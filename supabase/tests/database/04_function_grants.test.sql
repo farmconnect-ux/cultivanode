@@ -4,9 +4,9 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(16);
 
-select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb)', 'execute'),
+select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb, jsonb, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
 select ok(not has_function_privilege('authenticated', 'public.handle_new_user()', 'execute'),
   'handle_new_user() is not exposed');
@@ -22,7 +22,16 @@ select ok(not has_function_privilege('authenticated', 'public.compute_area_from_
   'compute_area_from_boundary() is not exposed');
 select ok(not has_function_privilege('anon', 'public.approve_role_request(uuid, text)', 'execute'),
   'anonymous visitors cannot call approve_role_request()');
-select ok(has_function_privilege('authenticated', 'public.nearby_listings(double precision, double precision, numeric, public.listing_kind, text, integer)', 'execute'),
+select ok(has_function_privilege('authenticated', 'public.has_permission(text)', 'execute')
+          and not has_function_privilege('anon', 'public.has_permission(text)', 'execute'),
+  'has_permission() is callable by signed-in users only');
+select ok(not has_function_privilege('authenticated', 'private.record_admin_action(text, text, text, uuid, text)', 'execute'),
+  'signed-in users cannot forge admin actions');
+select ok(not has_function_privilege('authenticated', 'private.recompute_verification_tier(uuid)', 'execute'),
+  'signed-in users cannot recompute verification tiers');
+select ok(to_regprocedure('public.is_admin(public.admin_role)') is null,
+  'is_admin() has been replaced by permission checks');
+select ok(has_function_privilege('authenticated', 'public.nearby_listings(double precision, double precision, numeric, public.listing_kind, public.equipment_type, public.provider_type, integer)', 'execute'),
   'signed-in users can still run the nearby search');
 
 -- RLS helpers live in the private schema, which the Data API does not expose.

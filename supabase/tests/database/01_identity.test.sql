@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(30);
 
 -- Fixture users (inserting into auth.users fires the profile trigger)
 insert into auth.users (id, phone, raw_user_meta_data) values
@@ -45,7 +45,7 @@ select throws_ok($$ insert into public.role_requests (role) values ('service_pro
   '23514', null, 'a service provider request must name the provider type');
 select throws_ok($$ insert into public.role_requests (role) values ('crop_farmer') $$,
   'P0001', 'You already hold this role.', 'cannot request a role already held');
-select throws_ok($$ insert into public.role_requests (role, status) values ('buyer', 'approved') $$,
+select throws_ok($$ insert into public.role_requests (role, status) values ('buyer_offtaker', 'approved') $$,
   '42501', null, 'a user cannot submit an already-approved request');
 select throws_ok($$ insert into public.role_requests (role) values ('admin') $$,
   '22P02', null, 'admin is not a requestable role');
@@ -53,7 +53,7 @@ select throws_ok($$ insert into public.user_roles (profile_id, role) values (aut
   '42501', null, 'a user cannot grant themselves a role');
 select throws_ok(
   $$ select public.approve_role_request((select id from public.role_requests where role = 'machinery_owner')) $$,
-  '42501', 'Only a verification officer can approve role requests.', 'a normal user cannot approve requests');
+  '42501', 'You do not have permission to approve role requests.', 'a normal user cannot approve requests');
 
 insert into public.role_requests (role, provider_type) values ('service_provider', 'mechanic');
 select is((select (public.cancel_role_request(id)).status::text from public.role_requests
@@ -77,10 +77,13 @@ select lives_ok(
 select ok(exists(select 1 from public.user_roles
                   where profile_id = '11111111-1111-1111-1111-111111111111' and role = 'machinery_owner'),
   'approval grants the role');
-select ok(exists(select 1 from public.audit_log where action = 'role_approved'), 'approval is written to the audit log');
+reset role;
+select ok(exists(select 1 from public.audit_log where action = 'role_approved'
+                   and actor_id = '33333333-3333-3333-3333-333333333333'
+                   and new_values ->> 'status' = 'approved'),
+  'approval is written to the audit log with before/after values');
 
 ---------------------------------------------------------------- verification tiers (server-side writes)
-reset role;
 insert into public.verifications (profile_id, kind, status, provider, masked_value, verified_at)
   values ('11111111-1111-1111-1111-111111111111', 'nin', 'verified', 'test', '*******4417', now());
 select is((select verification_tier from public.profiles where id = '11111111-1111-1111-1111-111111111111'),
@@ -88,7 +91,11 @@ select is((select verification_tier from public.profiles where id = '11111111-11
 insert into public.verifications (profile_id, kind, status, provider, masked_value, verified_at)
   values ('11111111-1111-1111-1111-111111111111', 'bvn', 'verified', 'test', '*******0021', now());
 select is((select verification_tier from public.profiles where id = '11111111-1111-1111-1111-111111111111'),
-  2::smallint, 'NIN plus BVN gives tier 2 (payout-ready)');
+  1::smallint, 'NIN plus BVN without a verified bank account stays at tier 1');
+insert into public.bank_accounts (profile_id, bank_code, bank_name, account_name, account_number_last4, provider, status, verified_at, is_default)
+  values ('11111111-1111-1111-1111-111111111111', '058', 'Test Bank', 'Adebayo Okafor', '1234', 'test', 'verified', now(), true);
+select is((select verification_tier from public.profiles where id = '11111111-1111-1111-1111-111111111111'),
+  2::smallint, 'NIN, BVN and a verified bank account give tier 2 (payout-ready)');
 
 ---------------------------------------------------------------- business accounts
 set local role authenticated;
