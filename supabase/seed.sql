@@ -1,0 +1,2 @@
+-- Local development seed. Runs after migrations on `supabase db reset` (local only, never in production).
+-- Crop catalogue and standards seed data arrive in M2.
