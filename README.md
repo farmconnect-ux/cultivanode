@@ -37,7 +37,10 @@ Status:
 - [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
 - [x] Spec alignment: permission-based admin, roles table, verification documents (private storage), bank accounts, consents, append-only audit with old/new values, record provenance, farm zones, multi-rate listings
 - [x] Shared Zod validation, structured errors, redacted logging, Sentry adapter, security headers, brand config
-- [ ] M1: phone sign-in, onboarding, ID checks, admin approval queue
+- [x] Switchable providers: SMS (Termii) and identity checks (Prembly) chosen, configured and tested in the admin console (`/admin/integrations`), keys in Supabase Vault. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
+- [x] Edge Functions: Send SMS hook, NIN/BVN/bank account checks, provider test
+- [x] Admin console: staff phone sign-in, overview, integrations
+- [ ] M1: public sign-up and onboarding, ID check screens, admin approval queue
 
 ## Prerequisites
 
@@ -121,12 +124,12 @@ Colours, type sizes, spacing and radii live in `packages/shared/src/design/token
 ## Tests
 
 ```bash
-npm run test          # shared package unit tests (includes a check that TS role lists match the DB enums)
+npm run test          # unit tests: shared package and Edge Functions (123)
 npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 144 permission, identity, search, website-form and function-exposure tests
+npm run db:test       # pgTAP: 183 permission, identity, search, website-form, function-exposure and integration tests
 npm run db:stop
 ```
 
@@ -146,7 +149,7 @@ After changing the schema, regenerate TypeScript types with `npm run db:types` (
 
 ## Phone sign-in (SMS)
 
-Local development uses fixed test numbers from `supabase/config.toml` (`2348000000001` and `2348000000002`, code `123456`). If local sign-in asks for an SMS provider, enable one in `config.toml` with dummy values; test numbers never send real SMS. For the hosted project, turn on an SMS provider in Supabase: Authentication > Providers > Phone. Twilio, MessageBird and Vonage work out of the box. To use Termii, add a Send SMS Hook; this is planned for M1.
+Local development uses fixed test numbers from `supabase/config.toml` (`2348000000001` and `2348000000002`, code `123456`). If local sign-in asks for an SMS provider, enable one in `config.toml` with dummy values; test numbers never send real SMS. On the hosted project, codes go through the `send-sms` Edge Function (Supabase Send SMS hook) and whichever SMS provider is active in `/admin/integrations`. One-time setup: `docs/DEPLOYMENT.md`.
 
 ## Known M0 limitations
 
