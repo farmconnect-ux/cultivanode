@@ -96,6 +96,16 @@ npm run dev:mobile    # scan the QR code with Expo Go on an Android phone
 - Partner names go in `apps/web/src/config/site.ts`; the section appears once there is at least one.
 - Hero images are simple illustrations for now. Swap in real pilot-farm photos (under ~150 KB each) when you have them.
 
+## Android test builds
+
+GitHub builds an installable APK for you, no Android Studio needed:
+
+1. On GitHub, open **Actions > Android build > Run workflow** (it also runs by itself when `apps/mobile` changes).
+2. When the run turns green (about 15-25 minutes), open it and download **tillmate-android-apk** under Artifacts.
+3. Unzip it, send the `.apk` to an Android phone (WhatsApp, Google Drive or USB), open it and allow "Install unknown apps" once.
+
+These test builds are signed with a development key, so they are for testing only. For the Play Store, build with EAS (`npx eas-cli build -p android --profile production`), which creates and keeps the upload key for you. App icon and splash come from `apps/mobile/assets/*.svg`; `npm run icons --workspace @tillmate/mobile` turns them into PNGs.
+
 ## Design system
 
 Colours, type sizes, spacing and radii live in `packages/shared/src/design/tokens.ts`. The web theme in `apps/web/src/app/globals.css` mirrors them, and a unit test fails if a colour drifts or if any text colour drops below WCAG AA contrast. Body text is never below 16px and tap targets are at least 48px, for outdoor use on small Android phones.
@@ -131,6 +141,5 @@ Local development uses fixed test numbers from `supabase/config.toml` (`23480000
 
 ## Known M0 limitations
 
-- App icons and splash screens are not added yet; Expo uses its defaults.
 - Mobile sessions use AsyncStorage for now. M1 switches to encrypted storage before any real user signs in.
 - The web session-refresh proxy arrives with sign-in in M1.
