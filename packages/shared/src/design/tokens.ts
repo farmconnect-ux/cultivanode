@@ -1,4 +1,4 @@
-// Tillmate design tokens: the single source for colours, type, spacing and radii.
+// CultivaNode design tokens: the single source for colours, type, spacing and radii.
 //
 // Web: apps/web/src/app/globals.css mirrors these in its Tailwind `@theme` block
 //      (src/__tests__/tokens.test.ts fails if the two drift apart).

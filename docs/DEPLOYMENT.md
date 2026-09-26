@@ -30,9 +30,19 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
    sign in at `/admin/sign-in`, get `super_admin` (README), then remove the test number.
 6. In `/admin/integrations`: add the Termii sender ID and key, send a test SMS, "Use this provider";
    add the Prembly sandbox key, run the sandbox check, "Use this provider". Switch to live when ready.
+7. **Edge Function `agent-onboard`** (field agents registering farmers) is deployed with JWT verification on.
+   It uses the active SMS provider; nothing else to configure.
+8. **Auth settings:** Authentication > Sign In / Providers > Phone: keep "SMS OTP expiry" at 5-10 minutes
+   and the default rate limits (Authentication > Rate Limits) so codes cannot be spammed.
+
+## Custom domain (cultivanode.com)
+1. Vercel > project > Settings > Domains: add `cultivanode.com` and `www.cultivanode.com`; add the DNS records
+   Vercel shows at your registrar.
+2. Vercel > Environment Variables: `NEXT_PUBLIC_SITE_URL=https://cultivanode.com` (canonical links, sitemap).
+3. Supabase > Authentication > URL Configuration: add the domain to Site URL / Redirect URLs.
 
 ## Mobile (Android)
-- Test APK: GitHub Actions > Android build > Run workflow > download `tillmate-android-apk`.
+- Test APK: GitHub Actions > Android build > Run workflow > download `cultivanode-android-apk`. The app ID is `com.cultivanode.app` (changed from `ng.tillmate.app` before any store release).
 - Store builds: EAS (`npx eas-cli build -p android --profile production`), which manages the upload key.
 
 ## CI (GitHub Actions)

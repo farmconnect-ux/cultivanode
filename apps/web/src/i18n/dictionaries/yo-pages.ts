@@ -1,7 +1,7 @@
 // Yorùbá copy for the audience, crops, partners, waitlist and legal pages.
 // DRAFT TRANSLATION: a native Yorùbá speaker must review every string before launch, and the
 // legal pages must also be checked by our lawyers in Yorùbá.
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
 
 import type { PagesDictionary } from "./en-pages";
 
@@ -135,7 +135,7 @@ const yoPages: PagesDictionary = {
         {
           heading: "Ta ni wá",
           body: [
-            `${brand.name} jẹ́ ìkànnì ìṣàkóso oko àti gbígba iṣẹ́ tí a ń dánwò ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà. "${brand.name}" jẹ́ orúkọ ìgbà díẹ̀. A máa kọ orúkọ ilé iṣẹ́ tí ó ní ojúṣe fún dátà rẹ síbí kí a tó ṣí sílẹ̀.`,
+            `${brand.name} jẹ́ ìkànnì ìṣàkóso oko àti gbígba iṣẹ́ tí a ń dánwò ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà. A máa kọ orúkọ ilé iṣẹ́ tí ó ní ojúṣe fún dátà rẹ síbí kí a tó ṣí sílẹ̀.`,
           ],
         },
         {
@@ -203,7 +203,7 @@ const yoPages: PagesDictionary = {
         {
           heading: "Nípa àwọn òfin yìí",
           body: [
-            `Nípa ṣíṣí àkáǹtì, o gbà láti tẹ̀lé àwọn òfin yìí. ${brand.name} jẹ́ orúkọ ìgbà díẹ̀, iṣẹ́ náà sì wà ní ìdánwò, nítorí náà àwọn ẹ̀yà rẹ̀ lè yípadà.`,
+            `Nípa ṣíṣí àkáǹtì, o gbà láti tẹ̀lé àwọn òfin yìí. Iṣẹ́ náà wà ní ìdánwò, nítorí náà àwọn ẹ̀yà rẹ̀ lè yípadà.`,
           ],
         },
         {

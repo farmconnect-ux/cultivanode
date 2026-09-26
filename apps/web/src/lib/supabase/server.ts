@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import type { Database } from "@tillmate/shared";
+import type { Database } from "@cultivanode/shared";
 import { supabaseEnv } from "./env";
 
 /** Supabase client for Server Components, Server Actions and Route Handlers. */

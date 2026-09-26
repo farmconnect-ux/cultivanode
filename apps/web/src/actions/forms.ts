@@ -1,6 +1,6 @@
 "use server";
 
-import { contactSchema, fieldErrors, fromDatabaseError, waitlistSchema } from "@tillmate/shared";
+import { contactSchema, fieldErrors, fromDatabaseError, waitlistSchema } from "@cultivanode/shared";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { reportError } from "@/lib/monitoring";
 

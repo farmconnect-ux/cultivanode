@@ -1,6 +1,6 @@
 // English copy for the audience, crops, partners, waitlist and legal pages.
 // yo-pages.ts must have exactly the same keys (TypeScript enforces it).
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
 
 const enPages = {
   howPage: {
@@ -132,7 +132,7 @@ const enPages = {
         {
           heading: "Who we are",
           body: [
-            `${brand.name} is a farm management and hiring platform being piloted in South-West Nigeria. "${brand.name}" is a working name. The company responsible for your data (the data controller) will be named here before launch.`,
+            `${brand.name} is a farm management and hiring platform being piloted in South-West Nigeria. The company responsible for your data (the data controller) will be named here before launch.`,
           ],
         },
         {
@@ -200,7 +200,7 @@ const enPages = {
         {
           heading: "About these terms",
           body: [
-            `By creating an account you agree to these terms. ${brand.name} is a working name and the service is in a pilot, so features may change.`,
+            `By creating an account you agree to these terms. The service is in a pilot, so features may change.`,
           ],
         },
         {

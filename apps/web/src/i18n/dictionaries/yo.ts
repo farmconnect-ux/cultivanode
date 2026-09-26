@@ -1,14 +1,15 @@
 // Yorùbá copy for the public website.
 // DRAFT TRANSLATION: have a native Yorùbá speaker (ideally one who farms or works in extension)
 // review every string before launch. Crop names keep the English in brackets where local names vary.
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
+import yoAccount from "./yo-account";
 import yoPages from "./yo-pages";
 
 import type { Dictionary } from "./en";
 
 const yo: Dictionary = {
   meta: {
-    title: `${brand.name}: alábàáṣiṣẹ́ oko rẹ`,
+    title: `${brand.name}: ọgbọ́n tí ó so iṣẹ́ àgbẹ̀ pọ̀`,
     description:
       "Ṣètò ọ̀gbìn rẹ, gba tírákítọ̀ àti àwọn òṣìṣẹ́ oko tí o lè gbẹ́kẹ̀lé, kí o sì máa kọ ìwé owó oko rẹ nínú áàpù kan ṣoṣo. A ṣe é fún àwọn àgbẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà.",
   },
@@ -21,6 +22,7 @@ const yo: Dictionary = {
     contact: "Kàn sí wa",
     signIn: "Wọlé",
     signUp: "Forúkọsílẹ̀",
+    myAccount: "Àkọọ́lẹ̀ mi",
     menu: "Àkójọ",
     close: "Pa àkójọ",
     language: "Èdè",
@@ -155,16 +157,16 @@ const yo: Dictionary = {
     intro:
       `${brand.name} ń ran àwọn àgbẹ̀ kéékèèké àti àwọn àgbẹ̀ oníṣòwò lọ́wọ́ láti ṣètò dáradára, láti rí ìrànlọ́wọ́ tó tọ́ ní owó tó tọ́, àti láti mọ iye tí oko wọn ń mú wọlé ní tòótọ́.`,
     nameTitle: "Kí nìdí orúkọ yìí?",
-    nameBody: `“Till” túmọ̀ sí láti ro ilẹ̀. “Mate” túmọ̀ sí ọ̀rẹ́ tàbí ẹlẹgbẹ́. ${brand.name} ni alábàáṣiṣẹ́ tí ó ń bá ọ ṣiṣẹ́ ní gbogbo àsìkò.`,
+    nameBody: `“Cultiva” túmọ̀ sí iṣẹ́ ọ̀gbìn: gbígbin oúnjẹ àti ṣíṣe oko. “Node” jẹ́ ojú-ìsopọ̀ kan nínú àwọ̀n kan. Gbogbo oko, àgbẹ̀, ẹ̀rọ, olùpèsè iṣẹ́ àti ọjà jẹ́ ojú-ìsopọ̀. ${brand.name} ń so wọ́n pọ̀, kí àlàyé tó yí oko rẹ ká lè di ìpinnu tó wúlò.`,
     whyTitle: "Ìdí tí a fi ń kọ́ ọ",
     whyBody: [
       "Ọ̀pọ̀ àgbẹ̀ ló ń pàdánù èso nítorí pé tírákítọ̀ pẹ́ dé, wọ́n lo ajílẹ̀ tí kò tọ́, tàbí òjò wẹ oògùn tí wọ́n fín lọ. Ìmọ̀ràn rere àti ìrànlọ́wọ́ tí a lè gbẹ́kẹ̀lé kò rọrùn láti rí ní àkókò tó yẹ.",
       "Àwọn onímọ́tò ẹ̀rọ oko àti àwọn òṣìṣẹ́ oko náà ń jìyà: iṣẹ́ fọ́n káàkiri, ìrìnàjò wọ́n, owó iṣẹ́ kì í sì í dájú nígbà gbogbo.",
       `${brand.name} ń mú àwọn àgbẹ̀, ẹ̀rọ oko àti àwọn òṣìṣẹ́ onímọ̀ papọ̀, pẹ̀lú ètò àti àkọsílẹ̀ tí yóò jẹ́ kí àsìkò kọ̀ọ̀kan rọrùn láti mọ̀ tẹ́lẹ̀.`,
     ],
-    pilotTitle: "A ń bẹ̀rẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn",
+    pilotTitle: "A kọ́ ọ ní Nàìjíríà, a ń bẹ̀rẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn",
     pilotBody:
-      "Ìdánwò wa ń lọ pẹ̀lú àwọn agbègbè àgbẹ̀ ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì àti Èkó, ní agbègbè igbó àti agbègbè ọ̀dàn. Àwọn aṣojú wa ń ran àwọn àgbẹ̀ lọ́wọ́ láti bẹ̀rẹ̀, kódà bí wọn kò bá ní fóònù alágbèéká ìgbàlódé.",
+      "Ìdánwò wa ń lọ pẹ̀lú àwọn agbègbè àgbẹ̀ ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì àti Èkó, ní agbègbè igbó àti agbègbè ọ̀dàn. Àwọn aṣojú wa ń ran àwọn àgbẹ̀ lọ́wọ́ láti bẹ̀rẹ̀, kódà bí wọn kò bá ní fóònù alágbèéká ìgbàlódé. Ìpinnu wa fún ọjọ́ iwájú ni láti kọ́ ètò ìsopọ̀ iṣẹ́ àgbẹ̀ fún Áfíríkà.",
     valuesTitle: "Ohun tí a dúró fún",
     values: [
       { title: "Àgbẹ̀ lákọ̀ọ́kọ́", body: "Gbogbo ohun tí a bá ṣe gbọ́dọ̀ fi àkókò tàbí owó pamọ́ fún àgbẹ̀." },
@@ -257,18 +259,6 @@ const yo: Dictionary = {
     sending: "Ó ń lọ…",
     success: `A ti kọ orúkọ rẹ sílẹ̀. A ó kàn sí ọ nígbà tí Ọjà ${brand.name} bá ṣí.`,
   },
-  account: {
-    signInTitle: "Wọlé",
-    signUpTitle: "Forúkọsílẹ̀",
-    body: `${brand.name} yóò kọ́kọ́ ṣí sílẹ̀ fún àwọn àgbẹ̀, àwọn onímọ́tò ẹ̀rọ oko àti àwọn olùpèsè iṣẹ́ ní àwọn agbègbè ìdánwò wa. A ó ṣí àkọọ́lẹ̀ sílẹ̀ níbí láìpẹ́.`,
-    stepsTitle: "Ṣé o fẹ́ kópa nínú ìdánwò?",
-    steps: [
-      "Fi orúkọ rẹ, nọ́ńbà fóònù rẹ, ìlú rẹ àti ohun tí o ń gbìn tàbí iṣẹ́ tí o ń ṣe ránṣẹ́ sí wa.",
-      `Aṣojú ${brand.name} yóò kàn sí ọ.`,
-      "Ìwọ yóò wà lára àwọn àkọ́kọ́ tí yóò lo áàpù náà.",
-    ],
-    cta: "Fi àlàyé rẹ ránṣẹ́",
-  },
   forms: {
     errorGeneric: "Nǹkan kan kò lọ dáadáa. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.",
     errorName: "Kọ orúkọ rẹ (ó kéré tán lẹ́tà méjì).",
@@ -281,7 +271,7 @@ const yo: Dictionary = {
     errorBusy: "Ìbéèrè ti pọ̀ jù báyìí. Jọ̀wọ́ gbìyànjú lẹ́yìn ìṣẹ́jú díẹ̀.",
   },
   footer: {
-    tagline: "Alábàáṣiṣẹ́ oko rẹ.",
+    tagline: "Ọgbọ́n tí ó so iṣẹ́ àgbẹ̀ pọ̀.",
     legal: "Òfin",
     product: "Áàpù",
     company: "Ilé-iṣẹ́",
@@ -294,6 +284,7 @@ const yo: Dictionary = {
     back: "Padà sí ojú-ìwé àkọ́kọ́",
   },
   ...yoPages,
+  ...yoAccount,
 };
 
 export default yo;

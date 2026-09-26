@@ -1,4 +1,4 @@
-import { colors, fontSize, fontWeight, lineHeight } from '@tillmate/shared';
+import { colors, fontSize, fontWeight, lineHeight } from '@cultivanode/shared';
 import { Text as RNText, type TextProps } from 'react-native';
 
 type Variant = 'title' | 'heading' | 'body' | 'label' | 'caption';
@@ -13,7 +13,7 @@ const styles = {
 
 type Props = TextProps & { variant?: Variant; muted?: boolean; color?: string };
 
-/** Text with the Tillmate type scale. Body text is never smaller than 16. */
+/** Text with the CultivaNode type scale. Body text is never smaller than 16. */
 export function Text({ variant = 'body', muted, color, style, ...rest }: Props) {
   return <RNText style={[styles[variant], { color: color ?? (muted ? colors.muted : colors.ink) }, style]} {...rest} />;
 }

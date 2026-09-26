@@ -10,7 +10,7 @@ const whatsapp = digits(process.env.NEXT_PUBLIC_CONTACT_WHATSAPP); // e.g. 23480
 const phone = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() || undefined; // e.g. +234 803 123 4567
 const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || undefined;
 
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
 
 export const site = {
   name: brand.name,

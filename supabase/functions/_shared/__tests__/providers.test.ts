@@ -20,7 +20,7 @@ const jsonRes = (body: unknown, status = 200) =>
 
 const termiiRt: Runtime = {
   provider: 'termii', kind: 'sms', mode: 'live', implemented: true, test_only: false, missing: [],
-  config: { base_url: 'https://v3.api.termii.com/', sender_id: 'Tillmate', channel: 'dnd', message_template: null },
+  config: { base_url: 'https://v3.api.termii.com/', sender_id: 'CultivaNode', channel: 'dnd', message_template: null },
   secrets: { api_key: 'TL-key' },
 };
 
@@ -38,7 +38,7 @@ describe('Termii', () => {
     expect(r).toMatchObject({ ok: true, value: { messageId: '9122821270554876574' } });
     expect(calls[0].url).toBe('https://v3.api.termii.com/api/sms/send');
     expect(JSON.parse(String(calls[0].init.body))).toEqual({
-      api_key: 'TL-key', to: '2348031234567', from: 'Tillmate', sms: 'Your code is 123456', type: 'plain', channel: 'dnd',
+      api_key: 'TL-key', to: '2348031234567', from: 'CultivaNode', sms: 'Your code is 123456', type: 'plain', channel: 'dnd',
     });
   });
 
@@ -73,7 +73,7 @@ describe('SMS registry and message', () => {
   });
 
   it('fills the template and falls back to the default', () => {
-    expect(renderOtpMessage('{brand}: {code}', '123456')).toBe('Tillmate: 123456');
+    expect(renderOtpMessage('{brand}: {code}', '123456')).toBe('CultivaNode: 123456');
     expect(renderOtpMessage('', '654321')).toContain('654321');
   });
 });

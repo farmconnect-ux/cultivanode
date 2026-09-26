@@ -1,5 +1,5 @@
 {
-  "name": "@tillmate/shared",
+  "name": "@cultivanode/shared",
   "version": "0.0.0",
   "private": true,
   "description": "Types, constants and helpers shared by the Tillmate web and mobile apps.",
@@ -7,7 +7,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./brand": "./src/brand.ts"
+    "./brand": "./src/brand.ts",
+    "./places": "./src/places.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p ../../supabase/functions",

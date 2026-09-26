@@ -31,7 +31,7 @@ storage on Supabase (`tillmate`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on
   adapters in `supabase/functions/_shared/providers`, chosen and configured by staff in the admin console
   (INTEGRATIONS.md). Payment, weather, maps and AI providers get the same treatment (**Planned**, M3–M6).
 - **Rename-safe branding.** The product name, tagline, logo and domain come from
-  `packages/shared/src/brand.ts`. "Tillmate" is a working name (see README).
+  `packages/shared/src/brand.ts` (CultivaNode; see README).
 - **Enum values come from the database.** `packages/shared/src/roles.ts` re-exports the enums in the
   generated `database.types.ts`, so TypeScript cannot drift from Postgres.
 
@@ -48,7 +48,7 @@ storage on Supabase (`tillmate`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on
 
 ## Mobile app
 
-- `app.config.ts` reads the brand name from `@tillmate/shared/brand`; icons are generated from SVG.
+- `app.config.ts` reads the brand name from `@cultivanode/shared/brand`; icons are generated from SVG.
 - UI kit in `src/ui` uses the shared design tokens. Screens beyond the placeholder arrive in M1.
 - **Planned (M7):** offline-first storage and sync (see OFFLINE_SYNC.md).
 

@@ -1,4 +1,4 @@
-import { colors, radius, space } from '@tillmate/shared';
+import { colors, radius, space } from '@cultivanode/shared';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 export function Card({ style, ...rest }: ViewProps) {

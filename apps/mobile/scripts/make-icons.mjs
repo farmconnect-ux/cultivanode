@@ -1,6 +1,6 @@
 // Turns the SVG sources in assets/ into the PNGs Expo needs for the app icon and splash screen.
 // PNGs are generated (and git-ignored) so the repo only holds the editable SVGs.
-// Run: npm run icons --workspace @tillmate/mobile   (CI runs it before every Android build)
+// Run: npm run icons --workspace @cultivanode/mobile   (CI runs it before every Android build)
 import { readFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

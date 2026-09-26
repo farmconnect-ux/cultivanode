@@ -1,10 +1,13 @@
-# Tillmate
+# CultivaNode
 
-Farm management, equipment and labour hire for Nigerian farmers. Web and mobile apps on one Supabase backend.
+**Connected intelligence for agriculture.** Farm management, agricultural services (machinery and labour hire)
+and, later, marketplace, IoT and AI, starting with farmers in South-West Nigeria. Web and mobile apps on one
+Supabase backend.
 
-> **Working name.** "Tillmate" has not cleared CAC, NIPO, domain, store or social checks, and a Caribbean
-> POS app already uses it. The name, tagline and logo come from `packages/shared/src/brand.ts`, so a rename
-> is a small change.
+> **Name.** CultivaNode is the final name (it replaced the working name "Tillmate" on 2026-09-26). The word
+> mark is not registered yet: file with NIPO before calling it a trademark. Name, taglines and logo come from
+> `packages/shared/src/brand.ts`. GitHub repo, Vercel project and Supabase project keep the old `tillmate`
+> identifiers until they are renamed in those dashboards.
 
 The authoritative product specification is the Phase 1 master build prompt. Status by requirement:
 [`docs/requirements-matrix.md`](docs/requirements-matrix.md). Architecture, database, security, payments,
@@ -112,10 +115,10 @@ npm run dev:mobile    # scan the QR code with Expo Go on an Android phone
 GitHub builds an installable APK for you, no Android Studio needed:
 
 1. On GitHub, open **Actions > Android build > Run workflow** (it also runs by itself when `apps/mobile` changes).
-2. When the run turns green (about 15-25 minutes), open it and download **tillmate-android-apk** under Artifacts.
+2. When the run turns green (about 15-25 minutes), open it and download **cultivanode-android-apk** under Artifacts.
 3. Unzip it, send the `.apk` to an Android phone (WhatsApp, Google Drive or USB), open it and allow "Install unknown apps" once.
 
-These test builds are signed with a development key, so they are for testing only. For the Play Store, build with EAS (`npx eas-cli build -p android --profile production`), which creates and keeps the upload key for you. App icon and splash come from `apps/mobile/assets/*.svg`; `npm run icons --workspace @tillmate/mobile` turns them into PNGs.
+These test builds are signed with a development key, so they are for testing only. For the Play Store, build with EAS (`npx eas-cli build -p android --profile production`), which creates and keeps the upload key for you. App icon and splash come from `apps/mobile/assets/*.svg`; `npm run icons --workspace @cultivanode/mobile` turns them into PNGs.
 
 ## Design system
 
@@ -124,12 +127,12 @@ Colours, type sizes, spacing and radii live in `packages/shared/src/design/token
 ## Tests
 
 ```bash
-npm run test          # unit tests: shared package and Edge Functions (123)
+npm run test          # unit tests: shared package and Edge Functions (137)
 npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 183 permission, identity, search, website-form, function-exposure and integration tests
+npm run db:test       # pgTAP: 241 permission, identity, search, website-form, function-exposure, integration and account tests
 npm run db:stop
 ```
 
@@ -141,8 +144,8 @@ npm run db:stop
 - **Verification tiers.** Server code (with the service role) writes ID results to `verifications` and payout accounts to `bank_accounts`. The tier updates automatically: NIN gives tier 1; NIN, BVN and a verified bank account give tier 2. Only masked numbers are stored, never full NIN/BVN or account numbers.
 - **Staff permissions.** Admin sub-roles (super_admin, verification_officer, support_disputes, agronomy_editor, finance_officer) map to permissions in `admin_role_permissions`; policies call `has_permission()`.
 - **Listing needs role and tier.** Creating a listing requires the approved role and tier 2 (payout-ready).
-- **Money** is stored in kobo as whole numbers (`rate_kobo`). Use `nairaToKobo()` and `formatNaira()` from `@tillmate/shared`.
-- **Coordinates** go to PostGIS as EWKT, longitude first. Use `toPointEwkt()` and `toPolygonEwkt()` from `@tillmate/shared`.
+- **Money** is stored in kobo as whole numbers (`rate_kobo`). Use `nairaToKobo()` and `formatNaira()` from `@cultivanode/shared`.
+- **Coordinates** go to PostGIS as EWKT, longitude first. Use `toPointEwkt()` and `toPolygonEwkt()` from `@cultivanode/shared`.
 - **`nearby_listings(lat, lng, radius_km, kind, equipment_type, provider_type, limit)`** returns active, priced listings nearest first, with all prices as `{unit: kobo}`. The radius is capped at 100 km and the limit at 100. A listing only shows if the farmer is also inside that provider's own service radius.
 
 After changing the schema, regenerate TypeScript types with `npm run db:types` (local Supabase running) or `npm run db:types:remote` (after `supabase login`).

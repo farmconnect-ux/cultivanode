@@ -24,6 +24,11 @@ export default async function ConsoleLayout({ children }: LayoutProps<"/admin">)
 
   const links = [
     { href: "/admin", label: "Overview", show: true },
+    { href: "/admin/approvals", label: "Approvals", show: can(staff, "roles.review") || can(staff, "verification.review") },
+    { href: "/admin/users", label: "Users", show: can(staff, "users.read") },
+    { href: "/admin/inbox", label: "Inbox", show: can(staff, "website_inbox.manage") },
+    { href: "/admin/privacy", label: "Privacy requests", show: can(staff, "privacy.manage") },
+    { href: "/admin/audit", label: "Audit", show: can(staff, "audit.read") },
     { href: "/admin/integrations", label: "Integrations", show: can(staff, "integrations.manage") },
   ].filter((l) => l.show);
 

@@ -1,8 +1,7 @@
+import { LEGAL_UPDATED, LEGAL_VERSION } from "@cultivanode/shared";
 import { Container } from "@/components/ui";
 import type { Dictionary } from "@/i18n/get-dictionary";
 
-export const LEGAL_VERSION = "2026-09 (draft)";
-export const LEGAL_UPDATED = "2026-09-26";
 
 type Doc = Dictionary["legal"]["privacy"];
 

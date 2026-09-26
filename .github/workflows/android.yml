@@ -58,10 +58,10 @@ jobs:
       - name: Name the APK
         run: |
           mkdir -p dist
-          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "dist/tillmate-${GITHUB_SHA::7}.apk"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "dist/cultivanode-${GITHUB_SHA::7}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: tillmate-android-apk
+          name: cultivanode-android-apk
           path: dist/*.apk
           retention-days: 30

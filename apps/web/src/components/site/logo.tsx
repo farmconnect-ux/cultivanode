@@ -1,24 +1,31 @@
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
 
-/** Brand mark (a seedling over furrows), drawn from the shared brand config so a rename is one edit. */
+/** Brand mark (a "C" of connected nodes), drawn from the shared brand config so a restyle is one edit. */
 export function LogoMark({ className = "size-9" }: { className?: string }) {
   const l = brand.logo;
   return (
     <svg viewBox={l.viewBox} className={className} aria-hidden="true">
       <rect width="40" height="40" rx="10" fill={l.background} />
-      <path d={l.stem.d} stroke={l.stem.stroke} strokeWidth={l.stem.strokeWidth} strokeLinecap="round" />
-      <path d={l.leafLeft.d} fill={l.leafLeft.fill} />
-      <path d={l.leafRight.d} fill={l.leafRight.fill} />
-      <path d={l.furrows.d} stroke={l.furrows.stroke} strokeWidth={l.furrows.strokeWidth} strokeLinecap="round" fill="none" />
+      {l.shapes.map((s, i) =>
+        s.kind === "circle" ? (
+          <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill={s.fill} />
+        ) : (
+          <path key={i} d={s.d} fill="none" stroke={s.stroke} strokeWidth={s.strokeWidth} strokeLinecap="round"
+                strokeLinejoin="round" opacity={"opacity" in s ? s.opacity : undefined} />
+        ),
+      )}
     </svg>
   );
 }
 
+/** Mark plus word mark. The capital N is part of the name: Cultiva + Node. */
 export function Logo() {
   return (
     <span className="inline-flex items-center gap-2.5">
       <LogoMark />
-      <span className="text-xl font-extrabold tracking-tight text-leaf-800">{brand.name}</span>
+      <span className="text-xl font-extrabold tracking-tight text-leaf-800">
+        Cultiva<span className="text-ink">Node</span>
+      </span>
     </span>
   );
 }

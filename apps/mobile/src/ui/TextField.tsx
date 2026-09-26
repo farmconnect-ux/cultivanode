@@ -1,4 +1,4 @@
-import { colors, fontSize, radius, space, touchTarget } from '@tillmate/shared';
+import { colors, fontSize, radius, space, touchTarget } from '@cultivanode/shared';
 import { useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { Text } from './Text';

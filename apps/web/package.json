@@ -1,5 +1,5 @@
 {
-  "name": "@tillmate/web",
+  "name": "@cultivanode/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,7 +14,7 @@
     "@sentry/nextjs": "^11.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
-    "@tillmate/shared": "*",
+    "@cultivanode/shared": "*",
     "next": "16.3.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

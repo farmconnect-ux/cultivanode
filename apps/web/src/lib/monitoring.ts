@@ -2,7 +2,7 @@
 // provider can change. Today: Sentry when SENTRY_DSN is set, otherwise the structured log only.
 
 import * as Sentry from "@sentry/nextjs";
-import { isAppError } from "@tillmate/shared";
+import { isAppError } from "@cultivanode/shared";
 import { logger, redact } from "./logger";
 
 export type Area = "auth" | "forms" | "payments" | "bookings" | "sync" | "ai" | "weather" | "database" | "other";

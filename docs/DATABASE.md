@@ -70,6 +70,14 @@ Tier 3 is kept only while tier 2 conditions hold. **Planned (M4):** the automati
 
 ## Tests
 
-`supabase/tests/database/*.test.sql` (pgTAP, 183 tests) cover RLS, grants, approvals, tiers, documents,
+`supabase/tests/database/*.test.sql` (pgTAP, 241 tests) cover RLS, grants, approvals, onboarding, business staff, privacy requests, field-agent codes, tiers, documents,
 consents, provenance, audit immutability and the nearby search. CI runs them on every push.
 Regenerate TypeScript types after a schema change: `npm run db:types:remote`.
+
+## M1 accounts (migration `20260926150328_m1_accounts`)
+- `profiles.onboarded_at`; `complete_onboarding()` records details, business account, consents and role requests in one transaction.
+- Role requests: only open roles (`roles.available`); approval needs the role's minimum tier and, where `requires_documents`, an accepted document.
+- Business staff: `add_org_member()` (owner adds by phone), `org_member_list()` (masked numbers).
+- Privacy: `data_requests`, `export_my_data()`, `request_account_deletion()`, `cancel_data_request()`, `admin_resolve_data_request()` (`privacy.manage`, given to support_disputes).
+- Staff: `admin_dashboard()`, `admin_grant_admin_role()` / `admin_revoke_admin_role()` (the last super admin cannot be removed), `admin_set_contact_handled()` (direct updates to contact messages revoked).
+- Field agents: `agent_onboarding_codes` (HMAC of phone + code only) and `agent_onboarding_start/verify/complete()`, service role only, called by the `agent-onboard` Edge Function.

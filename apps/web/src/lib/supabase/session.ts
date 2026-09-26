@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import type { Database } from "@tillmate/shared";
+import type { Database } from "@cultivanode/shared";
 import { supabaseEnv } from "./env";
 
 /**

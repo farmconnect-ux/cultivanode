@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "tillmate"
+project_id = "cultivanode"
 
 [api]
 enabled = true
@@ -255,7 +255,7 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-# Tillmate is phone-first: users sign up with a phone number and a one-time code.
+# CultivaNode is phone-first: users sign up with a phone number and a one-time code.
 enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
@@ -417,7 +417,7 @@ enabled = true
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
 
-# Tillmate Edge Functions. send-sms is called by Supabase Auth (signed webhook), not by users,
+# CultivaNode Edge Functions. send-sms is called by Supabase Auth (signed webhook), not by users,
 # so the gateway JWT check is off and the function verifies the webhook signature itself.
 [functions.send-sms]
 verify_jwt = false
@@ -426,4 +426,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.integration-test]
+verify_jwt = true
+
+[functions.agent-onboard]
 verify_jwt = true

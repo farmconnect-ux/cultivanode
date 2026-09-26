@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(31);
 
 -- Fixture users (inserting into auth.users fires the profile trigger)
 insert into auth.users (id, phone, raw_user_meta_data) values
@@ -71,9 +71,18 @@ select is((select count(*)::int from public.role_requests where status = 'pendin
 select throws_ok(
   $$ select public.reject_role_request((select id from public.role_requests where status = 'pending'), 'no') $$,
   '22023', null, 'a rejection needs a real reason');
+select throws_ok(
+  $$ select public.approve_role_request((select id from public.role_requests where status = 'pending'), 'Tractor seen') $$,
+  '22023', 'Accept at least one supporting document before approving.',
+  'a role that needs documents cannot be approved without an accepted document');
+reset role;
+insert into public.verification_documents (profile_id, role_request_id, document_type, storage_path, mime_type, size_bytes, status)
+select profile_id, id, 'equipment_ownership', profile_id::text || '/tractor-receipt-0001.pdf', 'application/pdf', 1000, 'accepted'
+  from public.role_requests where status = 'pending' and role = 'machinery_owner';
+set local role authenticated;
 select lives_ok(
   $$ select public.approve_role_request((select id from public.role_requests where status = 'pending'), 'Tractor seen') $$,
-  'the officer approves the machinery owner request');
+  'the officer approves the machinery owner request once a document is accepted');
 select ok(exists(select 1 from public.user_roles
                   where profile_id = '11111111-1111-1111-1111-111111111111' and role = 'machinery_owner'),
   'approval grants the role');

@@ -30,8 +30,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // The shared package ships TypeScript source; let Next compile it.
-  transpilePackages: ["@tillmate/shared"],
+  transpilePackages: ["@cultivanode/shared"],
   poweredByHeader: false,
+  experimental: {
+    // ID documents and equipment photos up to 5 MB are uploaded through a server action (see actions/account.ts).
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

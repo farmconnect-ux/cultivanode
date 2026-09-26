@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import type { Database } from "@tillmate/shared";
+import type { Database } from "@cultivanode/shared";
 import { supabaseEnv } from "./env";
 
 /** Supabase client for Client Components (runs in the browser). */

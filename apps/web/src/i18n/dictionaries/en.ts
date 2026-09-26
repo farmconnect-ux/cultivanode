@@ -1,12 +1,13 @@
 // English copy for the public website. Yoruba lives in yo.ts and must have exactly the same keys
 // (TypeScript enforces it). Keep sentences short: many readers are on small phones.
 
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
+import enAccount from "./en-account";
 import enPages from "./en-pages";
 
 const en = {
   meta: {
-    title: `${brand.name}: your farm's working partner`,
+    title: `${brand.name}: connected intelligence for agriculture`,
     description:
       "Plan your crops, hire tractors and farm hands you can trust, and keep your farm books in one app. Built for farmers in South-West Nigeria.",
   },
@@ -19,6 +20,7 @@ const en = {
     contact: "Contact",
     signIn: "Sign in",
     signUp: "Sign up",
+    myAccount: "My account",
     menu: "Menu",
     close: "Close menu",
     language: "Language",
@@ -153,16 +155,16 @@ const en = {
     intro:
       `${brand.name} helps smallholder and commercial farmers plan better, hire the right help at a fair price, and see what their farm really earns.`,
     nameTitle: "Why the name?",
-    nameBody: `To till is to work the land. A mate is a companion. ${brand.name} is the partner that works alongside you all season.`,
+    nameBody: `Cultiva is cultivation: growing food and running a farm. A node is a connected point in a network. Every farm, farmer, machine, service provider and market is a node. ${brand.name} connects them, so the information around your farm turns into practical decisions.`,
     whyTitle: "Why we are building it",
     whyBody: [
       "Many farmers lose yield because a tractor arrives late, the wrong fertiliser is used, or rain washes away a spray. Good advice and reliable help are hard to find at the right moment.",
       "Machinery owners and farm hands also struggle: jobs are scattered, travel is expensive, and payment is not always certain.",
       `${brand.name} brings farmers, equipment and skilled hands together, with plans and records that make every season a little more predictable.`,
     ],
-    pilotTitle: "Starting in the South-West",
+    pilotTitle: "Built in Nigeria, starting in the South-West",
     pilotBody:
-      "Our pilot runs with farming communities in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos, in both the rainforest belt and the derived savanna. Field agents help farmers get started, even without a smartphone.",
+      "Our pilot runs with farming communities in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos, in both the rainforest belt and the derived savanna. Field agents help farmers get started, even without a smartphone. Our long-term mission is connected farming infrastructure for Africa.",
     valuesTitle: "What we stand for",
     values: [
       { title: "Farmers first", body: "Every feature must save a farmer time or money." },
@@ -255,18 +257,6 @@ const en = {
     sending: "Sending…",
     success: `You're on the list. We will contact you when ${brand.name} Market opens.`,
   },
-  account: {
-    signInTitle: "Sign in",
-    signUpTitle: "Sign up",
-    body: `${brand.name} opens first to farmers, machinery owners and service providers in our pilot communities. Accounts will open here soon.`,
-    stepsTitle: "Want to be part of the pilot?",
-    steps: [
-      "Send us your name, phone number, town and what you farm or offer.",
-      `A ${brand.name} field agent will contact you.`,
-      "You'll be among the first to use the app.",
-    ],
-    cta: "Send us your details",
-  },
   forms: {
     errorGeneric: "Something went wrong. Please try again.",
     errorName: "Enter your name (at least 2 letters).",
@@ -279,7 +269,7 @@ const en = {
     errorBusy: "Too many requests right now. Please try again shortly.",
   },
   footer: {
-    tagline: "Your farm's working partner.",
+    tagline: "Connected intelligence for agriculture.",
     legal: "Legal",
     product: "Product",
     company: "Company",
@@ -292,6 +282,7 @@ const en = {
     back: "Go to the home page",
   },
   ...enPages,
+  ...enAccount,
 };
 
 export default en;

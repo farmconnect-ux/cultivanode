@@ -134,6 +134,47 @@ export type Database = {
           },
         ]
       }
+      agent_onboarding_codes: {
+        Row: {
+          agent_id: string
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          used_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          used_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_onboarding_codes_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -345,6 +386,60 @@ export type Database = {
           {
             foreignKeyName: "contact_messages_handled_by_fkey"
             columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_requests: {
+        Row: {
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["data_request_kind"]
+          profile_id: string | null
+          reason: string | null
+          resolution_note: string | null
+          status: Database["public"]["Enums"]["data_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["data_request_kind"]
+          profile_id?: string | null
+          reason?: string | null
+          resolution_note?: string | null
+          status?: Database["public"]["Enums"]["data_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["data_request_kind"]
+          profile_id?: string | null
+          reason?: string | null
+          resolution_note?: string | null
+          status?: Database["public"]["Enums"]["data_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_requests_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -957,6 +1052,7 @@ export type Database = {
           full_name: string | null
           id: string
           lga: string | null
+          onboarded_at: string | null
           onboarded_by: string | null
           phone: string | null
           preferred_language: Database["public"]["Enums"]["app_language"]
@@ -971,6 +1067,7 @@ export type Database = {
           full_name?: string | null
           id: string
           lga?: string | null
+          onboarded_at?: string | null
           onboarded_by?: string | null
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
@@ -985,6 +1082,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           lga?: string | null
+          onboarded_at?: string | null
           onboarded_by?: string | null
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
@@ -1426,6 +1524,14 @@ export type Database = {
       }
     }
     Functions: {
+      add_org_member: {
+        Args: {
+          p_org: string
+          p_phone: string
+          p_role: Database["public"]["Enums"]["org_member_role"]
+        }
+        Returns: Json
+      }
       admin_activate_integration: {
         Args: {
           p_kind: Database["public"]["Enums"]["integration_kind"]
@@ -1441,13 +1547,59 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_dashboard: { Args: never; Returns: Json }
+      admin_grant_admin_role: {
+        Args: {
+          p_profile: string
+          p_reason: string
+          p_role: Database["public"]["Enums"]["admin_role"]
+        }
+        Returns: undefined
+      }
       admin_integration_overview: { Args: never; Returns: Json }
+      admin_resolve_data_request: {
+        Args: {
+          p_note: string
+          p_request_id: string
+          p_status: Database["public"]["Enums"]["data_request_status"]
+        }
+        Returns: {
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["data_request_kind"]
+          profile_id: string | null
+          reason: string | null
+          resolution_note: string | null
+          status: Database["public"]["Enums"]["data_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "data_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_revoke_admin_role: {
+        Args: {
+          p_profile: string
+          p_reason: string
+          p_role: Database["public"]["Enums"]["admin_role"]
+        }
+        Returns: undefined
+      }
       admin_save_integration_config: {
         Args: {
           p_config: Json
           p_mode: Database["public"]["Enums"]["integration_mode"]
           p_provider: string
         }
+        Returns: undefined
+      }
+      admin_set_contact_handled: {
+        Args: { p_handled: boolean; p_message_id: string }
         Returns: undefined
       }
       admin_set_integration_mode: {
@@ -1465,6 +1617,28 @@ export type Database = {
           p_value: string
         }
         Returns: undefined
+      }
+      agent_onboarding_complete: {
+        Args: {
+          p_agent: string
+          p_consents: Json
+          p_document_version: string
+          p_full_name: string
+          p_language: Database["public"]["Enums"]["app_language"]
+          p_lga: string
+          p_profile: string
+          p_roles: Json
+          p_state: string
+        }
+        Returns: Json
+      }
+      agent_onboarding_start: {
+        Args: { p_agent: string; p_code_hash: string; p_phone: string }
+        Returns: Json
+      }
+      agent_onboarding_verify: {
+        Args: { p_agent: string; p_code_hash: string; p_phone: string }
+        Returns: Json
       }
       approve_role_request: {
         Args: { p_note?: string; p_request_id: string }
@@ -1485,6 +1659,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_data_request: {
+        Args: { p_request_id: string }
+        Returns: {
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["data_request_kind"]
+          profile_id: string | null
+          reason: string | null
+          resolution_note: string | null
+          status: Database["public"]["Enums"]["data_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "data_requests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1512,6 +1707,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_onboarding: {
+        Args: {
+          p_account_type: Database["public"]["Enums"]["account_type"]
+          p_business_name: string
+          p_cac_number: string
+          p_channel?: string
+          p_consents: Json
+          p_document_version: string
+          p_full_name: string
+          p_language: Database["public"]["Enums"]["app_language"]
+          p_lga: string
+          p_roles: Json
+          p_state: string
+        }
+        Returns: Json
+      }
       correct_farm_zone: {
         Args: {
           p_farm_id: string
@@ -1520,6 +1731,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      export_my_data: { Args: never; Returns: Json }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -1570,6 +1782,16 @@ export type Database = {
           rates: Json
           service_radius_km: number
           title: string
+        }[]
+      }
+      org_member_list: {
+        Args: { p_org: string }
+        Returns: {
+          added_at: string
+          full_name: string
+          member_role: Database["public"]["Enums"]["org_member_role"]
+          phone_hint: string
+          profile_id: string
         }[]
       }
       org_role: {
@@ -1624,6 +1846,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_account_deletion: {
+        Args: { p_reason?: string }
+        Returns: {
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["data_request_kind"]
+          profile_id: string | null
+          reason: string | null
+          resolution_note: string | null
+          status: Database["public"]["Enums"]["data_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "data_requests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1712,6 +1955,8 @@ export type Database = {
         | "share_with_buyers"
         | "share_with_investors"
         | "share_with_partners"
+      data_request_kind: "export" | "deletion"
+      data_request_status: "open" | "completed" | "rejected" | "cancelled"
       equipment_type:
         | "tractor"
         | "plough"
@@ -1921,6 +2166,8 @@ export const Constants = {
         "share_with_investors",
         "share_with_partners",
       ],
+      data_request_kind: ["export", "deletion"],
+      data_request_status: ["open", "completed", "rejected", "cancelled"],
       equipment_type: [
         "tractor",
         "plough",

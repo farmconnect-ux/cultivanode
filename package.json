@@ -1,5 +1,5 @@
 {
-  "name": "tillmate",
+  "name": "cultivanode",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -11,8 +11,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:web": "npm run dev --workspace @tillmate/web",
-    "dev:mobile": "npm run start --workspace @tillmate/mobile",
+    "dev:web": "npm run dev --workspace @cultivanode/web",
+    "dev:mobile": "npm run start --workspace @cultivanode/mobile",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -23,7 +23,8 @@
     "db:test": "supabase test db",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
-    "db:types:remote": "supabase gen types typescript --project-id vqbtnftnxyfaembwgfrk --schema public > packages/shared/src/database.types.ts"
+    "db:types:remote": "supabase gen types typescript --project-id vqbtnftnxyfaembwgfrk --schema public > packages/shared/src/database.types.ts",
+    "brand:icons": "node --experimental-strip-types scripts/brand-icons.ts"
   },
   "devDependencies": {
     "supabase": "^2.118.0",

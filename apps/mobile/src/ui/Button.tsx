@@ -1,4 +1,4 @@
-import { colors, radius, space, touchTarget } from '@tillmate/shared';
+import { colors, radius, space, touchTarget } from '@cultivanode/shared';
 import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
 import { Text } from './Text';
 

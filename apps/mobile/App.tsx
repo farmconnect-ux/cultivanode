@@ -1,4 +1,4 @@
-import { brand, colors, formatNaira, ROLE_LABELS, space } from '@tillmate/shared';
+import { brand, colors, formatNaira, ROLE_LABELS, space } from '@cultivanode/shared';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import { Container, LinkButton } from "@/components/ui";
+import { Container } from "@/components/ui";
+import { AuthLinks } from "./auth-links";
 import { LanguageToggle } from "./language-toggle";
 import { Logo } from "./logo";
-import { brand } from "@tillmate/shared/brand";
+import { brand } from "@cultivanode/shared/brand";
 
 export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
   const links = [
@@ -39,10 +40,7 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
           <LanguageToggle current={lang} label={t.language} />
           {/* Wrapped so `hidden` never competes with the button's own display class */}
           <div className="hidden items-center gap-2 md:flex">
-            <Link href={`/${lang}/sign-in`} className="rounded-md px-3 py-2 font-semibold text-leaf-700 hover:bg-leaf-50">
-              {t.signIn}
-            </Link>
-            <LinkButton href={`/${lang}/sign-up`}>{t.signUp}</LinkButton>
+            <AuthLinks lang={lang} t={t} variant="bar" />
           </div>
           {/* Small screens: a no-JavaScript disclosure menu */}
           <details className="group relative lg:hidden">
@@ -59,16 +57,7 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
                     </Link>
                   </li>
                 ))}
-                <li className="mt-2 border-t border-line pt-2">
-                  <Link href={`/${lang}/sign-in`} className="block rounded-md px-3 py-3 font-semibold text-leaf-700 hover:bg-leaf-50">
-                    {t.signIn}
-                  </Link>
-                </li>
-                <li>
-                  <Link href={`/${lang}/sign-up`} className="block rounded-md bg-leaf-600 px-3 py-3 text-center font-semibold text-white">
-                    {t.signUp}
-                  </Link>
-                </li>
+                <AuthLinks lang={lang} t={t} variant="menu" />
               </ul>
             </nav>
           </details>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AppError,
   brand,
+  logoSvg,
   contactSchema,
   fieldErrors,
   fromDatabaseError,
@@ -104,8 +105,14 @@ describe('payment mode', () => {
 });
 
 describe('brand', () => {
-  it('is marked as a working name until cleared', () => {
-    expect(brand.workingName).toBe(true);
-    expect(brand.tagline).toBe("Your farm's working partner");
+  it('uses the final name with its capital N and the agreed taglines', () => {
+    expect(brand.name).toBe('CultivaNode');
+    expect(brand.tagline).toBe('Connected intelligence for agriculture');
+    expect(brand.promise).toBe("Your farm's working partner");
+  });
+
+  it('draws the logo as a standalone SVG', () => {
+    expect(logoSvg()).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 40 40">/);
+    expect(logoSvg({ background: false })).not.toContain('<rect');
   });
 });

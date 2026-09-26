@@ -6,6 +6,8 @@ export * from './phone';
 export * from './errors';
 export * from './validation';
 export * from './config';
+export * from './places';
+export * from './legal';
 export * from './design/tokens';
 export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from './database.types';
 export { Constants as DbConstants } from './database.types';

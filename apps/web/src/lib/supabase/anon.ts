@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@tillmate/shared";
+import type { Database } from "@cultivanode/shared";
 import { supabaseEnv } from "./env";
 
 /**

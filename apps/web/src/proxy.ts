@@ -3,7 +3,7 @@ import { hasLocale, localeCookie, localeFromAcceptLanguage, type Locale } from "
 import { ADMIN_SIGN_IN } from "@/lib/admin/paths";
 import { updateSession } from "@/lib/supabase/session";
 
-// Admin console: keep the Supabase session fresh and require sign-in.
+// Admin console and the account area: keep the Supabase session fresh and require sign-in.
 // Everything else: send visitors without a language in the URL to /en/... or /yo/...
 // (the language they chose before, then their browser setting, then English).
 export async function proxy(request: NextRequest) {
@@ -12,8 +12,12 @@ export async function proxy(request: NextRequest) {
     return updateSession(request, ADMIN_SIGN_IN);
   }
 
-  const first = pathname.split("/")[1] ?? "";
-  if (hasLocale(first)) return NextResponse.next();
+  const [, first = "", section = ""] = pathname.split("/");
+  if (hasLocale(first)) {
+    // Signed-in areas: refresh the session and send signed-out visitors to that language's sign-in page.
+    if (section === "account" || section === "onboarding") return updateSession(request, `/${first}/sign-in`);
+    return NextResponse.next();
+  }
 
   const saved = request.cookies.get(localeCookie)?.value ?? "";
   const locale: Locale = hasLocale(saved) ? saved : localeFromAcceptLanguage(request.headers.get("accept-language"));

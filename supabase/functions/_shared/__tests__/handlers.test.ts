@@ -55,7 +55,7 @@ function backend(b: Backend) {
 
 const smsRuntime = (over: Partial<Runtime> = {}): Runtime => ({
   provider: 'termii', kind: 'sms', mode: 'live', implemented: true, test_only: false, missing: [],
-  config: { base_url: 'https://v3.api.termii.com', sender_id: 'Tillmate', channel: 'dnd', message_template: 'Code {code}' },
+  config: { base_url: 'https://v3.api.termii.com', sender_id: 'CultivaNode', channel: 'dnd', message_template: 'Code {code}' },
   secrets: { api_key: 'TL-key' }, ...over,
 });
 
@@ -82,7 +82,7 @@ describe('send-sms hook', () => {
     const res = await handleSendSms(await hookRequest(payload), { env, hookSecret: HOOK_SECRET, fetchFn: fn });
     expect(res.status).toBe(200);
     const sent = calls.find((c) => c.url.includes('termii'));
-    expect(sent?.body).toMatchObject({ to: '2348031234567', sms: 'Code 482913', from: 'Tillmate' });
+    expect(sent?.body).toMatchObject({ to: '2348031234567', sms: 'Code 482913', from: 'CultivaNode' });
     const logged = calls.find((c) => c.url.endsWith('/integration_events'));
     expect(logged?.body).toMatchObject({ kind: 'sms', provider: 'termii', operation: 'otp', success: true });
     expect(JSON.stringify(logged?.body)).not.toContain('2348031234567');

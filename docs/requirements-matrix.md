@@ -30,21 +30,21 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 | REQ-WEB-002 | English + Yorùbá, translation keys, extensible to pcm/ig/ha | – | – | i18n/ | ⬜ | typed dictionaries | 🟡 Yorùbá needs native review; mobile i18n in M1 |
 | REQ-WEB-003 | Marketplace waitlist and contact forms | waitlist_signups, contact_messages | join_waitlist(), send_contact_message() | forms.tsx | – | 05_website_forms, validation.test.ts | ✅ |
 | REQ-WEB-004 | No invented partners or claims | – | site.partners (empty) | partners page | – | – | ✅ |
-| REQ-ID-001 | One account per person; individual and business accounts | profiles, organizations, org_members | handle_new_user, handle_new_organization | ⬜ | ⬜ | 01_identity | 🟡 database done |
-| REQ-ID-002 | Multiple roles per account; spec role names | app_role, roles, user_roles | – | – | – | 01, 06 | 🟡 database done |
-| REQ-ID-003 | Role requests with documents, review, rejection reason, resubmission | role_requests, verification_documents, storage bucket | approve/reject/cancel_role_request, review_verification_document | ⬜ | ⬜ | 01, 06 | 🟡 database done |
+| REQ-ID-001 | One account per person; individual and business accounts | profiles (+onboarded_at), organizations, org_members | complete_onboarding() | /[lang]/onboarding | ⬜ | 01, 08 | 🟡 web done; mobile screens next |
+| REQ-ID-002 | Multiple roles per account; spec role names | app_role, roles, user_roles | parse_role_choices, before_role_request_insert (open roles only) | onboarding, /account/roles | ⬜ | 01, 06, 08 | 🟡 web done; mobile next |
+| REQ-ID-003 | Role requests with documents, review, rejection reason, resubmission | role_requests, verification_documents, storage bucket | approve (needs accepted document + min tier) / reject / cancel, review_verification_document | /account/roles (upload), /admin/approvals (signed links) | ⬜ | 01, 06, 08 | 🟡 web done; mobile next |
 | REQ-ID-004 | Sensitive roles never auto-granted | roles (check constraint) | role_is_auto_approved | – | – | 06 | ✅ |
-| REQ-ID-005 | Verification tiers 0–2, server-controlled | profiles.verification_tier, verifications, bank_accounts | recompute_verification_tier | ⬜ | ⬜ | 01 | 🟡 provider integration pending |
+| REQ-ID-005 | Verification tiers 0–2, server-controlled | profiles.verification_tier, verifications, bank_accounts | recompute_verification_tier | /account, /account/verification | ⬜ | 01, 07 | 🟡 web done; mobile next |
 | REQ-ID-006 | Tier 3 trusted provider rule | – | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ needs bookings/ratings (M4) |
-| REQ-ID-007 | Business staff with own logins, org-level RLS | org_members | org_role() | ⬜ | ⬜ | 01, 02 | 🟡 |
-| REQ-AUTH-001 | Phone OTP sign-in, resend, expiry, rate limits, logout, sessions | auth (Supabase) | send-sms hook, provider chosen in admin | admin sign-in ✅, public ⬜ | ⬜ | handlers.test.ts | 🟡 staff sign-in done; public sign-up next |
-| REQ-ID-008 | Identity provider adapters (Smile ID, Dojah, Prembly) | verifications (id_hash, name_match), bank_accounts | verify-identity; Prembly + mock adapters | ⬜ user screens | ⬜ | providers/handlers tests, 07 | 🟡 Prembly + mock done; Dojah/Smile ID listed, not built |
+| REQ-ID-007 | Business staff with own logins, org-level RLS | org_members | org_role(), add_org_member(), org_member_list() | /account/business | ⬜ | 01, 02, 08 | 🟡 web done; mobile next |
+| REQ-AUTH-001 | Phone OTP sign-in, resend, expiry, rate limits, logout, sessions | auth (Supabase) | send-sms hook, provider chosen in admin | /[lang]/sign-in, /sign-up (60 s resend timer), sign out, sign out everywhere; admin sign-in | ⬜ | handlers.test.ts | 🟡 web done; mobile + encrypted session storage next |
+| REQ-ID-008 | Identity provider adapters (Smile ID, Dojah, Prembly) | verifications (id_hash, name_match), bank_accounts | verify-identity; Prembly + mock adapters | /account/verification (consent, NIN, BVN, bank) | ⬜ | providers/handlers tests, 07 | 🟡 Prembly + mock done; Dojah/Smile ID listed, not built |
 | REQ-INT-001 | Providers switchable in admin (no hard-coding), test/live, keys encrypted | integration_* tables, Vault | admin_* functions, integration_runtime, integration-test | /admin/integrations | – | 07_integrations, unit tests | ✅ |
-| REQ-ADM-001 | Permission-based admin with 5 sub-roles | admin_roles, permissions, admin_role_permissions | has_permission() | /admin (sign-in, overview, integrations) | – | 06, 07 | 🟡 approval queue, users, audit views pending |
-| REQ-ADM-002 | Append-only audit log with old/new values, IP, user agent | audit_log, admin_actions | write_audit, record_admin_action | ⬜ | – | 01, 06 | ✅ database |
-| REQ-PRIV-001 | Consent records (NDPA), revocable | consents, current_consents | – | ⬜ sign-up screen | ⬜ | 06 | 🟡 database done |
-| REQ-PRIV-002 | Data export / deletion requests | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-AGT-001 | Assisted onboarding by field agents with farmer OTP confirmation | profiles.onboarded_by, farms.onboarded_by | policies | ⬜ | ⬜ | 02, 06 | 🟡 |
+| REQ-ADM-001 | Permission-based admin with 5 sub-roles | admin_roles, permissions, admin_role_permissions | has_permission(), admin_dashboard(), admin_grant/revoke_admin_role() | /admin: overview, approvals, users, inbox, privacy requests, audit, integrations | – | 06, 07, 08 | ✅ |
+| REQ-ADM-002 | Append-only audit log with old/new values, IP, user agent | audit_log, admin_actions | write_audit, record_admin_action | /admin/audit | – | 01, 06 | ✅ |
+| REQ-PRIV-001 | Consent records (NDPA), revocable | consents, current_consents | complete_onboarding() records them | onboarding, /account/privacy toggles | ⬜ | 06, 08 | 🟡 web done; mobile next |
+| REQ-PRIV-002 | Data export / deletion requests | data_requests | export_my_data(), request_account_deletion(), admin_resolve_data_request() | /account/privacy, /api/account/export, /admin/privacy | ⬜ | 08 | 🟡 web done; deletion itself is a manual staff step |
+| REQ-AGT-001 | Assisted onboarding by field agents with farmer OTP confirmation | agent_onboarding_codes, profiles.onboarded_by | agent-onboard Edge Function + agent_onboarding_* | /account/agent (register farmer, add their farm) | ⬜ | agent-onboard.test.ts, 08 | 🟡 web done; mobile next |
 
 ## M2 Farms and crop engine
 
@@ -121,4 +121,4 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 - **Admin is not an `app_role`:** admin powers live in `admin_roles` so they can never be self-requested.
 - **Tier 2 = NIN + BVN + verified bank account** (was NIN + BVN before the spec alignment).
 - **Providers are data, not code:** SMS/identity provider, settings and keys are managed in `/admin/integrations`; environment variables hold only platform secrets (hook secret, APP_ENV).
-- **Brand:** "Tillmate" is a working name; another company uses it for a POS app (see project notes).
+- **Brand:** CultivaNode (capital N), final name since 2026-09-26. Master tagline "Connected intelligence for agriculture"; human promise "Your farm's working partner". Code packages are `@cultivanode/*`; app ID `com.cultivanode.app`. Trademark filing with NIPO still to do.

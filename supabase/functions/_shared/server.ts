@@ -104,3 +104,28 @@ export async function rpcAsUser<T>(env: ServerEnv, authorization: string, fn: st
   if (!res.ok) throw new ServerError(`rpc ${fn} failed`, res.status);
   return (await res.json()) as T;
 }
+
+/** Like rpc(), but returns database errors (PostgREST `message`) instead of throwing, for mapping to app codes. */
+export async function rpcResult<T>(
+  env: ServerEnv,
+  fn: string,
+  args: Record<string, unknown>,
+  fetchFn: FetchFn = fetch,
+): Promise<{ ok: true; value: T } | { ok: false; status: number; message: string }> {
+  const res = await fetchFn(`${env.url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: headers(env),
+    body: JSON.stringify(args),
+  });
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    /* empty body */
+  }
+  if (!res.ok) {
+    const message = typeof (body as { message?: unknown })?.message === 'string' ? (body as { message: string }).message : '';
+    return { ok: false, status: res.status, message };
+  }
+  return { ok: true, value: body as T };
+}

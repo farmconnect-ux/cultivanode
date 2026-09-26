@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@tillmate/shared';
+import type { Database } from '@cultivanode/shared';
 import { AppState, Platform } from 'react-native';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
