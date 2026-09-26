@@ -4,7 +4,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
@@ -24,6 +24,12 @@ select ok(not has_function_privilege('anon', 'public.approve_role_request(uuid, 
   'anonymous visitors cannot call approve_role_request()');
 select ok(has_function_privilege('authenticated', 'public.nearby_listings(double precision, double precision, numeric, public.listing_kind, text, integer)', 'execute'),
   'signed-in users can still run the nearby search');
+
+-- RLS helpers live in the private schema, which the Data API does not expose.
+select ok(to_regprocedure('public.plot_farm_id(uuid)') is null and to_regprocedure('private.plot_farm_id(uuid)') is not null,
+  'plot_farm_id() moved out of the API schema');
+select ok(to_regprocedure('public.is_farmer_profile(uuid)') is null and to_regprocedure('private.is_farmer_profile(uuid)') is not null,
+  'is_farmer_profile() moved out of the API schema');
 
 -- The triggers still work after the revoke: a sign-up still creates a profile.
 insert into auth.users (id, phone) values ('99999999-0000-0000-0000-000000000009', '2348000000999');

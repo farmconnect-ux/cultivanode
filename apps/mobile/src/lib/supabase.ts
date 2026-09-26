@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@tillmate/shared';
 import { AppState, Platform } from 'react-native';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -9,7 +10,7 @@ export const supabaseConfigured = Boolean(url && key);
 
 // M0: sessions persist in AsyncStorage, following Supabase's Expo guide.
 // M1 (sign-in) switches this to encrypted storage before any real user logs in.
-export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing-key', {
+export const supabase = createClient<Database>(url ?? 'http://localhost', key ?? 'missing-key', {
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
     autoRefreshToken: true,
