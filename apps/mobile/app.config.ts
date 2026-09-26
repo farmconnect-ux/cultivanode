@@ -1,3 +1,5 @@
+// brand.ts has no imports, so Expo's config loader can read it directly.
+import { brand } from '@tillmate/shared/brand';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ExpoConfig } from 'expo/config';
@@ -12,8 +14,8 @@ const generated = (file: string) => {
 const leaf600 = '#236639'; // colors.leaf[600] in @tillmate/shared
 
 const config: ExpoConfig = {
-  name: 'Tillmate',
-  slug: 'tillmate',
+  name: brand.name,
+  slug: 'tillmate', // app IDs change only at a real rename (store listing identity)
   scheme: 'tillmate',
   version: '0.1.0',
   orientation: 'portrait',

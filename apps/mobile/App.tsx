@@ -1,4 +1,4 @@
-import { APP_NAME, colors, formatNaira, ROLE_LABELS, space } from '@tillmate/shared';
+import { brand, colors, formatNaira, ROLE_LABELS, space } from '@tillmate/shared';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -26,7 +26,7 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.brand}>
           <Text variant="title" color={colors.leaf[700]}>
-            {APP_NAME}
+            {brand.name}
           </Text>
           <Text muted>Your farm&apos;s working partner.</Text>
         </View>
