@@ -16,12 +16,28 @@
   Never change the production schema by hand; every change is a reviewed migration.
 - After a schema change: `npm run db:types:remote` and commit `packages/shared/src/database.types.ts`.
 
+## Sign-in codes and identity checks
+Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pieces are set once:
+
+1. **Edge Functions** `send-sms`, `verify-identity`, `integration-test` are deployed from
+   `supabase/functions` (`npx supabase functions deploy <name>`; `send-sms` has JWT verification off).
+2. **Auth hook:** Authentication > Auth Hooks > Send SMS hook > HTTPS, URL
+   `https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1/send-sms`, generate a secret.
+3. **Function secrets** (Edge Functions > Secrets): `SEND_SMS_HOOK_SECRET` = that secret (`v1,whsec_...`);
+   `APP_ENV` = `production` before real users (turns off the test providers).
+4. **Phone sign-in:** Authentication > Sign In / Providers > Phone: enabled.
+5. **First admin:** temporarily add your number under Phone > test phone numbers with a code of your choice,
+   sign in at `/admin/sign-in`, get `super_admin` (README), then remove the test number.
+6. In `/admin/integrations`: add the Termii sender ID and key, send a test SMS, "Use this provider";
+   add the Prembly sandbox key, run the sandbox check, "Use this provider". Switch to live when ready.
+
 ## Mobile (Android)
 - Test APK: GitHub Actions > Android build > Run workflow > download `tillmate-android-apk`.
 - Store builds: EAS (`npx eas-cli build -p android --profile production`), which manages the upload key.
 
 ## CI (GitHub Actions)
-- `ci.yml`: typecheck, lint, unit tests; database job starts local Supabase and runs pgTAP.
+- `ci.yml`: typecheck (including the Edge Functions), lint, unit tests (shared package and Edge Functions);
+  database job starts local Supabase and runs pgTAP.
 - `android.yml`: builds the test APK when mobile or shared code changes.
 
 ## Checklist before a release

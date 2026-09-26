@@ -21,8 +21,17 @@ This document describes controls that exist in the code today. Items marked **Pl
   by triggers.
 - Website forms go through SECURITY DEFINER functions with rate limits (errcode 54000) and a honeypot field.
 
+## Provider keys
+- SMS and identity provider keys are entered by staff with `integrations.manage` in the admin console and
+  stored in Supabase Vault (encrypted). Apps cannot read the key tables; the page shows only the last four
+  characters. Only Edge Functions (service role) read keys, through `integration_runtime()`.
+- The Send SMS hook checks the Standard Webhooks signature (HMAC, 5-minute window) before sending.
+- Test providers are refused when `APP_ENV=production`.
+
 ## Identity data
 - NIN/BVN: only masked values are stored (`*******4417`). Bank accounts: only the last four digits.
+- An HMAC fingerprint (pepper in Vault) detects one NIN, BVN or bank account on two profiles; the second is
+  refused as `already_linked`. ID checks need `data_processing` consent and are limited to 5 a day per person.
 - Verification documents go to the private `verification-documents` bucket, into the uploader's own
   folder; 5 MB limit; JPEG/PNG/WebP/PDF only (enforced by the bucket, a table constraint and the shared
   Zod schema). Only the owner and staff with `verification.review` can read them.
@@ -42,10 +51,12 @@ This document describes controls that exist in the code today. Items marked **Pl
 - Sentry (only when `SENTRY_DSN` is set) is configured to collect no user info, cookies, bodies or query
   strings (`src/lib/sentry-privacy.ts`). Expected user errors (validation, rate limit) are not reported.
 
-## Authentication (**Planned, M1**)
-Phone OTP through Supabase Auth with an SMS provider (Termii via Send SMS Hook). Supabase stores only
-hashed OTPs and applies rate limits and expiry. Session refresh in the web proxy; encrypted session
-storage on mobile (the current mobile client uses AsyncStorage and must not be used by real users yet).
+## Authentication
+Phone OTP through Supabase Auth; codes are delivered by the `send-sms` hook through the provider chosen in
+the admin console. Supabase stores only hashed codes and applies rate limits and expiry. The web proxy
+refreshes the session on signed-in pages (`/admin` today). **Planned (M1):** public sign-up/onboarding and
+encrypted session storage on mobile (the current mobile client uses AsyncStorage and must not be used by
+real users yet).
 
 ## Payments (**Planned, M5**)
 See PAYMENTS.md. `PAYMENT_MODE` defaults to `test`; `live` is refused outside an approved production

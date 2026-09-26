@@ -13,6 +13,7 @@ separately in `supabase/seed.sql` (local only).
 | Farms | `farms`, `plots`, `soil_records`, `farm_zones` | PostGIS geography points and polygons; area computed from the boundary. |
 | Marketplace | `listings`, `listing_rates` | Equipment type or service type; prices per hour/day/hectare/job in kobo. |
 | Website | `waitlist_signups`, `contact_messages` | Written only through rate-limited functions. |
+| Integrations | `integration_providers`, `integration_settings`, `integration_configs`, `integration_secrets`, `integration_events` | Staff-chosen SMS and identity providers; keys in Supabase Vault. No app access. See INTEGRATIONS.md. |
 
 Spec tables not yet created (they arrive with their milestone): crop catalogue, standards, plantings,
 calendar and reminders (M2); weather, inventory, farm books (M3); bookings, proofs, ratings, disputes (M4);
@@ -57,6 +58,8 @@ supports multiple memberships per person.
 | `correct_farm_zone` | `farms.correct_zone` | Staff correction of a farm's zone, with reason |
 | `nearby_listings` | signed-in | Priced, active listings whose service radius reaches the caller |
 | `join_waitlist`, `send_contact_message` | anyone | Website forms, rate-limited |
+| `admin_integration_overview`, `admin_save_integration_config`, `admin_set_integration_secret`, `admin_clear_integration_secret`, `admin_set_integration_mode`, `admin_activate_integration` | `integrations.manage` | Choose and configure providers |
+| `integration_runtime`, `record_identity_verification`, `record_bank_account_verification` | service role | Edge Functions only |
 
 ## Verification tiers
 
@@ -67,6 +70,6 @@ Tier 3 is kept only while tier 2 conditions hold. **Planned (M4):** the automati
 
 ## Tests
 
-`supabase/tests/database/*.test.sql` (pgTAP, 144 tests) cover RLS, grants, approvals, tiers, documents,
+`supabase/tests/database/*.test.sql` (pgTAP, 183 tests) cover RLS, grants, approvals, tiers, documents,
 consents, provenance, audit immutability and the nearby search. CI runs them on every push.
 Regenerate TypeScript types after a schema change: `npm run db:types:remote`.

@@ -27,8 +27,9 @@ storage on Supabase (`tillmate`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on
   Input shape rules live in `packages/shared/src/validation.ts` and are reused by web and mobile.
 - **Never trust the client** for owner, role, tier, price, commission or payment state. Those columns are
   either not granted to app roles or are overwritten by triggers.
-- **Vendor adapters.** Monitoring goes through `apps/web/src/lib/monitoring.ts`. Payment, SMS, identity,
-  weather, maps and AI providers get the same treatment when they are built (**Planned**, M1–M6).
+- **Vendor adapters.** Monitoring goes through `apps/web/src/lib/monitoring.ts`. SMS and identity providers are
+  adapters in `supabase/functions/_shared/providers`, chosen and configured by staff in the admin console
+  (INTEGRATIONS.md). Payment, weather, maps and AI providers get the same treatment (**Planned**, M3–M6).
 - **Rename-safe branding.** The product name, tagline, logo and domain come from
   `packages/shared/src/brand.ts`. "Tillmate" is a working name (see README).
 - **Enum values come from the database.** `packages/shared/src/roles.ts` re-exports the enums in the
@@ -42,6 +43,8 @@ storage on Supabase (`tillmate`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on
   database function with the publishable key, and map database errors to safe message keys.
 - Security headers and CSP: `next.config.ts`. Monitoring: `src/instrumentation*.ts` (Sentry when a DSN is set).
 - Structured, redacted server logs: `src/lib/logger.ts`.
+- Admin console under `app/admin` (own root layout, English, never indexed): staff phone sign-in, overview,
+  integrations. `src/proxy.ts` refreshes the Supabase session there and requires sign-in.
 
 ## Mobile app
 
