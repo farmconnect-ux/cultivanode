@@ -10,7 +10,7 @@
     "./brand": "./src/brand.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p ../../supabase/functions",
     "test": "vitest run"
   },
   "devDependencies": {
