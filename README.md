@@ -26,7 +26,10 @@ Status:
 - [x] `nearby_listings()` search, ported from the prototype with fixes and tests
 - [x] CI: typecheck, lint, unit tests, database tests
 - [x] Hosted Supabase project `tillmate` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1) with all migrations applied
-- [ ] M1: sign-in screens, onboarding, admin approval queue, design system
+- [x] Design system: shared tokens (`packages/shared/src/design/tokens.ts`), web components (`apps/web/src/components/ui`), mobile components (`apps/mobile/src/ui`)
+- [x] Public website in English and Yorùbá: home, how it works, about, FAQ, contact form, Marketplace waitlist
+- [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
+- [ ] M1: phone sign-in, onboarding, ID checks, admin approval queue
 
 ## Prerequisites
 
@@ -42,10 +45,10 @@ cd tillmate
 npm install
 ```
 
-Commit the `package-lock.json` that `npm install` creates:
+If `npm install` changes `package-lock.json` (for example after someone adds a dependency), commit it:
 
 ```bash
-git add package-lock.json && git commit -m "Add lockfile" && git push
+git add package-lock.json && git commit -m "Update lockfile" && git push
 ```
 
 ### Connect to the Supabase project
@@ -84,6 +87,19 @@ npm run dev:web       # http://localhost:3000
 npm run dev:mobile    # scan the QR code with Expo Go on an Android phone
 ```
 
+## Website
+
+- Routes live under `apps/web/src/app/[lang]` (`/en/...` and `/yo/...`). `src/proxy.ts` sends visitors without a language to the one they chose before (cookie), or to Yorùbá if their browser asks for it, otherwise English.
+- All copy is in `apps/web/src/i18n/dictionaries/`. `yo.ts` must have the same keys as `en.ts` (TypeScript checks it). The Yorùbá is a draft: have a native speaker review it before launch.
+- The contact form and Marketplace waitlist call the database functions `send_contact_message()` and `join_waitlist()` with the publishable key. Only support staff can read the results (tables `contact_messages`, `waitlist_signups`).
+- Optional environment variables: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CONTACT_WHATSAPP` (digits, e.g. 2348031234567), `NEXT_PUBLIC_CONTACT_PHONE`, `NEXT_PUBLIC_CONTACT_EMAIL`. Anything left blank is hidden.
+- Partner names go in `apps/web/src/config/site.ts`; the section appears once there is at least one.
+- Hero images are simple illustrations for now. Swap in real pilot-farm photos (under ~150 KB each) when you have them.
+
+## Design system
+
+Colours, type sizes, spacing and radii live in `packages/shared/src/design/tokens.ts`. The web theme in `apps/web/src/app/globals.css` mirrors them, and a unit test fails if a colour drifts or if any text colour drops below WCAG AA contrast. Body text is never below 16px and tap targets are at least 48px, for outdoor use on small Android phones.
+
 ## Tests
 
 ```bash
@@ -92,13 +108,13 @@ npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 79 permission, search and function-exposure tests
+npm run db:test       # pgTAP: 93 permission, search, website-form and function-exposure tests
 npm run db:stop
 ```
 
 ## Database design notes
 
-- **Function grants.** Supabase lets signed-in users call every new function in `public` by default. Migration `harden_function_grants` revokes that for internal and trigger functions and changes the default, so each new function must be granted explicitly. `04_function_grants.test.sql` guards it.
+- **Function grants.** Supabase lets signed-in users call every new function in `public` by default. Migration `harden_function_grants` revokes that for internal and trigger functions and changes the default, so each new function must be granted explicitly. Helpers used only by policies live in the `private` schema (`private_helpers` migration), which the API does not expose. `04_function_grants.test.sql` guards it.
 - **Row Level Security on every table.** Supabase grants broad table access by default, so each migration revokes it and grants back only what the apps need, down to individual columns. For example, a user can edit their name but not their verification tier.
 - **Roles.** A person asks for a role through `role_requests`. Farmer roles are approved instantly; machinery owner, service provider and the rest wait for a verification officer, who calls `approve_role_request()` or `reject_role_request()`. Approved roles live in `user_roles`, which apps cannot write to. Admin powers are a separate table (`admin_roles`) and can never be requested.
 - **Verification tiers.** Server code (with the service role) writes ID results to `verifications`. The tier updates automatically: NIN gives tier 1, NIN plus BVN gives tier 2. Only masked numbers are stored, never full NIN/BVN.
@@ -107,7 +123,7 @@ npm run db:stop
 - **Coordinates** go to PostGIS as EWKT, longitude first. Use `toPointEwkt()` and `toPolygonEwkt()` from `@tillmate/shared`.
 - **`nearby_listings(lat, lng, radius_km, kind, category, limit)`** returns active listings nearest first. The radius is capped at 100 km and the limit at 100. A listing only shows if the farmer is also inside that provider's own service radius.
 
-After changing the schema, regenerate TypeScript types with `npm run db:types` (needs local Supabase running).
+After changing the schema, regenerate TypeScript types with `npm run db:types` (local Supabase running) or `npm run db:types:remote` (after `supabase login`).
 
 ## Phone sign-in (SMS)
 
