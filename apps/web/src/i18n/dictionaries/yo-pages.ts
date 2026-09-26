@@ -8,29 +8,29 @@ import type { PagesDictionary } from "./en-pages";
 const yoPages: PagesDictionary = {
   howPage: {
     title: `Bí ${brand.name} ṣe ń ṣiṣẹ́`,
-    intro: "Áàpù kan fún gbogbo ènìyan lórí oko. Yan ipa rẹ láti rí àwọn ìgbésẹ̀.",
+    intro: "Áàpù kan fún gbogbo ènìyàn lórí oko. Yan ipa rẹ láti rí àwọn ìgbésẹ̀.",
     moneyTitle: "Bí a ṣe ń sanwó iṣẹ́ láìséwu",
     moneyIntro: "Tí o bá gba tírákítọ̀ tàbí òṣìṣẹ́ oko, owó rẹ wà ní ààbò ní gbogbo ìgbésẹ̀.",
     money: [
-      { title: "Ṣe ìforúkọsílẹ̀ iṣẹ́", body: "Yan olùpèsè iṣẹ́ tí a ti ṣàyẹ̀wo tí ó wà nítòsí oko rẹ, kí o sì yan ọjọ́." },
+      { title: "Ṣe ìforúkọsílẹ̀ iṣẹ́", body: "Yan olùpèsè iṣẹ́ tí a ti ṣàyẹ̀wò tí ó wà nítòsí oko rẹ, kí o sì yan ọjọ́." },
       { title: "San owó sí ibi ààbò", body: "Alábàáṣiṣẹ́ ìsanwó tí ìjọba fún ní ìwé-àṣẹ ni yóò mú owó rẹ dúró; a kò ní san án jáde lẹ́sẹ̀kẹsẹ̀." },
       { title: "A ṣe iṣẹ́ náà", body: "Olùpèsè iṣẹ́ yóò forúkọ sílẹ̀ ní oko rẹ, yóò sì fi fọ́tò pẹ̀lú ibi àti àkókò ránṣẹ́." },
       { title: "O fìdí rẹ̀ múlẹ̀", body: "O jẹ́rìí pé iṣẹ́ ti parí. Tí o kò bá dáhùn láàárín wákàtí 48, owó náà yóò lọ fúnra rẹ̀." },
       { title: "A sanwó fún olùpèsè iṣẹ́", body: "Olùpèsè iṣẹ́ yóò gba owó rẹ̀ sínú àkáǹtì báńkì rẹ̀. Ìṣòro wà? Ṣí ẹjọ́ sílẹ̀, owó náà yóò sì dúró." },
     ],
-    moneyNote: "Ìsanwó yóò bẹ̀rẹ̀ lẹ́yìn tí alábàáṣiṣẹ́ ìsanwó àti àyẹ̀wo òfin bá parí fún ìdánwò àkọ́kọ́ (pilot).",
+    moneyNote: "Ìsanwó yóò bẹ̀rẹ̀ lẹ́yìn tí alábàáṣiṣẹ́ ìsanwó àti àyẹ̀wò òfin bá parí fún ìdánwò àkọ́kọ́ (pilot).",
   },
   farmersPage: {
     badge: "Fún àwọn àgbẹ̀",
     title: "Ṣọ̀gbìn pẹ̀lú ètò, gba ìrànlọ́wọ́ láìbẹ̀rù",
-    intro: "Mọ ohun tí o máa ṣe lórí oko rẹ àti ìgbà tí o máa ṣe é, rí ìrànlọ́wọ́ nítòsí, kí o sì mọ èrè gidi ọ̀gbìn kọ̀ọkan.",
+    intro: "Mọ ohun tí o máa ṣe lórí oko rẹ àti ìgbà tí o máa ṣe é, rí ìrànlọ́wọ́ nítòsí, kí o sì mọ èrè gidi ọ̀gbìn kọ̀ọ̀kan.",
     benefitsTitle: "Ohun tí o máa rí",
     benefits: [
-      { title: "Ètò àsìkò fún irúgbìn kọ̀ọkan", body: "Láti ìmúrasilẹ̀ ilẹ̀ títí dé ìkórè, tí a ṣírò láti ọjọ́ tí o gbìn, agbègè rẹ àti àsìkò." },
-      { title: "Iye ajílẹ̀ àti oògùn fífọ́n", body: "Iye tí o máa rà àti tí o máa lò fún ìwọ̀n oko rẹ, láti inú ìlànà tí àwọn onímọ̀ ọ̀gbìn ṣàyẹ̀wo." },
+      { title: "Ètò àsìkò fún irúgbìn kọ̀ọ̀kan", body: "Láti ìmúrasílẹ̀ ilẹ̀ títí dé ìkórè, tí a ṣírò láti ọjọ́ tí o gbìn, agbègbè rẹ àti àsìkò." },
+      { title: "Iye ajílẹ̀ àti oògùn fífọ́n", body: "Iye tí o máa rà àti tí o máa lò fún ìwọ̀n oko rẹ, láti inú ìlànà tí àwọn onímọ̀ ọ̀gbìn ṣàyẹ̀wò." },
       { title: "Ojú ọjọ́ fún oko rẹ", body: "Àsọtẹ́lẹ̀ ọjọ́ 14 àti ìkìlọ̀ fún òjò ńlá, ọ̀gbẹlẹ̀, ooru àti ìjì líle." },
       { title: "Ilé ìpamọ́ rẹ", body: "Irúgbìn, ajílẹ̀ àti oògùn tó wà lọ́wọ́, pẹ̀lú ìkìlọ̀ kí wọ́n tó tán tàbí kí wọ́n tó bàjẹ́." },
-      { title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún ọ̀gbìn kọ̀ọkan, kí o lè mọ iye owó fún hẹ́kítà kan àti èrè rẹ." },
+      { title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún ọ̀gbìn kọ̀ọ̀kan, kí o lè mọ iye owó fún hẹ́kítà kan àti èrè rẹ." },
       { title: "Olùrànlọ́wọ́ oko", body: "Béèrè ní èdè Gẹ̀ẹ́sì, Pidgin tàbí Yorùbá, tàbí fi fọ́tò ohun ọ̀gbìn tí ń ṣàìsàn ránṣẹ́." },
     ],
     stepsTitle: "Bí o ṣe máa bẹ̀rẹ̀",
@@ -44,7 +44,7 @@ const yoPages: PagesDictionary = {
     typesTitle: "Ẹ̀rọ tí o lè fi sórí áàpù",
     types: [
       "Tírákítọ̀", "Ẹ̀rọ ìtúlẹ̀ (plough)", "Harrow", "Ẹ̀rọ ìgbìn (planter)", "Ẹ̀rọ ìkórè (harvester)", "Ẹ̀rọ ìfọ́n oògùn (sprayer)",
-      "Ẹ̀rọ ebè (ridger)", "Tiller", "Ohun èlò ìbomirin", "Ọkọ̀ ìkẹ́rù", "Ẹ̀rọ mìíàn",
+      "Ẹ̀rọ ebè (ridger)", "Tiller", "Ohun èlò ìbomirin", "Ọkọ̀ ìkẹ́rù", "Ẹ̀rọ mìíràn",
     ],
     benefitsTitle: "Ìdí tí o fi máa darapọ̀ mọ́ wa",
     benefits: [
@@ -57,14 +57,14 @@ const yoPages: PagesDictionary = {
     requirementsTitle: "Ohun tí o nílò",
     requirements: [
       "Nọ́ńbà fóònù fún wíwọlé",
-      "NIN, BVN àti àkáǹtì báńkì ní orúkọ rẹ (a máa ṣàyẹ̀wo wọn kí o tó lè fi ẹ̀rọ sórí áàpù tàbí gba owó)",
+      "NIN, BVN àti àkáǹtì báńkì ní orúkọ rẹ (a máa ṣàyẹ̀wò wọn kí o tó lè fi ẹ̀rọ sórí áàpù tàbí gba owó)",
       "Ẹ̀rí pé ìwọ ni o ni ẹ̀rọ náà tàbí pé ìwọ ni ò ń bójú tó o",
     ],
   },
   providersPage: {
     badge: "Fún àwọn olùpèsè iṣẹ́",
     title: "Rí iṣẹ́ oko nítòsí rẹ",
-    intro: "Òṣìṣẹ́ oko, awakọ̀ ẹ̀rọ, afọ́n oògùn, mẹkáníìkì, onímọ̀ ọ̀gbìn àti aṣojú ìmọ̀ ọ̀gbìn: kọ́ orúkọ rere pẹ̀lú iṣẹ́ kọ̀ọkan.",
+    intro: "Òṣìṣẹ́ oko, awakọ̀ ẹ̀rọ, afọ́n oògùn, mẹkáníìkì, onímọ̀ ọ̀gbìn àti aṣojú ìmọ̀ ọ̀gbìn: kọ́ orúkọ rere pẹ̀lú iṣẹ́ kọ̀ọ̀kan.",
     typesTitle: "Iṣẹ́ tí o lè ṣe",
     types: [
       "Òṣìṣẹ́ oko", "Awakọ̀ ẹ̀rọ", "Mẹkáníìkì", "Iṣẹ́ fífọ́n oògùn", "Onímọ̀ ọ̀gbìn", "Aṣojú ìmọ̀ ọ̀gbìn", "Dókítà ẹranko", "Olùṣe ohun ọ̀gbìn",
@@ -91,26 +91,26 @@ const yoPages: PagesDictionary = {
     seasons: [
       { title: "Àsìkò òjò àkọ́kọ́", body: "Ọ̀gbìn àkọ́kọ́ láti ìgbà tí òjò bá bẹ̀rẹ̀ dáadáa, láti bí oṣù Ẹrẹ̀nà (March) sí Agẹmọ (July)." },
       { title: "Àsìkò òjò ìkẹyìn", body: "Ọ̀gbìn kejì láti bí oṣù Ògún (August) sí Bélú (November)." },
-      { title: "Ìgbà ẹ̀rùn (pẹ̀lú ìbomirin)", body: "Ẹ̀fọ́ àti àwọn irúgbìn mìíàn tí a ń bomi rin láti bí oṣù Bélú (November) sí Ẹrẹ̀nà (March)." },
+      { title: "Ìgbà ẹ̀rùn (pẹ̀lú ìbomirin)", body: "Ẹ̀fọ́ àti àwọn irúgbìn mìíràn tí a ń bomi rin láti bí oṣù Bélú (November) sí Ẹrẹ̀nà (March)." },
     ],
-    zonesTitle: "Agbègè ọ̀gbìn méjì",
+    zonesTitle: "Agbègbè ọ̀gbìn méjì",
     zones: [
-      { title: "Agbègè igbó", body: "Agbègè igbó tí ó tutù: ọ̀pọ̀ nínú Ògùn, Oǹdó, Ọ̀ṣun, Èkìtì, gúúsù Ọ̀yọ́ àti Èkó." },
-      { title: "Agbègè ọ̀dàn (derived savanna)", body: "Agbègè ààlà tí ó gbẹ díẹ̀: àríwá Ọ̀yọ́, àríwá Ògùn àti apá kan Ọ̀ṣun àti Èkìtì." },
+      { title: "Agbègbè igbó", body: "Agbègbè igbó tí ó tutù: ọ̀pọ̀ nínú Ògùn, Oǹdó, Ọ̀ṣun, Èkìtì, gúúsù Ọ̀yọ́ àti Èkó." },
+      { title: "Agbègbè ọ̀dàn (derived savanna)", body: "Agbègbè ààlà tí ó gbẹ díẹ̀: àríwá Ọ̀yọ́, àríwá Ògùn àti apá kan Ọ̀ṣun àti Èkìtì." },
     ],
     standardsTitle: "Ìmọ̀ràn tí o lè tọpinpin",
     standardsBody:
-      "Gbogbo ètò àti iye ajílẹ̀ tàbí oògùn wá láti inú ìlànà tí a kọ sílẹ̀ fún irúgbìn, agbègè àti àsìkò yẹn, tí àwọn onímọ̀ ọ̀gbìn ṣàyẹ̀wo tí wọ́n sì fọwọ́ sí. Áàpù máa ń fi ìlànà tí ó lò hàn, kí ìwọ àti aṣojú ìmọ̀ ọ̀gbìn rẹ lè ṣàyẹ̀wo rẹ̀.",
+      "Gbogbo ètò àti iye ajílẹ̀ tàbí oògùn wá láti inú ìlànà tí a kọ sílẹ̀ fún irúgbìn, agbègbè àti àsìkò yẹn, tí àwọn onímọ̀ ọ̀gbìn ṣàyẹ̀wò tí wọ́n sì fọwọ́ sí. Áàpù máa ń fi ìlànà tí ó lò hàn, kí ìwọ àti aṣojú ìmọ̀ ọ̀gbìn rẹ lè ṣàyẹ̀wò rẹ̀.",
   },
   partnersPage: {
     title: "Bá wa ṣiṣẹ́ pọ̀",
-    intro: "A ń bá àwọn àjọ tí ń sin àgbẹ̀ ṣiṣẹ́. Papọ̀, a lè dé ọ̀pọ̀ oko pẹ̀lú ìmọ̀ràn rere, gígba iṣẹ́ lọ́nà tó tọ́ àti àkọsílẹ̀ tó dára.",
+    intro: "A ń bá àwọn àjọ tí ń sin àgbẹ̀ ṣiṣẹ́. Papọ̀, a lè dé ọ̀pọ̀ oko pẹ̀lú ìmọ̀ràn rere, gbígba iṣẹ́ lọ́nà tó tọ́ àti àkọsílẹ̀ tó dára.",
     typesTitle: "Àwọn tí a ń bá ṣiṣẹ́",
     types: [
       { title: "Àwọn ẹgbẹ́ àjùmọ̀ṣe àti ẹgbẹ́ àgbẹ̀", body: "Forúkọ àwọn ọmọ ẹgbẹ́ sílẹ̀, ṣètò papọ̀, kí ẹ sì gba ẹ̀rọ fún ẹgbẹ́." },
       { title: "Ìjọba àti ADP", body: "Ìrànlọ́wọ́ ìmọ̀ ọ̀gbìn, ìforúkọsílẹ̀ àgbẹ̀ àti ṣíṣe àwọn ètò ìjọba." },
       { title: "Ilé ìwádìí àti ilé ẹ̀kọ́", body: "Ìlànà ọ̀gbìn, kàlẹ́ńdà irúgbìn àti ẹ̀kọ́." },
-      { title: "Ilé iṣẹ́ ohun èlò àti ẹ̀rọ oko", body: "Ọjà àti iṣẹ́ tí a lè gbẹ́kẹ̀lé fún àwọn àgbẹ̀ ní agbègè ìdánwò." },
+      { title: "Ilé iṣẹ́ ohun èlò àti ẹ̀rọ oko", body: "Ọjà àti iṣẹ́ tí a lè gbẹ́kẹ̀lé fún àwọn àgbẹ̀ ní agbègbè ìdánwò." },
       { title: "Àwọn alábàáṣiṣẹ́ ìdàgbàsókè àti NGO", body: "Àwọn ètò tí ó ń dé ọ̀dọ̀ àwọn àgbẹ̀ kéékèèké." },
     ],
     currentTitle: "Àwọn alábàáṣiṣẹ́ wa",
@@ -124,26 +124,26 @@ const yoPages: PagesDictionary = {
     intro: `Jẹ́ ẹni àkọ́kọ́ tí yóò gbọ́ nígbà tí Ọjà ${brand.name} bá ṣí sílẹ̀ fún rírà àti títà èso oko, irúgbìn àti ohun èlò oko.`,
   },
   legal: {
-    draftNotice: "Àkọsílẹ̀ fún ìdánwò àkọ́kọ́ (pilot). Àwọn agbẹjọ́rò wa ń ṣàyẹ̀wo ìwé yìí, ó sì lè yípadà kí a tó ṣí sílẹ̀ fún gbogbo ènìyan.",
+    draftNotice: "Àkọsílẹ̀ fún ìdánwò àkọ́kọ́ (pilot). Àwọn agbẹjọ́rò wa ń ṣàyẹ̀wò ìwé yìí, ó sì lè yípadà kí a tó ṣí sílẹ̀ fún gbogbo ènìyàn.",
     versionLabel: "Ẹ̀dà",
     updatedLabel: "Àtúnṣe ìkẹyìn",
     contactLine: "Ìbéèrè nípa ìwé yìí? Kàn sí wa láti ojú-ìwé ìkànsí.",
     privacy: {
       title: "Ìlànà àṣírí",
-      intro: `Bí ${brand.name} ṣe ń gba, ń lò, tí ó sì ń dáàbò bo àlàyé rẹ, ní ìbámu pẹ̀lú Òfin Ìdáàbòbo Dátà Nàìjíríà 2023.`,
+      intro: `Bí ${brand.name} ṣe ń gba, ń lò, tí ó sì ń dáàbò bo àlàyé rẹ, ní ìbámu pẹ̀lú Òfin Ìdáàbòbò Dátà Nàìjíríà 2023.`,
       sections: [
         {
           heading: "Ta ni wá",
           body: [
-            `${brand.name} jẹ́ ìkànnì ìṣàkóso oko àti gígba iṣẹ́ tí a ń dánwò ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà. "${brand.name}" jẹ́ orúkọ ìgbà díẹ̀. A máa kọ orúkọ ilé iṣẹ́ tí ó ní ojúṣe fún dátà rẹ síbí kí a tó ṣí sílẹ̀.`,
+            `${brand.name} jẹ́ ìkànnì ìṣàkóso oko àti gbígba iṣẹ́ tí a ń dánwò ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà. "${brand.name}" jẹ́ orúkọ ìgbà díẹ̀. A máa kọ orúkọ ilé iṣẹ́ tí ó ní ojúṣe fún dátà rẹ síbí kí a tó ṣí sílẹ̀.`,
           ],
         },
         {
           heading: "Ohun tí a ń gbà",
           body: [
             "Àlàyé àkáǹtì: nọ́ńbà fóònù rẹ, orúkọ, èdè tí o fẹ́, ìpínlẹ̀ àti ìjọba ìbílẹ̀, àti ímeèlì tí o bá fún wa.",
-            "Àkọsílẹ̀ oko: ibi tí oko wà àti ààlà rẹ̀, àwọn ìpín oko, àyẹ̀wo ilẹ̀, ọ̀gbìn, iṣẹ́ tí a ṣe, ọjà ní ìpamọ́, ìnáwó àti owó títà.",
-            "Ìjẹ́rìí: èsì àyẹ̀wo NIN, BVN àti CAC. A máa ń tọ́jú nọ́ńbà tí a ti bò nìkan (fún àpẹẹrẹ *******4417), kì í ṣe gbogbo nọ́ńbà. Fún ìsanwó, a máa ń tọ́jú orúkọ báńkì, orúkọ àkáǹtì àti nọ́ńbà mẹ́rin ìkẹyìn àkáǹtì.",
+            "Àkọsílẹ̀ oko: ibi tí oko wà àti ààlà rẹ̀, àwọn ìpín oko, àyẹ̀wò ilẹ̀, ọ̀gbìn, iṣẹ́ tí a ṣe, ọjà ní ìpamọ́, ìnáwó àti owó títà.",
+            "Ìjẹ́rìí: èsì àyẹ̀wò NIN, BVN àti CAC. A máa ń tọ́jú nọ́ńbà tí a ti bò nìkan (fún àpẹẹrẹ *******4417), kì í ṣe gbogbo nọ́ńbà. Fún ìsanwó, a máa ń tọ́jú orúkọ báńkì, orúkọ àkáǹtì àti nọ́ńbà mẹ́rin ìkẹyìn àkáǹtì.",
             "Ìwé àti fọ́tò tí o fi ránṣẹ́, bí ẹ̀rí pé o ni ẹ̀rọ tàbí fọ́tò irúgbìn àti iṣẹ́ tí a parí.",
             "Àwọn ìfiránṣẹ́ tí o fi ránṣẹ́ sí wa, àti dátà ìmọ̀-ẹ̀rọ bí irú ẹ̀rọ tí o ń lò àti ìjábọ̀ àṣìṣe.",
           ],
@@ -151,8 +151,8 @@ const yoPages: PagesDictionary = {
         {
           heading: "Ìdí tí a fi ń lò ó",
           body: [
-            "Láti pèsè iṣẹ́ tí o forúkọ sílẹ̀ fún: ètò, ìránnilétí, ojú ọjọ́, àkọsílẹ̀, gígba iṣẹ́ àti ìsanwó.",
-            "Láti ṣàyẹ̀wo ìdánimọ̀ àti láti dènà jìbìtì, àti láti tẹ̀lé òfin àti ohun tí alábàáṣiṣẹ́ ìsanwó béèrè.",
+            "Láti pèsè iṣẹ́ tí o forúkọ sílẹ̀ fún: ètò, ìránnilétí, ojú ọjọ́, àkọsílẹ̀, gbígba iṣẹ́ àti ìsanwó.",
+            "Láti ṣàyẹ̀wò ìdánimọ̀ àti láti dènà jìbìtì, àti láti tẹ̀lé òfin àti ohun tí alábàáṣiṣẹ́ ìsanwó béèrè.",
             "Láti mú áàpù dára sí i àti láti tún àwọn ìṣòro ṣe.",
             "Láti fi ìròyìn tàbí àǹfààní ránṣẹ́ sí ọ, tí o bá gbà nìkan. O lè yí ọkàn rẹ padà nígbàkúgbà.",
           ],
@@ -160,7 +160,7 @@ const yoPages: PagesDictionary = {
         {
           heading: "Àwọn tí a ń pín in pẹ̀lú",
           body: [
-            "Àwọn ilé iṣẹ́ tí ó ń ràn wá lọ́wọ́ láti ṣiṣẹ́, lábẹ́ àdéhùn: ibi ìpamọ́ dátà lórí ayélujára, fífi SMS ránṣẹ́, àyẹ̀wo ìdánimọ̀ àti àwọn alábàáṣiṣẹ́ ìsanwó tí ó ní ìwé-àṣẹ.",
+            "Àwọn ilé iṣẹ́ tí ó ń ràn wá lọ́wọ́ láti ṣiṣẹ́, lábẹ́ àdéhùn: ibi ìpamọ́ dátà lórí ayélujára, fífi SMS ránṣẹ́, àyẹ̀wò ìdánimọ̀ àti àwọn alábàáṣiṣẹ́ ìsanwó tí ó ní ìwé-àṣẹ.",
             "Ẹnìkejì nínú iṣẹ́ kan yóò rí ohun tí iṣẹ́ náà nílò nìkan, bí orúkọ rẹ, ibi tí oko wà àti ọjọ́.",
             "A kì yóò pín àkọsílẹ̀ oko rẹ pẹ̀lú àwọn ayánilówó, olùrà, olùdókòwò tàbí alábàáṣiṣẹ́ láìsí àṣẹ tí ó ṣe kedere láti ọ̀dọ̀ rẹ, o sì lè gba àṣẹ yẹn padà nígbàkúgbà.",
             "Àwọn aláṣẹ ìjọba, nígbà tí òfin bá béèrè nìkan.",
@@ -169,7 +169,7 @@ const yoPages: PagesDictionary = {
         {
           heading: "Ibi tí a ń tọ́jú rẹ̀ àti fún ìgbà tí ó pẹ́ tó",
           body: [
-            "Olùpèsè ìpamọ́ dátà wa ń tọ́jú ibi ìpamọ́ dátà wa ní Ìṣọ̀kan Yúróòpù (Ireland), pẹ̀lú ààbò tí òfin Nàìjíríà béèrè fún gígbé dátà lọ sí òkèèrè.",
+            "Olùpèsè ìpamọ́ dátà wa ń tọ́jú ibi ìpamọ́ dátà wa ní Ìṣọ̀kan Yúróòpù (Ireland), pẹ̀lú ààbò tí òfin Nàìjíríà béèrè fún gbígbé dátà lọ sí òkèèrè.",
             "A máa ń tọ́jú àkáǹtì àti àkọsílẹ̀ oko rẹ nígbà tí àkáǹtì rẹ bá wà ní ṣíṣí. A máa ń tọ́jú àkọsílẹ̀ ìsanwó àti ìṣirò owó fún ìgbà tí òfin béèrè, a kò sì lè pa wọ́n rẹ́ ṣáájú ìgbà náà.",
           ],
         },
@@ -177,7 +177,7 @@ const yoPages: PagesDictionary = {
           heading: "Ẹ̀tọ́ rẹ",
           body: [
             "O lè béèrè láti rí, ṣàtúnṣe, gbà sílẹ̀ tàbí pa àlàyé rẹ rẹ́, gba àṣẹ padà, tàbí takò bí a ṣe ń lò ó. Kàn sí wa, a ó sì dáhùn láàárín àkókò tí òfin fàyè gbà.",
-            "O tún lè fi ẹ̀sùn sùn Àjọ Ìdáàbòbo Dátà Nàìjíríà (NDPC).",
+            "O tún lè fi ẹ̀sùn sùn Àjọ Ìdáàbòbò Dátà Nàìjíríà (NDPC).",
           ],
         },
         {
@@ -209,21 +209,21 @@ const yoPages: PagesDictionary = {
         {
           heading: "Àkáǹtì rẹ",
           body: [
-            "Wọlé pẹ̀lú nọ́ńbà fóònù tìrẹ, kí o sì pa àwọn kóòdù ìgbà-kan mọ́ ní àṣírí. Ènìyan kan tàbí ilé iṣẹ́ kan ní àkáǹtì kan.",
-            "Òṣìṣẹ́ ilé iṣẹ́ kọ̀ọkan máa ń lo ìwọlé tirẹ̀; má ṣe pín ìwọlé.",
-            "Fún wa ní àlàyé òtítọ́. A máa ń fọwọ́ sí ipa bí olùní ẹ̀rọ tàbí olùpèsè iṣẹ́ lẹ́yìn àyẹ̀wo nìkan.",
+            "Wọlé pẹ̀lú nọ́ńbà fóònù tìrẹ, kí o sì pa àwọn kóòdù ìgbà-kan mọ́ ní àṣírí. Ènìyàn kan tàbí ilé iṣẹ́ kan ní àkáǹtì kan.",
+            "Òṣìṣẹ́ ilé iṣẹ́ kọ̀ọ̀kan máa ń lo ìwọlé tirẹ̀; má ṣe pín ìwọlé.",
+            "Fún wa ní àlàyé òtítọ́. A máa ń fọwọ́ sí ipa bí olùní ẹ̀rọ tàbí olùpèsè iṣẹ́ lẹ́yìn àyẹ̀wò nìkan.",
           ],
         },
         {
           heading: "Ìmọ̀ràn oko",
           body: [
-            "Àwọn ètò àti iye ajílẹ̀ tàbí oògùn wá láti inú ìlànà fún irúgbìn, agbègè àti àsìkò rẹ, ṣùgbọ́n oko kọ̀ọkan yàtọ̀. Lò wọ́n gẹ́gẹ́ bí ìtọsọ́nà, kí o sì bá onímọ̀ ọ̀gbìn tàbí aṣojú ìmọ̀ ọ̀gbìn sọ̀rọ̀ nígbà tí o kò bá dá ọ lójú.",
-            "Máa tẹ̀lé ìtọnì orí àpò ọjà àti ìlànà ààbò nígbà gbogbo tí o bá ń lo oògùn oko.",
+            "Àwọn ètò àti iye ajílẹ̀ tàbí oògùn wá láti inú ìlànà fún irúgbìn, agbègbè àti àsìkò rẹ, ṣùgbọ́n oko kọ̀ọ̀kan yàtọ̀. Lò wọ́n gẹ́gẹ́ bí ìtọ́sọ́nà, kí o sì bá onímọ̀ ọ̀gbìn tàbí aṣojú ìmọ̀ ọ̀gbìn sọ̀rọ̀ nígbà tí o kò bá dá ọ lójú.",
+            "Máa tẹ̀lé ìtọ́ni orí àpò ọjà àti ìlànà ààbò nígbà gbogbo tí o bá ń lo oògùn oko.",
             "Olùrànlọ́wọ́ oko lè ṣàṣìṣe. Ìdámọ̀ àìsàn láti fọ́tò máa ń fi bí ó ṣe dá a lójú tó hàn, kì í sì í ṣe ìdámọ̀ ọ̀jọ̀gbọ́n.",
           ],
         },
         {
-          heading: "Gígba iṣẹ́ àti ìsanwó",
+          heading: "Gbígba iṣẹ́ àti ìsanwó",
           body: [
             "Alábàáṣiṣẹ́ ìsanwó tí ó ní ìwé-àṣẹ ló ń bójú tó ìsanwó. A máa ń mú owó iṣẹ́ kan dúró títí a ó fi fìdí iṣẹ́ múlẹ̀, tàbí a máa tú u sílẹ̀ ní wákàtí 48 lẹ́yìn ẹ̀rí iṣẹ́ tí àgbẹ̀ kò bá dáhùn.",
             "A máa ń fi owó ìfagilé àti kọ́míṣọ̀n wa hàn kí o tó gba iṣẹ́ tàbí kí o tó gba ẹni. A máa ń yọ kọ́míṣọ̀n láti inú owó olùpèsè iṣẹ́.",
@@ -233,7 +233,7 @@ const yoPages: PagesDictionary = {
         {
           heading: "Lílò tó tọ́",
           body: [
-            "Má ṣe fún wa ní àlàyé èké, má ṣe ṣẹ̀dá iṣẹ́ tàbí ìdíyelé èké, má ṣe dààmú àwọn olùlò mìíàn, má sì ṣe gbìyànjú láti yẹra fún ìsanwó tàbí ààbò.",
+            "Má ṣe fún wa ní àlàyé èké, má ṣe ṣẹ̀dá iṣẹ́ tàbí ìdíyelé èké, má ṣe dààmú àwọn olùlò mìíràn, má sì ṣe gbìyànjú láti yẹra fún ìsanwó tàbí ààbò.",
             "A lè dá àkáǹtì tí ó bá rú àwọn òfin yìí dúró tàbí pa á, a ó sì sọ ìdí rẹ̀ fún ọ.",
           ],
         },
@@ -245,7 +245,7 @@ const yoPages: PagesDictionary = {
         },
         {
           heading: "Òfin àti ìkànsí",
-          body: ["Òfin Orílẹ̀-èdè Olómìnira Àpapò Nàìjíríà ló ń darí àwọn òfin yìí."],
+          body: ["Òfin Orílẹ̀-èdè Olómìnira Àpapọ̀ Nàìjíríà ló ń darí àwọn òfin yìí."],
         },
       ],
     },

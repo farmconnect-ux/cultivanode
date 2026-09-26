@@ -51,7 +51,7 @@ const yo: Dictionary = {
     slides: [
       {
         title: "Mọ ohun tí o máa ṣe, àti ìgbà tí o máa ṣe é",
-        body: "Ètò àsìkò fún ohun ọ̀gbìn rẹ: ìmúra ilẹ̀, gígbìn, ìpalẹ̀mọ́ koríko, ajílẹ̀, fífín oògùn àti ìkórè, pẹ̀lú ìránnilétí.",
+        body: "Ètò àsìkò fún ohun ọ̀gbìn rẹ: ìmúra ilẹ̀, gbígbìn, ìpalẹ̀mọ́ koríko, ajílẹ̀, fífín oògùn àti ìkórè, pẹ̀lú ìránnilétí.",
       },
       {
         title: "Gba tírákítọ̀ nítòsí rẹ",
@@ -59,7 +59,7 @@ const yo: Dictionary = {
       },
       {
         title: "Rí èrè rẹ, àsìkò dé àsìkò",
-        body: "Gbogbo ìnáwó àti owó títà wà ní ibì kan, kí o lè mọ iye tí ọ̀gbìn kọ̀ọkan mú wọlé ní tòótọ́.",
+        body: "Gbogbo ìnáwó àti owó títà wà ní ibì kan, kí o lè mọ iye tí ọ̀gbìn kọ̀ọ̀kan mú wọlé ní tòótọ́.",
       },
     ],
     carouselLabel: `Ohun tí ${brand.name} ń ṣe`,
@@ -73,15 +73,15 @@ const yo: Dictionary = {
     features: [
       { title: "Kàlẹ́ńdà ọ̀gbìn", body: "Ètò ìgbésẹ̀-sí-ìgbésẹ̀ fún ohun ọ̀gbìn mẹ́ẹ̀ẹ́dógún tí a sábà máa ń gbìn ní Gúúsù-Ìwọ̀ Oòrùn, fún àsìkò òjò méjèèjì àti ẹ̀fọ́ ìgbà ẹ̀rùn." },
       { title: "Ètò ajílẹ̀ àti oògùn", body: "Iye tí o máa lò, ìgbà tí o máa lò ó, àti irú ọjà wo, gẹ́gẹ́ bí ìmọ̀ràn àwọn amòye iṣẹ́ àgbẹ̀." },
-      { title: "Gba òṣìṣẹ́ láìbẹ̀rù", body: "Àwọn onímọ́tò ẹ̀rọ oko àti òṣìṣẹ́ tí a ti ṣàyẹ̀wo. Owó rẹ yóò wà ní ìpamọ́, a ó sì san án nígbà tí o bá fọwọ́ sí i pé iṣẹ́ ti parí." },
+      { title: "Gba òṣìṣẹ́ láìbẹ̀rù", body: "Àwọn onímọ́tò ẹ̀rọ oko àti òṣìṣẹ́ tí a ti ṣàyẹ̀wò. Owó rẹ yóò wà ní ìpamọ́, a ó sì san án nígbà tí o bá fọwọ́ sí i pé iṣẹ́ ti parí." },
       { title: "Ojú ọjọ́ fún oko rẹ", body: "Àsọtẹ́lẹ̀ ọjọ́ mẹ́rìnlá fún ibi tí oko rẹ wà, pẹ̀lú ìkìlọ̀ fún òjò ńlá, ọ̀gbẹlẹ̀ àti afẹ́fẹ́ líle." },
       { title: "Ìṣúra àti ohun èlò", body: "Tọpinpin irúgbìn, ajílẹ̀ àti oògùn oko. Gba ìkìlọ̀ kí ọjà tó tán tàbí kí ó tó bàjẹ́." },
-      { title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún oko kọ̀ọkan àti ọ̀gbìn kọ̀ọkan, pẹ̀lú ìròyìn tó rọrùn tí o lè gbà sílẹ̀." },
+      { title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún oko kọ̀ọ̀kan àti ọ̀gbìn kọ̀ọ̀kan, pẹ̀lú ìròyìn tó rọrùn tí o lè gbà sílẹ̀." },
       { title: "Olùrànlọ́wọ́ oko", body: "Béèrè ìbéèrè tàbí fi àwòrán ewéko tó ń ṣàìsàn ránṣẹ́, ní èdè Gẹ̀ẹ́sì, Pidgin tàbí Yorùbá." },
       { title: "Ó ń ṣiṣẹ́ níbi tí nẹ́tíwọ́ọ̀kì kò ti dára", body: "Kọ iṣẹ́ rẹ sílẹ̀ láìsí íńtánẹ́ẹ̀tì. Yóò wọ inú àkọọ́lẹ̀ rẹ nígbà tí nẹ́tíwọ́ọ̀kì bá padà." },
     ],
     howEyebrow: "Bí ó ṣe ń ṣiṣẹ́",
-    howTitle: "A ṣe é fún gbogbo ènìyan tó ń ṣiṣẹ́ oko",
+    howTitle: "A ṣe é fún gbogbo ènìyàn tó ń ṣiṣẹ́ oko",
     howIntro: "Àkọọ́lẹ̀ kan lè ní ju ipa kan lọ. Àgbẹ̀ tí ó tún ní tírákítọ̀ lè ṣe méjèèjì.",
     audiences: [
       {
@@ -138,7 +138,7 @@ const yo: Dictionary = {
     trustEyebrow: "Ààbò lákọ̀ọ́kọ́",
     trustTitle: "A kọ́ ọ lórí ìgbẹ́kẹ̀lé",
     trust: [
-      { title: "Àwọn ènìyan tí a ti ṣàyẹ̀wo", body: "A ń ṣàyẹ̀wo NIN, BVN àti àkọọ́lẹ̀ báńkì gbogbo ẹni tí ó bá ń ṣe àkọsílẹ̀ ẹ̀rọ tàbí tí ó ń gba owó." },
+      { title: "Àwọn ènìyàn tí a ti ṣàyẹ̀wò", body: "A ń ṣàyẹ̀wò NIN, BVN àti àkọọ́lẹ̀ báńkì gbogbo ẹni tí ó bá ń ṣe àkọsílẹ̀ ẹ̀rọ tàbí tí ó ń gba owó." },
       { title: "Owó wà ní ìpamọ́", body: "Ilé-iṣẹ́ ìsanwó tí ìjọba fún ní ìwé-àṣẹ ni yóò pa owó rẹ mọ́, a kò sì ní san án títí o fi fọwọ́ sí i pé iṣẹ́ ti parí." },
       { title: "Ẹ̀rí iṣẹ́", body: "Olùpèsè iṣẹ́ yóò forúkọ wọlé ní oko rẹ, yóò sì fi àwòrán tí ó ní ibi àti àkókò ránṣẹ́." },
       { title: "Ìdíyelé òtítọ́", body: "Iṣẹ́ tí a ti parí tí a sì ti sanwó fún nìkan ni a lè fún ní ìdíyelé, láti ẹ̀gbẹ́ méjèèjì." },
@@ -146,7 +146,7 @@ const yo: Dictionary = {
     partnersTitle: "Àwọn alábàáṣiṣẹ́ wa",
     pilotTitle: "Ṣé o ń dáko ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì tàbí Èkó?",
     pilotBody:
-      "A ń bẹ̀rẹ̀ pẹ̀lú ìdánwò ní àwọn agbègè àgbẹ̀ kan. Darapọ̀ mọ́ wa ní kùtùkùtù láti ràn wá lọ́wọ́ láti ṣe áàpù náà, kí o sì gba ìrànlọ́wọ́ látọ̀dọ̀ àwọn aṣojú wa.",
+      "A ń bẹ̀rẹ̀ pẹ̀lú ìdánwò ní àwọn agbègbè àgbẹ̀ kan. Darapọ̀ mọ́ wa ní kùtùkùtù láti ràn wá lọ́wọ́ láti ṣe áàpù náà, kí o sì gba ìrànlọ́wọ́ látọ̀dọ̀ àwọn aṣojú wa.",
     pilotCta: "Darapọ̀ mọ́ ìdánwò",
     pilotSecondary: "Bá wa sọ̀rọ̀",
   },
@@ -154,21 +154,21 @@ const yo: Dictionary = {
     title: `Nípa ${brand.name}`,
     intro:
       `${brand.name} ń ran àwọn àgbẹ̀ kéékèèké àti àwọn àgbẹ̀ oníṣòwò lọ́wọ́ láti ṣètò dáradára, láti rí ìrànlọ́wọ́ tó tọ́ ní owó tó tọ́, àti láti mọ iye tí oko wọn ń mú wọlé ní tòótọ́.`,
-    nameTitle: "Kí nìdí orúkọ yìsí?",
+    nameTitle: "Kí nìdí orúkọ yìí?",
     nameBody: `“Till” túmọ̀ sí láti ro ilẹ̀. “Mate” túmọ̀ sí ọ̀rẹ́ tàbí ẹlẹgbẹ́. ${brand.name} ni alábàáṣiṣẹ́ tí ó ń bá ọ ṣiṣẹ́ ní gbogbo àsìkò.`,
     whyTitle: "Ìdí tí a fi ń kọ́ ọ",
     whyBody: [
       "Ọ̀pọ̀ àgbẹ̀ ló ń pàdánù èso nítorí pé tírákítọ̀ pẹ́ dé, wọ́n lo ajílẹ̀ tí kò tọ́, tàbí òjò wẹ oògùn tí wọ́n fín lọ. Ìmọ̀ràn rere àti ìrànlọ́wọ́ tí a lè gbẹ́kẹ̀lé kò rọrùn láti rí ní àkókò tó yẹ.",
       "Àwọn onímọ́tò ẹ̀rọ oko àti àwọn òṣìṣẹ́ oko náà ń jìyà: iṣẹ́ fọ́n káàkiri, ìrìnàjò wọ́n, owó iṣẹ́ kì í sì í dájú nígbà gbogbo.",
-      `${brand.name} ń mú àwọn àgbẹ̀, ẹ̀rọ oko àti àwọn òṣìṣẹ́ onímọ̀ papọ̀, pẹ̀lú ètò àti àkọsílẹ̀ tí yóò jẹ́ kí àsìkò kọ̀ọkan rọrùn láti mọ̀ tẹ́lẹ̀.`,
+      `${brand.name} ń mú àwọn àgbẹ̀, ẹ̀rọ oko àti àwọn òṣìṣẹ́ onímọ̀ papọ̀, pẹ̀lú ètò àti àkọsílẹ̀ tí yóò jẹ́ kí àsìkò kọ̀ọ̀kan rọrùn láti mọ̀ tẹ́lẹ̀.`,
     ],
     pilotTitle: "A ń bẹ̀rẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn",
     pilotBody:
-      "Ìdánwò wa ń lọ pẹ̀lú àwọn agbègè àgbẹ̀ ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì àti Èkó, ní agbègè igbó àti agbègè ọ̀dàn. Àwọn aṣojú wa ń ran àwọn àgbẹ̀ lọ́wọ́ láti bẹ̀rẹ̀, kódà bí wọn kò bá ní fóònù alágbèéká ìgbàlódé.",
+      "Ìdánwò wa ń lọ pẹ̀lú àwọn agbègbè àgbẹ̀ ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì àti Èkó, ní agbègbè igbó àti agbègbè ọ̀dàn. Àwọn aṣojú wa ń ran àwọn àgbẹ̀ lọ́wọ́ láti bẹ̀rẹ̀, kódà bí wọn kò bá ní fóònù alágbèéká ìgbàlódé.",
     valuesTitle: "Ohun tí a dúró fún",
     values: [
       { title: "Àgbẹ̀ lákọ̀ọ́kọ́", body: "Gbogbo ohun tí a bá ṣe gbọ́dọ̀ fi àkókò tàbí owó pamọ́ fún àgbẹ̀." },
-      { title: "Òdodo fún gbogbo ènìyan", body: "Iye owó tó ṣe kedere, òfin tó ṣe kedere, àti owó tí ó dé ọ̀dọ̀ àwọn tí ó ṣe iṣẹ́ náà." },
+      { title: "Òdodo fún gbogbo ènìyàn", body: "Iye owó tó ṣe kedere, òfin tó ṣe kedere, àti owó tí ó dé ọ̀dọ̀ àwọn tí ó ṣe iṣẹ́ náà." },
       { title: "Tìrẹ ni àkọsílẹ̀ rẹ", body: "A kì yóò fi àkọsílẹ̀ oko rẹ han àwọn tí ń yáni lówó, àwọn olùrà tàbí àwọn olùdókòwò láìsí àṣẹ rẹ." },
     ],
   },
@@ -178,11 +178,11 @@ const yo: Dictionary = {
     items: [
       {
         q: `Kí ni ${brand.name}?`,
-        a: `${brand.name} jẹ́ áàpù fóònù àti ojú-òpó wẹ́ẹ̀bù fún ìṣàkóso oko àti gígba òṣìṣẹ́. O lè ṣètò ọ̀gbìn rẹ, kọ iṣẹ́ oko rẹ sílẹ̀, tọpinpin ìṣúra àti owó rẹ, kí o sì gba tírákítọ̀ tàbí òṣìṣẹ́ oko nítòsí rẹ.`,
+        a: `${brand.name} jẹ́ áàpù fóònù àti ojú-òpó wẹ́ẹ̀bù fún ìṣàkóso oko àti gbígba òṣìṣẹ́. O lè ṣètò ọ̀gbìn rẹ, kọ iṣẹ́ oko rẹ sílẹ̀, tọpinpin ìṣúra àti owó rẹ, kí o sì gba tírákítọ̀ tàbí òṣìṣẹ́ oko nítòsí rẹ.`,
       },
       {
         q: "Ta ló lè lò ó?",
-        a: "Àwọn àgbẹ̀ ohun ọ̀gbìn, àwọn onímọ́tò ẹ̀rọ oko, àwọn òṣìṣẹ́ oko, àwọn awakọ̀ ẹ̀rọ, àwọn afín-oògùn, àwọn mẹkáníìkì àti àwọn òṣìṣẹ́ ìgbaniníyànjú àgbẹ̀. Àwọn tí ń sin ẹran lè forúkọsílẹ̀ báyìi; irinṣẹ́ fún ẹran ọ̀sìn yóò dé lẹ́yìn náà.",
+        a: "Àwọn àgbẹ̀ ohun ọ̀gbìn, àwọn onímọ́tò ẹ̀rọ oko, àwọn òṣìṣẹ́ oko, àwọn awakọ̀ ẹ̀rọ, àwọn afín-oògùn, àwọn mẹkáníìkì àti àwọn òṣìṣẹ́ ìgbaniníyànjú àgbẹ̀. Àwọn tí ń sin ẹran lè forúkọsílẹ̀ báyìí; irinṣẹ́ fún ẹran ọ̀sìn yóò dé lẹ́yìn náà.",
       },
       {
         q: "Ṣé mo nílò fóònù alágbèéká ìgbàlódé (smartphone)?",
@@ -206,11 +206,11 @@ const yo: Dictionary = {
       },
       {
         q: "Ṣé àkọsílẹ̀ mi wà láìléwu?",
-        a: "Bẹ́ẹ̀ni. A ń tẹ̀lé Òfin Ìdáàbòbo Àkọsílẹ̀ ti Nàìjíríà 2023 (NDPA). Nọ́ńbà ìdánimọ̀ tí a ti bò mọ́lẹ̀ nìkan ni a ń tọ́jú, a kò sì ní fi àkọsílẹ̀ oko rẹ han àwọn tí ń yáni lówó, àwọn olùrà tàbí àwọn olùdókòwò láìsí àṣẹ rẹ tí ó ṣe kedere.",
+        a: "Bẹ́ẹ̀ni. A ń tẹ̀lé Òfin Ìdáàbòbò Àkọsílẹ̀ ti Nàìjíríà 2023 (NDPA). Nọ́ńbà ìdánimọ̀ tí a ti bò mọ́lẹ̀ nìkan ni a ń tọ́jú, a kò sì ní fi àkọsílẹ̀ oko rẹ han àwọn tí ń yáni lówó, àwọn olùrà tàbí àwọn olùdókòwò láìsí àṣẹ rẹ tí ó ṣe kedere.",
       },
       {
         q: "Ìgbà wo ni yóò bẹ̀rẹ̀?",
-        a: "A ń gbèrò láti bẹ̀rẹ̀ ìdánwò pẹ̀lú àsìkò ọ̀gbìn àkọ́kọ́, ní àwọn agbègè kan káàkiri Gúúsù-Ìwọ̀ Oòrùn. Darapọ̀ mọ́ ìdánwò, a ó sì kàn sí ọ.",
+        a: "A ń gbèrò láti bẹ̀rẹ̀ ìdánwò pẹ̀lú àsìkò ọ̀gbìn àkọ́kọ́, ní àwọn agbègbè kan káàkiri Gúúsù-Ìwọ̀ Oòrùn. Darapọ̀ mọ́ ìdánwò, a ó sì kàn sí ọ.",
       },
     ],
   },
@@ -237,7 +237,7 @@ const yo: Dictionary = {
     intro:
       "Ra èso oko tuntun tààrà láti ọ̀dọ̀ àwọn àgbẹ̀, tàbí ta ìkórè rẹ fún àwọn olùrà tí o lè gbẹ́kẹ̀lé, pẹ̀lú ìsanwó àti ìfijíṣẹ́ tó ní ààbò. Forúkọ sílẹ̀ kí o lè gbọ́ lákọ̀ọ́kọ́ nígbà tí ó bá ṣí.",
     buyersTitle: "Fún àwọn olùrà",
-    buyersBody: "Àwọn ìdílé, ilé oúnjẹ, àwọn oníṣòwò, àwọn akójọpọ̀ ọjà àti àwọn ilé-iṣẹ́ tí ń ṣe ọjà, tí ń rà tààrà láti oko tí a ti ṣàyẹ̀wo.",
+    buyersBody: "Àwọn ìdílé, ilé oúnjẹ, àwọn oníṣòwò, àwọn akójọpọ̀ ọjà àti àwọn ilé-iṣẹ́ tí ń ṣe ọjà, tí ń rà tààrà láti oko tí a ti ṣàyẹ̀wò.",
     sellersTitle: "Fún àwọn olùtà",
     sellersBody: "Àwọn àgbẹ̀ àti ẹgbẹ́ alájọṣepọ̀ tí ń ta èso oko, àti àwọn olùtà irúgbìn, ajílẹ̀ àti irinṣẹ́.",
     formTitle: "Forúkọ sílẹ̀ fún ọjà",
@@ -260,7 +260,7 @@ const yo: Dictionary = {
   account: {
     signInTitle: "Wọlé",
     signUpTitle: "Forúkọsílẹ̀",
-    body: `${brand.name} yóò kọ́kọ́ ṣí sílẹ̀ fún àwọn àgbẹ̀, àwọn onímọ́tò ẹ̀rọ oko àti àwọn olùpèsè iṣẹ́ ní àwọn agbègè ìdánwò wa. A ó ṣí àkọọ́lẹ̀ sílẹ̀ níbí láìpẹ́.`,
+    body: `${brand.name} yóò kọ́kọ́ ṣí sílẹ̀ fún àwọn àgbẹ̀, àwọn onímọ́tò ẹ̀rọ oko àti àwọn olùpèsè iṣẹ́ ní àwọn agbègbè ìdánwò wa. A ó ṣí àkọọ́lẹ̀ sílẹ̀ níbí láìpẹ́.`,
     stepsTitle: "Ṣé o fẹ́ kópa nínú ìdánwò?",
     steps: [
       "Fi orúkọ rẹ, nọ́ńbà fóònù rẹ, ìlú rẹ àti ohun tí o ń gbìn tàbí iṣẹ́ tí o ń ṣe ránṣẹ́ sí wa.",
@@ -278,7 +278,7 @@ const yo: Dictionary = {
     errorMessage: "Kọ ìfiránṣẹ́ tí ó kéré tán ní lẹ́tà márùn-ún.",
     errorSide: "Yan bóyá o fẹ́ rà tàbí o fẹ́ tà.",
     errorTooLong: "Ó ti gùn jù. Jọ̀wọ́ ṣe é ní kúkúrú.",
-    errorBusy: "Ìbéèrè ti pọ̀ jù báyìi. Jọ̀wọ́ gbìyànjú lẹ́yìn ìṣẹ́jú díẹ̀.",
+    errorBusy: "Ìbéèrè ti pọ̀ jù báyìí. Jọ̀wọ́ gbìyànjú lẹ́yìn ìṣẹ́jú díẹ̀.",
   },
   footer: {
     tagline: "Alábàáṣiṣẹ́ oko rẹ.",
