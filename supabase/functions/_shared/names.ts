@@ -5,7 +5,7 @@
 function tokens(name: string): string[] {
   return name
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // drop Yoruba tone marks and under-dots so accented names still match
+    .replace(/\p{M}/gu, '') // drop combining marks (Yoruba tone marks, under-dots) so accented names still match
     .toUpperCase()
     .replace(/[^A-Z\s-]/g, ' ')
     .split(/[\s-]+/)
