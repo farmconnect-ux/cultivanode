@@ -4,10 +4,12 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { Container, LinkButton } from "@/components/ui";
 import { LanguageToggle } from "./language-toggle";
 import { Logo } from "./logo";
+import { brand } from "@tillmate/shared/brand";
 
 export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
   const links = [
-    { href: `/${lang}#how`, label: t.how },
+    { href: `/${lang}/how-it-works`, label: t.how },
+    { href: `/${lang}/crops`, label: t.crops },
     { href: `/${lang}/marketplace`, label: t.marketplace },
     { href: `/${lang}/about`, label: t.about },
     { href: `/${lang}/faq`, label: t.faq },
@@ -19,7 +21,7 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
         {t.skip}
       </a>
       <Container className="flex h-16 items-center justify-between gap-4">
-        <Link href={`/${lang}`} aria-label="Tillmate">
+        <Link href={`/${lang}`} aria-label={brand.name}>
           <Logo />
         </Link>
         <nav aria-label="Main" className="hidden lg:block">

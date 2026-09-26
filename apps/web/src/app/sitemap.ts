@@ -2,10 +2,13 @@ import type { MetadataRoute } from "next";
 import { site } from "@/config/site";
 import { htmlLang, locales } from "@/i18n/config";
 
-const paths = ["", "/about", "/marketplace", "/faq", "/contact"];
+export const publicPaths = [
+  "", "/how-it-works", "/farmers", "/machinery", "/service-providers", "/crops", "/marketplace", "/waitlist",
+  "/about", "/partners", "/faq", "/contact", "/privacy", "/terms",
+] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return paths.flatMap((path) =>
+  return publicPaths.flatMap((path) =>
     locales.map((lang) => ({
       url: `${site.url}/${lang}${path}`,
       changeFrequency: "monthly" as const,
