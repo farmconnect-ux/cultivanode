@@ -1,8 +1,8 @@
 "use server";
 
-import { isValidEmail, normalizeNgPhone } from "@tillmate/shared";
+import { contactSchema, fieldErrors, fromDatabaseError, waitlistSchema } from "@tillmate/shared";
 import { createAnonClient } from "@/lib/supabase/anon";
-import { hasLocale, type Locale } from "@/i18n/config";
+import { reportError } from "@/lib/monitoring";
 
 // Error keys map to dictionary strings in `forms` (see i18n/dictionaries/en.ts).
 export type FormErrorKey =
@@ -13,74 +13,64 @@ export type FormErrorKey =
   | "errorEmail"
   | "errorMessage"
   | "errorSide"
-  | "errorBusy";
+  | "errorBusy"
+  | "errorTooLong";
+
+type Field = "name" | "phone" | "email" | "message" | "side" | "state" | "interest";
 
 export type FormState = {
   status: "idle" | "success" | "error";
   error?: FormErrorKey;
-  fields?: Partial<Record<"name" | "phone" | "email" | "message" | "side", FormErrorKey>>;
+  fields?: Partial<Record<Field, FormErrorKey>>;
   // What the person typed, so the form can refill itself after an error (React resets forms after an action).
   values?: Record<string, string>;
 };
 
-function text(form: FormData, key: string, max: number): string {
-  const v = form.get(key);
-  return typeof v === "string" ? v.trim().slice(0, max) : "";
-}
-
-function languageOf(form: FormData): Locale {
-  const lang = text(form, "lang", 5);
-  return hasLocale(lang) ? lang : "en";
+/** Raw form values as strings (length-capped before validation). */
+function read(form: FormData, keys: readonly string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of keys) {
+    const v = form.get(key);
+    out[key] = typeof v === "string" ? v.slice(0, 2500) : "";
+  }
+  return out;
 }
 
 // Bots fill every field, including the hidden "company" field that people never see.
 function isBot(form: FormData): boolean {
-  return text(form, "company", 200) !== "";
+  const v = form.get("company");
+  return typeof v === "string" && v.trim() !== "";
 }
 
-function contactErrors(phoneRaw: string, email: string): FormState["fields"] {
-  const fields: FormState["fields"] = {};
-  const phone = normalizeNgPhone(phoneRaw);
-  if (phone === "invalid") fields.phone = "errorPhone";
-  if (email && !isValidEmail(email)) fields.email = "errorEmail";
-  if (!phone && !email) fields.phone = "errorContact";
-  return fields;
-}
-
-function mapDbError(code: string | undefined): FormErrorKey {
-  if (code === "54000") return "errorBusy";
-  if (code === "22023") return "errorPhone";
+function toFormError(code: string): FormErrorKey {
+  if (code === "rate_limited") return "errorBusy";
+  if (code === "validation") return "errorPhone";
   return "errorGeneric";
 }
 
 export async function joinWaitlist(_prev: FormState, form: FormData): Promise<FormState> {
   if (isBot(form)) return { status: "success" };
 
-  const side = text(form, "side", 10);
-  const name = text(form, "name", 120);
-  const phone = text(form, "phone", 30);
-  const email = text(form, "email", 200);
-  const state = text(form, "state", 60);
-  const interest = text(form, "interest", 500);
-
-  const fields = contactErrors(phone, email) ?? {};
-  if (side !== "buyer" && side !== "seller") fields.side = "errorSide";
-  if (name.length < 2) fields.name = "errorName";
-  const values = { side, name, phone, email, state, interest };
-  if (Object.keys(fields).length) return { status: "error", fields, values };
+  const values = read(form, ["side", "name", "phone", "email", "state", "interest", "lang"]);
+  const parsed = waitlistSchema.safeParse(values);
+  if (!parsed.success) {
+    return { status: "error", fields: fieldErrors(parsed.error) as FormState["fields"], values };
+  }
+  const input = parsed.data;
 
   const { error } = await createAnonClient().rpc("join_waitlist", {
-    p_side: side as "buyer" | "seller",
-    p_full_name: name,
-    p_phone: phone || undefined,
-    p_email: email || undefined,
-    p_state: state || undefined,
-    p_interest: interest || undefined,
-    p_language: languageOf(form),
+    p_side: input.side,
+    p_full_name: input.name,
+    p_phone: input.phone,
+    p_email: input.email,
+    p_state: input.state,
+    p_interest: input.interest,
+    p_language: input.lang,
   });
   if (error) {
-    console.error("join_waitlist failed", error.code, error.message);
-    return { status: "error", error: mapDbError(error.code), values };
+    const appError = fromDatabaseError(error);
+    reportError(appError, { area: "forms", action: "join_waitlist" });
+    return { status: "error", error: toFormError(appError.code), values };
   }
   return { status: "success" };
 }
@@ -88,27 +78,24 @@ export async function joinWaitlist(_prev: FormState, form: FormData): Promise<Fo
 export async function sendContactMessage(_prev: FormState, form: FormData): Promise<FormState> {
   if (isBot(form)) return { status: "success" };
 
-  const name = text(form, "name", 120);
-  const phone = text(form, "phone", 30);
-  const email = text(form, "email", 200);
-  const message = text(form, "message", 2000);
-
-  const fields = contactErrors(phone, email) ?? {};
-  if (name.length < 2) fields.name = "errorName";
-  if (message.length < 5) fields.message = "errorMessage";
-  const values = { name, phone, email, message };
-  if (Object.keys(fields).length) return { status: "error", fields, values };
+  const values = read(form, ["name", "phone", "email", "message", "lang"]);
+  const parsed = contactSchema.safeParse(values);
+  if (!parsed.success) {
+    return { status: "error", fields: fieldErrors(parsed.error) as FormState["fields"], values };
+  }
+  const input = parsed.data;
 
   const { error } = await createAnonClient().rpc("send_contact_message", {
-    p_full_name: name,
-    p_message: message,
-    p_phone: phone || undefined,
-    p_email: email || undefined,
-    p_language: languageOf(form),
+    p_full_name: input.name,
+    p_message: input.message,
+    p_phone: input.phone,
+    p_email: input.email,
+    p_language: input.lang,
   });
   if (error) {
-    console.error("send_contact_message failed", error.code, error.message);
-    return { status: "error", error: mapDbError(error.code), values };
+    const appError = fromDatabaseError(error);
+    reportError(appError, { area: "forms", action: "send_contact_message" });
+    return { status: "error", error: toFormError(appError.code), values };
   }
   return { status: "success" };
 }

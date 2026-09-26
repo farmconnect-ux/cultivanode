@@ -10,8 +10,10 @@ const whatsapp = digits(process.env.NEXT_PUBLIC_CONTACT_WHATSAPP); // e.g. 23480
 const phone = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() || undefined; // e.g. +234 803 123 4567
 const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || undefined;
 
+import { brand } from "@tillmate/shared/brand";
+
 export const site = {
-  name: "Tillmate",
+  name: brand.name,
   url:
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
