@@ -17,8 +17,8 @@ export async function createClient() {
         try {
           cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         } catch {
-          // Called from a Server Component, where cookies are read-only. Session refresh
-          // is handled by the proxy added with sign-in in M1.
+          // Called from a Server Component, where cookies are read-only. The proxy
+          // (src/proxy.ts) refreshes the session on signed-in pages instead.
         }
       },
     },

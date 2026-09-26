@@ -1,11 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasLocale, localeCookie, localeFromAcceptLanguage, type Locale } from "@/i18n/config";
+import { ADMIN_SIGN_IN } from "@/lib/admin/paths";
+import { updateSession } from "@/lib/supabase/session";
 
-// Sends visitors without a language in the URL to /en/... or /yo/...
-// Order: the language they chose before (cookie), then their browser setting, then English.
-// Supabase session refresh joins this file in M1, when sign-in arrives.
-export function proxy(request: NextRequest) {
+// Admin console: keep the Supabase session fresh and require sign-in.
+// Everything else: send visitors without a language in the URL to /en/... or /yo/...
+// (the language they chose before, then their browser setting, then English).
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return updateSession(request, ADMIN_SIGN_IN);
+  }
+
   const first = pathname.split("/")[1] ?? "";
   if (hasLocale(first)) return NextResponse.next();
 
