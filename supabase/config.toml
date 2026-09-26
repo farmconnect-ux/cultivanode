@@ -416,3 +416,14 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Tillmate Edge Functions. send-sms is called by Supabase Auth (signed webhook), not by users,
+# so the gateway JWT check is off and the function verifies the webhook signature itself.
+[functions.send-sms]
+verify_jwt = false
+
+[functions.verify-identity]
+verify_jwt = true
+
+[functions.integration-test]
+verify_jwt = true
