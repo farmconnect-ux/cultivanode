@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatNaira, nairaToKobo, percentOfKobo, toPointEwkt, toPolygonEwkt, isAutoApproved } from '../index';
+import { formatNaira, nairaToKobo, percentOfKobo, toPointEwkt, toPolygonEwkt, ROLE_LABELS, PROVIDER_TYPE_LABELS, APP_ROLES, PROVIDER_TYPES } from '../index';
 
 describe('money', () => {
   it('converts typed naira to kobo', () => {
@@ -44,8 +44,13 @@ describe('geo', () => {
 });
 
 describe('roles', () => {
-  it('auto-approves only farmer roles', () => {
-    expect(isAutoApproved('crop_farmer')).toBe(true);
-    expect(isAutoApproved('machinery_owner')).toBe(false);
+  it('has a label for every database role and provider type', () => {
+    expect(Object.keys(ROLE_LABELS).sort()).toEqual([...APP_ROLES].sort());
+    expect(Object.keys(PROVIDER_TYPE_LABELS).sort()).toEqual([...PROVIDER_TYPES].sort());
+  });
+  it('uses the specification names', () => {
+    expect(APP_ROLES).toContain('buyer_offtaker');
+    expect(PROVIDER_TYPES).toContain('extension_agent');
+    expect(PROVIDER_TYPES).toContain('vet');
   });
 });
