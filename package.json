@@ -1,0 +1,31 @@
+{
+  "name": "tillmate",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "npm@10.9.7",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "npm run dev --workspace @tillmate/web",
+    "dev:mobile": "npm run start --workspace @tillmate/mobile",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts"
+  },
+  "devDependencies": {
+    "supabase": "^2.118.0",
+    "turbo": "^2.11.4"
+  }
+}
