@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: number
+          permission: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: never
+          permission: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: never
+          permission?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_permission_fkey"
+            columns: ["permission"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["permission"]
+          },
+        ]
+      }
+      admin_role_permissions: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          created_at: string
+          created_by: string | null
+          permission: string
+        }
+        Insert: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          created_by?: string | null
+          permission: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          created_by?: string | null
+          permission?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_role_permissions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_role_permissions_permission_fkey"
+            columns: ["permission"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["permission"]
+          },
+        ]
+      }
       admin_roles: {
         Row: {
           admin_role: Database["public"]["Enums"]["admin_role"]
@@ -55,33 +139,159 @@ export type Database = {
           action: string
           actor_id: string | null
           created_at: string
-          details: Json
           entity: string
           entity_id: string | null
           id: number
+          ip: unknown
+          metadata: Json
+          new_values: Json | null
+          old_values: Json | null
+          user_agent: string | null
         }
         Insert: {
           action: string
           actor_id?: string | null
           created_at?: string
-          details?: Json
           entity: string
           entity_id?: string | null
           id?: never
+          ip?: unknown
+          metadata?: Json
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
         }
         Update: {
           action?: string
           actor_id?: string | null
           created_at?: string
-          details?: Json
           entity?: string
           entity_id?: string | null
           id?: never
+          ip?: unknown
+          metadata?: Json
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "audit_log_actor_id_fkey"
             columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number_last4: string
+          bank_code: string
+          bank_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          profile_id: string
+          provider: string
+          provider_recipient_code: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number_last4: string
+          bank_code: string
+          bank_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          profile_id: string
+          provider: string
+          provider_recipient_code?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number_last4?: string
+          bank_code?: string
+          bank_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          profile_id?: string
+          provider?: string
+          provider_recipient_code?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consents: {
+        Row: {
+          channel: string
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          created_at: string
+          created_by: string | null
+          document_version: string
+          granted: boolean
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          channel?: string
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          created_at?: string
+          created_by?: string | null
+          document_version: string
+          granted: boolean
+          id?: string
+          profile_id?: string
+        }
+        Update: {
+          channel?: string
+          consent_type?: Database["public"]["Enums"]["consent_type"]
+          created_at?: string
+          created_by?: string | null
+          document_version?: string
+          granted?: boolean
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -132,6 +342,33 @@ export type Database = {
           },
         ]
       }
+      farm_zones: {
+        Row: {
+          boundary: unknown
+          created_at: string
+          description: string
+          name: string
+          updated_at: string
+          zone: Database["public"]["Enums"]["farm_zone"]
+        }
+        Insert: {
+          boundary?: unknown
+          created_at?: string
+          description: string
+          name: string
+          updated_at?: string
+          zone: Database["public"]["Enums"]["farm_zone"]
+        }
+        Update: {
+          boundary?: unknown
+          created_at?: string
+          description?: string
+          name?: string
+          updated_at?: string
+          zone?: Database["public"]["Enums"]["farm_zone"]
+        }
+        Relationships: []
+      }
       farms: {
         Row: {
           address_hint: string | null
@@ -139,6 +376,7 @@ export type Database = {
           area_is_measured: boolean
           boundary: unknown
           created_at: string
+          created_by: string | null
           id: string
           lga: string | null
           location: unknown
@@ -146,9 +384,12 @@ export type Database = {
           onboarded_by: string | null
           organization_id: string | null
           owner_id: string
+          source: Database["public"]["Enums"]["record_source"]
           state: string | null
           updated_at: string
           zone: Database["public"]["Enums"]["farm_zone"]
+          zone_corrected_at: string | null
+          zone_corrected_by: string | null
         }
         Insert: {
           address_hint?: string | null
@@ -156,6 +397,7 @@ export type Database = {
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
+          created_by?: string | null
           id?: string
           lga?: string | null
           location: unknown
@@ -163,9 +405,12 @@ export type Database = {
           onboarded_by?: string | null
           organization_id?: string | null
           owner_id?: string
+          source?: Database["public"]["Enums"]["record_source"]
           state?: string | null
           updated_at?: string
           zone?: Database["public"]["Enums"]["farm_zone"]
+          zone_corrected_at?: string | null
+          zone_corrected_by?: string | null
         }
         Update: {
           address_hint?: string | null
@@ -173,6 +418,7 @@ export type Database = {
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
+          created_by?: string | null
           id?: string
           lga?: string | null
           location?: unknown
@@ -180,11 +426,21 @@ export type Database = {
           onboarded_by?: string | null
           organization_id?: string | null
           owner_id?: string
+          source?: Database["public"]["Enums"]["record_source"]
           state?: string | null
           updated_at?: string
           zone?: Database["public"]["Enums"]["farm_zone"]
+          zone_corrected_at?: string | null
+          zone_corrected_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "farms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "farms_onboarded_by_fkey"
             columns: ["onboarded_by"]
@@ -206,61 +462,114 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "farms_zone_corrected_by_fkey"
+            columns: ["zone_corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_rates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          listing_id: string
+          rate_kobo: number
+          unit: Database["public"]["Enums"]["pricing_unit"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          listing_id: string
+          rate_kobo: number
+          unit: Database["public"]["Enums"]["pricing_unit"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          listing_id?: string
+          rate_kobo?: number
+          unit?: Database["public"]["Enums"]["pricing_unit"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_rates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_rates_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       listings: {
         Row: {
-          category: string
           created_at: string
+          created_by: string | null
           description: string | null
+          equipment_type: Database["public"]["Enums"]["equipment_type"] | null
           id: string
           kind: Database["public"]["Enums"]["listing_kind"]
           location: unknown
           operator_included: boolean
           owner_id: string
-          pricing_unit: Database["public"]["Enums"]["pricing_unit"]
           provider_type: Database["public"]["Enums"]["provider_type"] | null
-          rate_kobo: number
           service_radius_km: number
           status: Database["public"]["Enums"]["listing_status"]
           title: string
           updated_at: string
         }
         Insert: {
-          category: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
           id?: string
           kind: Database["public"]["Enums"]["listing_kind"]
           location: unknown
           operator_included?: boolean
           owner_id?: string
-          pricing_unit: Database["public"]["Enums"]["pricing_unit"]
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
-          rate_kobo: number
           service_radius_km?: number
           status?: Database["public"]["Enums"]["listing_status"]
           title: string
           updated_at?: string
         }
         Update: {
-          category?: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
           id?: string
           kind?: Database["public"]["Enums"]["listing_kind"]
           location?: unknown
           operator_included?: boolean
           owner_id?: string
-          pricing_unit?: Database["public"]["Enums"]["pricing_unit"]
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
-          rate_kobo?: number
           service_radius_km?: number
           status?: Database["public"]["Enums"]["listing_status"]
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "listings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listings_owner_id_fkey"
             columns: ["owner_id"]
@@ -320,6 +629,7 @@ export type Database = {
         Row: {
           cac_number: string | null
           created_at: string
+          created_by: string | null
           id: string
           name: string
           owner_id: string
@@ -328,6 +638,7 @@ export type Database = {
         Insert: {
           cac_number?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
           owner_id?: string
@@ -336,12 +647,20 @@ export type Database = {
         Update: {
           cac_number?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
           owner_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organizations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organizations_owner_id_fkey"
             columns: ["owner_id"]
@@ -351,12 +670,31 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          created_at: string
+          description: string
+          permission: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          permission: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          permission?: string
+        }
+        Relationships: []
+      }
       plots: {
         Row: {
           area_ha: number | null
           area_is_measured: boolean
           boundary: unknown
           created_at: string
+          created_by: string | null
           farm_id: string
           id: string
           name: string
@@ -368,6 +706,7 @@ export type Database = {
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
+          created_by?: string | null
           farm_id: string
           id?: string
           name: string
@@ -379,6 +718,7 @@ export type Database = {
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
+          created_by?: string | null
           farm_id?: string
           id?: string
           name?: string
@@ -386,6 +726,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plots_farm_id_fkey"
             columns: ["farm_id"]
@@ -451,6 +798,7 @@ export type Database = {
       role_requests: {
         Row: {
           created_at: string
+          created_by: string | null
           details: Json
           id: string
           profile_id: string
@@ -464,6 +812,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           details?: Json
           id?: string
           profile_id?: string
@@ -477,6 +826,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           details?: Json
           id?: string
           profile_id?: string
@@ -490,6 +840,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "role_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "role_requests_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -499,6 +856,50 @@ export type Database = {
           {
             foreignKeyName: "role_requests_reviewed_by_fkey"
             columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          auto_approve: boolean
+          available: boolean
+          created_at: string
+          description: string
+          min_verification_tier: number
+          requires_documents: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_approve?: boolean
+          available?: boolean
+          created_at?: string
+          description: string
+          min_verification_tier?: number
+          requires_documents?: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_approve?: boolean
+          available?: boolean
+          created_at?: string
+          description?: string
+          min_verification_tier?: number
+          requires_documents?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -519,6 +920,7 @@ export type Database = {
           plot_id: string
           potassium_cmol_kg: number | null
           soil_type: string | null
+          source: Database["public"]["Enums"]["record_source"]
           tested_on: string | null
         }
         Insert: {
@@ -534,6 +936,7 @@ export type Database = {
           plot_id: string
           potassium_cmol_kg?: number | null
           soil_type?: string | null
+          source?: Database["public"]["Enums"]["record_source"]
           tested_on?: string | null
         }
         Update: {
@@ -549,6 +952,7 @@ export type Database = {
           plot_id?: string
           potassium_cmol_kg?: number | null
           soil_type?: string | null
+          source?: Database["public"]["Enums"]["record_source"]
           tested_on?: string | null
         }
         Relationships: [
@@ -614,6 +1018,86 @@ export type Database = {
           {
             foreignKeyName: "user_roles_request_id_fkey"
             columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "role_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_type: Database["public"]["Enums"]["verification_document_type"]
+          id: string
+          mime_type: string
+          profile_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role_request_id: string | null
+          size_bytes: number
+          status: Database["public"]["Enums"]["review_status"]
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_type: Database["public"]["Enums"]["verification_document_type"]
+          id?: string
+          mime_type: string
+          profile_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_request_id?: string | null
+          size_bytes: number
+          status?: Database["public"]["Enums"]["review_status"]
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_type?: Database["public"]["Enums"]["verification_document_type"]
+          id?: string
+          mime_type?: string
+          profile_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_request_id?: string | null
+          size_bytes?: number
+          status?: Database["public"]["Enums"]["review_status"]
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_documents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_documents_role_request_id_fkey"
+            columns: ["role_request_id"]
             isOneToOne: false
             referencedRelation: "role_requests"
             referencedColumns: ["id"]
@@ -705,13 +1189,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      current_consents: {
+        Row: {
+          channel: string | null
+          consent_type: Database["public"]["Enums"]["consent_type"] | null
+          created_at: string | null
+          document_version: string | null
+          granted: boolean | null
+          profile_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_role_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: {
           created_at: string
+          created_by: string | null
           details: Json
           id: string
           profile_id: string
@@ -734,6 +1237,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: {
           created_at: string
+          created_by: string | null
           details: Json
           id: string
           profile_id: string
@@ -752,15 +1256,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      correct_farm_zone: {
+        Args: {
+          p_farm_id: string
+          p_reason: string
+          p_zone: Database["public"]["Enums"]["farm_zone"]
+        }
+        Returns: undefined
+      }
+      has_permission: { Args: { p_permission: string }; Returns: boolean }
       has_role: {
         Args: {
           p_provider_type?: Database["public"]["Enums"]["provider_type"]
           p_role: Database["public"]["Enums"]["app_role"]
         }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: { p_role?: Database["public"]["Enums"]["admin_role"] }
         Returns: boolean
       }
       join_waitlist: {
@@ -775,26 +1284,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      my_permissions: { Args: never; Returns: string[] }
       my_verification_tier: { Args: never; Returns: number }
       nearby_listings: {
         Args: {
-          p_category?: string
+          p_equipment_type?: Database["public"]["Enums"]["equipment_type"]
           p_kind?: Database["public"]["Enums"]["listing_kind"]
           p_lat: number
           p_limit?: number
           p_lng: number
+          p_provider_type?: Database["public"]["Enums"]["provider_type"]
           p_radius_km?: number
         }
         Returns: {
-          category: string
           distance_km: number
+          equipment_type: Database["public"]["Enums"]["equipment_type"]
           kind: Database["public"]["Enums"]["listing_kind"]
           listing_id: string
           operator_included: boolean
           owner_id: string
-          pricing_unit: Database["public"]["Enums"]["pricing_unit"]
           provider_type: Database["public"]["Enums"]["provider_type"]
-          rate_kobo: number
+          rates: Json
           service_radius_km: number
           title: string
         }[]
@@ -807,6 +1317,7 @@ export type Database = {
         Args: { p_note: string; p_request_id: string }
         Returns: {
           created_at: string
+          created_by: string | null
           details: Json
           id: string
           profile_id: string
@@ -821,6 +1332,35 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_verification_document: {
+        Args: {
+          p_document_id: string
+          p_note?: string
+          p_status: Database["public"]["Enums"]["review_status"]
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          document_type: Database["public"]["Enums"]["verification_document_type"]
+          id: string
+          mime_type: string
+          profile_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role_request_id: string | null
+          size_bytes: number
+          status: Database["public"]["Enums"]["review_status"]
+          storage_path: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "verification_documents"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -842,9 +1382,11 @@ export type Database = {
       write_audit: {
         Args: {
           p_action: string
-          p_details?: Json
           p_entity: string
           p_entity_id: string
+          p_metadata?: Json
+          p_new_values?: Json
+          p_old_values?: Json
         }
         Returns: undefined
       }
@@ -854,8 +1396,8 @@ export type Database = {
       admin_role:
         | "super_admin"
         | "verification_officer"
-        | "support_officer"
-        | "content_editor"
+        | "support_disputes"
+        | "agronomy_editor"
         | "finance_officer"
       app_language: "en" | "yo" | "pcm"
       app_role:
@@ -864,11 +1406,32 @@ export type Database = {
         | "machinery_owner"
         | "service_provider"
         | "input_supplier"
-        | "buyer"
+        | "buyer_offtaker"
         | "logistics_provider"
         | "field_agent"
         | "institutional_partner"
         | "investor"
+      consent_type:
+        | "terms_of_use"
+        | "privacy_policy"
+        | "data_processing"
+        | "marketing_messages"
+        | "share_with_lenders"
+        | "share_with_buyers"
+        | "share_with_investors"
+        | "share_with_partners"
+      equipment_type:
+        | "tractor"
+        | "plough"
+        | "harrow"
+        | "planter"
+        | "harvester"
+        | "sprayer"
+        | "ridger"
+        | "tiller"
+        | "irrigation_equipment"
+        | "transport_equipment"
+        | "other"
       farm_zone: "rainforest" | "derived_savanna" | "other"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -885,9 +1448,24 @@ export type Database = {
         | "mechanic"
         | "spraying_service"
         | "agronomist"
-        | "vet_doctor"
+        | "extension_agent"
+        | "vet"
         | "agro_processor"
+      record_source:
+        | "self_reported"
+        | "agent_verified"
+        | "platform_verified"
+        | "payment_verified"
       request_status: "pending" | "approved" | "rejected" | "cancelled"
+      review_status: "pending" | "accepted" | "rejected"
+      verification_document_type:
+        | "national_id"
+        | "cac_certificate"
+        | "proof_of_address"
+        | "equipment_ownership"
+        | "professional_licence"
+        | "photo"
+        | "other"
       verification_kind: "phone" | "nin" | "bvn" | "cac" | "document"
       verification_status: "pending" | "verified" | "failed"
       waitlist_side: "buyer" | "seller"
@@ -1022,8 +1600,8 @@ export const Constants = {
       admin_role: [
         "super_admin",
         "verification_officer",
-        "support_officer",
-        "content_editor",
+        "support_disputes",
+        "agronomy_editor",
         "finance_officer",
       ],
       app_language: ["en", "yo", "pcm"],
@@ -1033,11 +1611,34 @@ export const Constants = {
         "machinery_owner",
         "service_provider",
         "input_supplier",
-        "buyer",
+        "buyer_offtaker",
         "logistics_provider",
         "field_agent",
         "institutional_partner",
         "investor",
+      ],
+      consent_type: [
+        "terms_of_use",
+        "privacy_policy",
+        "data_processing",
+        "marketing_messages",
+        "share_with_lenders",
+        "share_with_buyers",
+        "share_with_investors",
+        "share_with_partners",
+      ],
+      equipment_type: [
+        "tractor",
+        "plough",
+        "harrow",
+        "planter",
+        "harvester",
+        "sprayer",
+        "ridger",
+        "tiller",
+        "irrigation_equipment",
+        "transport_equipment",
+        "other",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
       listing_kind: ["equipment", "service"],
@@ -1056,10 +1657,27 @@ export const Constants = {
         "mechanic",
         "spraying_service",
         "agronomist",
-        "vet_doctor",
+        "extension_agent",
+        "vet",
         "agro_processor",
       ],
+      record_source: [
+        "self_reported",
+        "agent_verified",
+        "platform_verified",
+        "payment_verified",
+      ],
       request_status: ["pending", "approved", "rejected", "cancelled"],
+      review_status: ["pending", "accepted", "rejected"],
+      verification_document_type: [
+        "national_id",
+        "cac_certificate",
+        "proof_of_address",
+        "equipment_ownership",
+        "professional_licence",
+        "photo",
+        "other",
+      ],
       verification_kind: ["phone", "nin", "bvn", "cac", "document"],
       verification_status: ["pending", "verified", "failed"],
       waitlist_side: ["buyer", "seller"],
