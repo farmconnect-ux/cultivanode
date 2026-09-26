@@ -2,7 +2,13 @@
 
 Farm management, equipment and labour hire for Nigerian farmers. Web and mobile apps on one Supabase backend.
 
-> Working name. Rename the repo and app IDs once the name clears CAC, NIPO and domain checks.
+> **Working name.** "Tillmate" has not cleared CAC, NIPO, domain, store or social checks, and a Caribbean
+> POS app already uses it. The name, tagline and logo come from `packages/shared/src/brand.ts`, so a rename
+> is a small change.
+
+The authoritative product specification is the Phase 1 master build prompt. Status by requirement:
+[`docs/requirements-matrix.md`](docs/requirements-matrix.md). Architecture, database, security, payments,
+agronomy, AI, offline sync, deployment and contribution rules are in [`docs/`](docs).
 
 ## What's here (milestone M0)
 
@@ -29,6 +35,8 @@ Status:
 - [x] Design system: shared tokens (`packages/shared/src/design/tokens.ts`), web components (`apps/web/src/components/ui`), mobile components (`apps/mobile/src/ui`)
 - [x] Public website in English and Yorùbá: home, how it works, about, FAQ, contact form, Marketplace waitlist
 - [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
+- [x] Spec alignment: permission-based admin, roles table, verification documents (private storage), bank accounts, consents, append-only audit with old/new values, record provenance, farm zones, multi-rate listings
+- [x] Shared Zod validation, structured errors, redacted logging, Sentry adapter, security headers, brand config
 - [ ] M1: phone sign-in, onboarding, ID checks, admin approval queue
 
 ## Prerequisites
@@ -118,7 +126,7 @@ npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 93 permission, search, website-form and function-exposure tests
+npm run db:test       # pgTAP: 144 permission, identity, search, website-form and function-exposure tests
 npm run db:stop
 ```
 
@@ -126,12 +134,13 @@ npm run db:stop
 
 - **Function grants.** Supabase lets signed-in users call every new function in `public` by default. Migration `harden_function_grants` revokes that for internal and trigger functions and changes the default, so each new function must be granted explicitly. Helpers used only by policies live in the `private` schema (`private_helpers` migration), which the API does not expose. `04_function_grants.test.sql` guards it.
 - **Row Level Security on every table.** Supabase grants broad table access by default, so each migration revokes it and grants back only what the apps need, down to individual columns. For example, a user can edit their name but not their verification tier.
-- **Roles.** A person asks for a role through `role_requests`. Farmer roles are approved instantly; machinery owner, service provider and the rest wait for a verification officer, who calls `approve_role_request()` or `reject_role_request()`. Approved roles live in `user_roles`, which apps cannot write to. Admin powers are a separate table (`admin_roles`) and can never be requested.
-- **Verification tiers.** Server code (with the service role) writes ID results to `verifications`. The tier updates automatically: NIN gives tier 1, NIN plus BVN gives tier 2. Only masked numbers are stored, never full NIN/BVN.
+- **Roles.** A person asks for a role through `role_requests`. Approval rules live in the `roles` table: farmer roles are approved instantly (a check constraint stops any other role being set to auto-approve); machinery owner, service provider and the rest wait for staff with `roles.review`, who call `approve_role_request()` or `reject_role_request()`. Approved roles live in `user_roles`, which apps cannot write to. Admin powers are a separate table (`admin_roles`) and can never be requested.
+- **Verification tiers.** Server code (with the service role) writes ID results to `verifications` and payout accounts to `bank_accounts`. The tier updates automatically: NIN gives tier 1; NIN, BVN and a verified bank account give tier 2. Only masked numbers are stored, never full NIN/BVN or account numbers.
+- **Staff permissions.** Admin sub-roles (super_admin, verification_officer, support_disputes, agronomy_editor, finance_officer) map to permissions in `admin_role_permissions`; policies call `has_permission()`.
 - **Listing needs role and tier.** Creating a listing requires the approved role and tier 2 (payout-ready).
 - **Money** is stored in kobo as whole numbers (`rate_kobo`). Use `nairaToKobo()` and `formatNaira()` from `@tillmate/shared`.
 - **Coordinates** go to PostGIS as EWKT, longitude first. Use `toPointEwkt()` and `toPolygonEwkt()` from `@tillmate/shared`.
-- **`nearby_listings(lat, lng, radius_km, kind, category, limit)`** returns active listings nearest first. The radius is capped at 100 km and the limit at 100. A listing only shows if the farmer is also inside that provider's own service radius.
+- **`nearby_listings(lat, lng, radius_km, kind, equipment_type, provider_type, limit)`** returns active, priced listings nearest first, with all prices as `{unit: kobo}`. The radius is capped at 100 km and the limit at 100. A listing only shows if the farmer is also inside that provider's own service radius.
 
 After changing the schema, regenerate TypeScript types with `npm run db:types` (local Supabase running) or `npm run db:types:remote` (after `supabase login`).
 
