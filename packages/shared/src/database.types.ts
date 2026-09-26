@@ -192,8 +192,11 @@ export type Database = {
           bank_name: string
           created_at: string
           created_by: string | null
+          failure_reason: string | null
           id: string
+          id_hash: string | null
           is_default: boolean
+          name_match: number | null
           profile_id: string
           provider: string
           provider_recipient_code: string | null
@@ -208,8 +211,11 @@ export type Database = {
           bank_name: string
           created_at?: string
           created_by?: string | null
+          failure_reason?: string | null
           id?: string
+          id_hash?: string | null
           is_default?: boolean
+          name_match?: number | null
           profile_id: string
           provider: string
           provider_recipient_code?: string | null
@@ -224,8 +230,11 @@ export type Database = {
           bank_name?: string
           created_at?: string
           created_by?: string | null
+          failure_reason?: string | null
           id?: string
+          id_hash?: string | null
           is_default?: boolean
+          name_match?: number | null
           profile_id?: string
           provider?: string
           provider_recipient_code?: string | null
@@ -465,6 +474,204 @@ export type Database = {
           {
             foreignKeyName: "farms_zone_corrected_by_fkey"
             columns: ["zone_corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_configs: {
+        Row: {
+          config: Json
+          mode: Database["public"]["Enums"]["integration_mode"]
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          mode?: Database["public"]["Enums"]["integration_mode"]
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          mode?: Database["public"]["Enums"]["integration_mode"]
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_configs_provider_fkey"
+            columns: ["provider"]
+            isOneToOne: true
+            referencedRelation: "integration_providers"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "integration_configs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_events: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          http_status: number | null
+          id: number
+          kind: Database["public"]["Enums"]["integration_kind"]
+          mode: Database["public"]["Enums"]["integration_mode"]
+          operation: string
+          provider: string
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          http_status?: number | null
+          id?: never
+          kind: Database["public"]["Enums"]["integration_kind"]
+          mode: Database["public"]["Enums"]["integration_mode"]
+          operation: string
+          provider: string
+          success: boolean
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          http_status?: number | null
+          id?: never
+          kind?: Database["public"]["Enums"]["integration_kind"]
+          mode?: Database["public"]["Enums"]["integration_mode"]
+          operation?: string
+          provider?: string
+          success?: boolean
+        }
+        Relationships: []
+      }
+      integration_providers: {
+        Row: {
+          code: string
+          config_fields: Json
+          description: string
+          docs_url: string | null
+          implemented: boolean
+          kind: Database["public"]["Enums"]["integration_kind"]
+          name: string
+          secret_fields: Json
+          sort_order: number
+          test_only: boolean
+        }
+        Insert: {
+          code: string
+          config_fields?: Json
+          description: string
+          docs_url?: string | null
+          implemented?: boolean
+          kind: Database["public"]["Enums"]["integration_kind"]
+          name: string
+          secret_fields?: Json
+          sort_order?: number
+          test_only?: boolean
+        }
+        Update: {
+          code?: string
+          config_fields?: Json
+          description?: string
+          docs_url?: string | null
+          implemented?: boolean
+          kind?: Database["public"]["Enums"]["integration_kind"]
+          name?: string
+          secret_fields?: Json
+          sort_order?: number
+          test_only?: boolean
+        }
+        Relationships: []
+      }
+      integration_secrets: {
+        Row: {
+          field: string
+          hint: string | null
+          mode: Database["public"]["Enums"]["integration_mode"]
+          provider: string
+          updated_at: string
+          updated_by: string | null
+          vault_secret_id: string
+        }
+        Insert: {
+          field: string
+          hint?: string | null
+          mode: Database["public"]["Enums"]["integration_mode"]
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_secret_id: string
+        }
+        Update: {
+          field?: string
+          hint?: string | null
+          mode?: Database["public"]["Enums"]["integration_mode"]
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_secret_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_secrets_provider_fkey"
+            columns: ["provider"]
+            isOneToOne: false
+            referencedRelation: "integration_providers"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "integration_secrets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_settings: {
+        Row: {
+          active_provider: string
+          kind: Database["public"]["Enums"]["integration_kind"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_provider: string
+          kind: Database["public"]["Enums"]["integration_kind"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_provider?: string
+          kind?: Database["public"]["Enums"]["integration_kind"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_settings_active_provider_kind_fkey"
+            columns: ["active_provider", "kind"]
+            isOneToOne: false
+            referencedRelation: "integration_providers"
+            referencedColumns: ["code", "kind"]
+          },
+          {
+            foreignKeyName: "integration_settings_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1107,9 +1314,12 @@ export type Database = {
       verifications: {
         Row: {
           created_at: string
+          failure_reason: string | null
           id: string
+          id_hash: string | null
           kind: Database["public"]["Enums"]["verification_kind"]
           masked_value: string | null
+          name_match: number | null
           profile_id: string
           provider: string | null
           reference: string | null
@@ -1119,9 +1329,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          failure_reason?: string | null
           id?: string
+          id_hash?: string | null
           kind: Database["public"]["Enums"]["verification_kind"]
           masked_value?: string | null
+          name_match?: number | null
           profile_id: string
           provider?: string | null
           reference?: string | null
@@ -1131,9 +1344,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          failure_reason?: string | null
           id?: string
+          id_hash?: string | null
           kind?: Database["public"]["Enums"]["verification_kind"]
           masked_value?: string | null
+          name_match?: number | null
           profile_id?: string
           provider?: string | null
           reference?: string | null
@@ -1210,6 +1426,46 @@ export type Database = {
       }
     }
     Functions: {
+      admin_activate_integration: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["integration_kind"]
+          p_provider: string
+        }
+        Returns: undefined
+      }
+      admin_clear_integration_secret: {
+        Args: {
+          p_field: string
+          p_mode: Database["public"]["Enums"]["integration_mode"]
+          p_provider: string
+        }
+        Returns: undefined
+      }
+      admin_integration_overview: { Args: never; Returns: Json }
+      admin_save_integration_config: {
+        Args: {
+          p_config: Json
+          p_mode: Database["public"]["Enums"]["integration_mode"]
+          p_provider: string
+        }
+        Returns: undefined
+      }
+      admin_set_integration_mode: {
+        Args: {
+          p_mode: Database["public"]["Enums"]["integration_mode"]
+          p_provider: string
+        }
+        Returns: undefined
+      }
+      admin_set_integration_secret: {
+        Args: {
+          p_field: string
+          p_mode: Database["public"]["Enums"]["integration_mode"]
+          p_provider: string
+          p_value: string
+        }
+        Returns: undefined
+      }
       approve_role_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: {
@@ -1272,6 +1528,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      integration_runtime: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["integration_kind"]
+          p_provider?: string
+        }
+        Returns: Json
+      }
       join_waitlist: {
         Args: {
           p_email?: string
@@ -1312,6 +1575,35 @@ export type Database = {
       org_role: {
         Args: { p_org: string }
         Returns: Database["public"]["Enums"]["org_member_role"]
+      }
+      record_bank_account_verification: {
+        Args: {
+          p_account_name: string
+          p_bank_code: string
+          p_bank_name: string
+          p_failure?: string
+          p_id_hash: string
+          p_last4: string
+          p_name_match: number
+          p_profile: string
+          p_provider: string
+          p_verified: boolean
+        }
+        Returns: Json
+      }
+      record_identity_verification: {
+        Args: {
+          p_failure?: string
+          p_id_hash: string
+          p_kind: Database["public"]["Enums"]["verification_kind"]
+          p_masked: string
+          p_name_match: number
+          p_profile: string
+          p_provider: string
+          p_reference: string
+          p_verified: boolean
+        }
+        Returns: Json
       }
       reject_role_request: {
         Args: { p_note: string; p_request_id: string }
@@ -1433,6 +1725,8 @@ export type Database = {
         | "transport_equipment"
         | "other"
       farm_zone: "rainforest" | "derived_savanna" | "other"
+      integration_kind: "sms" | "identity"
+      integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
       org_member_role:
@@ -1641,6 +1935,8 @@ export const Constants = {
         "other",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
+      integration_kind: ["sms", "identity"],
+      integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],
       org_member_role: [
