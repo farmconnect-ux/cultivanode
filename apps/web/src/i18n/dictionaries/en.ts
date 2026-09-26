@@ -1,9 +1,12 @@
 // English copy for the public website. Yoruba lives in yo.ts and must have exactly the same keys
 // (TypeScript enforces it). Keep sentences short: many readers are on small phones.
 
+import { brand } from "@tillmate/shared/brand";
+import enPages from "./en-pages";
+
 const en = {
   meta: {
-    title: "Tillmate: your farm's working partner",
+    title: `${brand.name}: your farm's working partner`,
     description:
       "Plan your crops, hire tractors and farm hands you can trust, and keep your farm books in one app. Built for farmers in South-West Nigeria.",
   },
@@ -20,6 +23,14 @@ const en = {
     close: "Close menu",
     language: "Language",
     switchTo: "Yorùbá",
+    farmers: "Farmers",
+    machinery: "Machinery owners",
+    providers: "Service providers",
+    crops: "Crops",
+    partners: "Partners",
+    privacy: "Privacy",
+    terms: "Terms",
+    waitlist: "Waitlist",
     skip: "Skip to content",
   },
   common: {
@@ -49,7 +60,7 @@ const en = {
         body: "Every cost and sale in one place, so you know what each planting really earned.",
       },
     ],
-    carouselLabel: "What Tillmate does",
+    carouselLabel: `What ${brand.name} does`,
     previous: "Previous slide",
     next: "Next slide",
     pause: "Pause slideshow",
@@ -77,7 +88,7 @@ const en = {
         steps: [
           "Sign up with your phone number. No email needed.",
           "Add your farm by dropping a pin or walking the boundary with your phone.",
-          "Choose your crops. Tillmate builds your season plan and reminds you.",
+          `Choose your crops. ${brand.name} builds your season plan and reminds you.`,
           "Hire a tractor or farm hands when you need them, and pay safely.",
         ],
       },
@@ -138,16 +149,16 @@ const en = {
     pilotSecondary: "Talk to us",
   },
   about: {
-    title: "About Tillmate",
+    title: `About ${brand.name}`,
     intro:
-      "Tillmate helps smallholder and commercial farmers plan better, hire the right help at a fair price, and see what their farm really earns.",
+      `${brand.name} helps smallholder and commercial farmers plan better, hire the right help at a fair price, and see what their farm really earns.`,
     nameTitle: "Why the name?",
-    nameBody: "To till is to work the land. A mate is a companion. Tillmate is the partner that works alongside you all season.",
+    nameBody: `To till is to work the land. A mate is a companion. ${brand.name} is the partner that works alongside you all season.`,
     whyTitle: "Why we are building it",
     whyBody: [
       "Many farmers lose yield because a tractor arrives late, the wrong fertiliser is used, or rain washes away a spray. Good advice and reliable help are hard to find at the right moment.",
       "Machinery owners and farm hands also struggle: jobs are scattered, travel is expensive, and payment is not always certain.",
-      "Tillmate brings farmers, equipment and skilled hands together, with plans and records that make every season a little more predictable.",
+      `${brand.name} brings farmers, equipment and skilled hands together, with plans and records that make every season a little more predictable.`,
     ],
     pilotTitle: "Starting in the South-West",
     pilotBody:
@@ -164,8 +175,8 @@ const en = {
     intro: "Can't find your answer? Send us a message and we will reply.",
     items: [
       {
-        q: "What is Tillmate?",
-        a: "Tillmate is a mobile app and website for farm management and hiring. You can plan your crops, record your farm work, track your store and money, and hire tractors or farm hands near you.",
+        q: `What is ${brand.name}?`,
+        a: `${brand.name} is a mobile app and website for farm management and hiring. You can plan your crops, record your farm work, track your store and money, and hire tractors or farm hands near you.`,
       },
       {
         q: "Who can use it?",
@@ -173,7 +184,7 @@ const en = {
       },
       {
         q: "Do I need a smartphone?",
-        a: "A smartphone gives you the full app. If you don't have one, a Tillmate field agent can register you and your farm, and important alerts come by SMS.",
+        a: `A smartphone gives you the full app. If you don't have one, a ${brand.name} field agent can register you and your farm, and important alerts come by SMS.`,
       },
       {
         q: "Do I need an email address?",
@@ -185,7 +196,7 @@ const en = {
       },
       {
         q: "How much does it cost?",
-        a: "You pay the price shown by the provider. Tillmate's commission comes out of the provider's payment, not added on top. Full pricing will be published before the pilot starts.",
+        a: `You pay the price shown by the provider. ${brand.name}'s commission comes out of the provider's payment, not added on top. Full pricing will be published before the pilot starts.`,
       },
       {
         q: "Which languages can I use?",
@@ -220,7 +231,7 @@ const en = {
   },
   marketplace: {
     badge: "Coming soon",
-    title: "Tillmate Market",
+    title: `${brand.name} Market`,
     intro:
       "Buy fresh produce straight from farmers, or sell your harvest to trusted buyers, with safe payment and delivery. Join the waitlist to hear first when it opens.",
     buyersTitle: "For buyers",
@@ -242,16 +253,16 @@ const en = {
     contactHint: "Give us a phone number or an email.",
     submit: "Join the waitlist",
     sending: "Sending…",
-    success: "You're on the list. We will contact you when Tillmate Market opens.",
+    success: `You're on the list. We will contact you when ${brand.name} Market opens.`,
   },
   account: {
     signInTitle: "Sign in",
     signUpTitle: "Sign up",
-    body: "Tillmate opens first to farmers, machinery owners and service providers in our pilot communities. Accounts will open here soon.",
+    body: `${brand.name} opens first to farmers, machinery owners and service providers in our pilot communities. Accounts will open here soon.`,
     stepsTitle: "Want to be part of the pilot?",
     steps: [
       "Send us your name, phone number, town and what you farm or offer.",
-      "A Tillmate field agent will contact you.",
+      `A ${brand.name} field agent will contact you.`,
       "You'll be among the first to use the app.",
     ],
     cta: "Send us your details",
@@ -264,10 +275,12 @@ const en = {
     errorEmail: "Enter a valid email address.",
     errorMessage: "Write a message of at least 5 characters.",
     errorSide: "Choose whether you want to buy or sell.",
+    errorTooLong: "That is too long. Please shorten it.",
     errorBusy: "Too many requests right now. Please try again shortly.",
   },
   footer: {
     tagline: "Your farm's working partner.",
+    legal: "Legal",
     product: "Product",
     company: "Company",
     rights: "All rights reserved.",
@@ -278,6 +291,7 @@ const en = {
     body: "We couldn't find that page.",
     back: "Go to the home page",
   },
+  ...enPages,
 };
 
 export default en;
