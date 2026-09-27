@@ -14,16 +14,24 @@
     "prebuild:android": "npm run icons && expo prebuild -p android --clean"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@supabase/supabase-js": "^2.117.2",
     "@cultivanode/shared": "*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@sentry/react-native": "~7.11.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "aes-js": "^3.1.2",
     "expo": "~57.0.25",
+    "expo-crypto": "~57.0.3",
+    "expo-localization": "~57.0.2",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "^15.15.4"
   },
   "devDependencies": {
+    "@types/aes-js": "^3.1.4",
     "@types/react": "~19.2.2",
     "sharp": "^0.35.4",
     "typescript": "~6.0.3"

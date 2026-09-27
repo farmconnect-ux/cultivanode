@@ -6,6 +6,10 @@ import { site } from "@/config/site";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { pageMetadata } from "@/i18n/metadata";
+import { loadHeroSlides } from "@/lib/site-content";
+
+// Rebuilt in the background at most every 5 minutes; saving a slide in the admin console refreshes it at once.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<"/[lang]">) {
   const { lang } = await params;
@@ -28,8 +32,12 @@ const featureIcons = [
 export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const t = await getDictionary(lang);
+  const [t, pictures] = await Promise.all([getDictionary(lang), loadHeroSlides(lang)]);
   const h = t.home;
+  // Pictures uploaded in the admin console replace the built-in illustrated slides.
+  const slides = pictures.length > 0
+    ? pictures.map((p) => ({ key: p.id, title: p.title, body: p.body, href: p.href, image: { src: p.src, alt: p.alt } }))
+    : h.slides.map((s) => ({ key: s.title, title: s.title, body: s.body }));
 
   return (
     <>
@@ -50,7 +58,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             </div>
           </div>
           <HeroCarousel
-            slides={h.slides}
+            slides={slides}
             labels={{ label: h.carouselLabel, previous: h.previous, next: h.next, pause: h.pause, play: h.play, slideOf: h.slideOf }}
           />
         </Container>

@@ -127,12 +127,12 @@ Colours, type sizes, spacing and radii live in `packages/shared/src/design/token
 ## Tests
 
 ```bash
-npm run test          # unit tests: shared package and Edge Functions (137)
+npm run test          # unit tests: shared package, Edge Functions and mobile modules (152)
 npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 241 permission, identity, search, website-form, function-exposure, integration and account tests
+npm run db:test       # pgTAP: 279 permission, identity, search, website-form, function-exposure, integration, account, content and analytics tests
 npm run db:stop
 ```
 
@@ -156,5 +156,5 @@ Local development uses fixed test numbers from `supabase/config.toml` (`23480000
 
 ## Known M0 limitations
 
-- Mobile sessions use AsyncStorage for now. M1 switches to encrypted storage before any real user signs in.
+- Mobile sessions are AES-encrypted: a fresh key per write lives in the Android Keystore / iOS Keychain (expo-secure-store), the ciphertext in app storage (`apps/mobile/src/lib/encrypted-storage.ts`).
 - The web session-refresh proxy arrives with sign-in in M1.

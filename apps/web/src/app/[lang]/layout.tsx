@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import "../globals.css";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
+import { PageViewTracker } from "@/components/site/page-view-tracker";
 import { site } from "@/config/site";
 import { hasLocale, htmlLang, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -43,6 +44,7 @@ export default async function LangLayout({ children, params }: LayoutProps<"/[la
           {children}
         </main>
         <Footer lang={lang} t={t.footer} nav={t.nav} />
+        <PageViewTracker />
       </body>
     </html>
   );

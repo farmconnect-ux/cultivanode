@@ -1,16 +1,17 @@
 import { colors, fontSize, radius, space, touchTarget } from '@cultivanode/shared';
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { Text } from './Text';
 
-type Props = TextInputProps & { label: string; hint?: string; error?: string };
+type Props = TextInputProps & { label: string; hint?: string; error?: string; ref?: Ref<TextInput> };
 
-export function TextField({ label, hint, error, style, onFocus, onBlur, ...rest }: Props) {
+export function TextField({ label, hint, error, style, onFocus, onBlur, ref, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap}>
       <Text variant="label">{label}</Text>
       <TextInput
+        ref={ref}
         accessibilityLabel={label}
         placeholderTextColor={colors.muted}
         style={[

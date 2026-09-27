@@ -54,9 +54,15 @@ This document describes controls that exist in the code today. Items marked **Pl
 ## Authentication
 Phone OTP through Supabase Auth; codes are delivered by the `send-sms` hook through the provider chosen in
 the admin console. Supabase stores only hashed codes and applies rate limits and expiry. The web proxy
-refreshes the session on signed-in pages (`/admin` today). **Planned (M1):** public sign-up/onboarding and
-encrypted session storage on mobile (the current mobile client uses AsyncStorage and must not be used by
-real users yet).
+refreshes the session on signed-in pages (`/admin`, `/{lang}/account`, `/{lang}/onboarding`).
+
+Mobile sessions are encrypted at rest (`apps/mobile/src/lib/encrypted-storage.ts`): each write uses a new
+random 256-bit AES-CTR key and IV; the key is kept in the Android Keystore / iOS Keychain through
+expo-secure-store (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`, excluded from Android cloud backup) and only the
+ciphertext goes to AsyncStorage. A copied app-storage file reveals nothing; a wrong or missing key signs the
+person out. Sign-out clears both parts even when offline; "sign out on all devices" revokes every session
+on the server. Mobile crash reports (Sentry) are off without a DSN and scrub phones, codes, ID numbers,
+tokens and emails before sending.
 
 ## Payments (**Planned, M5**)
 See PAYMENTS.md. `PAYMENT_MODE` defaults to `test`; `live` is refused outside an approved production

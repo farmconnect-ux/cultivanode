@@ -1,53 +1,132 @@
-import { brand, colors, formatNaira, ROLE_LABELS, space } from '@cultivanode/shared';
+import { colors, space } from '@cultivanode/shared';
+import type { Session } from '@supabase/supabase-js';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { I18nProvider, useI18n } from './src/i18n';
+import { loadAccount, type Account } from './src/lib/account';
+import { signOut } from './src/lib/auth';
+import { initMonitoring, reportError, withMonitoring } from './src/lib/monitoring';
 import { supabase, supabaseConfigured } from './src/lib/supabase';
-import { Button, Card, Text } from './src/ui';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { PhoneSignInScreen } from './src/screens/PhoneSignInScreen';
+import { WelcomeScreen } from './src/screens/WelcomeScreen';
+import { Button, Logo, Notice, Screen } from './src/ui';
 
-// M0 placeholder screen built from the design system. Real screens arrive in M1.
-export default function App() {
-  const [status, setStatus] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+initMonitoring();
 
-  async function checkConnection() {
-    if (!supabaseConfigured) {
-      setStatus('Supabase is not set up. Copy apps/mobile/.env.example to .env and restart.');
-      return;
+type Guest = 'welcome' | 'signIn' | 'signUp';
+type AccountState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; account: Account | null };
+
+function Root() {
+  const { t } = useI18n();
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [guest, setGuest] = useState<Guest>('welcome');
+  const [account, setAccount] = useState<AccountState>({ status: 'loading' });
+  const [justJoined, setJustJoined] = useState(false);
+  const userId = session?.user.id;
+
+  useEffect(() => {
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null));
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const refreshAccount = useCallback(async () => {
+    if (!userId) return;
+    setAccount({ status: 'loading' });
+    try {
+      setAccount({ status: 'ready', account: await loadAccount(userId) });
+    } catch (error) {
+      reportError('account_load_failed', error);
+      setAccount({ status: 'error' });
     }
-    setChecking(true);
-    const { error } = await supabase.auth.getSession();
-    setChecking(false);
-    setStatus(error ? `Could not reach Supabase: ${error.message}` : 'Connected to Supabase.');
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) void refreshAccount();
+    else {
+      setAccount({ status: 'loading' });
+      setJustJoined(false);
+      setGuest('welcome');
+    }
+  }, [userId, refreshAccount]);
+
+  const signedOut = useCallback(() => setSession(null), []);
+
+  if (!supabaseConfigured) {
+    return (
+      <Screen>
+        <Logo />
+        <Notice>{t.common.notConfigured}</Notice>
+      </Screen>
+    );
   }
 
+  if (session === undefined || (session && account.status === 'loading')) return <Splash label={t.common.loading} />;
+
+  if (!session) {
+    if (guest === 'welcome') {
+      return <WelcomeScreen onStart={() => setGuest('signUp')} onSignIn={() => setGuest('signIn')} />;
+    }
+    return <PhoneSignInScreen mode={guest} onBack={() => setGuest('welcome')} />;
+  }
+
+  if (account.status === 'error') {
+    return (
+      <Screen>
+        <Logo />
+        <Notice>{t.account.errorLoad}</Notice>
+        <Button title={t.common.retry} onPress={refreshAccount} />
+        <Button title={t.account.signOut} variant="secondary" onPress={() => signOut('local').then(signedOut)} />
+      </Screen>
+    );
+  }
+
+  const acct = account.status === 'ready' ? account.account : null;
+  if (!acct || !acct.profile.onboarded_at) {
+    return (
+      <OnboardingScreen
+        onDone={(welcome) => {
+          setJustJoined(welcome);
+          void refreshAccount();
+        }}
+        onSignedOut={() => signOut('local').then(signedOut)}
+      />
+    );
+  }
+
+  return <HomeScreen account={acct} justJoined={justJoined} onSignedOut={signedOut} />;
+}
+
+function Splash({ label }: { label: string }) {
   return (
-    <View style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.brand}>
-          <Text variant="title" color={colors.leaf[700]}>
-            {brand.name}
-          </Text>
-          <Text muted>Your farm&apos;s working partner.</Text>
-        </View>
-
-        <Card>
-          <Text variant="heading">Development build</Text>
-          <Text muted>
-            {Object.keys(ROLE_LABELS).length} roles loaded. Tractor hire example: {formatNaira(2_500_000)} per hectare.
-          </Text>
-        </Card>
-
-        <Button title="Check connection" onPress={checkConnection} loading={checking} />
-        {status ? <Text accessibilityLiveRegion="polite">{status}</Text> : null}
-      </ScrollView>
-      <StatusBar style="dark" />
+    <View style={styles.splash} accessibilityLabel={label}>
+      <StatusBar style="light" />
+      <Logo size={88} />
+      <ActivityIndicator color={colors.white} />
     </View>
   );
 }
 
+function App() {
+  return (
+    <SafeAreaProvider>
+      <I18nProvider>
+        <Root />
+        <StatusBar style="dark" />
+      </I18nProvider>
+    </SafeAreaProvider>
+  );
+}
+
+export default withMonitoring(App);
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: space[6], gap: space[5], paddingTop: space[16] },
-  brand: { gap: space[1] },
+  splash: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space[6], backgroundColor: '#123D27' },
 });

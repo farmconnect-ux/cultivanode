@@ -35,6 +35,12 @@ const config: ExpoConfig = {
       : undefined,
   },
   plugins: [
+    // Keeps keystore entries out of Android cloud backups (a restored phone signs in again).
+    ['expo-secure-store', { configureAndroidBackup: true, faceIDPermission: false }],
+    // Source-map upload only when a Sentry project is configured for the build (EAS secrets).
+    ...(process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+      ? [['@sentry/react-native/expo', { organization: process.env.SENTRY_ORG, project: process.env.SENTRY_PROJECT }] as [string, object]]
+      : []),
     [
       'expo-splash-screen',
       {

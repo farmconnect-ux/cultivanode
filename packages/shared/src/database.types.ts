@@ -575,6 +575,75 @@ export type Database = {
           },
         ]
       }
+      hero_slides: {
+        Row: {
+          alt_en: string
+          alt_yo: string | null
+          caption_en: string | null
+          caption_yo: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          image_path: string
+          link_url: string | null
+          position: number
+          published: boolean
+          title_en: string | null
+          title_yo: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alt_en: string
+          alt_yo?: string | null
+          caption_en?: string | null
+          caption_yo?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_path: string
+          link_url?: string | null
+          position?: number
+          published?: boolean
+          title_en?: string | null
+          title_yo?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alt_en?: string
+          alt_yo?: string | null
+          caption_en?: string | null
+          caption_yo?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_path?: string
+          link_url?: string | null
+          position?: number
+          published?: boolean
+          title_en?: string | null
+          title_yo?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hero_slides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hero_slides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_configs: {
         Row: {
           config: Json
@@ -971,6 +1040,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_view_daily: {
+        Row: {
+          day: string
+          path: string
+          views: number
+        }
+        Insert: {
+          day: string
+          path: string
+          views?: number
+        }
+        Update: {
+          day?: string
+          path?: string
+          views?: number
+        }
+        Relationships: []
       }
       permissions: {
         Row: {
@@ -1539,6 +1626,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_clear_integration_secret: {
         Args: {
           p_field: string
@@ -1548,6 +1636,7 @@ export type Database = {
         Returns: undefined
       }
       admin_dashboard: { Args: never; Returns: Json }
+      admin_delete_hero_slide: { Args: { p_id: string }; Returns: string }
       admin_grant_admin_role: {
         Args: {
           p_profile: string
@@ -1557,6 +1646,10 @@ export type Database = {
         Returns: undefined
       }
       admin_integration_overview: { Args: never; Returns: Json }
+      admin_move_hero_slide: {
+        Args: { p_id: string; p_up: boolean }
+        Returns: undefined
+      }
       admin_resolve_data_request: {
         Args: {
           p_note: string
@@ -1590,6 +1683,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_save_hero_slide: {
+        Args: {
+          p_alt_en: string
+          p_alt_yo: string
+          p_caption_en: string
+          p_caption_yo: string
+          p_id: string
+          p_image_path: string
+          p_link_url: string
+          p_published: boolean
+          p_title_en: string
+          p_title_yo: string
+        }
+        Returns: Json
+      }
       admin_save_integration_config: {
         Args: {
           p_config: Json
@@ -1600,6 +1708,10 @@ export type Database = {
       }
       admin_set_contact_handled: {
         Args: { p_handled: boolean; p_message_id: string }
+        Returns: undefined
+      }
+      admin_set_hero_slide_published: {
+        Args: { p_id: string; p_published: boolean }
         Returns: undefined
       }
       admin_set_integration_mode: {
@@ -1914,6 +2026,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      track_page_view: { Args: { p_path: string }; Returns: undefined }
       write_audit: {
         Args: {
           p_action: string

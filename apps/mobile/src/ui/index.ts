@@ -2,3 +2,8 @@ export { Text } from './Text';
 export { Button } from './Button';
 export { Card } from './Card';
 export { TextField } from './TextField';
+export { Choice } from './Choice';
+export { Logo } from './Logo';
+export { Notice } from './Notice';
+export { Screen } from './Screen';
+export { SelectField } from './SelectField';
