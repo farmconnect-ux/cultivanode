@@ -43,7 +43,15 @@ const en = {
     readFaq: "Read all questions",
   },
   home: {
-    heroTitle: "Your farm's working partner",
+    heroTitle: "Connected intelligence for agriculture.",
+    // Part of heroTitle shown in the accent colour (must appear in heroTitle exactly).
+    heroAccent: "intelligence",
+    heroPromise: "Your farm's working partner.",
+    heroProof: [
+      { title: "Phone sign-in", body: "No passwords to remember" },
+      { title: "Verified people", body: "ID-checked hands and owners" },
+      { title: "Safe payments", body: "Escrow coming soon" },
+    ],
     heroBody:
       "Plan your crops, hire tractors and farm hands you can trust, and keep your farm books. One app, built for farmers in South-West Nigeria.",
     heroPrimary: "Join the pilot",

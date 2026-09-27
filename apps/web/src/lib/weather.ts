@@ -1,21 +1,29 @@
-import { openMeteoUrl, parseOpenMeteo, PILOT_WEATHER_PLACES, type PlaceForecast } from "@cultivanode/shared";
+import type { WeatherResponse } from "@cultivanode/shared";
 import { logger } from "@/lib/logger";
+import { supabaseEnv } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 
 /**
- * 7-day forecasts for the pilot states from Open-Meteo, cached for 30 minutes by Next.
- * OPEN_METEO_API_KEY (server-only) switches to the paid endpoint, which commercial use requires.
- * Returns null when the service cannot be reached, so the dashboard still loads.
+ * Pilot-state forecasts from the `weather` Edge Function, which uses the provider chosen in
+ * Admin > Integrations and caches results for 30 minutes. Runs as the signed-in staff member
+ * (the function checks analytics.read); API keys never reach the website.
  */
-export async function loadPilotWeather(): Promise<{ forecasts: PlaceForecast[]; fetchedAt: string } | null> {
+export async function loadPilotWeather(): Promise<WeatherResponse> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return { ok: false, error: "not_signed_in" };
+  const { url, key } = supabaseEnv();
   try {
-    const res = await fetch(openMeteoUrl(PILOT_WEATHER_PLACES, process.env.OPEN_METEO_API_KEY || undefined), {
-      next: { revalidate: 1800 },
-      signal: AbortSignal.timeout(8000),
+    const res = await fetch(`${url}/functions/v1/weather`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: key },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20000),
     });
-    if (!res.ok) throw new Error(`status_${res.status}`);
-    return { forecasts: parseOpenMeteo(await res.json(), PILOT_WEATHER_PLACES), fetchedAt: new Date().toISOString() };
+    return (await res.json()) as WeatherResponse;
   } catch (error) {
-    logger.warn("weather_load_failed", { reason: error instanceof Error ? error.message : "unknown" });
-    return null;
+    logger.warn("weather_load_failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { ok: false, error: "unavailable" };
   }
 }

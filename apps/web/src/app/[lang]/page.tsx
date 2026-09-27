@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { HeroCarousel } from "@/components/site/hero-carousel";
 import { HowItWorks } from "@/components/site/how-it-works";
-import { Badge, Card, Container, LinkButton, Section } from "@/components/ui";
+import { Card, Container, LinkButton, Section } from "@/components/ui";
 import { site } from "@/config/site";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -41,21 +41,37 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
 
   return (
     <>
-      {/* Hero */}
-      <section className="bg-cream">
-        <Container className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-2 lg:py-20">
+      {/* Hero: deep brand green with the cyan accent (Figma: Screens > Landing · desktop 1440) */}
+      <section className="relative overflow-hidden bg-leaf-800 text-white">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-40 size-[34rem] rounded-full bg-node-300/10 blur-3xl" />
+        <Container className="relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-20">
           <div className="flex flex-col items-start gap-6">
-            <Badge>{t.common.pilotBadge}</Badge>
-            <h1 className="text-4xl font-extrabold text-leaf-800 sm:text-5xl">{h.heroTitle}</h1>
-            <p className="max-w-xl text-lg text-muted sm:text-xl">{h.heroBody}</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-leaf-700 px-3 py-1.5 text-sm font-semibold text-leaf-100">
+              <span aria-hidden="true" className="size-2 rounded-full bg-harvest-300" />
+              {t.common.pilotBadge}
+            </span>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+              <HeroTitle title={h.heroTitle} accent={h.heroAccent} />
+            </h1>
+            <p className="max-w-xl text-lg text-leaf-100 sm:text-xl">
+              <strong className="font-semibold text-white">{h.heroPromise}</strong> {h.heroBody}
+            </p>
             <div className="flex flex-wrap gap-3">
-              <LinkButton href={`/${lang}/sign-up`} size="lg">
+              <LinkButton href={`/${lang}/sign-up`} size="lg" variant="accent">
                 {h.heroPrimary}
               </LinkButton>
-              <LinkButton href={`/${lang}#how`} size="lg" variant="secondary">
+              <LinkButton href={`/${lang}#how`} size="lg" variant="onDark">
                 {h.heroSecondary}
               </LinkButton>
             </div>
+            <ul className="grid w-full max-w-xl gap-4 pt-2 sm:grid-cols-3">
+              {h.heroProof.map((p) => (
+                <li key={p.title} className="border-l-2 border-node-300/60 pl-3">
+                  <p className="font-bold text-white">{p.title}</p>
+                  <p className="text-sm text-leaf-100">{p.body}</p>
+                </li>
+              ))}
+            </ul>
           </div>
           <HeroCarousel
             slides={slides}
@@ -141,6 +157,19 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
           </div>
         </Container>
       </section>
+    </>
+  );
+}
+
+/** The tagline with one phrase in the brand cyan (falls back to plain text if the phrase is missing). */
+function HeroTitle({ title, accent }: { title: string; accent: string }) {
+  const i = accent ? title.indexOf(accent) : -1;
+  if (i < 0) return <>{title}</>;
+  return (
+    <>
+      {title.slice(0, i)}
+      <span className="text-node-300">{accent}</span>
+      {title.slice(i + accent.length)}
     </>
   );
 }

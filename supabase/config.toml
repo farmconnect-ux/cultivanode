@@ -430,3 +430,6 @@ verify_jwt = true
 
 [functions.agent-onboard]
 verify_jwt = true
+
+[functions.weather]
+verify_jwt = true

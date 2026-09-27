@@ -1,7 +1,7 @@
 // Contracts every provider adapter implements. The rest of the code never names a provider:
 // it asks the database which one is active (integration_runtime) and calls it through these.
 
-export type IntegrationKind = 'sms' | 'identity';
+export type IntegrationKind = 'sms' | 'identity' | 'weather';
 export type IntegrationMode = 'test' | 'live';
 
 /** What public.integration_runtime() returns. */

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cx } from "./cx";
 
-type Variant = "primary" | "secondary" | "ghost" | "gold";
+type Variant = "primary" | "secondary" | "ghost" | "gold" | "accent" | "onDark";
 type Size = "md" | "lg";
 
 const base =
@@ -14,6 +14,9 @@ const variants: Record<Variant, string> = {
   secondary: "border-2 border-leaf-600 bg-white text-leaf-700 hover:bg-leaf-50",
   ghost: "text-leaf-700 hover:bg-leaf-50",
   gold: "bg-harvest-300 text-ink hover:bg-harvest-400",
+  // For deep-green (leaf-800) backgrounds, as on the home-page hero.
+  accent: "bg-node-300 text-leaf-900 hover:bg-node-200",
+  onDark: "border-2 border-white/60 text-white hover:bg-white/10",
 };
 
 const sizes: Record<Size, string> = {

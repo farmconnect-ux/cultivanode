@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import { can, requireStaff } from "@/lib/admin/staff";
 import { createClient } from "@/lib/supabase/server";
 import { loadPilotWeather } from "@/lib/weather";
+import type { WeatherResponse } from "@cultivanode/shared";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -83,7 +84,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
   const [{ data }, analyticsRes, weather] = await Promise.all([
     supabase.rpc("admin_dashboard"),
     showAnalytics ? supabase.rpc("admin_analytics", { p_days: days }) : Promise.resolve({ data: null }),
-    loadPilotWeather(),
+    showAnalytics ? loadPilotWeather() : Promise.resolve<WeatherResponse>({ ok: false, error: "forbidden" }),
   ]);
   const c = (data ?? {}) as Counts;
   const a = (analyticsRes.data ?? null) as Analytics | null;
@@ -223,14 +224,27 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
         </section>
       )}
 
-      <section aria-labelledby="weather-h" className="flex flex-col gap-3">
+      {showAnalytics && <section aria-labelledby="weather-h" className="flex flex-col gap-3">
         <h2 id="weather-h" className="text-2xl font-bold">Weather in the pilot states</h2>
-        {weather ? (
-          <WeatherPanel forecasts={weather.forecasts} fetchedAt={weather.fetchedAt} />
+        {weather.ok ? (
+          <WeatherPanel forecasts={weather.forecasts} fetchedAt={weather.fetchedAt} provider={weather.provider} stale={weather.stale} />
         ) : (
-          <p className="text-muted">The weather service could not be reached. It will try again in a few minutes.</p>
+          <p className="text-muted">
+            {weather.error === "not_configured"
+              ? "Weather is not set up yet. "
+              : weather.error === "not_available"
+                ? "The chosen weather provider cannot be used here (a free, non-commercial service is switched off in production). "
+                : weather.error === "rejected" || weather.error === "billing"
+                  ? `The weather provider refused the request${weather.detail ? ` (${weather.detail})` : ""}. `
+                  : "The weather service could not be reached. It will try again in a few minutes. "}
+            {can(staff, "integrations.manage") && weather.error !== "unavailable" && (
+              <Link href="/admin/integrations" className="font-semibold text-leaf-700 hover:underline">
+                Open Integrations › Weather to add or check the API key.
+              </Link>
+            )}
+          </p>
         )}
-      </section>
+      </section>}
 
       {can(staff, "site_content.manage") && (
         <Card className="flex flex-col gap-2">

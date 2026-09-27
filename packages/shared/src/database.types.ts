@@ -1588,6 +1588,32 @@ export type Database = {
         }
         Relationships: []
       }
+      weather_cache: {
+        Row: {
+          fetched_at: string
+          payload: Json
+          provider: string
+        }
+        Insert: {
+          fetched_at?: string
+          payload: Json
+          provider: string
+        }
+        Update: {
+          fetched_at?: string
+          payload?: Json
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weather_cache_provider_fkey"
+            columns: ["provider"]
+            isOneToOne: true
+            referencedRelation: "integration_providers"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Views: {
       current_consents: {
@@ -2083,7 +2109,7 @@ export type Database = {
         | "transport_equipment"
         | "other"
       farm_zone: "rainforest" | "derived_savanna" | "other"
-      integration_kind: "sms" | "identity"
+      integration_kind: "sms" | "identity" | "weather"
       integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -2295,7 +2321,7 @@ export const Constants = {
         "other",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
-      integration_kind: ["sms", "identity"],
+      integration_kind: ["sms", "identity", "weather"],
       integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],

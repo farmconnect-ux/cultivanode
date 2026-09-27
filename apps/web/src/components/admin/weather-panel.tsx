@@ -1,4 +1,4 @@
-import { weatherKind, WEATHER_THRESHOLDS, type PlaceForecast, type WeatherAlert, type WeatherKind } from "@cultivanode/shared";
+import { WEATHER_THRESHOLDS, type PlaceForecast, type WeatherAlert, type WeatherKind } from "@cultivanode/shared";
 
 const KIND_LABEL: Record<WeatherKind, string> = {
   clear: "Sunny",
@@ -47,19 +47,36 @@ function alertText(a: WeatherAlert): string {
   }
 }
 
-/** Current conditions, a 7-day strip and farm alerts for each pilot state. */
-export function WeatherPanel({ forecasts, fetchedAt }: { forecasts: PlaceForecast[]; fetchedAt: string }) {
+const PROVIDER_CREDIT: Record<string, React.ReactNode> = {
+  weatherapi: (
+    <>
+      Powered by{" "}
+      <a href="https://www.weatherapi.com/" className="underline" rel="noopener noreferrer" target="_blank">WeatherAPI.com</a>.
+    </>
+  ),
+  open_meteo: (
+    <>
+      Weather data by{" "}
+      <a href="https://open-meteo.com/" className="underline" rel="noopener noreferrer" target="_blank">Open-Meteo.com</a> (CC BY 4.0).
+    </>
+  ),
+};
+
+type PanelProps = { forecasts: PlaceForecast[]; fetchedAt: string; provider: string; stale: boolean };
+
+/** Current conditions, a daily forecast strip and farm alerts for each pilot state. */
+export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelProps) {
   const withAlerts = forecasts.filter((f) => f.alerts.length > 0).length;
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">
-        {withAlerts > 0 ? `${withAlerts} of ${forecasts.length} pilot states have a farm alert this week.` : "No farm alerts in the pilot states this week."}{" "}
+        {withAlerts > 0 ? `${withAlerts} of ${forecasts.length} pilot states have a farm alert in the forecast.` : "No farm alerts in the pilot states in the forecast."}{" "}
         Alerts: rain ≥ {WEATHER_THRESHOLDS.heavyRainMm} mm in a day, under {WEATHER_THRESHOLDS.dryWeekMm} mm in 7 days, ≥{" "}
         {WEATHER_THRESHOLDS.heatC}°C, wind ≥ {WEATHER_THRESHOLDS.strongWindKmh} km/h.
       </p>
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {forecasts.map((f) => {
-          const nowKind = weatherKind(f.now?.code ?? -1);
+          const nowKind: WeatherKind = f.now?.kind ?? "unknown";
           return (
             <li key={f.place.state} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4">
               <div className="flex items-start justify-between gap-3">
@@ -80,7 +97,7 @@ export function WeatherPanel({ forecasts, fetchedAt }: { forecasts: PlaceForecas
                 )}
               </div>
               <table className="w-full table-fixed text-center text-xs">
-                <caption className="sr-only">7-day forecast for {f.place.town}, {f.place.state}</caption>
+                <caption className="sr-only">Forecast for {f.place.town}, {f.place.state}</caption>
                 <thead>
                   <tr>
                     {f.days.map((d) => (
@@ -92,10 +109,10 @@ export function WeatherPanel({ forecasts, fetchedAt }: { forecasts: PlaceForecas
                   <tr>
                     {f.days.map((d) => (
                       <td key={d.date} className="py-1">
-                        <span className="flex justify-center text-leaf-700" title={KIND_LABEL[weatherKind(d.code)]}>
-                          <WeatherIcon kind={weatherKind(d.code)} className="size-5" />
+                        <span className="flex justify-center text-leaf-700" title={KIND_LABEL[d.kind]}>
+                          <WeatherIcon kind={d.kind} className="size-5" />
                         </span>
-                        <span className="sr-only">{KIND_LABEL[weatherKind(d.code)]}</span>
+                        <span className="sr-only">{KIND_LABEL[d.kind]}</span>
                       </td>
                     ))}
                   </tr>
@@ -133,9 +150,9 @@ export function WeatherPanel({ forecasts, fetchedAt }: { forecasts: PlaceForecas
         })}
       </ul>
       <p className="text-xs text-muted">
-        Weather data by{" "}
-        <a href="https://open-meteo.com/" className="underline" rel="noopener noreferrer" target="_blank">Open-Meteo.com</a> (CC BY 4.0).
-        Updated {new Date(fetchedAt).toLocaleString("en-GB", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} (Lagos time).
+        {PROVIDER_CREDIT[provider] ?? <>Weather data from {provider}.</>} Updated{" "}
+        {new Date(fetchedAt).toLocaleString("en-GB", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} (Lagos time).
+        {stale && <strong className="ml-1 text-harvest-700">The weather service did not answer, so this is the last forecast we received.</strong>}
       </p>
     </div>
   );

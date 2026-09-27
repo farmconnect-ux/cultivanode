@@ -1,10 +1,11 @@
 // "Send test" button on the admin Integrations page. Staff with integrations.manage only.
 // SMS: sends a harmless test message. Identity: in test mode runs the provider's sandbox NIN;
-// in live mode only fetches the bank list (free, no personal data).
+// in live mode only fetches the bank list (free, no personal data). Weather: one forecast for Ibadan.
 import { BRAND_NAME } from '../brand.ts';
 import { fail, json, preflight } from '../http.ts';
 import { identityProvider } from '../providers/identity.ts';
 import { smsProvider } from '../providers/sms.ts';
+import { PILOT_PLACES, weatherProvider } from '../providers/weather.ts';
 import type { FetchFn } from '../providers/types.ts';
 import { currentUserId, getRuntime, logEvent, rpcAsUser, runtimeProblem, type ServerEnv } from '../server.ts';
 
@@ -40,7 +41,7 @@ export async function handleIntegrationTest(req: Request, deps: IntegrationTestD
   } catch {
     return fail('invalid_request', 400);
   }
-  if ((body.kind !== 'sms' && body.kind !== 'identity') || typeof body.provider !== 'string') {
+  if ((body.kind !== 'sms' && body.kind !== 'identity' && body.kind !== 'weather') || typeof body.provider !== 'string') {
     return fail('invalid_request', 400);
   }
 
@@ -63,6 +64,16 @@ export async function handleIntegrationTest(req: Request, deps: IntegrationTestD
     await logEvent(env, { kind: 'sms', provider: rt.provider, mode: rt.mode, operation: 'test', success: r.ok,
       http_status: r.httpStatus, error_code: r.ok ? undefined : r.error, duration_ms: Date.now() - started }, fetchFn);
     return json(r.ok ? { ok: true, mode: rt.mode } : { ok: false, error: r.error, detail: r.detail, mode: rt.mode });
+  }
+
+  if (body.kind === 'weather') {
+    const w = weatherProvider(rt, fetchFn);
+    if (!w.ok) return json({ ok: false, error: w.error });
+    const r = await w.value.forecast(PILOT_PLACES[0]!);
+    await logEvent(env, { kind: 'weather', provider: rt.provider, mode: rt.mode, operation: 'test', success: r.ok,
+      http_status: r.httpStatus, error_code: r.ok ? undefined : r.error, duration_ms: Date.now() - started }, fetchFn);
+    return json(r.ok ? { ok: true, mode: rt.mode, check: 'forecast', days: r.value.days.length, place: r.value.place.town }
+                     : { ok: false, error: r.error, detail: r.detail, mode: rt.mode });
   }
 
   const adapter = identityProvider(rt, fetchFn);

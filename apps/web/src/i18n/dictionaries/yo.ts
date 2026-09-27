@@ -45,7 +45,14 @@ const yo: Dictionary = {
     readFaq: "Wo gbogbo ìbéèrè",
   },
   home: {
-    heroTitle: "Alábàáṣiṣẹ́ oko rẹ",
+    heroTitle: "Ọgbọ́n tí a so pọ̀ fún iṣẹ́ àgbẹ̀.",
+    heroAccent: "Ọgbọ́n tí a so pọ̀",
+    heroPromise: "Alábàáṣiṣẹ́ oko rẹ.",
+    heroProof: [
+      { title: "Wọlé pẹ̀lú fóònù", body: "Kò sí ọ̀rọ̀ aṣínà láti rántí" },
+      { title: "Àwọn ènìyàn tí a fìdí wọn múlẹ̀", body: "A ti ṣàyẹ̀wò ìdánimọ̀ òṣìṣẹ́ àti onímọ́tò" },
+      { title: "Owó sísan tó ní ààbò", body: "Escrow ń bọ̀ láìpẹ́" },
+    ],
     heroBody:
       "Ṣètò ọ̀gbìn rẹ, gba tírákítọ̀ àti àwọn òṣìṣẹ́ oko tí o lè gbẹ́kẹ̀lé, kí o sì máa kọ ìwé owó oko rẹ. Áàpù kan ṣoṣo, tí a ṣe fún àwọn àgbẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà.",
     heroPrimary: "Darapọ̀ mọ́ ìdánwò",

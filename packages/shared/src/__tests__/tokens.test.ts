@@ -25,6 +25,7 @@ describe('colour contrast (WCAG AA, 4.5:1 for body text)', () => {
     danger: colors.danger,
     info: colors.info,
     'harvest-700': colors.harvest[700],
+    'node-600': colors.node[600],
   };
   for (const [name, hex] of Object.entries(textColours)) {
     it(`${name} on cream and white`, () => {
@@ -35,6 +36,12 @@ describe('colour contrast (WCAG AA, 4.5:1 for body text)', () => {
   it('white text on the primary button (leaf-600) and its hover (leaf-700)', () => {
     expect(contrast(colors.white, colors.leaf[600])).toBeGreaterThanOrEqual(4.5);
     expect(contrast(colors.white, colors.leaf[700])).toBeGreaterThanOrEqual(4.5);
+  });
+  it('brand combinations: cyan on deep green, deep green on cyan buttons, off-white on deep green', () => {
+    expect(contrast(colors.node[300], colors.leaf[800])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.leaf[900], colors.node[300])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.cream, colors.leaf[800])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.leaf[100], colors.leaf[800])).toBeGreaterThanOrEqual(4.5);
   });
   it('ink text on the harvest highlight (harvest-300)', () => {
     expect(contrast(colors.ink, colors.harvest[300])).toBeGreaterThanOrEqual(4.5);

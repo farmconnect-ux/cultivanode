@@ -22,7 +22,7 @@ export default async function IntegrationsPage() {
       <div>
         <h1 className="text-3xl font-extrabold text-leaf-800">Integrations</h1>
         <p className="mt-1 max-w-3xl text-muted">
-          Pick which provider sends sign-in codes and which one checks NIN, BVN and bank accounts. Keys are stored
+          Pick which provider sends sign-in codes, which one checks NIN, BVN and bank accounts, and which one supplies weather. Keys are stored
           encrypted and can only be replaced, never read back. Test and live keep separate settings and keys.
         </p>
       </div>

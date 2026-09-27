@@ -1,9 +1,7 @@
-// Weather: pilot locations, Open-Meteo request/response handling and simple farm alerts.
-// Pure functions only (no fetch), so the web admin, the future farmer app and tests share them.
-//
-// Data source: Open-Meteo (https://open-meteo.com), CC BY 4.0 — the UI must credit it.
-// The free endpoint is for non-commercial use; production needs an Open-Meteo API plan
-// (set OPEN_METEO_API_KEY and the customer endpoint is used) or another provider.
+// Weather: shared types, pilot locations and farm-alert rules.
+// Forecasts are fetched by the `weather` Edge Function from the provider chosen in Admin > Integrations
+// (WeatherAPI.com by default); supabase/functions/_shared/providers/weather.ts holds the adapters and a
+// copy of these constants (a unit test keeps the two in step).
 
 export type WeatherPlace = { state: string; town: string; lat: number; lon: number };
 
@@ -17,28 +15,11 @@ export const PILOT_WEATHER_PLACES: readonly WeatherPlace[] = [
   { state: 'Lagos', town: 'Ikeja', lat: 6.6018, lon: 3.3515 },
 ];
 
-const DAILY = ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'precipitation_probability_max', 'wind_speed_10m_max'];
-const CURRENT = ['temperature_2m', 'relative_humidity_2m', 'weather_code', 'wind_speed_10m'];
-
-/** One request for all places (Open-Meteo accepts comma-separated coordinates). */
-export function openMeteoUrl(places: readonly WeatherPlace[], apiKey?: string): string {
-  const base = apiKey ? 'https://customer-api.open-meteo.com/v1/forecast' : 'https://api.open-meteo.com/v1/forecast';
-  const q = new URLSearchParams({
-    latitude: places.map((p) => p.lat).join(','),
-    longitude: places.map((p) => p.lon).join(','),
-    daily: DAILY.join(','),
-    current: CURRENT.join(','),
-    timezone: 'Africa/Lagos',
-    forecast_days: '7',
-    wind_speed_unit: 'kmh',
-  });
-  if (apiKey) q.set('apikey', apiKey);
-  return `${base}?${q.toString()}`;
-}
+export type WeatherKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'storm' | 'unknown';
 
 export type WeatherDay = {
   date: string;
-  code: number;
+  kind: WeatherKind;
   maxC: number;
   minC: number;
   rainMm: number;
@@ -51,10 +32,15 @@ export type WeatherAlert = { kind: WeatherAlertKind; date?: string; value: numbe
 
 export type PlaceForecast = {
   place: WeatherPlace;
-  now: { tempC: number; humidity: number; code: number; windKmh: number } | null;
+  now: { tempC: number; humidity: number; kind: WeatherKind; windKmh: number } | null;
   days: WeatherDay[];
   alerts: WeatherAlert[];
 };
+
+/** What the `weather` Edge Function returns. */
+export type WeatherResponse =
+  | { ok: true; provider: string; fetchedAt: string; stale: boolean; forecasts: PlaceForecast[] }
+  | { ok: false; error: string; provider?: string; missing?: string[]; detail?: string };
 
 // Thresholds for farm alerts. Simple and explainable on purpose; agronomists can tune them later.
 export const WEATHER_THRESHOLDS = {
@@ -64,14 +50,7 @@ export const WEATHER_THRESHOLDS = {
   strongWindKmh: 40, // daily maximum: no spraying
 } as const;
 
-const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
-
-type Raw = {
-  current?: Record<string, unknown>;
-  daily?: Record<string, unknown[]>;
-};
-
-/** Alerts for one place from its 7-day forecast. */
+/** Alerts for one place from its forecast. The dry-week alert needs at least 7 days. */
 export function weatherAlerts(days: WeatherDay[]): WeatherAlert[] {
   const t = WEATHER_THRESHOLDS;
   const out: WeatherAlert[] = [];
@@ -84,56 +63,4 @@ export function weatherAlerts(days: WeatherDay[]): WeatherAlert[] {
   const windy = days.find((d) => d.windKmh >= t.strongWindKmh);
   if (windy) out.push({ kind: 'strong_wind', date: windy.date, value: windy.windKmh });
   return out;
-}
-
-/** Turns the Open-Meteo response (one object, or an array for several places) into forecasts. */
-export function parseOpenMeteo(json: unknown, places: readonly WeatherPlace[]): PlaceForecast[] {
-  const list = (Array.isArray(json) ? json : [json]) as Raw[];
-  if (list.length !== places.length) throw new Error('weather_response_mismatch');
-  return list.map((raw, i) => {
-    const d = raw.daily ?? {};
-    const dates = (d.time ?? []) as unknown[];
-    const days: WeatherDay[] = dates
-      .map((date, k) => ({
-        date: String(date),
-        code: num(d.weather_code?.[k]),
-        maxC: num(d.temperature_2m_max?.[k]),
-        minC: num(d.temperature_2m_min?.[k]),
-        rainMm: num(d.precipitation_sum?.[k]),
-        rainChance: Number.isFinite(num(d.precipitation_probability_max?.[k])) ? num(d.precipitation_probability_max?.[k]) : null,
-        windKmh: num(d.wind_speed_10m_max?.[k]),
-      }))
-      .filter((day) => Number.isFinite(day.maxC) && Number.isFinite(day.minC))
-      .map((day) => ({
-        ...day,
-        rainMm: Number.isFinite(day.rainMm) ? day.rainMm : 0,
-        windKmh: Number.isFinite(day.windKmh) ? day.windKmh : 0,
-        code: Number.isFinite(day.code) ? day.code : -1,
-      }));
-    const c = raw.current;
-    const now =
-      c && Number.isFinite(num(c.temperature_2m))
-        ? {
-            tempC: num(c.temperature_2m),
-            humidity: num(c.relative_humidity_2m),
-            code: num(c.weather_code),
-            windKmh: num(c.wind_speed_10m),
-          }
-        : null;
-    return { place: places[i]!, now, days, alerts: weatherAlerts(days) };
-  });
-}
-
-export type WeatherKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'storm' | 'unknown';
-
-/** Groups WMO weather codes into a few kinds the UI can name and draw. */
-export function weatherKind(code: number): WeatherKind {
-  if (code === 0) return 'clear';
-  if (code === 1 || code === 2) return 'partly';
-  if (code === 3) return 'cloudy';
-  if (code === 45 || code === 48) return 'fog';
-  if (code >= 51 && code <= 57) return 'drizzle';
-  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
-  if (code >= 95 && code <= 99) return 'storm';
-  return 'unknown';
 }

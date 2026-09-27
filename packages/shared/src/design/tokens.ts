@@ -11,18 +11,30 @@
 //   warm cream background. All text colours below pass WCAG AA (4.5:1) on `cream` and `white`.
 
 export const colors = {
-  // Leaf green: primary actions, links, brand
+  // Leaf green, deepened to the CultivaNode brand (800 = logo background #123D27): primary actions, text
   leaf: {
-    50: '#EEF7F0',
-    100: '#D5EBDA',
-    200: '#ABD6B6',
+    50: '#EDF5EF',
+    100: '#D3E7D8',
+    200: '#A9CFB4',
     300: '#78BB8A',
-    400: '#4A9C62',
-    500: '#2F7F47',
-    600: '#236639', // primary button
-    700: '#1F5130', // primary text on light, hover
-    800: '#173D25',
-    900: '#0F2918',
+    400: '#4A9867',
+    500: '#2E7A4F',
+    600: '#1F6340', // primary button
+    700: '#1A5236',
+    800: '#123D27', // brand deep green, hero and footer
+    900: '#0B2718',
+  },
+  // Node cyan: the brand accent (connections, highlights on dark green). 300 is the logo cyan.
+  // Use 600+ for text on light backgrounds; 300 only on dark green or as a fill with dark text.
+  node: {
+    50: '#E8F8FA',
+    100: '#C5EEF3',
+    200: '#8FDDE8',
+    300: '#3BC6D9',
+    400: '#22A9BD',
+    500: '#17879A',
+    600: '#126B7A',
+    700: '#0F5561',
   },
   // Harvest gold: highlights, badges, focus accents (not for body text on light backgrounds)
   harvest: {
@@ -44,13 +56,13 @@ export const colors = {
     900: '#33241A',
   },
   // Neutrals (warm)
-  ink: '#1C2420', // body text
+  ink: '#1E2528', // body text (brand graphite)
   muted: '#55605A', // secondary text
   line: '#DAD6CC', // borders
   cream: '#FAF7F0', // page background
   white: '#FFFFFF',
   // Status
-  success: '#236639',
+  success: '#1F6340',
   warning: '#A06B0E',
   danger: '#B42318',
   info: '#1E5A8A',

@@ -12,7 +12,7 @@ import {
 } from "@/actions/admin-integrations";
 import { Badge, Button, Card, cx, Field, Input, Select } from "@/components/ui";
 
-type Kind = "sms" | "identity";
+type Kind = "sms" | "identity" | "weather";
 type Mode = "test" | "live";
 
 type ConfigField = { key: string; label: string; required?: boolean; default?: string; options?: string[]; help?: string };
@@ -42,6 +42,7 @@ export type Overview = {
 const KIND_TITLES: Record<Kind, { title: string; intro: string }> = {
   sms: { title: "SMS (sign-in codes)", intro: "Sends the one-time codes people use to sign in, and SMS alerts later." },
   identity: { title: "Identity checks", intro: "Checks NIN, BVN and payout bank accounts during verification." },
+  weather: { title: "Weather", intro: "Forecasts and farm alerts for the pilot states on the admin dashboard (farm-level weather later)." },
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" });
@@ -94,7 +95,7 @@ function ActionForm({
 export function IntegrationsBoard({ overview }: { overview: Overview }) {
   return (
     <div className="flex flex-col gap-10">
-      {(["sms", "identity"] as const).map((kind) => {
+      {(["sms", "identity", "weather"] as const).map((kind) => {
         const active = overview.settings.find((s) => s.kind === kind)?.active_provider;
         const providers = overview.providers.filter((p) => p.kind === kind);
         const current = providers.find((p) => p.code === active);
@@ -113,7 +114,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
             </div>
             {current?.test_only && (
               <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
-                A test provider is in use. Real people cannot {kind === "sms" ? "receive sign-in codes" : "be verified"} until
+                A test provider is in use. {kind === "sms" ? "Real people cannot receive sign-in codes" : kind === "identity" ? "Real people cannot be verified" : "Weather stops"} until
                 you switch to a real provider. Test providers stop working once the platform runs in production.
               </p>
             )}
@@ -280,7 +281,7 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
                   </div>
                 )}
                 <Button type="submit" variant="secondary" disabled={pending}>
-                  {pending ? "Testing..." : p.kind === "sms" ? "Send test SMS" : p.mode === "live" ? "Check connection" : "Run sandbox check"}
+                  {pending ? "Testing..." : p.kind === "sms" ? "Send test SMS" : p.kind === "weather" || p.mode === "live" ? "Check connection" : "Run sandbox check"}
                 </Button>
               </div>
             )}
