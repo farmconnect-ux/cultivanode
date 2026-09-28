@@ -33,7 +33,7 @@ browser). Native parity comes after the MVP, with offline sync (M7).
 |---|---|---|---|---|
 | 1 | M0 Foundations | M0 | ✅ done | – |
 | 2 | M1 Website and identity | M1, modules 1–2 | ✅ done (leftovers listed below) | – |
-| 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | 🟡 code done 2026-09-28; hosted migration and live providers pending | dashboard access, live Termii and Prembly |
+| 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | ✅ code done and live on the hosted project 2026-09-28 (marketplace switch still closed) | – |
 | 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | ⬜ next | W1 |
 | 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | ⬜ | W2 |
 | 6 | **MVP W4** Operable pilot | module 12, M5 (cancellation, no money), M7 (agents) | ⬜ | legal review of direct-payment terms |
@@ -56,10 +56,10 @@ calendar weeks and keep the week order. If time runs short, cut W4 hardening ite
 
 ### W1 — Safe foundation and supply online
 
-Status (2026-09-28): code done and tested (migration `20260928140000_mvp_week1.sql`, pgTAP `11_mvp_week1`). Still to do on the
-hosted project: apply the migration, redeploy the Edge Functions, switch Termii and Prembly to live, open the marketplace
-switch for the beta cluster when providers are ready. Suspension and sign-out are done in the database (auth ban + ending
-sessions), so no extra Edge Function was needed. The marketplace switch follows the state on each person's profile.
+Status (2026-09-28): done. Migration `20260928164741_mvp_week1.sql` is applied on the hosted project and all five
+Edge Functions are redeployed with the fail-closed check; suspension (auth ban + ending sessions) was smoke-tested there
+and rolled back. Still to do by staff: open the marketplace switch for the beta cluster when providers are ready; keep
+Termii and Prembly in live mode with working keys. The marketplace switch follows the state on each person's profile.
 
 Goal: safe to invite real providers; an approved provider can publish a listing a farmer can find.
 

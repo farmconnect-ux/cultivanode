@@ -124,7 +124,7 @@ agreed price in kobo and both sides mark it paid. New requirements from the audi
 
 | ID | Requirement | Week | Status |
 |---|---|---|---|
-| REQ-OPS-010 | Fail closed: test-only providers refused unless `APP_ENV=development` or a local Supabase URL; hosted project on live providers | W1 | ✅ code (_shared/env.ts, env.test.ts); hosted: switch to live Termii and Prembly |
+| REQ-OPS-010 | Fail closed: test-only providers refused unless `APP_ENV=development` or a local Supabase URL; hosted project on live providers | W1 | ✅ deployed 2026-09-28 (_shared/env.ts, env.test.ts); hosted runs Termii and Prembly |
 | REQ-WEB-011 | Truthful public site: no escrow or payment-partner claim, unbuilt features "coming soon", pilot terms say payment is direct (EN and YO) | W1 | ✅ (Yorùbá and legal review pending) |
 | REQ-SEC-010 | One verified claimant per NIN, BVN and bank account (`id_claims` primary key, `private.claim_id`) | W1 | ✅ 11_mvp_week1 |
 | REQ-ADM-012 | Suspend or flag an account with a reason (`suspended_at` + `auth.users.banned_until`), force sign-out (sessions ended), audited | W1 | ✅ /admin/users/[id]; 11_mvp_week1 |
