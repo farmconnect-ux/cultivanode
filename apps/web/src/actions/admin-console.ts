@@ -104,3 +104,83 @@ export async function resolveDataRequest(_prev: AdminResult | null, form: FormDa
   });
   return explain(error, "Request closed.");
 }
+
+/* ------------------------------------------------------------------ MVP week 1: account and marketplace controls */
+
+const reasonOf = (form: FormData) => field(form, "reason", 500);
+const needReason = "Write a reason (at least 5 characters). It goes in the audit log.";
+
+export async function setAccountSuspension(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const profile = id(form, "profile_id");
+  const suspend = field(form, "do", 10) === "suspend";
+  if (!profile) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_account_suspension", { p_profile: profile, p_suspend: suspend, p_reason: reasonOf(form) });
+  return explain(error, suspend
+    ? "Suspended. They are signed out, cannot sign in, and their listings are hidden."
+    : "Restored. They can sign in again; their listings stay as they were.");
+}
+
+export async function setAccountFlag(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const profile = id(form, "profile_id");
+  const flag = field(form, "do", 10) === "flag";
+  if (!profile) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_account_flag", { p_profile: profile, p_flag: flag, p_reason: reasonOf(form) });
+  return explain(error, flag ? "Flagged for review." : "Flag removed.");
+}
+
+export async function forceSignOut(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const profile = id(form, "profile_id");
+  if (!profile) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_force_sign_out", { p_profile: profile, p_reason: reasonOf(form) });
+  return explain(error, `Signed out of ${data ?? 0} session(s). A token already issued works for up to an hour; suspend the account if it is urgent.`);
+}
+
+export async function setFeatureFlag(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const key = field(form, "key", 40);
+  if (!/^[a-z][a-z0-9_]{2,40}$/.test(key)) return failed("Invalid request.");
+  const enabled = field(form, "do", 10) === "on";
+  const states = form.getAll("states").map((s) => String(s).slice(0, 40)).filter(Boolean);
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_feature_flag", {
+    p_key: key, p_enabled: enabled, p_states: states, p_reason: reasonOf(form),
+  });
+  return explain(error, enabled
+    ? `Switched on${states.length ? ` for ${states.join(", ")}` : " everywhere"}.`
+    : "Switched off. Search and publishing stop at once.");
+}
+
+export async function moderateListing(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const listing = id(form, "listing_id");
+  const suspend = field(form, "do", 10) === "suspend";
+  if (!listing) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_listing_status", { p_listing: listing, p_suspend: suspend, p_reason: reasonOf(form) });
+  return explain(error, suspend ? "Listing suspended and hidden from search." : "Listing restored as paused; the owner can publish it again.");
+}
+
+export async function revokeAgentCode(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const code = id(form, "code_id");
+  if (!code) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_revoke_agent_code", { p_code: code, p_reason: reasonOf(form) });
+  return explain(error, "Code revoked. It can no longer be used.");
+}
+
+export async function removeOrgMember(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const org = id(form, "org_id");
+  const profile = id(form, "profile_id");
+  if (!org || !profile) return failed("Invalid request.");
+  if (reasonOf(form).length < 5) return failed(needReason);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_remove_org_member", { p_org: org, p_profile: profile, p_reason: reasonOf(form) });
+  return explain(error, "Removed from the business.");
+}

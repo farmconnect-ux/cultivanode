@@ -13,7 +13,12 @@ export function PageHero({ badge, title, intro, children }: { badge?: string; ti
   );
 }
 
-export function BenefitGrid({ items, columns = 3 }: { items: readonly { title: string; body: string }[]; columns?: 2 | 3 }) {
+/** Cards of title + body. Items with `soon: true` get a "coming soon" label (pass the translated text). */
+export function BenefitGrid({ items, columns = 3, soonLabel }: {
+  items: readonly { title: string; body: string; soon?: boolean }[];
+  columns?: 2 | 3;
+  soonLabel?: string;
+}) {
   return (
     <ul className={columns === 3 ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "grid gap-4 sm:grid-cols-2"}>
       {items.map((b) => (
@@ -21,6 +26,9 @@ export function BenefitGrid({ items, columns = 3 }: { items: readonly { title: s
           <Card className="h-full">
             <h3 className="text-lg font-bold text-leaf-700">{b.title}</h3>
             <p className="mt-2 text-muted">{b.body}</p>
+            {b.soon && soonLabel && (
+              <span className="mt-3 inline-block rounded-full bg-harvest-100 px-3 py-1 text-sm font-semibold text-harvest-700">{soonLabel}</span>
+            )}
           </Card>
         </li>
       ))}

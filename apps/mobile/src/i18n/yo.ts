@@ -18,7 +18,7 @@ const yo: Dictionary = {
   welcome: {
     title: 'Alábàáṣiṣẹ́pọ̀\noko rẹ.',
     intro: 'Gba òṣìṣẹ́ oko, yá tírákítọ̀, ra ohun èlò oko kí o sì tọ́jú ìwé ìṣirò oko rẹ — ní ibì kan, ní Gẹ̀ẹ́sì tàbí Yorùbá.',
-    chips: ['Òṣìṣẹ́ tí a fọwọ́ sí', 'Owó ààbò (escrow)', 'Wọlé pẹ̀lú fóònù'],
+    chips: ['Òṣìṣẹ́ tí a fọwọ́ sí', 'Iye owó tó ṣe kedere', 'Wọlé pẹ̀lú fóònù'],
     start: 'Bẹ̀rẹ̀',
     haveAccount: 'Mo ti ní àkọọ́lẹ̀',
   },

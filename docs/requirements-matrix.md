@@ -2,6 +2,8 @@
 
 Every major requirement of the Phase 1 master specification, where it lives, and its status.
 Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the same change as the code.
+Build order: [`ROADMAP.md`](ROADMAP.md). After M1 comes the MVP track "first real jobs" (weeks W1–W4, section below);
+rows pulled into it from later milestones are marked **→ MVP Wn**.
 
 ## M0 Foundations
 
@@ -35,7 +37,7 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 | REQ-ID-003 | Role requests with documents, review, rejection reason, resubmission | role_requests, verification_documents, storage bucket | approve (needs accepted document + min tier) / reject / cancel, review_verification_document | /account/roles (upload), /admin/approvals (signed links) | pending requests shown; uploads on web | 01, 06, 08 | 🟡 mobile uploads later |
 | REQ-ID-004 | Sensitive roles never auto-granted | roles (check constraint) | role_is_auto_approved | – | – | 06 | ✅ |
 | REQ-ID-005 | Verification tiers 0–2, server-controlled | profiles.verification_tier, verifications, bank_accounts | recompute_verification_tier | /account, /account/verification | tier shown on Home; checks on web | 01, 07 | 🟡 mobile ID checks later |
-| REQ-ID-006 | Tier 3 trusted provider rule | – | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ needs bookings/ratings (M4) |
+| REQ-ID-006 | Tier 3 trusted provider rule | – | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ needs completed bookings and ratings (after the MVP) |
 | REQ-ID-007 | Business staff with own logins, org-level RLS | org_members | org_role(), add_org_member(), org_member_list() | /account/business | web only for now | 01, 02, 08 | 🟡 web done |
 | REQ-AUTH-001 | Phone OTP sign-in, resend, expiry, rate limits, logout, sessions | auth (Supabase) | send-sms hook, provider chosen in admin | /[lang]/sign-in, /sign-up (60 s resend timer), sign out, sign out everywhere; admin sign-in | PhoneSignInScreen (60 s resend), sign out, sign out everywhere; AES-encrypted session (key in Keystore/Keychain) | handlers.test.ts, mobile-lib | ✅ |
 | REQ-ID-008 | Identity provider adapters (Smile ID, Dojah, Prembly) | verifications (id_hash, name_match), bank_accounts | verify-identity; Prembly + mock adapters | /account/verification (consent, NIN, BVN, bank) | ⬜ | providers/handlers tests, 07 | 🟡 Prembly + mock done; Dojah/Smile ID listed, not built |
@@ -50,7 +52,7 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 
 | ID | Requirement | Database | Server logic | Web UI | Mobile UI | Tests | Status |
 |---|---|---|---|---|---|---|---|
-| REQ-FARM-001 | Farms by GPS point, polygon or typed coordinates; hectares/acres | farms, plots | compute_area_from_boundary | ⬜ | ⬜ | 02 | 🟡 database done |
+| REQ-FARM-001 | Farms by GPS point, polygon or typed coordinates; hectares/acres | farms, plots | compute_area_from_boundary, addFarm action | /account/farms (pin + typed area), /account/agent | ⬜ | 02 | 🟡 web: pin and area; boundary walking, plots UI and mobile pending |
 | REQ-FARM-002 | Zone auto-detection and admin correction | farm_zones, farms.zone_corrected_* | detect_farm_zone, correct_farm_zone | ⬜ | ⬜ | 06 | 🟡 needs zone map data |
 | REQ-FARM-003 | Soil records | soil_records | – | ⬜ | ⬜ | 02 | 🟡 |
 | REQ-FARM-004 | Record provenance | record_source on farms, soil_records | set_*_source triggers | – | – | 06 | ✅ |
@@ -75,13 +77,13 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 
 | ID | Requirement | Database | Server logic | Tests | Status |
 |---|---|---|---|---|---|
-| REQ-MKT-001 | Equipment and service listings with hourly/daily/per-hectare rates | listings, listing_rates, equipment_type | can_create_listing (role + tier 2) | 03 | 🟡 database done |
-| REQ-MKT-002 | Search by type, distance, service radius | – | nearby_listings() | 03 | 🟡 date/availability filters pending |
-| REQ-MKT-003 | Availability, photos | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-MKT-004 | Booking state machine (shared) | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-MKT-006 | Ratings (completed, paid, once) | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-MKT-007 | Demand-nearby clustering without exposing farmers | ⬜ | ⬜ | ⬜ | ⬜ |
+| REQ-MKT-001 | Equipment and service listings with hourly/daily/per-hectare rates | listings, listing_rates, equipment_type | can_create_listing (role + tier 2) | 03, 11 | ✅ web UI (/account/listings); publishing needs tier 2, an active account and the marketplace switch |
+| REQ-MKT-002 | Search by type, distance, service radius | – | nearby_listings() | 03, 11 | ✅ web UI (/account/find); date/availability filters after the MVP |
+| REQ-MKT-003 | Availability, photos | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
+| REQ-MKT-004 | Booking state machine (shared) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W2** |
+| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** |
+| REQ-MKT-006 | Ratings (completed, paid, once) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** (after confirmation; payment is marked, not processed) |
+| REQ-MKT-007 | Demand-nearby clustering without exposing farmers | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
 
 ## M5 Payments and escrow
 
@@ -91,10 +93,10 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 | REQ-PAY-002 | Verified, idempotent webhooks | ⬜ |
 | REQ-PAY-003 | Double-entry hash-chained ledger | ⬜ |
 | REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | ⬜ |
-| REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ |
-| REQ-PAY-006 | Disputes with evidence and audited outcomes | ⬜ |
+| REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ rules without money **→ MVP W4**; refunds after legal sign-off |
+| REQ-PAY-006 | Disputes with evidence and audited outcomes | ⬜ **→ MVP W3–W4** (no funds frozen: outcome recorded only) |
 | REQ-PAY-007 | PAYMENT_MODE test/live guard | ✅ (resolvePaymentMode) |
-| REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | ⬜ |
+| REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | 🟡 one claimant per ID ✅ (W1); GPS check **→ MVP W3**; patterns later |
 
 ## M6 AI assistant
 
@@ -110,12 +112,40 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 | ID | Requirement | Status |
 |---|---|---|
 | REQ-OFF-001 | Offline-first mobile with deterministic sync | ⬜ |
-| REQ-AGT-002 | Field-agent dashboard and visits | ⬜ |
-| REQ-NOTIF-001 | In-app, push and SMS notifications with preferences | ⬜ |
+| REQ-AGT-002 | Field-agent dashboard and visits | ⬜ booking on behalf of a farmer **→ MVP W4**; dashboard and visits later |
+| REQ-NOTIF-001 | In-app, push and SMS notifications with preferences | ⬜ in-app feed and booking SMS **→ MVP W2**; push and preferences later |
 | REQ-OPS-001 | Monitoring dashboards, load and security testing | ⬜ |
 | REQ-OPS-002 | Play Store preparation | ⬜ |
 
+## MVP — first real jobs (W1–W4, added 2026-09-28)
+
+The MVP is done when real jobs run through the platform. No money moves through CultivaNode: the booking records the
+agreed price in kobo and both sides mark it paid. New requirements from the audit, plus the pulled-forward rows above.
+
+| ID | Requirement | Week | Status |
+|---|---|---|---|
+| REQ-OPS-010 | Fail closed: test-only providers refused unless `APP_ENV=development` or a local Supabase URL; hosted project on live providers | W1 | ✅ code (_shared/env.ts, env.test.ts); hosted: switch to live Termii and Prembly |
+| REQ-WEB-011 | Truthful public site: no escrow or payment-partner claim, unbuilt features "coming soon", pilot terms say payment is direct (EN and YO) | W1 | ✅ (Yorùbá and legal review pending) |
+| REQ-SEC-010 | One verified claimant per NIN, BVN and bank account (`id_claims` primary key, `private.claim_id`) | W1 | ✅ 11_mvp_week1 |
+| REQ-ADM-012 | Suspend or flag an account with a reason (`suspended_at` + `auth.users.banned_until`), force sign-out (sessions ended), audited | W1 | ✅ /admin/users/[id]; 11_mvp_week1 |
+| REQ-ADM-013 | `feature_flags` kill switch (`marketplace_live`, per pilot state), settings.manage, audited | W1 | ✅ /admin/marketplace; starts closed |
+| REQ-ADM-014 | Users search (name, phone, business, filters); queue counts, oldest wait and median approval time on the Overview; agent codes and business staff views with revoke/remove | W1 | ✅ /admin/users, /admin, /admin/access |
+| REQ-ADM-015 | Listing moderation: suspend and restore (as paused), audited; owners cannot lift it | W1 | ✅ /admin/marketplace |
+| REQ-FARM-005 | Farm list shows my farms and my businesses' farms | W1 | ✅ /account/farms |
+| REQ-MKT-001/002 | Provider listing screens; farmer search from a farm (`nearby_listings_for_farm`), provider card (first name, state, tier) | W1 | ✅ /account/listings, /account/find (web) |
+| REQ-MKT-004 | Bookings, append-only booking events, request/accept/decline/cancel/expire functions, participant-only RLS, `bookings.read` | W2 | ⬜ |
+| REQ-NOTIF-002 | Notifications table and inbox; booking SMS through the active SMS provider | W2 | ⬜ |
+| REQ-MKT-005 | GPS check-in near the farm pin; proof photos in a private bucket (EXIF stripped, GPS and time stored) | W3 | ⬜ |
+| REQ-MKT-008 | Confirm or dispute within 48 hours; auto-confirm by `pg_cron`; marked paid by each side, mismatch flagged | W3 | ⬜ |
+| REQ-MKT-006 | Ratings once per side after confirmation; average in search | W3 | ⬜ |
+| REQ-ADM-016 | Admin bookings list and detail (timeline, proofs, notes); dispute resolution with outcome and notifications | W4 | ⬜ |
+| REQ-MKT-009 | Cancellation windows, provider strikes, free weather reschedule, as settings data (no money) | W4 | ⬜ |
+| REQ-AGT-003 | Field agent books on behalf of a farmer they onboarded | W4 | ⬜ |
+| REQ-SEC-011 | Identity-check attempt limit counts provider calls | W4 | ⬜ |
+| REQ-OPS-011 | Pilot runbook, Sentry alerts on booking functions, low-end Android over 3G pass, Yorùbá copy for new screens | W4 | ⬜ |
+
 ## Decisions and assumptions
+- **MVP first (2026-09-28):** after M1, the "first real jobs" MVP runs before M2–M7; the job flow is responsive web first; no money through the platform until M5 and legal sign-off (payment boundary to be confirmed). See ROADMAP.md.
 - **npm instead of pnpm:** kept after review; switching adds risk without product benefit.
 - **`accounts` = `profiles`:** see DATABASE.md.
 - **Admin is not an `app_role`:** admin powers live in `admin_roles` so they can never be self-requested.
@@ -129,4 +159,4 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 |---|---|---|---|---|---|---|---|
 | REQ-WEB-010 | Home-page picture carousel managed by staff (EN/YO text, alt text, order, publish) | hero_slides, site-media bucket | admin_save/move/delete/set_hero_slide_published (site_content.manage, audited) | home hero, /admin/content | – | 09 | ✅ |
 | REQ-ADM-010 | Admin analytics: sign-ups by channel, set-up completion, roles, states, verification, approvals, page views | page_view_daily | admin_analytics (analytics.read), track_page_view (path only) | /admin overview | – | 09 | ✅ |
-| REQ-ADM-011 | Weather for pilot states with farm alerts | – | shared/weather.ts (Open-Meteo) | /admin overview | later (farm weather, M3) | weather.test.ts | 🟡 needs Open-Meteo commercial plan or another provider before launch |
+| REQ-ADM-011 | Weather for pilot states with farm alerts | weather_cache; providers `weatherapi` (live) and `open_meteo` (test only) | `weather` Edge Function (analytics.read, 30-min cache), shared/weather.ts | /admin overview | later (farm weather, M3) | weather tests, 10_weather | ✅ admin only; free WeatherAPI plan gives 3 days, the plan promises 14 |

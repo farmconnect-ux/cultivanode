@@ -25,7 +25,7 @@ export default async function MachineryPage({ params }: PageProps<"/[lang]/machi
         <ChipList items={p.types} />
       </Section>
       <Section title={p.benefitsTitle}>
-        <BenefitGrid items={p.benefits} columns={2} />
+        <BenefitGrid soonLabel={t.common.comingSoon} items={p.benefits} columns={2} />
       </Section>
       <Section tone="white" title={p.stepsTitle}>
         <Steps steps={steps} />

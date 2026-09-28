@@ -143,6 +143,8 @@ export type Database = {
           expires_at: string
           id: string
           phone: string
+          revoked_at: string | null
+          revoked_by: string | null
           used_at: string | null
         }
         Insert: {
@@ -153,6 +155,8 @@ export type Database = {
           expires_at: string
           id?: string
           phone: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           used_at?: string | null
         }
         Update: {
@@ -163,6 +167,8 @@ export type Database = {
           expires_at?: string
           id?: string
           phone?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           used_at?: string | null
         }
         Relationships: [
@@ -575,6 +581,41 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          description: string
+          enabled: boolean
+          key: string
+          states: string[] | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description: string
+          enabled?: boolean
+          key: string
+          states?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string
+          enabled?: boolean
+          key?: string
+          states?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hero_slides: {
         Row: {
           alt_en: string
@@ -638,6 +679,35 @@ export type Database = {
           {
             foreignKeyName: "hero_slides_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      id_claims: {
+        Row: {
+          claimed_at: string
+          id_hash: string
+          kind: string
+          profile_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id_hash: string
+          kind: string
+          profile_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id_hash?: string
+          kind?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "id_claims_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -898,6 +968,8 @@ export type Database = {
           provider_type: Database["public"]["Enums"]["provider_type"] | null
           service_radius_km: number
           status: Database["public"]["Enums"]["listing_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
           title: string
           updated_at: string
         }
@@ -914,6 +986,8 @@ export type Database = {
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
           service_radius_km?: number
           status?: Database["public"]["Enums"]["listing_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
           title: string
           updated_at?: string
         }
@@ -930,6 +1004,8 @@ export type Database = {
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
           service_radius_km?: number
           status?: Database["public"]["Enums"]["listing_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
           title?: string
           updated_at?: string
         }
@@ -1136,6 +1212,9 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"]
           created_at: string
           email: string | null
+          flag_reason: string | null
+          flagged_at: string | null
+          flagged_by: string | null
           full_name: string | null
           id: string
           lga: string | null
@@ -1144,6 +1223,9 @@ export type Database = {
           phone: string | null
           preferred_language: Database["public"]["Enums"]["app_language"]
           state: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
           updated_at: string
           verification_tier: number
         }
@@ -1151,6 +1233,9 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           email?: string | null
+          flag_reason?: string | null
+          flagged_at?: string | null
+          flagged_by?: string | null
           full_name?: string | null
           id: string
           lga?: string | null
@@ -1159,6 +1244,9 @@ export type Database = {
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
           state?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           verification_tier?: number
         }
@@ -1166,6 +1254,9 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           email?: string | null
+          flag_reason?: string | null
+          flagged_at?: string | null
+          flagged_by?: string | null
           full_name?: string | null
           id?: string
           lga?: string | null
@@ -1174,6 +1265,9 @@ export type Database = {
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
           state?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           verification_tier?: number
         }
@@ -1652,6 +1746,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_agent_codes: { Args: { p_limit?: number }; Returns: Json }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_clear_integration_secret: {
         Args: {
@@ -1663,6 +1758,10 @@ export type Database = {
       }
       admin_dashboard: { Args: never; Returns: Json }
       admin_delete_hero_slide: { Args: { p_id: string }; Returns: string }
+      admin_force_sign_out: {
+        Args: { p_profile: string; p_reason: string }
+        Returns: number
+      }
       admin_grant_admin_role: {
         Args: {
           p_profile: string
@@ -1672,8 +1771,24 @@ export type Database = {
         Returns: undefined
       }
       admin_integration_overview: { Args: never; Returns: Json }
+      admin_listings: {
+        Args: {
+          p_limit?: number
+          p_query?: string
+          p_status?: Database["public"]["Enums"]["listing_status"]
+        }
+        Returns: Json
+      }
       admin_move_hero_slide: {
         Args: { p_id: string; p_up: boolean }
+        Returns: undefined
+      }
+      admin_org_memberships: {
+        Args: { p_limit?: number; p_query?: string }
+        Returns: Json
+      }
+      admin_remove_org_member: {
+        Args: { p_org: string; p_profile: string; p_reason: string }
         Returns: undefined
       }
       admin_resolve_data_request: {
@@ -1709,6 +1824,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_revoke_agent_code: {
+        Args: { p_code: string; p_reason: string }
+        Returns: undefined
+      }
       admin_save_hero_slide: {
         Args: {
           p_alt_en: string
@@ -1732,8 +1851,29 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_search_users: {
+        Args: { p_filter?: string; p_limit?: number; p_query?: string }
+        Returns: Json
+      }
+      admin_set_account_flag: {
+        Args: { p_flag: boolean; p_profile: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_set_account_suspension: {
+        Args: { p_profile: string; p_reason: string; p_suspend: boolean }
+        Returns: Json
+      }
       admin_set_contact_handled: {
         Args: { p_handled: boolean; p_message_id: string }
+        Returns: undefined
+      }
+      admin_set_feature_flag: {
+        Args: {
+          p_enabled: boolean
+          p_key: string
+          p_reason: string
+          p_states: string[]
+        }
         Returns: undefined
       }
       admin_set_hero_slide_published: {
@@ -1754,6 +1894,10 @@ export type Database = {
           p_provider: string
           p_value: string
         }
+        Returns: undefined
+      }
+      admin_set_listing_status: {
+        Args: { p_listing: string; p_reason: string; p_suspend: boolean }
         Returns: undefined
       }
       agent_onboarding_complete: {
@@ -1897,6 +2041,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      marketplace_open: { Args: never; Returns: boolean }
+      my_listings: { Args: never; Returns: Json }
       my_permissions: { Args: never; Returns: string[] }
       my_verification_tier: { Args: never; Returns: number }
       nearby_listings: {
@@ -1910,17 +2056,30 @@ export type Database = {
           p_radius_km?: number
         }
         Returns: {
+          description: string
           distance_km: number
           equipment_type: Database["public"]["Enums"]["equipment_type"]
           kind: Database["public"]["Enums"]["listing_kind"]
           listing_id: string
           operator_included: boolean
           owner_id: string
+          provider: Json
           provider_type: Database["public"]["Enums"]["provider_type"]
           rates: Json
           service_radius_km: number
           title: string
         }[]
+      }
+      nearby_listings_for_farm: {
+        Args: {
+          p_equipment_type?: Database["public"]["Enums"]["equipment_type"]
+          p_farm: string
+          p_kind?: Database["public"]["Enums"]["listing_kind"]
+          p_limit?: number
+          p_provider_type?: Database["public"]["Enums"]["provider_type"]
+          p_radius_km?: number
+        }
+        Returns: Json[]
       }
       org_member_list: {
         Args: { p_org: string }

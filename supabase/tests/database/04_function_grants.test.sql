@@ -4,7 +4,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(18);
 
 select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb, jsonb, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
@@ -33,6 +33,11 @@ select ok(to_regprocedure('public.is_admin(public.admin_role)') is null,
   'is_admin() has been replaced by permission checks');
 select ok(has_function_privilege('authenticated', 'public.nearby_listings(double precision, double precision, numeric, public.listing_kind, public.equipment_type, public.provider_type, integer)', 'execute'),
   'signed-in users can still run the nearby search');
+
+select ok(not has_function_privilege('authenticated', 'private.claim_id(text, text, uuid)', 'execute'),
+  'signed-in users cannot claim an ID directly');
+select ok(not has_function_privilege('authenticated', 'private.end_sessions(uuid)', 'execute'),
+  'signed-in users cannot end other people''s sessions');
 
 -- RLS helpers live in the private schema, which the Data API does not expose.
 select ok(to_regprocedure('public.plot_farm_id(uuid)') is null and to_regprocedure('private.plot_farm_id(uuid)') is not null,

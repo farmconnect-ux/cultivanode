@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DbConstants } from "@cultivanode/shared";
-import { grantAdminRole, revokeAdminRole } from "@/actions/admin-console";
+import { forceSignOut, grantAdminRole, revokeAdminRole, setAccountFlag, setAccountSuspension } from "@/actions/admin-console";
 import { AdminForm } from "@/components/admin/admin-form";
 import { Alert, Badge, Card, Field, Input, Select } from "@/components/ui";
 import { phoneLabel, roleLabel, TIER_LABELS, when } from "@/lib/admin/labels";
@@ -21,7 +21,7 @@ export default async function UserPage({ params }: PageProps<"/admin/users/[id]"
 
   const supabase = await createClient();
   const { data: p } = await supabase.from("profiles")
-    .select("id, full_name, phone, email, account_type, verification_tier, state, lga, preferred_language, created_at, onboarded_at, onboarded_by")
+    .select("id, full_name, phone, email, account_type, verification_tier, state, lga, preferred_language, created_at, onboarded_at, onboarded_by, suspended_at, suspended_reason, flagged_at, flag_reason")
     .eq("id", id).maybeSingle();
   if (!p) notFound();
 
@@ -48,6 +48,43 @@ export default async function UserPage({ params }: PageProps<"/admin/users/[id]"
           {p.onboarded_by ? " · registered by a field agent" : ""}
         </p>
       </div>
+      {p.suspended_at && (
+        <Alert tone="danger">Suspended {when(p.suspended_at)}: {p.suspended_reason}. They cannot sign in, list or book.</Alert>
+      )}
+      {p.flagged_at && (
+        <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
+          <strong>Flagged</strong> {when(p.flagged_at)}: {p.flag_reason}
+        </p>
+      )}
+
+      {can(staff, "users.suspend") && p.id !== staff.userId && (
+        <Card className="flex flex-col gap-4">
+          <h2 className="text-xl font-bold">Account controls</h2>
+          <p className="text-sm text-muted">Every action needs a reason and is kept in the audit log.</p>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <AdminForm action={setAccountSuspension} hidden={{ profile_id: id, do: p.suspended_at ? "restore" : "suspend" }}
+                       buttons={[{ label: p.suspended_at ? "Restore account" : "Suspend account", variant: p.suspended_at ? "primary" : "secondary" }]}>
+              <Field id="suspend-reason" label={p.suspended_at ? "Why restore?" : "Why suspend?"}
+                     hint={p.suspended_at ? undefined : "Signs them out everywhere, blocks sign-in and hides their listings."}>
+                <Input id="suspend-reason" name="reason" maxLength={500} required aria-describedby="suspend-reason-hint" />
+              </Field>
+            </AdminForm>
+            <AdminForm action={setAccountFlag} hidden={{ profile_id: id, do: p.flagged_at ? "unflag" : "flag" }}
+                       buttons={[{ label: p.flagged_at ? "Remove flag" : "Flag for review", variant: "secondary" }]}>
+              <Field id="flag-reason" label={p.flagged_at ? "Why remove the flag?" : "What needs checking?"}
+                     hint={p.flagged_at ? undefined : "A note for staff. The person is not told and nothing is blocked."}>
+                <Input id="flag-reason" name="reason" maxLength={500} required aria-describedby="flag-reason-hint" />
+              </Field>
+            </AdminForm>
+            <AdminForm action={forceSignOut} hidden={{ profile_id: id }} buttons={[{ label: "Sign out everywhere", variant: "secondary" }]}>
+              <Field id="signout-reason" label="Why?" hint="For a lost or shared phone. Their current token lasts up to an hour.">
+                <Input id="signout-reason" name="reason" maxLength={500} required aria-describedby="signout-reason-hint" />
+              </Field>
+            </AdminForm>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-2">
           <h2 className="text-xl font-bold">Details</h2>

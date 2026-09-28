@@ -17,7 +17,7 @@ const en = {
   welcome: {
     title: "Your farm's\nworking partner.",
     intro: 'Hire farm hands, rent a tractor, buy inputs and keep your farm books — in one place, in English or Yorùbá.',
-    chips: ['Verified hands', 'Escrow-ready', 'Phone sign-in'],
+    chips: ['Verified hands', 'Clear prices', 'Phone sign-in'],
     start: 'Get started',
     haveAccount: 'I already have an account',
   },

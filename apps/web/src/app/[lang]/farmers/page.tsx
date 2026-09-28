@@ -22,7 +22,7 @@ export default async function FarmersPage({ params }: PageProps<"/[lang]/farmers
     <>
       <PageHero badge={p.badge} title={p.title} intro={p.intro} />
       <Section tone="white" title={p.benefitsTitle}>
-        <BenefitGrid items={p.benefits} />
+        <BenefitGrid soonLabel={t.common.comingSoon} items={p.benefits} />
       </Section>
       <Section title={p.stepsTitle}>
         <Steps steps={steps} />

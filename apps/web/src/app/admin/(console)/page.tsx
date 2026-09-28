@@ -11,9 +11,11 @@ import type { WeatherResponse } from "@cultivanode/shared";
 export const metadata: Metadata = { title: "Overview" };
 
 type Counts = Partial<Record<
-  "pending_role_requests" | "pending_documents" | "open_contact_messages" | "waitlist_signups" | "open_data_requests" | "users" | "users_last_7_days",
+  "pending_role_requests" | "pending_documents" | "open_contact_messages" | "waitlist_signups" | "open_data_requests" | "users" | "users_last_7_days"
+  | "oldest_pending_role_request_hours" | "median_approval_hours_30d" | "suspended_accounts" | "flagged_accounts"
+  | "active_listings" | "suspended_listings",
   number | null
->>;
+>> & { marketplace_live?: { enabled: boolean; states: string[] | null } | null };
 
 type Analytics = {
   days: number;
@@ -95,6 +97,10 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
     { label: "Open contact messages", value: c.open_contact_messages, href: "/admin/inbox" },
     { label: "Deletion requests open", value: c.open_data_requests, href: "/admin/privacy" },
     { label: "Marketplace waitlist", value: c.waitlist_signups, href: "/admin/inbox" },
+    { label: "Flagged accounts", value: c.flagged_accounts, href: "/admin/users?filter=flagged" },
+    { label: "Suspended accounts", value: c.suspended_accounts, href: "/admin/users?filter=suspended" },
+    { label: "Live listings", value: c.active_listings, href: "/admin/marketplace?status=active" },
+    { label: "Suspended listings", value: c.suspended_listings, href: "/admin/marketplace?status=suspended" },
     // Shown here only for staff who cannot see the analytics section below.
     ...(a ? [] : [
       { label: "People signed up", value: c.users, href: "/admin/users" },
@@ -108,6 +114,28 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
         <h1 className="text-3xl font-extrabold text-leaf-800">Welcome{staff.name ? `, ${staff.name}` : ""}</h1>
         <p className="mt-1 text-muted">What needs attention today.</p>
       </div>
+
+      {(c.median_approval_hours_30d !== undefined || c.marketplace_live) && (
+        <p className="flex flex-wrap gap-x-6 gap-y-1 rounded-lg border border-line bg-white px-5 py-3">
+          {c.median_approval_hours_30d !== undefined && (
+            <span>
+              <span className="text-muted">Approval time, median over 30 days: </span>
+              <strong>{hours(c.median_approval_hours_30d ?? null)}</strong>
+              {c.oldest_pending_role_request_hours != null && (
+                <span className="text-muted"> · oldest waiting {hours(c.oldest_pending_role_request_hours)}</span>
+              )}
+            </span>
+          )}
+          {c.marketplace_live && (
+            <span>
+              <span className="text-muted">Marketplace: </span>
+              <Link href="/admin/marketplace" className={`font-bold underline ${c.marketplace_live.enabled ? "text-leaf-700" : "text-danger"}`}>
+                {c.marketplace_live.enabled ? `open (${c.marketplace_live.states?.join(", ") ?? "all states"})` : "closed"}
+              </Link>
+            </span>
+          )}
+        </p>
+      )}
 
       {tiles.length > 0 && (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

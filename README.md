@@ -9,11 +9,12 @@ Supabase backend.
 > `packages/shared/src/brand.ts`. GitHub repo, Vercel project and Supabase project keep the old `tillmate`
 > identifiers until they are renamed in those dashboards.
 
-The authoritative product specification is the Phase 1 master build prompt. Status by requirement:
+The authoritative product specification is the Phase 1 master build prompt. Build order: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+(M0 and M1 done; next is the four-week "first real jobs" MVP). Status by requirement:
 [`docs/requirements-matrix.md`](docs/requirements-matrix.md). Architecture, database, security, payments,
 agronomy, AI, offline sync, deployment and contribution rules are in [`docs/`](docs).
 
-## What's here (milestone M0)
+## What's here (M0 and M1 done)
 
 ```
 apps/
@@ -42,8 +43,9 @@ Status:
 - [x] Shared Zod validation, structured errors, redacted logging, Sentry adapter, security headers, brand config
 - [x] Switchable providers: SMS (Termii) and identity checks (Prembly) chosen, configured and tested in the admin console (`/admin/integrations`), keys in Supabase Vault. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
 - [x] Edge Functions: Send SMS hook, NIN/BVN/bank account checks, provider test
-- [x] Admin console: staff phone sign-in, overview, integrations
-- [ ] M1: public sign-up and onboarding, ID check screens, admin approval queue
+- [x] Admin console: staff phone sign-in, overview with analytics and pilot-state weather, approvals, users, inbox, privacy requests, audit, integrations, home-page pictures
+- [x] M1: public sign-up and onboarding (web and mobile), roles and documents, ID check screens, admin approval queue, business staff, field-agent onboarding, farms by pin (web)
+- [ ] MVP "first real jobs" (W1–W4 in `docs/ROADMAP.md`): listings, search, bookings, proof, ratings, notifications, admin controls
 
 ## Prerequisites
 
@@ -154,7 +156,7 @@ After changing the schema, regenerate TypeScript types with `npm run db:types` (
 
 Local development uses fixed test numbers from `supabase/config.toml` (`2348000000001` and `2348000000002`, code `123456`). If local sign-in asks for an SMS provider, enable one in `config.toml` with dummy values; test numbers never send real SMS. On the hosted project, codes go through the `send-sms` Edge Function (Supabase Send SMS hook) and whichever SMS provider is active in `/admin/integrations`. One-time setup: `docs/DEPLOYMENT.md`.
 
-## Known M0 limitations
+## Known limitations
 
+- The native app covers sign-in, onboarding and account home only; roles, documents, ID checks and farms are on the web. The MVP job flow is built for mobile web first (see `docs/ROADMAP.md`).
 - Mobile sessions are AES-encrypted: a fresh key per write lives in the Android Keystore / iOS Keychain (expo-secure-store), the ciphertext in app storage (`apps/mobile/src/lib/encrypted-storage.ts`).
-- The web session-refresh proxy arrives with sign-in in M1.

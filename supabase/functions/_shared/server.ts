@@ -47,7 +47,8 @@ export async function getRuntime(env: ServerEnv, kind: IntegrationKind, provider
 /** Why a runtime cannot be used right now, or null when it can. */
 export function runtimeProblem(rt: Runtime, appEnv: string): 'not_available' | 'not_configured' | null {
   if (!rt.implemented) return 'not_available';
-  if (rt.test_only && appEnv === 'production') return 'not_available';
+  // Fail closed: only an explicit development environment may use a test-only provider.
+  if (rt.test_only && appEnv !== 'development') return 'not_available';
   if (rt.missing.length > 0) return 'not_configured';
   return null;
 }

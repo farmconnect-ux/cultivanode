@@ -46,6 +46,9 @@ select id, 'hour', 400000 from public.listings where title = 'T1 tractor 5 km';
 insert into public.listing_rates (listing_id, unit, rate_kobo)
 select id, 'day', 1500000 from public.listings where title = 'S1 operator 8 km';
 
+-- The marketplace kill switch is off by default; these tests run with it on (11_mvp_week1 covers off).
+update public.feature_flags set enabled = true where key = 'marketplace_live';
+
 ---------------------------------------------------------------- searching as the farmer
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f0000000-0000-0000-0000-00000000000f"}', true);

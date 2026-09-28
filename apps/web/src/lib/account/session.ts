@@ -14,6 +14,8 @@ export type AccountProfile = {
   verification_tier: number;
   account_type: "individual" | "business";
   onboarded_at: string | null;
+  suspended_at: string | null;
+  suspended_reason: string | null;
 };
 
 export type Account = {
@@ -22,6 +24,10 @@ export type Account = {
   roles: { role: string; provider_type: string | null }[];
   isFarmer: boolean;
   isAgent: boolean;
+  /** Machinery owner (equipment listings). */
+  isOwner: boolean;
+  /** Approved service types (service listings). */
+  serviceTypes: string[];
   orgIds: string[];
 };
 
@@ -34,7 +40,7 @@ export const loadAccount = cache(async (): Promise<Account | null> => {
   const [{ data: profile }, { data: roles }, { data: orgs }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, phone, email, state, lga, preferred_language, verification_tier, account_type, onboarded_at")
+      .select("id, full_name, phone, email, state, lga, preferred_language, verification_tier, account_type, onboarded_at, suspended_at, suspended_reason")
       .eq("id", uid)
       .maybeSingle(),
     supabase.from("user_roles").select("role, provider_type").eq("profile_id", uid),
@@ -48,6 +54,8 @@ export const loadAccount = cache(async (): Promise<Account | null> => {
     roles: held,
     isFarmer: held.some((r) => r.role === "crop_farmer" || r.role === "animal_farmer"),
     isAgent: held.some((r) => r.role === "field_agent"),
+    isOwner: held.some((r) => r.role === "machinery_owner"),
+    serviceTypes: held.filter((r) => r.role === "service_provider" && r.provider_type).map((r) => r.provider_type as string),
     orgIds: (orgs ?? []).map((o) => o.organization_id),
   };
 });

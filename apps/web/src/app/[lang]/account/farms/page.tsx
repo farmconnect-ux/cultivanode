@@ -14,8 +14,10 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
   const t = await getDictionary(lang);
   const f = t.acct.farms;
   const supabase = await createClient();
-  const { data: farms } = await supabase.from("farms").select("id, name, state, lga, area_ha, plots(count)")
-    .eq("owner_id", account.userId).order("created_at");
+  // My own farms and farms of businesses I belong to (not every farm staff permissions could show).
+  const scope = [`owner_id.eq.${account.userId}`, ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : [])];
+  const { data: farms } = await supabase.from("farms").select("id, name, state, lga, area_ha, organization_id, organizations(name), plots(count)")
+    .or(scope.join(",")).order("created_at");
 
   return (
     <>
@@ -32,6 +34,7 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
               <Card className="flex h-full flex-col gap-1">
                 <h2 className="text-lg font-bold">{farm.name}</h2>
                 <p className="text-muted">{[farm.lga, farm.state].filter(Boolean).join(", ")}</p>
+                {farm.organizations?.name && <p className="text-sm font-semibold text-node-600">{farm.organizations.name}</p>}
                 <p>{farm.area_ha ? fill(f.area, { area: Number(farm.area_ha).toLocaleString(lang === "yo" ? "yo-NG" : "en-NG", { maximumFractionDigits: 2 }) }) : f.areaUnknown}</p>
               </Card>
             </li>

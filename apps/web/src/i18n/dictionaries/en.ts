@@ -38,6 +38,7 @@ const en = {
   common: {
     optional: "optional",
     comingSoon: "Coming soon",
+    inPilot: "In the pilot",
     pilotBadge: "Pilot: South-West Nigeria",
     learnMore: "Learn more",
     readFaq: "Read all questions",
@@ -50,24 +51,24 @@ const en = {
     heroProof: [
       { title: "Phone sign-in", body: "No passwords to remember" },
       { title: "Verified people", body: "ID-checked hands and owners" },
-      { title: "Safe payments", body: "Escrow coming soon" },
+      { title: "Clear prices", body: "Rates shown before you hire" },
     ],
     heroBody:
-      "Plan your crops, hire tractors and farm hands you can trust, and keep your farm books. One app, built for farmers in South-West Nigeria.",
+      "Find verified tractors and farm hands near your farm. Crop plans, weather and farm books come next. Built with farmers in South-West Nigeria.",
     heroPrimary: "Join the pilot",
     heroSecondary: "See how it works",
     slides: [
       {
         title: "Know what to do, and when",
-        body: "A season plan for your crop: land preparation, planting, weeding, fertiliser, spraying and harvest, with reminders.",
+        body: "Coming soon: a season plan for your crop, from land preparation to harvest, with reminders.",
       },
       {
         title: "Hire a tractor near you",
-        body: "Find tractors, sprayers and operators close to your farm. Your money is held safely until the job is done.",
+        body: "Find verified tractors, sprayers and operators close to your farm, with their prices shown up front.",
       },
       {
         title: "See your profit, season by season",
-        body: "Every cost and sale in one place, so you know what each planting really earned.",
+        body: "Coming soon: every cost and sale in one place, so you know what each planting really earned.",
       },
     ],
     carouselLabel: `What ${brand.name} does`,
@@ -77,16 +78,17 @@ const en = {
     play: "Play slideshow",
     slideOf: "Slide {n} of {total}",
     featuresEyebrow: "One app for the whole season",
-    featuresTitle: "Everything your farm needs, in your pocket",
+    featuresTitle: "What we are building with farmers",
+    featuresNote: "Hiring opens first, in the pilot. The other tools follow in stages; each one is marked until it is ready.",
     features: [
-      { title: "Crop calendar", body: "Step-by-step plans for 15 common South-West crops, for both rainy seasons and dry-season vegetables." },
-      { title: "Fertiliser and spray planner", body: "How much to apply, when, and which product, based on recommendations from agricultural experts." },
-      { title: "Hire with confidence", body: "Verified machinery owners and farm hands. Pay into escrow; money is released when you confirm the work." },
-      { title: "Weather for your farm", body: "A 14-day forecast for your farm's location, with warnings for heavy rain, dry spells and strong wind." },
-      { title: "Store and inventory", body: "Track seeds, fertiliser and chemicals. Get a warning before you run short or a product expires." },
-      { title: "Farm books", body: "Costs and sales for each farm and each planting, with simple reports you can download." },
-      { title: "Farm assistant", body: "Ask questions or send a photo of a sick plant, in English, Pidgin or Yorùbá." },
-      { title: "Works with poor network", body: "Record your work offline. It saves to your account when you are back in signal." },
+      { soon: true, title: "Crop calendar", body: "Step-by-step plans for 15 common South-West crops, for both rainy seasons and dry-season vegetables." },
+      { soon: true, title: "Fertiliser and spray planner", body: "How much to apply, when, and which product, based on recommendations from agricultural experts." },
+      { soon: false, title: "Hire with confidence", body: "Verified machinery owners and farm hands near your farm. In the pilot you pay the provider directly." },
+      { soon: true, title: "Weather for your farm", body: "A 14-day forecast for your farm's location, with warnings for heavy rain, dry spells and strong wind." },
+      { soon: true, title: "Store and inventory", body: "Track seeds, fertiliser and chemicals. Get a warning before you run short or a product expires." },
+      { soon: true, title: "Farm books", body: "Costs and sales for each farm and each planting, with simple reports you can download." },
+      { soon: true, title: "Farm assistant", body: "Ask questions or send a photo of a sick plant, in English, Pidgin or Yorùbá." },
+      { soon: true, title: "Works with poor network", body: "Record your work offline. It saves to your account when you are back in signal." },
     ],
     howEyebrow: "How it works",
     howTitle: "Made for everyone on the farm",
@@ -97,9 +99,9 @@ const en = {
         label: "Farmers",
         steps: [
           "Sign up with your phone number. No email needed.",
-          "Add your farm by dropping a pin or walking the boundary with your phone.",
-          `Choose your crops. ${brand.name} builds your season plan and reminds you.`,
-          "Hire a tractor or farm hands when you need them, and pay safely.",
+          "Add your farm by dropping a pin with your phone. Walking the boundary comes later.",
+          `Choose your crops. ${brand.name} will build your season plan and remind you (coming soon).`,
+          "Find a tractor or farm hands near your farm. In the pilot you pay the provider directly.",
         ],
       },
       {
@@ -108,8 +110,8 @@ const en = {
         steps: [
           "Sign up and verify your identity and bank account.",
           "List your tractor, planter or sprayer with your price per hour, day or hectare.",
-          "Accept bookings from farmers near you. See where many farms need the same job in the same week.",
-          "Finish the job, upload proof, and get paid to your bank account.",
+          "Farmers near you find your listing. Bookings through the app open during the pilot.",
+          "Do the job and get paid by the farmer directly while the pilot runs.",
         ],
       },
       {
@@ -147,9 +149,9 @@ const en = {
     trustTitle: "Built on trust",
     trust: [
       { title: "Verified people", body: "Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account." },
-      { title: "Money held safely", body: "Your payment is held by a licensed payment partner and only released when you confirm the job." },
-      { title: "Proof of work", body: "Providers check in at your farm and upload photos with location and time." },
-      { title: "Honest ratings", body: "Only completed, paid jobs can be rated, by both sides." },
+      { title: "No hidden money handling", body: "During the pilot we do not hold or move your money. You pay the provider directly; protected payments come only after legal review." },
+      { title: "Proof of work", body: "Coming with bookings: providers check in at your farm and upload photos with location and time." },
+      { title: "Honest ratings", body: "Coming with bookings: only completed jobs can be rated, by both sides." },
     ],
     partnersTitle: "Our partners",
     pilotTitle: "Farming in Oyo, Ogun, Osun, Ondo, Ekiti or Lagos?",
@@ -202,11 +204,11 @@ const en = {
       },
       {
         q: "How is my money protected when I hire?",
-        a: "When you book, your payment is held by a licensed payment partner. The provider is paid only after you confirm the job, or 48 hours after they upload proof if you do not respond. If there is a problem, you can raise a dispute and the money stays on hold.",
+        a: `During the pilot, ${brand.name} does not collect, hold or pay out money. You agree the price, pay the provider directly (cash or transfer), and both of you mark the job as paid. If something goes wrong, tell us in the app and our team will help. Protected payments, held by a licensed payment partner until you confirm the job, are planned after legal review; we will tell you before they start.`,
       },
       {
         q: "How much does it cost?",
-        a: `You pay the price shown by the provider. ${brand.name}'s commission comes out of the provider's payment, not added on top. Full pricing will be published before the pilot starts.`,
+        a: `There is no charge for farmers or providers during the pilot. You pay the provider the price they show, directly. Our commission and full pricing will be published before protected payments start.`,
       },
       {
         q: "Which languages can I use?",

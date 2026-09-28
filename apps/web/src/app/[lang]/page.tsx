@@ -81,7 +81,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       </section>
 
       {/* Features */}
-      <Section tone="white" eyebrow={h.featuresEyebrow} title={h.featuresTitle}>
+      <Section tone="white" eyebrow={h.featuresEyebrow} title={h.featuresTitle} intro={h.featuresNote}>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {h.features.map((f, i) => (
             <li key={f.title}>
@@ -93,6 +93,9 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
                 </span>
                 <h3 className="text-lg font-bold">{f.title}</h3>
                 <p className="text-muted">{f.body}</p>
+                <span className={`mt-auto self-start rounded-full px-3 py-1 text-sm font-semibold ${f.soon ? "bg-harvest-100 text-harvest-700" : "bg-leaf-100 text-leaf-800"}`}>
+                  {f.soon ? t.common.comingSoon : t.common.inPilot}
+                </span>
               </Card>
             </li>
           ))}

@@ -115,7 +115,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
             {current?.test_only && (
               <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
                 A test provider is in use. {kind === "sms" ? "Real people cannot receive sign-in codes" : kind === "identity" ? "Real people cannot be verified" : "Weather stops"} until
-                you switch to a real provider. Test providers stop working once the platform runs in production.
+                you switch to a real provider. On the hosted project test providers are always refused; they only work in local development.
               </p>
             )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
