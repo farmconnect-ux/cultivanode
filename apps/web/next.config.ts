@@ -3,14 +3,14 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 // Content Security Policy without nonces, so pages stay statically generated (fast on 3G).
-// Allowed: our own origin, Supabase (API + storage) and Sentry error reports.
+// Allowed: our own origin, Supabase (API + storage), Sentry error reports, and Vercel Analytics.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://*.supabase.co",
   "font-src 'self'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://vitals.vercel-insights.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

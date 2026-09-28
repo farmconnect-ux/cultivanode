@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
+import { Analytics } from "@vercel/analytics/next";
 import "../globals.css";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
@@ -45,6 +46,7 @@ export default async function LangLayout({ children, params }: LayoutProps<"/[la
         </main>
         <Footer lang={lang} t={t.footer} nav={t.nav} />
         <PageViewTracker />
+        <Analytics />
       </body>
     </html>
   );
