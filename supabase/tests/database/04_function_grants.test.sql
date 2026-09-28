@@ -4,7 +4,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(21);
 
 select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb, jsonb, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
@@ -36,6 +36,13 @@ select ok(has_function_privilege('authenticated', 'public.nearby_listings(double
 
 select ok(not has_function_privilege('authenticated', 'private.claim_id(text, text, uuid)', 'execute'),
   'signed-in users cannot claim an ID directly');
+select ok(not has_function_privilege('authenticated', 'private.notify(uuid, text, uuid, jsonb, boolean)', 'execute'),
+  'signed-in users cannot send notifications or SMS directly');
+select ok(not has_function_privilege('authenticated', 'private.expire_bookings()', 'execute'),
+  'signed-in users cannot run the booking expiry');
+select ok(not has_function_privilege('authenticated', 'public.finish_sms_outbox(uuid, boolean, text, text, text, boolean)', 'execute')
+          and has_function_privilege('service_role', 'public.finish_sms_outbox(uuid, boolean, text, text, text, boolean)', 'execute'),
+  'only the service role records SMS results');
 select ok(not has_function_privilege('authenticated', 'private.end_sessions(uuid)', 'execute'),
   'signed-in users cannot end other people''s sessions');
 

@@ -46,7 +46,7 @@ select ok(jsonb_array_length(public.admin_integration_overview() -> 'providers')
   'a super admin sees the provider catalogue');
 select throws_ok($$ select public.admin_activate_integration('sms', 'termii') $$, '22023', null,
   'Termii cannot be activated before its key and sender ID are set');
-select throws_ok($$ select public.admin_activate_integration('sms', 'twilio') $$, '22023',
+select throws_ok($$ select public.admin_activate_integration('identity', 'dojah') $$, '22023',
   'this provider is not available yet', 'a provider without an adapter cannot be activated');
 select throws_ok($$ select public.admin_activate_integration('identity', 'termii') $$, '22023', null,
   'an SMS provider cannot be used for identity checks');

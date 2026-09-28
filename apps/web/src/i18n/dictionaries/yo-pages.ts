@@ -13,8 +13,8 @@ const yoPages: PagesDictionary = {
     moneyIntro: `Nígbà ìdánwò, ${brand.name} kò ní mú tàbí gbé owó. Áàpù náà ń tọ́jú àkọsílẹ̀ tó ṣe kedere kí ẹ̀gbẹ́ méjèèjì lè mọ ohun tí a fẹnu kò lé lórí.`,
     money: [
       { title: "Wá", body: "Yan olùpèsè iṣẹ́ tí a ti ṣàyẹ̀wò nítòsí oko rẹ, kí o sì wo iye owó wọn." },
-      { title: "Fẹnu kò", body: "Fẹnu kò lórí iṣẹ́ náà, ọjọ́ àti iye owó. Gbígba iṣẹ́ nínú áàpù yóò ṣí nígbà ìdánwò." },
-      { title: "A ṣe iṣẹ́ náà", body: "Olùpèsè iṣẹ́ yóò ṣe iṣẹ́ náà. Ìforúkọwọlé àti ẹ̀rí fọ́tò nínú áàpù yóò dé pẹ̀lú gbígba iṣẹ́." },
+      { title: "Fẹnu kò", body: "Béèrè fún iṣẹ́ náà nínú áàpù fún ọjọ́ kan, ní iye owó tí ó wà nínú ìpolówó. Olùpèsè yóò gbà á tàbí kọ̀ ọ́, ẹ̀yin méjèèjì yóò sì gba SMS." },
+      { title: "A ṣe iṣẹ́ náà", body: "Olùpèsè iṣẹ́ yóò ṣe iṣẹ́ náà. Ìforúkọwọlé àti ẹ̀rí fọ́tò nínú áàpù ń bọ̀ láìpẹ́." },
       { title: "Sanwó ní tààràtà", body: "Ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà, ní ọwọ́ tàbí nípasẹ̀ báńkì. San fún iṣẹ́ tí a ṣe nìkan." },
       { title: "Ẹ̀yin méjèèjì fìdí rẹ̀ múlẹ̀", body: "Ẹ̀yin méjèèjì yóò sàmì sí i pé a ti sanwó, ẹ ó sì fún ara yín ní ìdíyelé. Ìṣòro wà? Sọ fún wa, ẹgbẹ́ wa yóò ràn ọ́ lọ́wọ́." },
     ],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { identityProvider, mockIdentity, prembly } from '../providers/identity.ts';
-import { renderOtpMessage, smsProvider, termii } from '../providers/sms.ts';
+import { renderOtpMessage, smsProvider, termii, toE164, twilio } from '../providers/sms.ts';
 import type { Runtime } from '../providers/types.ts';
 
 type Call = { url: string; init: RequestInit };
@@ -65,11 +65,79 @@ describe('Termii', () => {
   });
 });
 
+const SID = 'AC' + '0123456789abcdef'.repeat(2);
+const twilioRt: Runtime = {
+  provider: 'twilio', kind: 'sms', mode: 'live', implemented: true, test_only: false, missing: [],
+  config: { account_sid: SID, from: 'CultivaNode', base_url: null, message_template: null },
+  secrets: { auth_token: 'tw-token' },
+};
+
+describe('Twilio', () => {
+  it('posts a form with Basic auth and E.164 recipient', async () => {
+    const { fn, calls } = fakeFetch(() => jsonRes({ sid: 'SM123', status: 'queued' }, 201));
+    const r = await twilio(twilioRt, fn).send('2348031234567', 'Your code is 123456');
+    expect(r).toMatchObject({ ok: true, value: { messageId: 'SM123' }, httpStatus: 201 });
+    expect(calls[0].url).toBe(`https://api.twilio.com/2010-04-01/Accounts/${SID}/Messages.json`);
+    const h = calls[0].init.headers as Record<string, string>;
+    expect(h.Authorization).toBe(`Basic ${btoa(`${SID}:tw-token`)}`);
+    expect(h['Content-Type']).toBe('application/x-www-form-urlencoded');
+    const body = new URLSearchParams(String(calls[0].init.body));
+    expect(Object.fromEntries(body)).toEqual({ To: '+2348031234567', Body: 'Your code is 123456', From: 'CultivaNode' });
+  });
+
+  it('routes through a Messaging Service when from is an MG SID', async () => {
+    const mg = 'MG' + 'a'.repeat(32);
+    const { fn, calls } = fakeFetch(() => jsonRes({ sid: 'SM1', status: 'accepted' }, 201));
+    await twilio({ ...twilioRt, config: { ...twilioRt.config, from: mg } }, fn).send('2348031234567', 'x');
+    const body = new URLSearchParams(String(calls[0].init.body));
+    expect(body.get('MessagingServiceSid')).toBe(mg);
+    expect(body.has('From')).toBe(false);
+  });
+
+  it('maps an inactive account (no balance) to billing', async () => {
+    const { fn } = fakeFetch(() => jsonRes({ code: 10001, message: 'Account is not active', status: 401 }, 401));
+    expect(await twilio(twilioRt, fn).send('2348031234567', 'x')).toMatchObject({ ok: false, error: 'billing', detail: 'twilio 10001' });
+  });
+
+  it('maps bad credentials and bad numbers to rejected, without the message text', async () => {
+    const { fn } = fakeFetch(() => jsonRes({ code: 21211, message: "The 'To' number +2348031234567 is not valid.", status: 400 }, 400));
+    const r = await twilio(twilioRt, fn).send('2348031234567', 'x');
+    expect(r).toMatchObject({ ok: false, error: 'rejected', detail: 'twilio 21211' });
+    expect(JSON.stringify(r)).not.toContain('803');
+  });
+
+  it('maps rate limits and outages to unavailable', async () => {
+    const { fn } = fakeFetch(() => jsonRes({ code: 20429, message: 'Too Many Requests' }, 429));
+    expect(await twilio(twilioRt, fn).send('2348031234567', 'x')).toMatchObject({ ok: false, error: 'unavailable' });
+    const down = fakeFetch(() => { throw new TypeError('offline'); });
+    expect(await twilio(twilioRt, down.fn).send('2348031234567', 'x')).toMatchObject({ ok: false, error: 'unavailable' });
+  });
+
+  it('treats a message created as failed as not sent', async () => {
+    const { fn } = fakeFetch(() => jsonRes({ sid: 'SM9', status: 'failed', error_code: 30007 }, 201));
+    expect(await twilio(twilioRt, fn).send('2348031234567', 'x')).toMatchObject({ ok: false, error: 'rejected' });
+  });
+
+  it('refuses to send without a valid Account SID, token or sender', async () => {
+    const { fn, calls } = fakeFetch(() => jsonRes({}));
+    expect(await twilio({ ...twilioRt, secrets: {} }, fn).send('2348031234567', 'x')).toMatchObject({ error: 'not_configured' });
+    expect(await twilio({ ...twilioRt, config: { ...twilioRt.config, account_sid: 'AC123' } }, fn).send('2348031234567', 'x'))
+      .toMatchObject({ error: 'not_configured' });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('formats numbers as E.164', () => {
+    expect(toE164('2348031234567')).toBe('+2348031234567');
+    expect(toE164('+234 803 123 4567')).toBe('+2348031234567');
+  });
+});
+
 describe('SMS registry and message', () => {
   it('picks the adapter named by the database', () => {
     expect(smsProvider(termiiRt).ok).toBe(true);
     expect(smsProvider({ ...termiiRt, provider: 'mock_sms' }).ok).toBe(true);
-    expect(smsProvider({ ...termiiRt, provider: 'twilio' })).toMatchObject({ ok: false, error: 'not_available' });
+    expect(smsProvider({ ...termiiRt, provider: 'twilio' }).ok).toBe(true);
+    expect(smsProvider({ ...termiiRt, provider: 'bulksms' })).toMatchObject({ ok: false, error: 'not_available' });
   });
 
   it('fills the template and falls back to the default', () => {

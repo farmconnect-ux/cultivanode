@@ -110,7 +110,7 @@ const en = {
         steps: [
           "Sign up and verify your identity and bank account.",
           "List your tractor, planter or sprayer with your price per hour, day or hectare.",
-          "Farmers near you find your listing. Bookings through the app open during the pilot.",
+          "Farmers near you find your listing and send job requests. Accept or decline in the app; both sides get an SMS.",
           "Do the job and get paid by the farmer directly while the pilot runs.",
         ],
       },
@@ -150,8 +150,8 @@ const en = {
     trust: [
       { title: "Verified people", body: "Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account." },
       { title: "No hidden money handling", body: "During the pilot we do not hold or move your money. You pay the provider directly; protected payments come only after legal review." },
-      { title: "Proof of work", body: "Coming with bookings: providers check in at your farm and upload photos with location and time." },
-      { title: "Honest ratings", body: "Coming with bookings: only completed jobs can be rated, by both sides." },
+      { title: "Proof of work", body: "Coming next: providers check in at your farm and upload photos with location and time." },
+      { title: "Honest ratings", body: "Coming next: only completed jobs can be rated, by both sides." },
     ],
     partnersTitle: "Our partners",
     pilotTitle: "Farming in Oyo, Ogun, Osun, Ondo, Ekiti or Lagos?",

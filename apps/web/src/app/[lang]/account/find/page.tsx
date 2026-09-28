@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DbConstants, formatNaira } from "@cultivanode/shared";
-import { Badge, Button, Card, Field, Select } from "@/components/ui";
+import { Badge, Button, Card, Field, LinkButton, Select } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
@@ -158,12 +158,15 @@ export default async function FindPage({ params, searchParams }: PageProps<"/[la
                             <span key={u}>{formatNaira(k)} {t.units[u as keyof typeof t.units]}</span>
                           ))}
                         </p>
+                        <LinkButton href={`/${lang}/account/bookings/new?listing=${r.listing_id}&farm=${farmId}`} className="mt-auto self-start">
+                          {f.request}
+                        </LinkButton>
                       </Card>
                     </li>
                   ))}
                 </ul>
               )}
-              <p className="text-sm text-muted">{f.bookingSoon}</p>
+              <p className="text-sm text-muted">{f.payDirect}</p>
             </section>
           )}
         </>

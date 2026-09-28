@@ -10,8 +10,8 @@ const enPages = {
     moneyIntro: `During the pilot ${brand.name} does not hold or move money. The app keeps a clear record so both sides know what was agreed.`,
     money: [
       { title: "Find", body: "Choose a verified provider near your farm and see their prices." },
-      { title: "Agree", body: "Agree the job, the date and the price. Booking in the app opens during the pilot." },
-      { title: "Work is done", body: "The provider does the job. Check-in and photo proof in the app come with bookings." },
+      { title: "Agree", body: "Request the job in the app for a date, at the listed price. The provider accepts or declines, and you both get an SMS." },
+      { title: "Work is done", body: "The provider does the job. Check-in and photo proof in the app are coming next." },
       { title: "Pay directly", body: "You pay the provider directly, by cash or transfer. Pay only for work that was done." },
       { title: "Both confirm", body: "Both of you mark the job as paid and rate each other. Problems? Tell us and our team will help." },
     ],

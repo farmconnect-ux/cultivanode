@@ -433,3 +433,6 @@ verify_jwt = true
 
 [functions.weather]
 verify_jwt = true
+
+[functions.send-notifications]
+verify_jwt = false

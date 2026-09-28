@@ -80,7 +80,7 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-MKT-001 | Equipment and service listings with hourly/daily/per-hectare rates | listings, listing_rates, equipment_type | can_create_listing (role + tier 2) | 03, 11 | ✅ web UI (/account/listings); publishing needs tier 2, an active account and the marketplace switch |
 | REQ-MKT-002 | Search by type, distance, service radius | – | nearby_listings() | 03, 11 | ✅ web UI (/account/find); date/availability filters after the MVP |
 | REQ-MKT-003 | Availability, photos | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
-| REQ-MKT-004 | Booking state machine (shared) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W2** |
+| REQ-MKT-004 | Booking state machine (shared) | bookings, booking_events | request/accept/decline/cancel_booking, expire_bookings | 12 | 🟡 MVP W2 code done; web /account/bookings (native later) |
 | REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** |
 | REQ-MKT-006 | Ratings (completed, paid, once) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** (after confirmation; payment is marked, not processed) |
 | REQ-MKT-007 | Demand-nearby clustering without exposing farmers | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
@@ -113,7 +113,7 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 |---|---|---|
 | REQ-OFF-001 | Offline-first mobile with deterministic sync | ⬜ |
 | REQ-AGT-002 | Field-agent dashboard and visits | ⬜ booking on behalf of a farmer **→ MVP W4**; dashboard and visits later |
-| REQ-NOTIF-001 | In-app, push and SMS notifications with preferences | ⬜ in-app feed and booking SMS **→ MVP W2**; push and preferences later |
+| REQ-NOTIF-001 | In-app, push and SMS notifications with preferences | 🟡 in-app inbox and booking SMS done (MVP W2); push and preferences later |
 | REQ-OPS-001 | Monitoring dashboards, load and security testing | ⬜ |
 | REQ-OPS-002 | Play Store preparation | ⬜ |
 
@@ -133,8 +133,9 @@ agreed price in kobo and both sides mark it paid. New requirements from the audi
 | REQ-ADM-015 | Listing moderation: suspend and restore (as paused), audited; owners cannot lift it | W1 | ✅ /admin/marketplace |
 | REQ-FARM-005 | Farm list shows my farms and my businesses' farms | W1 | ✅ /account/farms |
 | REQ-MKT-001/002 | Provider listing screens; farmer search from a farm (`nearby_listings_for_farm`), provider card (first name, state, tier) | W1 | ✅ /account/listings, /account/find (web) |
-| REQ-MKT-004 | Bookings, append-only booking events, request/accept/decline/cancel/expire functions, participant-only RLS, `bookings.read` | W2 | ⬜ |
-| REQ-NOTIF-002 | Notifications table and inbox; booking SMS through the active SMS provider | W2 | ⬜ |
+| REQ-MKT-004 | Bookings, append-only booking events, request/accept/decline/cancel/expire functions, participant-only RLS, `bookings.read` | W2 | 🟡 code done 2026-09-29 (20260929090000_mvp_week2.sql, 12_mvp_week2); /account/bookings (web); not yet on hosted |
+| REQ-NOTIF-002 | Notifications table and inbox; booking SMS through the active SMS provider | W2 | 🟡 code done: notifications + /account/inbox; sms_outbox drained by the send-notifications Edge Function (send-notifications.test.ts); pg_cron wake-up and expiry on hosted pending |
+| REQ-SMS-002 | Twilio as a second switchable SMS provider (sign-in codes and booking SMS) | W2 | 🟡 adapter + tests done (providers.test.ts); needs Twilio account, SID, token and sender in Admin › Integrations |
 | REQ-MKT-005 | GPS check-in near the farm pin; proof photos in a private bucket (EXIF stripped, GPS and time stored) | W3 | ⬜ |
 | REQ-MKT-008 | Confirm or dispute within 48 hours; auto-confirm by `pg_cron`; marked paid by each side, mismatch flagged | W3 | ⬜ |
 | REQ-MKT-006 | Ratings once per side after confirmation; average in search | W3 | ⬜ |

@@ -5,6 +5,7 @@ import { Alert, Container } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
+import { createClient } from "@/lib/supabase/server";
 import { fill } from "@/lib/text";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -16,12 +17,18 @@ export default async function AccountLayout({ children, params }: LayoutProps<"/
   const t = await getDictionary(lang);
   const n = t.acct.nav;
   const base = `/${lang}/account`;
+  const supabase = await createClient();
+  const { count: unread } = await supabase
+    .from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  const canBook = account.isFarmer || account.isOwner || account.serviceTypes.length > 0;
   const items = [
     { href: base, label: n.overview, show: true },
     { href: `${base}/profile`, label: n.profile, show: true },
     { href: `${base}/roles`, label: n.roles, show: true },
     { href: `${base}/verification`, label: n.verification, show: true },
     { href: `${base}/farms`, label: n.farms, show: true },
+    { href: `${base}/inbox`, label: unread ? `${n.inbox} (${unread})` : n.inbox, show: true },
+    { href: `${base}/bookings`, label: n.bookings, show: canBook },
     { href: `${base}/find`, label: n.find, show: account.isFarmer },
     { href: `${base}/listings`, label: n.listings, show: account.isOwner || account.serviceTypes.length > 0 },
     { href: `${base}/business`, label: n.business, show: account.profile.account_type === "business" || account.orgIds.length > 0 },

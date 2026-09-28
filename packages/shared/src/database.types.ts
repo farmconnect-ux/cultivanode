@@ -306,6 +306,132 @@ export type Database = {
           },
         ]
       }
+      booking_events: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          created_at: string
+          event: string
+          from_status: Database["public"]["Enums"]["booking_status"] | null
+          id: number
+          note: string | null
+          to_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          created_at?: string
+          event: string
+          from_status?: Database["public"]["Enums"]["booking_status"] | null
+          id?: number
+          note?: string | null
+          to_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event?: string
+          from_status?: Database["public"]["Enums"]["booking_status"] | null
+          id?: number
+          note?: string | null
+          to_status?: Database["public"]["Enums"]["booking_status"]
+        }
+        Relationships: []
+      }
+      bookings: {
+        Row: {
+          cancelled_by: string | null
+          closed_reason: string | null
+          created_at: string
+          distance_km: number
+          equipment_type: Database["public"]["Enums"]["equipment_type"] | null
+          expires_at: string
+          farm_id: string | null
+          farm_name: string
+          farmer_id: string
+          farmer_note: string | null
+          id: string
+          job_date: string
+          job_lga: string | null
+          job_location: unknown
+          job_state: string | null
+          listing_id: string | null
+          listing_kind: Database["public"]["Enums"]["listing_kind"]
+          listing_title: string
+          organization_id: string | null
+          provider_id: string
+          provider_type: Database["public"]["Enums"]["provider_type"] | null
+          quantity: number
+          rate_kobo: number
+          responded_at: string | null
+          status: Database["public"]["Enums"]["booking_status"]
+          total_kobo: number
+          unit: Database["public"]["Enums"]["pricing_unit"]
+          updated_at: string
+        }
+        Insert: {
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          created_at?: string
+          distance_km: number
+          equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
+          expires_at: string
+          farm_id?: string | null
+          farm_name: string
+          farmer_id: string
+          farmer_note?: string | null
+          id?: string
+          job_date: string
+          job_lga?: string | null
+          job_location: unknown
+          job_state?: string | null
+          listing_id?: string | null
+          listing_kind: Database["public"]["Enums"]["listing_kind"]
+          listing_title: string
+          organization_id?: string | null
+          provider_id: string
+          provider_type?: Database["public"]["Enums"]["provider_type"] | null
+          quantity: number
+          rate_kobo: number
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          total_kobo: number
+          unit: Database["public"]["Enums"]["pricing_unit"]
+          updated_at?: string
+        }
+        Update: {
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          created_at?: string
+          distance_km?: number
+          equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
+          expires_at?: string
+          farm_id?: string | null
+          farm_name?: string
+          farmer_id?: string
+          farmer_note?: string | null
+          id?: string
+          job_date?: string
+          job_lga?: string | null
+          job_location?: unknown
+          job_state?: string | null
+          listing_id?: string | null
+          listing_kind?: Database["public"]["Enums"]["listing_kind"]
+          listing_title?: string
+          organization_id?: string | null
+          provider_id?: string
+          provider_type?: Database["public"]["Enums"]["provider_type"] | null
+          quantity?: number
+          rate_kobo?: number
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          total_kobo?: number
+          unit?: Database["public"]["Enums"]["pricing_unit"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consents: {
         Row: {
           channel: string
@@ -1026,6 +1152,36 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          data: Json
+          id: string
+          kind: string
+          profile_id: string
+          read_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          kind: string
+          profile_id: string
+          read_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: string
+          profile_id?: string
+          read_at?: string | null
+        }
+        Relationships: []
+      }
       org_members: {
         Row: {
           added_by: string | null
@@ -1392,6 +1548,57 @@ export type Database = {
           },
         ]
       }
+      sms_outbox: {
+        Row: {
+          attempts: number
+          booking_id: string | null
+          created_at: string
+          data: Json
+          error_code: string | null
+          id: string
+          kind: string
+          locked_at: string | null
+          message_id: string | null
+          next_attempt_at: string
+          profile_id: string
+          provider: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          error_code?: string | null
+          id?: string
+          kind: string
+          locked_at?: string | null
+          message_id?: string | null
+          next_attempt_at?: string
+          profile_id: string
+          provider?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          error_code?: string | null
+          id?: string
+          kind?: string
+          locked_at?: string | null
+          message_id?: string | null
+          next_attempt_at?: string
+          profile_id?: string
+          provider?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       soil_records: {
         Row: {
           created_at: string
@@ -1731,6 +1938,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_booking: { Args: { p_booking: string }; Returns: undefined }
       add_org_member: {
         Args: {
           p_org: string
@@ -1748,6 +1956,7 @@ export type Database = {
       }
       admin_agent_codes: { Args: { p_limit?: number }; Returns: Json }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
+      admin_booking_stats: { Args: never; Returns: Json }
       admin_clear_integration_secret: {
         Args: {
           p_field: string
@@ -1945,6 +2154,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      booking_detail: { Args: { p_booking: string }; Returns: Json }
+      cancel_booking: {
+        Args: { p_booking: string; p_reason?: string }
+        Returns: undefined
+      }
       cancel_data_request: {
         Args: { p_request_id: string }
         Returns: {
@@ -1989,6 +2203,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_sms_outbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          data: Json
+          id: string
+          kind: string
+          language: Database["public"]["Enums"]["app_language"]
+          phone: string
+        }[]
+      }
       complete_onboarding: {
         Args: {
           p_account_type: Database["public"]["Enums"]["account_type"]
@@ -2013,7 +2238,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      decline_booking: {
+        Args: { p_booking: string; p_reason?: string }
+        Returns: undefined
+      }
       export_my_data: { Args: never; Returns: Json }
+      finish_sms_outbox: {
+        Args: {
+          p_error: string
+          p_id: string
+          p_message_id: string
+          p_ok: boolean
+          p_provider: string
+          p_retry: boolean
+        }
+        Returns: undefined
+      }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -2041,7 +2281,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      listing_for_booking: {
+        Args: { p_farm: string; p_listing: string }
+        Returns: Json
+      }
+      mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       marketplace_open: { Args: never; Returns: boolean }
+      my_bookings: { Args: { p_limit?: number }; Returns: Json }
       my_listings: { Args: never; Returns: Json }
       my_permissions: { Args: never; Returns: string[] }
       my_verification_tier: { Args: never; Returns: number }
@@ -2081,6 +2327,7 @@ export type Database = {
         }
         Returns: Json[]
       }
+      notify_worker_authorized: { Args: { p_secret: string }; Returns: boolean }
       org_member_list: {
         Args: { p_org: string }
         Returns: {
@@ -2168,6 +2415,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_booking: {
+        Args: {
+          p_farm: string
+          p_job_date: string
+          p_listing: string
+          p_note?: string
+          p_quantity: number
+          p_unit: Database["public"]["Enums"]["pricing_unit"]
+        }
+        Returns: string
+      }
       review_verification_document: {
         Args: {
           p_document_id: string
@@ -2244,6 +2502,7 @@ export type Database = {
         | "field_agent"
         | "institutional_partner"
         | "investor"
+      booking_status: "requested" | "accepted" | "declined" | "cancelled" | "expired"
       consent_type:
         | "terms_of_use"
         | "privacy_policy"
@@ -2454,6 +2713,7 @@ export const Constants = {
         "institutional_partner",
         "investor",
       ],
+      booking_status: ["requested", "accepted", "declined", "cancelled", "expired"],
       consent_type: [
         "terms_of_use",
         "privacy_policy",

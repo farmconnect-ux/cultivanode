@@ -111,7 +111,7 @@ const yo: Dictionary = {
         steps: [
           "Forúkọsílẹ̀, kí o sì jẹ́rìí ìdánimọ̀ rẹ àti àkọọ́lẹ̀ báńkì rẹ.",
           "Ṣe àkọsílẹ̀ tírákítọ̀, ẹ̀rọ ìgbìn tàbí ẹ̀rọ fífín oògùn rẹ pẹ̀lú iye owó fún wákàtí, ọjọ́ tàbí hẹ́kítà.",
-          "Àwọn àgbẹ̀ nítòsí rẹ yóò rí ìpolówó rẹ. Gbígba iṣẹ́ nínú áàpù yóò ṣí nígbà ìdánwò.",
+          "Àwọn àgbẹ̀ nítòsí rẹ yóò rí ìpolówó rẹ, wọn yóò sì fi ìbéèrè iṣẹ́ ránṣẹ́. Gbà á tàbí kọ̀ ọ́ nínú áàpù; ẹ̀gbẹ́ méjèèjì yóò gba SMS.",
           "Ṣe iṣẹ́ náà, kí àgbẹ̀ sì san owó fún ọ ní tààràtà nígbà ìdánwò.",
         ],
       },
@@ -151,8 +151,8 @@ const yo: Dictionary = {
     trust: [
       { title: "Àwọn ènìyàn tí a ti ṣàyẹ̀wò", body: "A ń ṣàyẹ̀wò NIN, BVN àti àkọọ́lẹ̀ báńkì gbogbo ẹni tí ó bá ń ṣe àkọsílẹ̀ ẹ̀rọ tàbí tí ó ń gba owó." },
       { title: "A kò fọwọ́ kan owó rẹ", body: "Nígbà ìdánwò, a kò ní mú tàbí gbé owó rẹ. Ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà; ìsanwó tó ní ààbò yóò dé lẹ́yìn àyẹ̀wò òfin nìkan." },
-      { title: "Ẹ̀rí iṣẹ́", body: "Ó ń bọ̀ pẹ̀lú gbígba iṣẹ́: olùpèsè iṣẹ́ yóò forúkọ wọlé ní oko rẹ, yóò sì fi àwòrán tí ó ní ibi àti àkókò ránṣẹ́." },
-      { title: "Ìdíyelé òtítọ́", body: "Ó ń bọ̀ pẹ̀lú gbígba iṣẹ́: iṣẹ́ tí a ti parí nìkan ni a lè fún ní ìdíyelé, láti ẹ̀gbẹ́ méjèèjì." },
+      { title: "Ẹ̀rí iṣẹ́", body: "Ó ń bọ̀ láìpẹ́: olùpèsè iṣẹ́ yóò forúkọ wọlé ní oko rẹ, yóò sì fi àwòrán tí ó ní ibi àti àkókò ránṣẹ́." },
+      { title: "Ìdíyelé òtítọ́", body: "Ó ń bọ̀ láìpẹ́: iṣẹ́ tí a ti parí nìkan ni a lè fún ní ìdíyelé, láti ẹ̀gbẹ́ méjèèjì." },
     ],
     partnersTitle: "Àwọn alábàáṣiṣẹ́ wa",
     pilotTitle: "Ṣé o ń dáko ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì tàbí Èkó?",

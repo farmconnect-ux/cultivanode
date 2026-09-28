@@ -32,7 +32,12 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
    add the Prembly sandbox key, run the sandbox check, "Use this provider". Switch to live when ready.
 7. **Edge Function `agent-onboard`** (field agents registering farmers) is deployed with JWT verification on.
    It uses the active SMS provider; nothing else to configure.
-8. **Auth settings:** Authentication > Sign In / Providers > Phone: keep "SMS OTP expiry" at 5-10 minutes
+8. **Booking SMS worker (MVP week 2):** deploy `send-notifications` with JWT verification **off**; enable the
+   `pg_cron` and `pg_net` extensions (the week 2 migration does this where allowed); add a Vault secret named
+   `functions_base_url` with the value `https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1`
+   (`select vault.create_secret('https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1', 'functions_base_url');`).
+   Check `select * from cron.job;` shows `cultivanode-expire-bookings` and `cultivanode-wake-sms-worker`.
+9. **Auth settings:** Authentication > Sign In / Providers > Phone: keep "SMS OTP expiry" at 5-10 minutes
    and the default rate limits (Authentication > Rate Limits) so codes cannot be spammed.
 
 ## Custom domain (cultivanode.com)
