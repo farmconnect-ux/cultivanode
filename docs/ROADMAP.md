@@ -34,7 +34,7 @@ browser). Native parity comes after the MVP, with offline sync (M7).
 | 1 | M0 Foundations | M0 | ✅ done | – |
 | 2 | M1 Website and identity | M1, modules 1–2 | ✅ done (leftovers listed below) | – |
 | 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | ✅ code done and live on the hosted project 2026-09-28 (marketplace switch still closed) | – |
-| 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | ⬜ next | W1 |
+| 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | 🟡 code done 2026-09-29; hosted migration, worker deploy and Vault setting pending | W1 |
 | 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | ⬜ | W2 |
 | 6 | **MVP W4** Operable pilot | module 12, M5 (cancellation, no money), M7 (agents) | ⬜ | legal review of direct-payment terms |
 | 7 | Closed beta: 5 providers, 10 farmers, one cluster | pilot plan step 4 | ⬜ | W4 |
@@ -80,6 +80,16 @@ away; a suspended listing or owner disappears from search and the owner is signe
 `marketplace_live` off hides search; a fake NIN cannot verify on the hosted project; the Overview shows queue counts.
 
 ### W2 — Booking agreed
+
+Status (2026-09-29): code done and tested (migration `20260929090000_mvp_week2.sql`, pgTAP `12_mvp_week2`, worker
+tests `send-notifications.test.ts`). Twilio is built as a second SMS provider alongside Termii. Decisions made while
+building: a request expires after 24 hours or at the end of the job day, whichever is sooner; the switch is judged by
+the farmer's state; declining and cancelling stay possible when the marketplace is closed (new requests and accepting
+do not); an agreed job can be called off by either side, with a reason, until the end of the job day (windows and
+strikes come in W4); the provider sees the farm pin, directions and the farmer's phone only while the job is agreed,
+and the farmer sees the provider's phone at the same point. Booking SMS carry no price, reason or phone number.
+Still to do on the hosted project: apply the migration, deploy `send-notifications`, add the Vault setting
+`functions_base_url`, check the two cron jobs (DEPLOYMENT.md step 8). Yorùbá SMS and screen copy need native review.
 
 Goal: a farmer and a provider agree a job through the platform, and each is told.
 
