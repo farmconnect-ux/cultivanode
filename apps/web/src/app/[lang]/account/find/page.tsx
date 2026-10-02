@@ -22,7 +22,7 @@ type Result = {
   rates: Record<string, number>;
   operator_included: boolean;
   distance_km: number;
-  provider: { name: string; state: string | null; tier: number };
+  provider: { name: string; state: string | null; tier: number; rating: { avg: number | null; count: number } | null };
 };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -150,6 +150,11 @@ export default async function FindPage({ params, searchParams }: PageProps<"/[la
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {r.provider.tier >= 2 && <Badge className="bg-leaf-100 text-leaf-800">✓ {f.verified}</Badge>}
+                          {r.provider.rating && r.provider.rating.count > 0 && (
+                            <Badge className="bg-harvest-50 text-harvest-700">
+                              ★ {Number(r.provider.rating.avg).toFixed(1)} ({r.provider.rating.count})
+                            </Badge>
+                          )}
                           {r.kind === "equipment" && r.operator_included && <Badge className="bg-node-50 text-node-700">{f.operator}</Badge>}
                         </div>
                         {r.description && <p className="line-clamp-3">{r.description}</p>}
