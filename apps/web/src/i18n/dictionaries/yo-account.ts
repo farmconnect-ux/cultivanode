@@ -372,7 +372,7 @@ const yoAccount: typeof enAccount = {
         invalid_roles: "Yan iṣẹ́ ọ̀gbìn tàbí sísin ẹran.",
         service_not_ready: "SMS kò sí báyìí. Tún gbìyànjú lẹ́yìn náà.",
         provider_unavailable: "SMS ń dí lọ́wọ́. Tún gbìyànjú lẹ́yìn ìṣẹ́jú díẹ̀.",
-        generic: "Nǹkan kan ṣẹlẹ̀. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan síi.",
+        generic: "Nǹkan kan ṣẹlẹ̀. Jọ̀wọ́ tún gbìyànjú.",
       },
     },
     listings: {
