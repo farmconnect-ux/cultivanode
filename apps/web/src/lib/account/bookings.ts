@@ -1,6 +1,8 @@
 // Shapes returned by my_bookings() and booking_detail(), and how each status is shown.
 
-export type BookingStatus = "requested" | "accepted" | "declined" | "cancelled" | "expired";
+export type BookingStatus =
+  | "requested" | "accepted" | "in_progress" | "awaiting_confirmation"
+  | "confirmed" | "disputed" | "completed" | "declined" | "cancelled" | "expired";
 
 export type BookingSummary = {
   id: string;
@@ -24,6 +26,17 @@ export type BookingSummary = {
   other_name: string;
 };
 
+export type Proof = {
+  id: string;
+  kind: "before" | "after" | "extra";
+  path: string;
+  taken_at: string;
+  gps_distance_m: number | null;
+  hectares: number | null;
+};
+
+export type Rating = { stars: number; tags: string[]; comment: string | null };
+
 export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
   my_side: "farmer" | "provider" | "staff";
   listing_id: string | null;
@@ -31,17 +44,41 @@ export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
   responded_at: string | null;
   closed_reason: string | null;
   cancelled_by_me: boolean;
+  checked_in_at: string | null;
+  check_in_distance_m: number | null;
+  work_submitted_at: string | null;
+  confirm_by: string | null;
+  hectares_done: number | null;
+  disputed_at: string | null;
+  dispute_reason: string | null;
+  payment: {
+    mine: { at: string; kobo: number } | { farmer: number | null; provider: number | null } | null;
+    theirs_marked: boolean | null;
+    disputed: boolean;
+  };
   other: { name: string | null; phone: string | null; tier: number } | null;
   location: { lat: number; lng: number; hint: string | null } | null;
-  can: { accept: boolean; decline: boolean; cancel: boolean };
-  events: { event: BookingStatus; at: string; note: string | null; by: "farmer" | "provider" | "system" | "staff" }[];
+  proofs: Proof[];
+  my_rating: Rating | null;
+  their_rating: Rating | null;
+  can: {
+    accept: boolean; decline: boolean; cancel: boolean;
+    check_in: boolean; submit_proof: boolean; confirm: boolean; dispute: boolean;
+    mark_paid: boolean; rate: boolean;
+  };
+  events: { event: string; at: string; note: string | null; by: "farmer" | "provider" | "system" | "staff" }[];
 };
 
 export const BOOKING_TONE: Record<BookingStatus, string> = {
   requested: "bg-harvest-100 text-harvest-700",
   accepted: "bg-leaf-100 text-leaf-800",
+  in_progress: "bg-node-50 text-node-700",
+  awaiting_confirmation: "bg-harvest-100 text-harvest-700",
+  confirmed: "bg-leaf-100 text-leaf-800",
+  disputed: "bg-red-50 text-danger",
+  completed: "bg-leaf-100 text-leaf-800",
   declined: "bg-line/60 text-ink",
-  cancelled: "bg-red-50 text-danger",
+  cancelled: "bg-line/60 text-ink",
   expired: "bg-line/60 text-ink",
 };
 
