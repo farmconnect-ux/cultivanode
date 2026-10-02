@@ -19,10 +19,12 @@ and both sides and CultivaNode staff can see that the job was agreed, done, prov
 done when real jobs run through the platform, not when M1 is finished. Listing moderation, the bookings view,
 dispute resolution and user suspension are MVP items.
 
-**Payment boundary (to confirm).** No money moves through CultivaNode in the MVP. A booking records the agreed
+**Payment boundary (confirmed 2026-10-02).** No money moves through CultivaNode in the MVP. A booking records the agreed
 price in kobo; the farmer pays the provider directly (cash or transfer) and both mark the job paid. No
 commission in the pilot, and the site says so. Escrow, ledger and commission start in M5 after the fintech
-lawyer's sign-off. `PAYMENT_MODE` stays `test`.
+lawyer's sign-off. `PAYMENT_MODE` stays `test`. Paystack is registered in `integration_providers`
+(kind `payment`, test mode, `implemented: false`) so the M5 adapter already has its configuration home; no charge
+or escrow code ships before legal sign-off.
 
 **Mobile.** The job flow is built once, as responsive web for Android Chrome (camera and GPS through the
 browser). Native parity comes after the MVP, with offline sync (M7).
@@ -34,8 +36,8 @@ browser). Native parity comes after the MVP, with offline sync (M7).
 | 1 | M0 Foundations | M0 | ✅ done | – |
 | 2 | M1 Website and identity | M1, modules 1–2 | ✅ done (leftovers listed below) | – |
 | 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | ✅ code done and live on the hosted project 2026-09-28 (marketplace switch still closed) | – |
-| 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | 🟡 code done 2026-09-29; hosted migration, worker deploy and Vault setting pending | W1 |
-| 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | ⬜ | W2 |
+| 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | ✅ done: code 2026-09-29, verified live on the hosted project 2026-10-01 (migration, worker, Vault, cron) | W1 |
+| 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | 🟡 code done and hosted migration applied 2026-10-02; on-device pilot test pending | W2 |
 | 6 | **MVP W4** Operable pilot | module 12, M5 (cancellation, no money), M7 (agents) | ⬜ | legal review of direct-payment terms |
 | 7 | Closed beta: 5 providers, 10 farmers, one cluster | pilot plan step 4 | ⬜ | W4 |
 | 8 | M5 Payments and escrow (money parts) | M5 | ⬜ | fintech lawyer, Paystack/Flutterwave accounts |
@@ -81,15 +83,16 @@ away; a suspended listing or owner disappears from search and the owner is signe
 
 ### W2 — Booking agreed
 
-Status (2026-09-29): code done and tested (migration `20260929090000_mvp_week2.sql`, pgTAP `12_mvp_week2`, worker
-tests `send-notifications.test.ts`). Twilio is built as a second SMS provider alongside Termii. Decisions made while
-building: a request expires after 24 hours or at the end of the job day, whichever is sooner; the switch is judged by
-the farmer's state; declining and cancelling stay possible when the marketplace is closed (new requests and accepting
-do not); an agreed job can be called off by either side, with a reason, until the end of the job day (windows and
-strikes come in W4); the provider sees the farm pin, directions and the farmer's phone only while the job is agreed,
-and the farmer sees the provider's phone at the same point. Booking SMS carry no price, reason or phone number.
-Still to do on the hosted project: apply the migration, deploy `send-notifications`, add the Vault setting
-`functions_base_url`, check the two cron jobs (DEPLOYMENT.md step 8). Yorùbá SMS and screen copy need native review.
+Status (2026-10-01): done and live. Migration `20260929090000_mvp_week2.sql` is applied on the hosted project,
+`send-notifications` is deployed, `functions_base_url` is in Vault and both cron jobs (notification wake-up and
+request expiry) are active; SMS was switched from the mock to live Twilio (SID, token and sender set in Admin ›
+Integrations and Vault). pgTAP `12_mvp_week2` and worker tests `send-notifications.test.ts` cover the flow.
+Decisions made while building: a request expires after 24 hours or at the end of the job day, whichever is sooner;
+the switch is judged by the farmer's state; declining and cancelling stay possible when the marketplace is closed
+(new requests and accepting do not); an agreed job can be called off by either side, with a reason, until the end of
+the job day (windows and strikes come in W4); the provider sees the farm pin, directions and the farmer's phone only
+while the job is agreed, and the farmer sees the provider's phone at the same point. Booking SMS carry no price,
+reason or phone number. Yorùbá SMS and screen copy need native review.
 
 Goal: a farmer and a provider agree a job through the platform, and each is told.
 
@@ -104,6 +107,17 @@ Done when: a farmer requests a job from search; the provider gets an SMS and acc
 and gets an SMS; a third user cannot read the booking; a forged status change is refused by the database.
 
 ### W3 — Job done, proven, confirmed
+
+Status (2026-10-02): code done and applied on the hosted project. Migrations `20261002093000_w3_enums.sql` (enum
+values first, so they are usable in the same deploy) and `20261002120000_mvp_week3.sql` add the statuses
+`in_progress`, `awaiting_confirmation`, `confirmed`, `disputed` and `completed`, the `booking_proofs` table, the
+private `booking-proofs` bucket (participant-only policies), and the functions `check_in_booking`, `submit_proof`,
+`finish_booking_work`, `confirm_booking`, `dispute_booking`, `mark_paid` and `rate_booking`, plus the
+`cultivanode-autoconfirm-bookings` cron (every 15 minutes). Ratings feed the provider card, so the average and count
+show in search. Paystack is registered in `integration_providers` in test mode with `implemented: false`. pgTAP
+`13_mvp_week3` covers 97 assertions. Web job pages carry the whole flow (GPS check-in, EXIF-stripped proof upload,
+confirm/dispute, mark-paid, rating form) and the search card shows the rating badge, in English and Yorùbá (Yorùbá
+pending native review). Still to do: the real-phone pilot pass below.
 
 Goal: the job is carried out and closed with evidence; both sides rate each other.
 

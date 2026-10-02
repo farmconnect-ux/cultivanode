@@ -80,23 +80,23 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-MKT-001 | Equipment and service listings with hourly/daily/per-hectare rates | listings, listing_rates, equipment_type | can_create_listing (role + tier 2) | 03, 11 | ✅ web UI (/account/listings); publishing needs tier 2, an active account and the marketplace switch |
 | REQ-MKT-002 | Search by type, distance, service radius | – | nearby_listings() | 03, 11 | ✅ web UI (/account/find); date/availability filters after the MVP |
 | REQ-MKT-003 | Availability, photos | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
-| REQ-MKT-004 | Booking state machine (shared) | bookings, booking_events | request/accept/decline/cancel_booking, expire_bookings | 12 | 🟡 MVP W2 code done; web /account/bookings (native later) |
-| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** |
-| REQ-MKT-006 | Ratings (completed, paid, once) | ⬜ | ⬜ | ⬜ | ⬜ **→ MVP W3** (after confirmation; payment is marked, not processed) |
+| REQ-MKT-004 | Booking state machine (shared) | bookings, booking_events | request/accept/decline/cancel_booking, expire_bookings | 12 | ✅ deployed on hosted 2026-10-01; web /account/bookings (native later) |
+| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | bookings GPS columns, booking_proofs, private booking-proofs bucket | check_in_booking, submit_proof, finish_booking_work | 13_mvp_week3 | 🟡 MVP W3 code done 2026-10-02; real-phone pass pending |
+| REQ-MKT-006 | Ratings (completed, paid, once) | ratings | rate_booking, provider_card average and count | 13_mvp_week3 | 🟡 MVP W3 code done 2026-10-02; payment is marked, not processed |
 | REQ-MKT-007 | Demand-nearby clustering without exposing farmers | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
 
 ## M5 Payments and escrow
 
 | ID | Requirement | Status |
 |---|---|---|
-| REQ-PAY-001 | Payment provider adapters (Paystack, Flutterwave) in test mode | ⬜ |
+| REQ-PAY-001 | Payment provider adapters (Paystack, Flutterwave) in test mode | ⬜ (Paystack registered in integration_providers, test mode, implemented=false, 2026-10-02; adapter code stays M5) |
 | REQ-PAY-002 | Verified, idempotent webhooks | ⬜ |
 | REQ-PAY-003 | Double-entry hash-chained ledger | ⬜ |
 | REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | ⬜ |
 | REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ rules without money **→ MVP W4**; refunds after legal sign-off |
-| REQ-PAY-006 | Disputes with evidence and audited outcomes | ⬜ **→ MVP W3–W4** (no funds frozen: outcome recorded only) |
+| REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 dispute_booking with reason and photo evidence done in MVP W3 (no funds frozen); staff outcome, audit entry and admin screens in W4 |
 | REQ-PAY-007 | PAYMENT_MODE test/live guard | ✅ (resolvePaymentMode) |
-| REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | 🟡 one claimant per ID ✅ (W1); GPS check **→ MVP W3**; patterns later |
+| REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | 🟡 one claimant per ID ✅ (W1); GPS check-in and photo distance checks ✅ (W3); patterns later |
 
 ## M6 AI assistant
 
@@ -133,12 +133,12 @@ agreed price in kobo and both sides mark it paid. New requirements from the audi
 | REQ-ADM-015 | Listing moderation: suspend and restore (as paused), audited; owners cannot lift it | W1 | ✅ /admin/marketplace |
 | REQ-FARM-005 | Farm list shows my farms and my businesses' farms | W1 | ✅ /account/farms |
 | REQ-MKT-001/002 | Provider listing screens; farmer search from a farm (`nearby_listings_for_farm`), provider card (first name, state, tier) | W1 | ✅ /account/listings, /account/find (web) |
-| REQ-MKT-004 | Bookings, append-only booking events, request/accept/decline/cancel/expire functions, participant-only RLS, `bookings.read` | W2 | 🟡 code done 2026-09-29 (20260929090000_mvp_week2.sql, 12_mvp_week2); /account/bookings (web); not yet on hosted |
-| REQ-NOTIF-002 | Notifications table and inbox; booking SMS through the active SMS provider | W2 | 🟡 code done: notifications + /account/inbox; sms_outbox drained by the send-notifications Edge Function (send-notifications.test.ts); pg_cron wake-up and expiry on hosted pending |
-| REQ-SMS-002 | Twilio as a second switchable SMS provider (sign-in codes and booking SMS) | W2 | 🟡 adapter + tests done (providers.test.ts); needs Twilio account, SID, token and sender in Admin › Integrations |
-| REQ-MKT-005 | GPS check-in near the farm pin; proof photos in a private bucket (EXIF stripped, GPS and time stored) | W3 | ⬜ |
-| REQ-MKT-008 | Confirm or dispute within 48 hours; auto-confirm by `pg_cron`; marked paid by each side, mismatch flagged | W3 | ⬜ |
-| REQ-MKT-006 | Ratings once per side after confirmation; average in search | W3 | ⬜ |
+| REQ-MKT-004 | Bookings, append-only booking events, request/accept/decline/cancel/expire functions, participant-only RLS, `bookings.read` | W2 | ✅ deployed and verified on hosted 2026-10-01 (20260929090000_mvp_week2.sql, 12_mvp_week2); /account/bookings (web) |
+| REQ-NOTIF-002 | Notifications table and inbox; booking SMS through the active SMS provider | W2 | ✅ deployed: notifications + /account/inbox; sms_outbox drained by the send-notifications Edge Function (send-notifications.test.ts); pg_cron wake-up and expiry active on hosted |
+| REQ-SMS-002 | Twilio as a second switchable SMS provider (sign-in codes and booking SMS) | W2 | ✅ adapter + tests done (providers.test.ts); Twilio live on hosted since 2026-10-01 (SID, token and sender in Admin › Integrations and Vault; active provider switched from the mock) |
+| REQ-MKT-005 | GPS check-in near the farm pin; proof photos in a private bucket (EXIF stripped, GPS and time stored) | W3 | 🟡 code done and applied on hosted 2026-10-02 (check-in within 1000 m on the job day; EXIF stripped in the browser; photo GPS within 2000 m); real-phone pass pending |
+| REQ-MKT-008 | Confirm or dispute within 48 hours; auto-confirm by `pg_cron`; marked paid by each side, mismatch flagged | W3 | 🟡 code done and applied on hosted 2026-10-02 (confirm_booking, dispute_booking, autoconfirm cron every 15 min, mark_paid both sides with mismatch flag) |
+| REQ-MKT-006 | Ratings once per side after confirmation; average in search | W3 | 🟡 code done and applied on hosted 2026-10-02 (rate_booking, 1–5 stars plus fixed tags; average + count badge on the search card) |
 | REQ-ADM-016 | Admin bookings list and detail (timeline, proofs, notes); dispute resolution with outcome and notifications | W4 | ⬜ |
 | REQ-MKT-009 | Cancellation windows, provider strikes, free weather reschedule, as settings data (no money) | W4 | ⬜ |
 | REQ-AGT-003 | Field agent books on behalf of a farmer they onboarded | W4 | ⬜ |
@@ -146,7 +146,8 @@ agreed price in kobo and both sides mark it paid. New requirements from the audi
 | REQ-OPS-011 | Pilot runbook, Sentry alerts on booking functions, low-end Android over 3G pass, Yorùbá copy for new screens | W4 | ⬜ |
 
 ## Decisions and assumptions
-- **MVP first (2026-09-28):** after M1, the "first real jobs" MVP runs before M2–M7; the job flow is responsive web first; no money through the platform until M5 and legal sign-off (payment boundary to be confirmed). See ROADMAP.md.
+- **MVP first (2026-09-28):** after M1, the "first real jobs" MVP runs before M2–M7; the job flow is responsive web first; no money through the platform until M5 and legal sign-off. See ROADMAP.md.
+- **Payment boundary (confirmed 2026-10-02):** no money through the platform in the MVP; both sides mark the job paid. Paystack is registered in test mode only, as the M5 adapter's configuration home.
 - **npm instead of pnpm:** kept after review; switching adds risk without product benefit.
 - **`accounts` = `profiles`:** see DATABASE.md.
 - **Admin is not an `app_role`:** admin powers live in `admin_roles` so they can never be self-requested.
