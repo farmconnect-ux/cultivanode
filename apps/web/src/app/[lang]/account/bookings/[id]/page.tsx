@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatNaira } from "@cultivanode/shared";
 import {
-  BookingActions, CheckInButton, ConfirmDispute, FinishWork, MarkPaidForm, ProofFlow, RatingForm,
+  BookingActions, CheckInButton, ConfirmWork, DisputeForm, EvidenceUpload, FinishWork, MarkPaidForm, ProofFlow, RatingForm,
 } from "@/components/account/booking-forms";
 import { Badge, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
@@ -83,7 +83,11 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
       )}
       {x.status === "disputed" && (
         <p role="alert" className="rounded-md border-l-4 border-danger bg-red-50 p-3">
-          {fill(b.disputedNote, { reason: x.dispute_reason ?? "" })}
+          {fill(b.disputedNote, {
+            by: x.disputed_by === x.my_side ? b.disputedByYou : b.disputedByThem,
+            category: x.dispute_category ? b.disputeCategories[x.dispute_category] : "",
+          })}
+          {x.dispute_reason && <span className="mt-1 block">“{x.dispute_reason}”</span>}
         </p>
       )}
       {x.closed_reason && (x.status === "declined" || x.status === "cancelled") && (
@@ -138,7 +142,7 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
         </Card>
       )}
 
-      {(x.proofs.length > 0 || x.can.submit_proof) && (
+      {(x.proofs.length > 0 || x.can.submit_proof || x.can.add_evidence) && (
         <Card className="flex flex-col gap-4">
           <h2 className="text-xl font-bold">{b.proofTitle}</h2>
           {x.proofs.length > 0 && (
@@ -153,6 +157,7 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
                   )}
                   <span className="text-sm">
                     <span className="font-semibold">{b.proofKinds[p.kind]}</span>
+                    {p.kind === "evidence" && <span className="ml-1 text-muted">{b.by[p.by]}</span>}
                     {p.gps_distance_m !== null && <span className="ml-1 text-muted">✓ GPS</span>}
                   </span>
                 </li>
@@ -168,14 +173,23 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
                           ready={x.proofs.some((p) => p.kind === "before") && x.proofs.some((p) => p.kind === "after")} />
             </>
           )}
+          {x.can.add_evidence && <EvidenceUpload lang={lang} t={t.acct} id={x.id} userId={account.userId} />}
         </Card>
       )}
 
-      {x.my_side === "farmer" && (x.can.confirm || x.can.dispute) && (
+      {x.my_side === "farmer" && x.can.confirm && (
         <Card className="flex flex-col gap-4">
           <h2 className="text-xl font-bold">{b.yourAnswer}</h2>
           <p className="text-muted">{b.confirmHint}</p>
-          <ConfirmDispute lang={lang} t={t.acct} id={x.id} confirmBy={x.confirm_by} />
+          <ConfirmWork lang={lang} t={t.acct} id={x.id} />
+        </Card>
+      )}
+
+      {x.my_side !== "staff" && x.can.dispute && (
+        <Card className="flex flex-col gap-4">
+          <h2 className="text-xl font-bold">{b.problemTitle}</h2>
+          <p className="text-muted">{x.my_side === "farmer" ? b.problemHintFarmer : b.problemHintProvider}</p>
+          <DisputeForm lang={lang} t={t.acct} id={x.id} />
         </Card>
       )}
 

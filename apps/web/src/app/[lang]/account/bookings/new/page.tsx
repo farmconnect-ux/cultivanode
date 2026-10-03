@@ -48,6 +48,17 @@ export default async function NewBookingPage({ params, searchParams }: PageProps
   );
 
   if (!account.isFarmer) return <>{header}<p>{t.acct.bookingErrors.farmer_role_needed}</p></>;
+  if (account.profile.verification_tier < 1) {
+    return (
+      <>
+        {header}
+        <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
+          {k.tierNeeded}{" "}
+          <Link href={`/${lang}/account/verification`} className="font-semibold text-leaf-700 underline">{k.verifyNow}</Link>
+        </p>
+      </>
+    );
+  }
   if (!UUID.test(listingId) || !UUID.test(farmId)) return <>{header}<p>{k.notAvailable}</p></>;
 
   const supabase = await createClient();

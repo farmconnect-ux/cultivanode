@@ -424,7 +424,9 @@ export type Database = {
           closed_reason: string | null
           confirm_by: string | null
           created_at: string
+          dispute_category: string | null
           dispute_reason: string | null
+          disputed_by: string | null
           disputed_at: string | null
           distance_km: number
           equipment_type: Database["public"]["Enums"]["equipment_type"] | null
@@ -467,7 +469,9 @@ export type Database = {
           closed_reason?: string | null
           confirm_by?: string | null
           created_at?: string
+          dispute_category?: string | null
           dispute_reason?: string | null
+          disputed_by?: string | null
           disputed_at?: string | null
           distance_km: number
           equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
@@ -510,7 +514,9 @@ export type Database = {
           closed_reason?: string | null
           confirm_by?: string | null
           created_at?: string
+          dispute_category?: string | null
           dispute_reason?: string | null
+          disputed_by?: string | null
           disputed_at?: string | null
           distance_km?: number
           equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
@@ -2196,6 +2202,16 @@ export type Database = {
     }
     Functions: {
       accept_booking: { Args: { p_booking: string }; Returns: undefined }
+      add_dispute_evidence: {
+        Args: {
+          p_booking: string
+          p_lat?: number
+          p_lng?: number
+          p_path: string
+          p_taken_at: string
+        }
+        Returns: string
+      }
       add_org_member: {
         Args: {
           p_org: string
@@ -2505,7 +2521,7 @@ export type Database = {
         Returns: undefined
       }
       dispute_booking: {
-        Args: { p_booking: string; p_reason: string }
+        Args: { p_booking: string; p_category: string; p_details?: string }
         Returns: undefined
       }
       export_my_data: { Args: never; Returns: Json }

@@ -138,17 +138,16 @@ Review (2026-10-03), fixed in `20261003185642_mvp_week3_fixes.sql` and the web/w
 - Gap against the plan: `dispute_booking` takes a reason but the farmer cannot attach evidence photos yet (only the
   provider uploads). Moved to W4 with dispute resolution.
 
-Open decisions against the master plan (not changed; each alters pilot behaviour, so it needs a yes from Quadri):
-1. Disputes: the plan lets the farmer *or the provider* dispute, with a reason category (job not done, poor quality,
-   wrong area, damage, no-show) and evidence. Built: farmer only, free-text reason, no evidence. Proposed for W4.
-2. Ratings: the plan allows rating only "completed, paid jobs". Built (per this roadmap): after the farmer confirms,
-   before both sides mark paid. Tightening to `completed` makes fake reviews harder; a payment mismatch would then
-   block rating until staff settle it.
-3. Proof photos: the plan says photos "must carry GPS within the farm boundary". Built: GPS optional per photo (checked
-   within 2 km of the pin when present); check-in itself requires GPS within 1 km. Making GPS mandatory for the
-   before/after photos is a one-function change.
-4. Booking needs tier 1 (NIN verified) in the plan's tier table. `request_booking` (W2) only needs the farmer role.
-   Enforcing it now would block every farmer while the Prembly wallet is empty (checks return `billing`).
+Decided 2026-10-03 (Quadri: follow the master plan), built in `20261003200000_mvp_week3_plan_rules.sql`, pgTAP
+`14_mvp_plan_rules` (40 assertions):
+1. Disputes: the farmer or the provider opens one while the job runs or within the 48 hours after the proof upload
+   (the farmer also for a no-show), choosing job not done, poor quality, wrong area, damage or no-show, with optional
+   details; both sides add evidence photos (EXIF stripped, up to 10 each) while it is open. Resolution: W4.
+2. Ratings only on completed, paid jobs (both sides marked the same amount).
+3. Before and after photos must carry GPS inside the farm: within 100 m of the mapped boundary, or 1 km of the pin when
+   the farm has no boundary. Uploads are allowed only after check-in.
+4. Booking needs verification tier 1 (NIN). Until the Prembly wallet is topped up, no farmer can reach tier 1, so no new
+   bookings can be made.
 
 Goal: the job is carried out and closed with evidence; both sides rate each other.
 

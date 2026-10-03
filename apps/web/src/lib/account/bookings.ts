@@ -28,12 +28,16 @@ export type BookingSummary = {
 
 export type Proof = {
   id: string;
-  kind: "before" | "after" | "extra";
+  kind: "before" | "after" | "extra" | "evidence";
   path: string;
   taken_at: string;
   gps_distance_m: number | null;
   hectares: number | null;
+  by: "farmer" | "provider";
 };
+
+export type DisputeCategory = "job_not_done" | "poor_quality" | "wrong_area" | "damage" | "no_show";
+export const DISPUTE_CATEGORIES: DisputeCategory[] = ["job_not_done", "poor_quality", "wrong_area", "damage", "no_show"];
 
 export type Rating = { stars: number; tags: string[]; comment: string | null };
 
@@ -51,6 +55,8 @@ export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
   hectares_done: number | null;
   disputed_at: string | null;
   dispute_reason: string | null;
+  dispute_category: DisputeCategory | null;
+  disputed_by: "farmer" | "provider" | "staff" | null;
   payment: {
     mine: { at: string; kobo: number } | { farmer: number | null; provider: number | null } | null;
     theirs_marked: boolean | null;
@@ -63,7 +69,7 @@ export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
   their_rating: Rating | null;
   can: {
     accept: boolean; decline: boolean; cancel: boolean;
-    check_in: boolean; submit_proof: boolean; confirm: boolean; dispute: boolean;
+    check_in: boolean; submit_proof: boolean; confirm: boolean; dispute: boolean; add_evidence: boolean;
     mark_paid: boolean; rate: boolean;
   };
   events: { event: string; at: string; note: string | null; by: "farmer" | "provider" | "system" | "staff" }[];

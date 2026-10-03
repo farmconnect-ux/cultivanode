@@ -25,7 +25,9 @@ const CODES = new Set([
   "not_allowed", "wrong_status", "expired", "counterpart_unavailable", "too_late", "reason_needed",
   "not_job_day", "no_gps", "too_far_from_farm", "bad_kind", "proof_not_found", "too_many_proofs", "bad_photo_time",
   "photo_too_far", "proof_needed", "bad_amount", "bad_rating", "already_rated",
+  "tier_needed", "dispute_window_closed",
 ]);
+const DISPUTE_CATEGORIES = new Set(["job_not_done", "poor_quality", "wrong_area", "damage", "no_show"]);
 
 const ok = (extra: Partial<ActionState> = {}): ActionState => ({ ok: true, at: Date.now(), ...extra });
 const bad = (error: string): ActionState => ({ ok: false, error, at: Date.now() });
@@ -185,17 +187,43 @@ export async function confirmWork(_prev: ActionState, form: FormData): Promise<A
   return ok();
 }
 
+/** Either side, within the 48 hours after the proof (or while the job runs): a reason category and details. */
 export async function disputeBooking(_prev: ActionState, form: FormData): Promise<ActionState> {
   const supabase = await signedIn(form);
   const id = bookingId(form);
-  const reason = text(form, "reason", 500);
+  const category = text(form, "category", 20);
   if (!id) return bad("errorGeneric");
-  if (reason.length < 5) return bad("reason_needed");
+  if (!DISPUTE_CATEGORIES.has(category)) return bad("reason_needed");
 
-  const { error } = await supabase.rpc("dispute_booking", { p_booking: id, p_reason: reason });
+  const { error } = await supabase.rpc("dispute_booking", {
+    p_booking: id,
+    p_category: category,
+    p_details: text(form, "details", 500) || undefined,
+  });
   refresh();
   if (error) return bad(codeOf(error, "dispute"));
   return ok();
+}
+
+/** One evidence photo for an open dispute, already uploaded (EXIF-stripped) into the booking's folder. */
+export async function addDisputeEvidence(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const supabase = await signedIn(form);
+  const id = bookingId(form);
+  const path = text(form, "path", 200);
+  const takenAt = text(form, "taken_at", 40);
+  if (!id || !path || Number.isNaN(Date.parse(takenAt))) return bad("proof_not_found");
+  const c = coords(form);
+  if (c === "mixed") return bad("no_gps");
+
+  const { error } = await supabase.rpc("add_dispute_evidence", {
+    p_booking: id,
+    p_path: path,
+    p_taken_at: new Date(takenAt).toISOString(),
+    ...(c ? { p_lat: c.lat, p_lng: c.lng } : {}),
+  });
+  refresh();
+  if (error) return bad(codeOf(error, "add_evidence"));
+  return ok({ message: "photoAdded" });
 }
 
 /** No money moves through CultivaNode in the pilot: each side marks what was paid or received. */

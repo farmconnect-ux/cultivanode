@@ -26,6 +26,8 @@ insert into public.user_roles (profile_id, role) values
   ('c3000000-0000-0000-0000-000000000005', 'machinery_owner'),
   ('c3000000-0000-0000-0000-000000000007', 'crop_farmer');
 update public.profiles set verification_tier = 2 where id = 'c3000000-0000-0000-0000-000000000005';
+-- Farmers have verified their NIN (tier 1): booking needs it (master plan tier table).
+update public.profiles set verification_tier = 1 where id in ('c3000000-0000-0000-0000-000000000004', 'c3000000-0000-0000-0000-000000000007');
 insert into public.farms (id, owner_id, name, location, state, address_hint) values
   ('c3000000-0000-0000-0000-0000000000f4', 'c3000000-0000-0000-0000-000000000004', 'Kemi maize', 'SRID=4326;POINT(3.8967 7.3775)', 'Oyo', 'Behind the church'),
   ('c3000000-0000-0000-0000-0000000000f9', 'c3000000-0000-0000-0000-000000000004', 'Kemi second', 'SRID=4326;POINT(3.8970 7.3780)', 'Oyo', null);
@@ -100,7 +102,7 @@ insert into storage.objects (bucket_id, name) values
   ('booking-proofs', pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/after1.jpg');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
-select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now()) $$,
+select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now(), 7.3776, 3.8968) $$,
   '42501', 'Only the provider can add proof.', 'the farmer cannot add proof');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000005"}', true);
 select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'sideways', now()) $$,
@@ -112,14 +114,14 @@ select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') 
 select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before',
   now() - interval '3 hours') $$, '22023', 'The photo time does not fit this job.', 'a photo older than the check-in is refused');
 select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before',
-  now(), 7.3775, 3.95) $$, '22023', 'That photo was taken more than 2 km from the farm.', 'a photo 6 km away is refused');
+  now(), 7.3775, 3.95) $$, '22023', 'That photo was not taken at the farm.', 'a photo 6 km away is refused');
 select isnt(public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before',
   now(), 7.3775, 3.8967), null, 'the before photo is recorded');
 select throws_ok($$ select public.finish_booking_work(pg_temp.r('r1'), null) $$, '22023',
   'Add at least one before and one after photo first.', 'finishing needs before and after photos');
 select isnt(public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after',
   now(), 7.3775, 3.8967), null, 'the after photo is recorded');
-select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now()) $$,
+select throws_ok($$ select public.submit_proof(pg_temp.r('r1'), pg_temp.r('r1') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now(), 7.3775, 3.8967) $$,
   '23505', null, 'the same photo cannot be recorded twice');
 select lives_ok($$ select public.finish_booking_work(pg_temp.r('r1'), 2.5) $$, 'the provider finishes the job');
 select is((select status::text from public.bookings where id = pg_temp.r('r1')), 'awaiting_confirmation', 'the job waits for the farmer');
@@ -137,8 +139,8 @@ select throws_ok($$ select public.confirm_booking(pg_temp.r('r1')) $$, '42501', 
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
 select throws_ok($$ select public.mark_paid(pg_temp.r('r1'), 6250000) $$, '22023', 'The farmer confirms the finished work first.',
   'payment cannot be marked before confirmation');
-select throws_ok($$ select public.rate_booking(pg_temp.r('r1'), 5, '{}', null) $$, '22023', 'You can rate after the job is confirmed.',
-  'rating before confirmation is refused');
+select throws_ok($$ select public.rate_booking(pg_temp.r('r1'), 5, '{}', null) $$, '22023', 'You can rate after the job is completed and paid.',
+  'rating before the job is completed and paid is refused');
 select lives_ok($$ select public.confirm_booking(pg_temp.r('r1')) $$, 'the farmer confirms the job');
 select is((select status::text from public.bookings where id = pg_temp.r('r1')), 'confirmed', 'the job is confirmed');
 reset role;
@@ -184,9 +186,9 @@ insert into storage.objects (bucket_id, name) values
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000005"}', true);
 select lives_ok($$ select public.check_in_booking(pg_temp.r('r3'), 7.378, 3.897) $$, 'r3: check-in');
-select lives_ok($$ select public.submit_proof(pg_temp.r('r3'), pg_temp.r('r3') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now()) $$,
+select lives_ok($$ select public.submit_proof(pg_temp.r('r3'), pg_temp.r('r3') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now(), 7.3776, 3.8968) $$,
   'r3: before photo');
-select lives_ok($$ select public.submit_proof(pg_temp.r('r3'), pg_temp.r('r3') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now()) $$,
+select lives_ok($$ select public.submit_proof(pg_temp.r('r3'), pg_temp.r('r3') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now(), 7.3776, 3.8968) $$,
   'r3: after photo');
 select lives_ok($$ select public.finish_booking_work(pg_temp.r('r3'), null) $$, 'r3: work finished');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
@@ -214,9 +216,9 @@ insert into storage.objects (bucket_id, name) values
   ('booking-proofs', pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/before1.jpg'),
   ('booking-proofs', pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/after1.jpg');
 set local role authenticated;
-select lives_ok($$ select public.submit_proof(pg_temp.r('r5'), pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now()) $$,
+select lives_ok($$ select public.submit_proof(pg_temp.r('r5'), pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/before1.jpg', 'before', now(), 7.3776, 3.8968) $$,
   'r5: before photo');
-select lives_ok($$ select public.submit_proof(pg_temp.r('r5'), pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now()) $$,
+select lives_ok($$ select public.submit_proof(pg_temp.r('r5'), pg_temp.r('r5') || '/c3000000-0000-0000-0000-000000000005/after1.jpg', 'after', now(), 7.3776, 3.8968) $$,
   'r5: after photo');
 select lives_ok($$ select public.finish_booking_work(pg_temp.r('r5'), null) $$, 'r5: work finished');
 reset role;
@@ -232,13 +234,13 @@ select is((select count(*)::int from public.notifications where booking_id = pg_
 update public.bookings set job_date = pg_temp.day(-1) where id = pg_temp.r('r2');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
-select throws_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'no') $$, '22023',
-  'Say what went wrong (at least 5 characters).', 'a dispute needs a reason');
+select throws_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'it was bad', null) $$, '22023',
+  'Choose what went wrong.', 'a dispute needs one of the reason categories');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000005"}', true);
-select throws_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'He never came and my day is gone') $$, '42501',
-  'Only the farmer can open a dispute.', 'the provider cannot open a dispute');
+select throws_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'no_show', 'He says I never came') $$, '22023',
+  'This booking cannot be disputed now.', 'only the farmer can report a no-show on an accepted job');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
-select lives_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'He never came and my day is gone') $$, 'the farmer disputes the no-show');
+select lives_ok($$ select public.dispute_booking(pg_temp.r('r2'), 'no_show', 'He never came and my day is gone') $$, 'the farmer disputes the no-show');
 reset role;
 select is((select status::text from public.bookings where id = pg_temp.r('r2')), 'disputed', 'the job is disputed');
 select is((select count(*)::int from public.sms_outbox where booking_id = pg_temp.r('r2') and kind = 'booking_disputed'), 1,
@@ -246,7 +248,7 @@ select is((select count(*)::int from public.sms_outbox where booking_id = pg_tem
 set local role authenticated;
 select throws_ok($$ select public.mark_paid(pg_temp.r('r2'), 9000000) $$, '22023', 'The farmer confirms the finished work first.',
   'a disputed job cannot be marked paid');
-select throws_ok($$ select public.rate_booking(pg_temp.r('r2'), 1, '{}', null) $$, '22023', 'You can rate after the job is confirmed.',
+select throws_ok($$ select public.rate_booking(pg_temp.r('r2'), 1, '{}', null) $$, '22023', 'You can rate after the job is completed and paid.',
   'a disputed job cannot be rated');
 
 ---------------------------------------------------------------- 8. what each side sees
@@ -263,14 +265,14 @@ select is((select count(*)::int from public.booking_proofs), 0, 'or read its pro
 
 ---------------------------------------------------------------- 9. storage policies and grants
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000005"}', true);
-select lives_ok($$ insert into storage.objects (bucket_id, name)
-  values ('booking-proofs', pg_temp.r('r4') || '/c3000000-0000-0000-0000-000000000005/plan.jpg') $$,
-  'the provider can upload into his own booking folder');
+select throws_ok($$ insert into storage.objects (bucket_id, name)
+  values ('booking-proofs', pg_temp.r('r4') || '/c3000000-0000-0000-0000-000000000005/plan.jpg') $$, '42501', null,
+  'the provider cannot upload before checking in');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000004"}', true);
 select throws_ok($$ insert into storage.objects (bucket_id, name)
   values ('booking-proofs', pg_temp.r('r4') || '/c3000000-0000-0000-0000-000000000004/evil.jpg') $$, '42501', null,
   'the farmer cannot upload proof photos');
-select is((select count(*)::int from storage.objects where bucket_id = 'booking-proofs'), 7,
+select is((select count(*)::int from storage.objects where bucket_id = 'booking-proofs'), 6,
   'the farmer reads the proofs of her bookings');
 select set_config('request.jwt.claims', '{"sub":"c3000000-0000-0000-0000-000000000007"}', true);
 select is((select count(*)::int from storage.objects where bucket_id = 'booking-proofs'), 0, 'a third party reads none');

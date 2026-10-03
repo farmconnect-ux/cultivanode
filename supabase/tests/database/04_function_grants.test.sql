@@ -4,7 +4,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(23);
 
 select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb, jsonb, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
@@ -43,6 +43,12 @@ select ok(not has_function_privilege('authenticated', 'private.expire_bookings()
 select ok(not has_function_privilege('authenticated', 'public.finish_sms_outbox(uuid, boolean, text, text, text, boolean)', 'execute')
           and has_function_privilege('service_role', 'public.finish_sms_outbox(uuid, boolean, text, text, text, boolean)', 'execute'),
   'only the service role records SMS results');
+select ok(has_function_privilege('authenticated', 'public.add_dispute_evidence(uuid, text, timestamptz, double precision, double precision)', 'execute')
+          and not has_function_privilege('anon', 'public.add_dispute_evidence(uuid, text, timestamptz, double precision, double precision)', 'execute'),
+  'dispute evidence is for signed-in parties only');
+select ok(to_regprocedure('public.dispute_booking(uuid, text)') is null
+          and not has_function_privilege('anon', 'public.dispute_booking(uuid, text, text)', 'execute'),
+  'the old free-text dispute function is gone; the category version is not public');
 select ok(not has_function_privilege('authenticated', 'private.end_sessions(uuid)', 'execute'),
   'signed-in users cannot end other people''s sessions');
 

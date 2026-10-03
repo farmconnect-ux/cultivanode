@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { formatNaira } from "@cultivanode/shared";
 import {
-  answerBooking, checkInBooking, confirmWork, disputeBooking, finishWork,
+  addDisputeEvidence, answerBooking, checkInBooking, confirmWork, disputeBooking, finishWork,
   markInboxRead, markPaid, rateBooking, requestBooking, submitProof,
 } from "@/actions/bookings";
 import type { ActionState } from "@/actions/account";
 import { Button, Field, Input, Select, TextArea } from "@/components/ui";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { DISPUTE_CATEGORIES } from "@/lib/account/bookings";
 import { createClient } from "@/lib/supabase/client";
 import { fill } from "@/lib/text";
 import { ActionForm, messageFor } from "./action-form";
@@ -291,27 +292,84 @@ export function FinishWork({ lang, t, id, ready }: { lang: Locale; t: Pick<Acct,
 }
 
 /** The farmer checks the proof and confirms, or opens a dispute with a reason. */
-// The 48-hour deadline is shown by the page above this form (confirmPrompt), so it is not repeated here.
-export function ConfirmDispute({ lang, t, id }: {
-  lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string; confirmBy?: string | null;
-}) {
+/** The farmer checks the proof and confirms the work. */
+export function ConfirmWork({ lang, t, id }: { lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string }) {
   const b = t.bookings;
   return (
-    <div className="flex flex-col gap-6">
-      <ActionForm action={confirmWork} hidden={{ lang, id }} messages={[t.bookingErrors]} success={b.done}>
-        {(pending) => <Button type="submit" disabled={pending} className="self-start">{pending ? b.sending : b.confirmWork}</Button>}
-      </ActionForm>
-      <ActionForm action={disputeBooking} hidden={{ lang, id }} messages={[t.bookingErrors]} success={b.done}>
-        {(pending) => (
-          <>
-            <Field id={`dispute-${id}`} label={b.disputeReason} hint={b.disputeReasonHint}>
-              <TextArea id={`dispute-${id}`} name="reason" minLength={5} maxLength={500} required className="min-h-20"
-                        aria-describedby={`dispute-${id}-hint`} />
-            </Field>
-            <Button type="submit" variant="secondary" disabled={pending} className="self-start">{b.dispute}</Button>
-          </>
-        )}
-      </ActionForm>
+    <ActionForm action={confirmWork} hidden={{ lang, id }} messages={[t.bookingErrors]} success={b.done}>
+      {(pending) => <Button type="submit" disabled={pending} className="self-start">{pending ? b.sending : b.confirmWork}</Button>}
+    </ActionForm>
+  );
+}
+
+/** Either side raises a problem (master plan): one reason category, optional details; evidence photos follow. */
+export function DisputeForm({ lang, t, id }: { lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string }) {
+  const b = t.bookings;
+  return (
+    <ActionForm action={disputeBooking} hidden={{ lang, id }} messages={[t.bookingErrors]} success={b.done}>
+      {(pending) => (
+        <>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 font-semibold">{b.disputeReason}</legend>
+            {DISPUTE_CATEGORIES.map((c) => (
+              <label key={c} className="inline-flex min-h-11 items-center gap-3">
+                <input type="radio" name="category" value={c} required className="size-5 accent-leaf-700" />
+                {b.disputeCategories[c]}
+              </label>
+            ))}
+          </fieldset>
+          <Field id={`dispute-${id}`} label={b.disputeDetails} hint={b.disputeReasonHint}>
+            <TextArea id={`dispute-${id}`} name="details" maxLength={500} className="min-h-20" aria-describedby={`dispute-${id}-hint`} />
+          </Field>
+          <Button type="submit" variant="secondary" disabled={pending} className="self-start">{b.dispute}</Button>
+        </>
+      )}
+    </ActionForm>
+  );
+}
+
+/** Evidence photos for an open dispute, from either side: stripped of EXIF, uploaded, then recorded. */
+export function EvidenceUpload({ lang, t, id, userId }: {
+  lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string; userId: string;
+}) {
+  const b = t.bookings;
+  const [state, setState] = useState<ActionState | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const add = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setState(null);
+    try {
+      const [blob, c] = await Promise.all([stripPhoto(file), locate()]);
+      const path = `${id}/${userId}/${crypto.randomUUID()}.jpg`;
+      const { error: up } = await createClient().storage.from("booking-proofs").upload(path, blob, { contentType: "image/jpeg" });
+      if (up) { setState({ ok: false, error: "proof_not_found", at: Date.now() }); return; }
+      const form = new FormData();
+      form.set("lang", lang);
+      form.set("id", id);
+      form.set("path", path);
+      form.set("taken_at", new Date().toISOString());
+      if (c) { form.set("lat", String(c.lat)); form.set("lng", String(c.lng)); }
+      setState(await addDisputeEvidence({} as ActionState, form));
+    } catch {
+      setState({ ok: false, error: "errorGeneric", at: Date.now() });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="inline-flex min-h-11 cursor-pointer items-center self-start rounded-md bg-leaf-700 px-4 font-semibold text-white">
+        {busy ? b.uploading : b.addEvidence}
+        <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={busy} onChange={add}
+               aria-label={b.addEvidence} />
+      </label>
+      <p className="text-sm text-muted">{b.evidenceHint}</p>
+      <Note state={state} b={b} errors={t.bookingErrors} />
     </div>
   );
 }

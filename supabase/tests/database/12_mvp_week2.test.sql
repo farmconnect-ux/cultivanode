@@ -31,6 +31,8 @@ insert into public.user_roles (profile_id, role) values
   ('c2000000-0000-0000-0000-000000000007', 'crop_farmer'),
   ('c2000000-0000-0000-0000-000000000008', 'crop_farmer');
 update public.profiles set verification_tier = 2 where id = 'c2000000-0000-0000-0000-000000000005';
+-- Farmers have verified their NIN (tier 1): booking needs it (master plan tier table).
+update public.profiles set verification_tier = 1 where id in ('c2000000-0000-0000-0000-000000000004', 'c2000000-0000-0000-0000-000000000006', 'c2000000-0000-0000-0000-000000000007', 'c2000000-0000-0000-0000-000000000008');
 insert into public.farms (id, owner_id, name, location, state, address_hint) values
   ('c2000000-0000-0000-0000-0000000000f4', 'c2000000-0000-0000-0000-000000000004', 'Kemi maize', 'SRID=4326;POINT(3.8967 7.3775)', 'Oyo', 'Behind the church'),
   ('c2000000-0000-0000-0000-0000000000f6', 'c2000000-0000-0000-0000-000000000006', 'Musa cassava', 'SRID=4326;POINT(3.8967 6.9)', 'Oyo', null),
