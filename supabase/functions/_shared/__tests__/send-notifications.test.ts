@@ -31,10 +31,24 @@ describe('booking SMS wording', () => {
   it('keeps messages short and never fills in text people typed', () => {
     const long = renderBookingSms('booking_requested', { ...data, title: 'A {date} tractor with a very long name indeed' }, 'en')!;
     expect(long).toContain('A {date} tractor with a ver...');
-    for (const kind of ['booking_requested', 'booking_accepted', 'booking_declined', 'booking_cancelled', 'booking_expired']) {
+    for (const kind of ['booking_requested', 'booking_accepted', 'booking_declined', 'booking_cancelled', 'booking_expired',
+                        'job_checked_in', 'proof_submitted', 'booking_confirmed', 'booking_disputed', 'booking_completed',
+                        'payment_marked', 'payment_mismatch']) {
       expect(renderBookingSms(kind, { title: 'x'.repeat(80), job_date: '2026-12-31', name: 'y'.repeat(40) }, 'en')!.length)
         .toBeLessThanOrEqual(160);
     }
+  });
+
+  it('words every kind the database queues by SMS (week 3 job flow included), in both languages', () => {
+    // Kinds that private.notify(..., true) can queue; rating_received and booking_auto_confirmed are inbox-only.
+    const queued = ['booking_requested', 'booking_accepted', 'booking_declined', 'booking_cancelled', 'booking_expired',
+      'job_checked_in', 'proof_submitted', 'booking_confirmed', 'booking_disputed', 'booking_completed',
+      'payment_marked', 'payment_mismatch'];
+    for (const kind of queued) {
+      expect(renderBookingSms(kind, data, 'en'), kind).toMatch(/^CultivaNode: /);
+      expect(renderBookingSms(kind, data, 'yo'), kind).toContain('/yo/account/');
+    }
+    expect(renderBookingSms('proof_submitted', data, 'en')).toContain('48 hours');
   });
 
   it('refuses unknown kinds and missing facts', () => {

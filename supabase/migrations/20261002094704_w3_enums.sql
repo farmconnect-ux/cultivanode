@@ -1,6 +1,6 @@
 -- CultivaNode MVP week 3, part 1: new booking states and the payment integration kind.
 --
--- Kept separate from 20261002120000_mvp_week3.sql because a newly added enum value cannot be used
+-- Kept separate from 20261002095258_mvp_week3.sql because a newly added enum value cannot be used
 -- inside the transaction that added it: this file is applied (and committed) first.
 
 alter type public.booking_status add value if not exists 'in_progress';

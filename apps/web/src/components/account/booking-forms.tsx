@@ -291,8 +291,9 @@ export function FinishWork({ lang, t, id, ready }: { lang: Locale; t: Pick<Acct,
 }
 
 /** The farmer checks the proof and confirms, or opens a dispute with a reason. */
-export function ConfirmDispute({ lang, t, id, confirmBy }: {
-  lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string; confirmBy: string | null;
+// The 48-hour deadline is shown by the page above this form (confirmPrompt), so it is not repeated here.
+export function ConfirmDispute({ lang, t, id }: {
+  lang: Locale; t: Pick<Acct, "bookings" | "bookingErrors">; id: string; confirmBy?: string | null;
 }) {
   const b = t.bookings;
   return (

@@ -330,7 +330,7 @@ export type Database = {
           created_at?: string
           event: string
           from_status?: Database["public"]["Enums"]["booking_status"] | null
-          id?: number
+          id?: never
           note?: string | null
           to_status: Database["public"]["Enums"]["booking_status"]
         }
@@ -340,17 +340,92 @@ export type Database = {
           created_at?: string
           event?: string
           from_status?: Database["public"]["Enums"]["booking_status"] | null
-          id?: number
+          id?: never
           note?: string | null
           to_status?: Database["public"]["Enums"]["booking_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "booking_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_proofs: {
+        Row: {
+          booking_id: string
+          created_at: string
+          gps: unknown
+          gps_distance_m: number | null
+          hectares: number | null
+          id: string
+          kind: string
+          storage_path: string
+          taken_at: string
+          uploader_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          gps?: unknown
+          gps_distance_m?: number | null
+          hectares?: number | null
+          id?: string
+          kind: string
+          storage_path: string
+          taken_at: string
+          uploader_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          gps?: unknown
+          gps_distance_m?: number | null
+          hectares?: number | null
+          id?: string
+          kind?: string
+          storage_path?: string
+          taken_at?: string
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_proofs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_proofs_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookings: {
         Row: {
           cancelled_by: string | null
+          check_in_distance_m: number | null
+          check_in_location: unknown
+          checked_in_at: string | null
           closed_reason: string | null
+          confirm_by: string | null
           created_at: string
+          dispute_reason: string | null
+          disputed_at: string | null
           distance_km: number
           equipment_type: Database["public"]["Enums"]["equipment_type"] | null
           expires_at: string
@@ -358,6 +433,9 @@ export type Database = {
           farm_name: string
           farmer_id: string
           farmer_note: string | null
+          farmer_paid_at: string | null
+          farmer_paid_kobo: number | null
+          hectares_done: number | null
           id: string
           job_date: string
           job_lga: string | null
@@ -367,7 +445,10 @@ export type Database = {
           listing_kind: Database["public"]["Enums"]["listing_kind"]
           listing_title: string
           organization_id: string | null
+          payment_disputed: boolean
           provider_id: string
+          provider_paid_at: string | null
+          provider_paid_kobo: number | null
           provider_type: Database["public"]["Enums"]["provider_type"] | null
           quantity: number
           rate_kobo: number
@@ -376,11 +457,18 @@ export type Database = {
           total_kobo: number
           unit: Database["public"]["Enums"]["pricing_unit"]
           updated_at: string
+          work_submitted_at: string | null
         }
         Insert: {
           cancelled_by?: string | null
+          check_in_distance_m?: number | null
+          check_in_location?: unknown
+          checked_in_at?: string | null
           closed_reason?: string | null
+          confirm_by?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           distance_km: number
           equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
           expires_at: string
@@ -388,6 +476,9 @@ export type Database = {
           farm_name: string
           farmer_id: string
           farmer_note?: string | null
+          farmer_paid_at?: string | null
+          farmer_paid_kobo?: number | null
+          hectares_done?: number | null
           id?: string
           job_date: string
           job_lga?: string | null
@@ -397,7 +488,10 @@ export type Database = {
           listing_kind: Database["public"]["Enums"]["listing_kind"]
           listing_title: string
           organization_id?: string | null
+          payment_disputed?: boolean
           provider_id: string
+          provider_paid_at?: string | null
+          provider_paid_kobo?: number | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
           quantity: number
           rate_kobo: number
@@ -406,11 +500,18 @@ export type Database = {
           total_kobo: number
           unit: Database["public"]["Enums"]["pricing_unit"]
           updated_at?: string
+          work_submitted_at?: string | null
         }
         Update: {
           cancelled_by?: string | null
+          check_in_distance_m?: number | null
+          check_in_location?: unknown
+          checked_in_at?: string | null
           closed_reason?: string | null
+          confirm_by?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           distance_km?: number
           equipment_type?: Database["public"]["Enums"]["equipment_type"] | null
           expires_at?: string
@@ -418,6 +519,9 @@ export type Database = {
           farm_name?: string
           farmer_id?: string
           farmer_note?: string | null
+          farmer_paid_at?: string | null
+          farmer_paid_kobo?: number | null
+          hectares_done?: number | null
           id?: string
           job_date?: string
           job_lga?: string | null
@@ -427,7 +531,10 @@ export type Database = {
           listing_kind?: Database["public"]["Enums"]["listing_kind"]
           listing_title?: string
           organization_id?: string | null
+          payment_disputed?: boolean
           provider_id?: string
+          provider_paid_at?: string | null
+          provider_paid_kobo?: number | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
           quantity?: number
           rate_kobo?: number
@@ -436,8 +543,52 @@ export type Database = {
           total_kobo?: number
           unit?: Database["public"]["Enums"]["pricing_unit"]
           updated_at?: string
+          work_submitted_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consents: {
         Row: {
@@ -1187,7 +1338,22 @@ export type Database = {
           profile_id?: string
           read_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_members: {
         Row: {
@@ -1458,6 +1624,61 @@ export type Database = {
           },
         ]
       }
+      ratings: {
+        Row: {
+          booking_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          ratee_id: string
+          rater_id: string
+          stars: number
+          tags: string[]
+        }
+        Insert: {
+          booking_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ratee_id: string
+          rater_id: string
+          stars: number
+          tags?: string[]
+        }
+        Update: {
+          booking_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ratee_id?: string
+          rater_id?: string
+          stars?: number
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_ratee_id_fkey"
+            columns: ["ratee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_rater_id_fkey"
+            columns: ["rater_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_requests: {
         Row: {
           created_at: string
@@ -1618,7 +1839,22 @@ export type Database = {
           sent_at?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_outbox_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_outbox_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       soil_records: {
         Row: {
@@ -2224,6 +2460,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_in_booking: {
+        Args: { p_booking: string; p_lat: number; p_lng: number }
+        Returns: undefined
+      }
       claim_sms_outbox: {
         Args: { p_limit?: number }
         Returns: {
@@ -2251,6 +2491,7 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_booking: { Args: { p_booking: string }; Returns: undefined }
       correct_farm_zone: {
         Args: {
           p_farm_id: string
@@ -2263,7 +2504,15 @@ export type Database = {
         Args: { p_booking: string; p_reason?: string }
         Returns: undefined
       }
+      dispute_booking: {
+        Args: { p_booking: string; p_reason: string }
+        Returns: undefined
+      }
       export_my_data: { Args: never; Returns: Json }
+      finish_booking_work: {
+        Args: { p_booking: string; p_hectares?: number }
+        Returns: undefined
+      }
       finish_sms_outbox: {
         Args: {
           p_error: string
@@ -2307,6 +2556,10 @@ export type Database = {
         Returns: Json
       }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
+      mark_paid: {
+        Args: { p_amount_kobo: number; p_booking: string }
+        Returns: undefined
+      }
       marketplace_open: { Args: never; Returns: boolean }
       my_bookings: { Args: { p_limit?: number }; Returns: Json }
       my_listings: { Args: never; Returns: Json }
@@ -2362,6 +2615,15 @@ export type Database = {
       org_role: {
         Args: { p_org: string }
         Returns: Database["public"]["Enums"]["org_member_role"]
+      }
+      rate_booking: {
+        Args: {
+          p_booking: string
+          p_comment?: string
+          p_stars: number
+          p_tags?: string[]
+        }
+        Returns: undefined
       }
       record_bank_account_verification: {
         Args: {
@@ -2490,6 +2752,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      submit_proof: {
+        Args: {
+          p_booking: string
+          p_hectares?: number
+          p_kind: string
+          p_lat?: number
+          p_lng?: number
+          p_path: string
+          p_taken_at: string
+        }
+        Returns: string
+      }
       track_page_view: { Args: { p_path: string }; Returns: undefined }
       write_audit: {
         Args: {
@@ -2523,7 +2797,17 @@ export type Database = {
         | "field_agent"
         | "institutional_partner"
         | "investor"
-      booking_status: "requested" | "accepted" | "declined" | "cancelled" | "expired"
+      booking_status:
+        | "requested"
+        | "accepted"
+        | "declined"
+        | "cancelled"
+        | "expired"
+        | "in_progress"
+        | "awaiting_confirmation"
+        | "confirmed"
+        | "disputed"
+        | "completed"
       consent_type:
         | "terms_of_use"
         | "privacy_policy"
@@ -2548,7 +2832,7 @@ export type Database = {
         | "transport_equipment"
         | "other"
       farm_zone: "rainforest" | "derived_savanna" | "other"
-      integration_kind: "sms" | "identity" | "weather"
+      integration_kind: "sms" | "identity" | "weather" | "payment"
       integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -2734,7 +3018,18 @@ export const Constants = {
         "institutional_partner",
         "investor",
       ],
-      booking_status: ["requested", "accepted", "declined", "cancelled", "expired"],
+      booking_status: [
+        "requested",
+        "accepted",
+        "declined",
+        "cancelled",
+        "expired",
+        "in_progress",
+        "awaiting_confirmation",
+        "confirmed",
+        "disputed",
+        "completed",
+      ],
       consent_type: [
         "terms_of_use",
         "privacy_policy",
@@ -2761,7 +3056,7 @@ export const Constants = {
         "other",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
-      integration_kind: ["sms", "identity", "weather"],
+      integration_kind: ["sms", "identity", "weather", "payment"],
       integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],

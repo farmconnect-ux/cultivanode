@@ -13,7 +13,7 @@
 --      through the provider card.
 --
 -- Errors carry a stable code in HINT, which the apps translate. The new booking states were added in
--- 20261002093000_w3_enums.sql.
+-- 20261002094704_w3_enums.sql.
 
 ------------------------------------------------------------------------------------------------
 -- 1. Bookings: job execution, confirmation and payment columns

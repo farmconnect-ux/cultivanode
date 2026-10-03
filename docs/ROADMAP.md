@@ -37,7 +37,7 @@ browser). Native parity comes after the MVP, with offline sync (M7).
 | 2 | M1 Website and identity | M1, modules 1–2 | ✅ done (leftovers listed below) | – |
 | 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | ✅ code done and live on the hosted project 2026-09-28 (marketplace switch still closed) | – |
 | 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | ✅ done: code 2026-09-29, verified live on the hosted project 2026-10-01 (migration, worker, Vault, cron) | W1 |
-| 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | 🟡 code done and hosted migration applied 2026-10-02; on-device pilot test pending | W2 |
+| 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | 🟡 database live 2026-10-02; review fixes 2026-10-03; web job pages go live with the fix push (earlier builds failed); on-device pilot test pending | W2 |
 | 6 | **MVP W4** Operable pilot | module 12, M5 (cancellation, no money), M7 (agents) | ⬜ | legal review of direct-payment terms |
 | 7 | Closed beta: 5 providers, 10 farmers, one cluster | pilot plan step 4 | ⬜ | W4 |
 | 8 | M5 Payments and escrow (money parts) | M5 | ⬜ | fintech lawyer, Paystack/Flutterwave accounts |
@@ -108,8 +108,8 @@ and gets an SMS; a third user cannot read the booking; a forged status change is
 
 ### W3 — Job done, proven, confirmed
 
-Status (2026-10-02): code done and applied on the hosted project. Migrations `20261002093000_w3_enums.sql` (enum
-values first, so they are usable in the same deploy) and `20261002120000_mvp_week3.sql` add the statuses
+Status (2026-10-02): code done and applied on the hosted project. Migrations `20261002094704_w3_enums.sql` (enum
+values first, so they are usable in the same deploy) and `20261002095258_mvp_week3.sql` add the statuses
 `in_progress`, `awaiting_confirmation`, `confirmed`, `disputed` and `completed`, the `booking_proofs` table, the
 private `booking-proofs` bucket (participant-only policies), and the functions `check_in_booking`, `submit_proof`,
 `finish_booking_work`, `confirm_booking`, `dispute_booking`, `mark_paid` and `rate_booking`, plus the
@@ -118,6 +118,37 @@ show in search. Paystack is registered in `integration_providers` in test mode w
 `13_mvp_week3` covers 97 assertions. Web job pages carry the whole flow (GPS check-in, EXIF-stripped proof upload,
 confirm/dispute, mark-paid, rating form) and the search card shows the rating badge, in English and Yorùbá (Yorùbá
 pending native review). Still to do: the real-phone pilot pass below.
+
+Review (2026-10-03), fixed in `20261003185642_mvp_week3_fixes.sql` and the web/worker patch:
+- Every Vercel build from the W3 web commits failed: `database.types.ts` was never regenerated, so the seven new RPCs
+  did not type-check. The live site stayed on the W2 web build. Types regenerated from the hosted project.
+- The two W3 migration files kept their local names while the hosted project recorded them as `20261002094704` and
+  `20261002095258`; renamed so `supabase db push` and the GitHub deploy do not try to run them again.
+- `13_mvp_week3` never ran: psql variables (`:'r1'`) are not substituted inside the `$$` strings pgTAP executes, so 86
+  of 97 assertions died with a syntax error. Ids now come from a temporary table; all 97 pass.
+- The W3 booking columns were not in the column-level read grant, so the parties could not read their own check-in
+  time or confirm-by deadline. Granted (the check-in GPS point and the two payment amounts stay hidden).
+- Booking SMS for the seven W3 events (checked in, proof ready, confirmed, disputed, payment marked, mismatch,
+  completed) would all have failed as `bad_message`: the worker only knew the W2 wording. EN/YO wording added.
+- The provider card returned `{"avg": null, "count": 0}` instead of no rating; the admin acceptance rate counted later
+  stages as not accepted; the W1 card test failed. Fixed.
+- Job pages had no loading or error state (a W3 requirement); added for the bookings section.
+- Not changed: the proof upload policy still allows uploads from acceptance (not only after check-in); the hosted
+  project does not take storage policy changes through the connector. The app only offers uploads after check-in.
+- Gap against the plan: `dispute_booking` takes a reason but the farmer cannot attach evidence photos yet (only the
+  provider uploads). Moved to W4 with dispute resolution.
+
+Open decisions against the master plan (not changed; each alters pilot behaviour, so it needs a yes from Quadri):
+1. Disputes: the plan lets the farmer *or the provider* dispute, with a reason category (job not done, poor quality,
+   wrong area, damage, no-show) and evidence. Built: farmer only, free-text reason, no evidence. Proposed for W4.
+2. Ratings: the plan allows rating only "completed, paid jobs". Built (per this roadmap): after the farmer confirms,
+   before both sides mark paid. Tightening to `completed` makes fake reviews harder; a payment mismatch would then
+   block rating until staff settle it.
+3. Proof photos: the plan says photos "must carry GPS within the farm boundary". Built: GPS optional per photo (checked
+   within 2 km of the pin when present); check-in itself requires GPS within 1 km. Making GPS mandatory for the
+   before/after photos is a one-function change.
+4. Booking needs tier 1 (NIN verified) in the plan's tier table. `request_booking` (W2) only needs the farmer role.
+   Enforcing it now would block every farmer while the Prembly wallet is empty (checks return `billing`).
 
 Goal: the job is carried out and closed with evidence; both sides rate each other.
 

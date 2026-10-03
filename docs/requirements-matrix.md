@@ -81,7 +81,7 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-MKT-002 | Search by type, distance, service radius | – | nearby_listings() | 03, 11 | ✅ web UI (/account/find); date/availability filters after the MVP |
 | REQ-MKT-003 | Availability, photos | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
 | REQ-MKT-004 | Booking state machine (shared) | bookings, booking_events | request/accept/decline/cancel_booking, expire_bookings | 12 | ✅ deployed on hosted 2026-10-01; web /account/bookings (native later) |
-| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | bookings GPS columns, booking_proofs, private booking-proofs bucket | check_in_booking, submit_proof, finish_booking_work | 13_mvp_week3 | 🟡 MVP W3 code done 2026-10-02; real-phone pass pending |
+| REQ-MKT-005 | Proof of work (GPS, time, inside boundary) | bookings GPS columns, booking_proofs, private booking-proofs bucket | check_in_booking, submit_proof, finish_booking_work | 13_mvp_week3 | 🟡 MVP W3 database live 2026-10-02 (fixes 2026-10-03); web pages live with the fix push; real-phone pass pending |
 | REQ-MKT-006 | Ratings (completed, paid, once) | ratings | rate_booking, provider_card average and count | 13_mvp_week3 | 🟡 MVP W3 code done 2026-10-02; payment is marked, not processed |
 | REQ-MKT-007 | Demand-nearby clustering without exposing farmers | ⬜ | ⬜ | ⬜ | ⬜ after the MVP |
 
@@ -94,7 +94,7 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-PAY-003 | Double-entry hash-chained ledger | ⬜ |
 | REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | ⬜ |
 | REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ rules without money **→ MVP W4**; refunds after legal sign-off |
-| REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 dispute_booking with reason and photo evidence done in MVP W3 (no funds frozen); staff outcome, audit entry and admin screens in W4 |
+| REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 dispute_booking with a written reason done in MVP W3 (no funds frozen; the provider's proof photos are the evidence on file); farmer evidence photos, staff outcome, audit entry and admin screens in W4 |
 | REQ-PAY-007 | PAYMENT_MODE test/live guard | ✅ (resolvePaymentMode) |
 | REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | 🟡 one claimant per ID ✅ (W1); GPS check-in and photo distance checks ✅ (W3); patterns later |
 

@@ -115,8 +115,8 @@ select is((select count(*)::int from public.nearby_listings(7.3775, 3.8967)), 0,
 select set_config('request.jwt.claims', '{"sub":"b1000000-0000-0000-0000-000000000004"}', true);
 select is((select array_agg(title) from public.nearby_listings(7.3775, 3.8967)), array['Lanre tractor'],
   'a farmer in Oyo finds the listing 5 km away');
-select is((select provider from public.nearby_listings(7.3775, 3.8967)), '{"name": "Lanre", "state": "Oyo", "tier": 2}'::jsonb,
-  'the provider card shows first name, state and tier only');
+select is((select provider from public.nearby_listings(7.3775, 3.8967)), '{"name": "Lanre", "state": "Oyo", "tier": 2, "rating": null}'::jsonb,
+  'the provider card shows first name, state, tier and rating only (none yet)');
 select is((select count(*)::int from public.nearby_listings(6.9, 3.8967, 100)), 0,
   'a farmer 60 km away is outside the 30 km service radius');
 
