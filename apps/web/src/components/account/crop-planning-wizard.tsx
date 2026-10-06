@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   NORMALIZED_CROP_CATALOGUE,
@@ -28,10 +29,12 @@ export function CropPlanningWizard({
   lang,
   plots,
   farmZone = "derived_savanna",
+  farmId,
 }: {
   lang: Locale;
   plots: PlotOption[];
   farmZone?: string;
+  farmId?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<number>(1);
@@ -151,9 +154,26 @@ export function CropPlanningWizard({
           </div>
 
           {plots.length === 0 ? (
-            <Alert tone="warning">
-              No plots found on your farms. Please register a plot in your farm dashboard first.
-            </Alert>
+            <div className="flex flex-col gap-3">
+              <Alert tone="warning">
+                No plots found for this farm. Please register a plot in your farm dashboard first to begin planning crop cycles.
+              </Alert>
+              <div className="pt-1">
+                {farmId ? (
+                  <Link href={`/${lang}/account/farms/${farmId}?tab=plots`}>
+                    <Button type="button" variant="primary" size="sm">
+                      + Add Plot to Farm Now &rarr;
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/${lang}/account/farms`}>
+                    <Button type="button" variant="primary" size="sm">
+                      Go to Farms Dashboard &rarr;
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {plots.map((plot) => (

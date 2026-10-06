@@ -19,7 +19,7 @@ export default async function CropMapPage({
   const { data: rawPlots } = await (supabase as any)
     .from("plots")
     .select(`
-      id, name, area_ha, soil_texture, irrigation_type,
+      id, name, area_ha,
       farms(id, name, state, lga, zone),
       crop_cycles(id, crop_id, variety_id, status, current_stage, health_score, health_status, planting_date, expected_harvest_date)
     `)

@@ -18,33 +18,74 @@ export default async function NewCropPlanPage({
   const { farm: farmIdParam } = await searchParams;
   const supabase = await createClient();
 
-  // Fetch plots for the current authenticated user's farms
-  const { data: rawPlots } = await (supabase as any)
-    .from("plots")
-    .select("id, name, area_ha, soil_texture, irrigation_type, farm_id, farms(id, name, zone)")
+  // 1. Fetch authenticated user's farms
+  let farmsQuery = supabase
+    .from("farms")
+    .select("id, name, zone")
     .order("name");
 
-  let filteredPlots = (rawPlots ?? []) as any[];
-  let scopedFarmName = "";
   if (farmIdParam) {
-    const scoped = filteredPlots.filter((p: any) => p.farm_id === farmIdParam);
-    if (scoped.length > 0) {
-      filteredPlots = scoped;
-      scopedFarmName = scoped[0]?.farms?.name ?? "";
+    farmsQuery = farmsQuery.eq("id", farmIdParam);
+  }
+
+  const { data: farmsData } = await farmsQuery;
+  const farms = (farmsData ?? []) as Array<{ id: string; name: string; zone?: string }>;
+  const farmMap = new Map<string, { id: string; name: string; zone?: string }>();
+  farms.forEach((f) => farmMap.set(f.id, f));
+
+  // 2. Fetch plots using standard schema columns guaranteed across migrations
+  let plotsQuery = supabase
+    .from("plots")
+    .select("id, farm_id, name, area_ha, notes")
+    .order("name");
+
+  if (farmIdParam) {
+    plotsQuery = plotsQuery.eq("farm_id", farmIdParam);
+  } else if (farms.length > 0) {
+    plotsQuery = plotsQuery.in("farm_id", farms.map((f) => f.id));
+  }
+
+  const { data: rawPlots } = await plotsQuery;
+  const plotsList = (rawPlots ?? []) as Array<{
+    id: string;
+    farm_id: string;
+    name: string;
+    area_ha: number | null;
+    notes: string | null;
+  }>;
+
+  // Determine scoped farm information
+  let scopedFarmName = "";
+  let primaryZone = "derived_savanna";
+
+  if (farmIdParam) {
+    const targetFarm = farmMap.get(farmIdParam);
+    if (targetFarm) {
+      scopedFarmName = targetFarm.name;
+      primaryZone = targetFarm.zone || "derived_savanna";
+    }
+  } else if (farms.length === 1 && farms[0]) {
+    scopedFarmName = farms[0].name;
+    primaryZone = farms[0].zone || "derived_savanna";
+  } else if (plotsList.length > 0 && plotsList[0]) {
+    const firstPlotFarm = farmMap.get(plotsList[0].farm_id);
+    if (firstPlotFarm) {
+      primaryZone = firstPlotFarm.zone || "derived_savanna";
     }
   }
 
-  const plots = filteredPlots.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    area_ha: p.area_ha ? Number(p.area_ha) : 1.0,
-    soil_texture: p.soil_texture,
-    irrigation_type: p.irrigation_type,
-    farm_id: p.farm_id,
-    farm_name: p.farms?.name ?? "My Farm",
-  }));
-
-  const primaryZone = (filteredPlots[0] as any)?.farms?.zone ?? "derived_savanna";
+  const plots = plotsList.map((p) => {
+    const parentFarm = farmMap.get(p.farm_id);
+    return {
+      id: p.id,
+      name: p.name,
+      area_ha: p.area_ha ? Number(p.area_ha) : 1.0,
+      soil_texture: "Sandy loam",
+      irrigation_type: "Rainfed",
+      farm_id: p.farm_id,
+      farm_name: parentFarm?.name ?? (scopedFarmName || "My Farm"),
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,6 +122,7 @@ export default async function NewCropPlanPage({
         lang={lang}
         plots={plots}
         farmZone={primaryZone}
+        farmId={farmIdParam}
       />
     </div>
   );

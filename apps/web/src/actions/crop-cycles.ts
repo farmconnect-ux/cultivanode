@@ -99,19 +99,29 @@ export async function createCropPlanAction(
     }
   }
 
-  // Fetch plot and farm zone to generate agronomic schedule
+  // Fetch plot
   const { data: plotData, error: plotErr } = await s.supabase
     .from("plots")
-    .select("id, farm_id, area_ha, farms(zone)")
+    .select("id, farm_id, area_ha")
     .eq("id", plotId)
-    .single();
+    .maybeSingle();
 
   if (plotErr || !plotData) {
     logger.warn("crop_cycles.plot_not_found", { plotId, error: String(plotErr) });
     return bad("errorPlotNotFound");
   }
 
-  const farmZone: FarmZone = ((plotData.farms as any)?.zone as FarmZone) ?? "derived_savanna";
+  let farmZone: FarmZone = "derived_savanna";
+  if (plotData.farm_id) {
+    const { data: farmRow } = await s.supabase
+      .from("farms")
+      .select("zone")
+      .eq("id", plotData.farm_id)
+      .maybeSingle();
+    if (farmRow?.zone) {
+      farmZone = farmRow.zone as FarmZone;
+    }
+  }
 
   // Generate deterministic planting schedule from agronomy engine
   const schedule = generatePlantingSchedule({
