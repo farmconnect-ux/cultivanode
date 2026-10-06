@@ -71,7 +71,7 @@ export default async function NewBookingPage({ params, searchParams }: PageProps
           </p>
         )}
 
-        <ServiceRequestWizard lang={lang} farms={farms ?? []} t={t} />
+        <ServiceRequestWizard lang={lang} farms={farms ?? []} initialFarmId={farmId} t={t} />
       </div>
     );
   }

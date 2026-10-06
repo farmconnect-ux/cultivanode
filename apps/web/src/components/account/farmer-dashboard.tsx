@@ -244,10 +244,10 @@ export function FarmerDashboard({
                 <div className="flex items-center justify-between border-t border-line pt-3">
                   <span className="text-xs text-muted">Boundary verified</span>
                   <Link
-                    href={`/${lang}/account/farms?ws=farmer`}
+                    href={`/${lang}/account/farms/${f.id}`}
                     className="text-xs font-bold text-leaf-700 hover:underline"
                   >
-                    Open Farm →
+                    Open Farm (Operations) →
                   </Link>
                 </div>
               </Card>

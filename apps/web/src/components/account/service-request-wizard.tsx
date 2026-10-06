@@ -27,33 +27,53 @@ const SERVICES = [
   { id: "other", label: "Other Agronomy Service", icon: "⚙️", unit: "job", baseRate: 30000 },
 ] as const;
 
+const SERVICE_TYPE_MAP: Record<string, { kind: "equipment" | "service"; type: string }> = {
+  ploughing: { kind: "equipment", type: "tractor" },
+  harrowing: { kind: "equipment", type: "tractor" },
+  planting: { kind: "equipment", type: "planter" },
+  spraying: { kind: "equipment", type: "boom_sprayer" },
+  harvesting: { kind: "equipment", type: "harvester" },
+  labour: { kind: "service", type: "farm_hand" },
+  transport: { kind: "service", type: "produce_hauler" },
+  other: { kind: "service", type: "other" },
+};
+
 export function ServiceRequestWizard({
   lang,
   farms,
+  initialFarmId,
   t,
 }: {
   lang: Locale;
   farms: Farm[];
+  initialFarmId?: string;
   t: Dictionary;
 }) {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // Form State
   const [selectedService, setSelectedService] = useState<string>("ploughing");
-  const [selectedFarmId, setSelectedFarmId] = useState<string>(farms[0]?.id ?? "");
+  const [selectedFarmId, setSelectedFarmId] = useState<string>(
+    initialFarmId && farms.some((f) => f.id === initialFarmId)
+      ? initialFarmId
+      : farms[0]?.id ?? "",
+  );
   const [jobDate, setJobDate] = useState<string>(
     new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
   );
   const [jobTime, setJobTime] = useState<string>("08:00");
   const [flexible, setFlexible] = useState<boolean>(true);
   const [farmSize, setFarmSize] = useState<string>(
-    farms[0]?.area_ha ? String(farms[0].area_ha) : "2.0",
+    farms.find((f) => f.id === (initialFarmId || farms[0]?.id))?.area_ha
+      ? String(farms.find((f) => f.id === (initialFarmId || farms[0]?.id))?.area_ha)
+      : "2.0",
   );
   const [notes, setNotes] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
 
   const activeService = SERVICES.find((s) => s.id === selectedService) ?? SERVICES[0];
   const activeFarm = farms.find((f) => f.id === selectedFarmId) ?? farms[0];
+  const matchedFilter = SERVICE_TYPE_MAP[selectedService] ?? { kind: "equipment", type: "tractor" };
   const parsedSize = Math.max(0.1, Number(farmSize) || 1);
   const estimatedTotal = Math.round(activeService.baseRate * parsedSize);
 
@@ -378,13 +398,21 @@ export function ServiceRequestWizard({
             </div>
           </Card>
 
-          <div className="flex justify-between pt-4 border-t border-line">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line">
             <Button type="button" variant="secondary" onClick={() => setStep(4)}>
               ← Back
             </Button>
-            <Button type="submit" className="bg-leaf-700 text-white font-bold text-base px-6 py-3">
-              Submit & Broadcast Request 🚀
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/${lang}/account/find?farm=${selectedFarmId}&kind=${matchedFilter.kind}&type=${matchedFilter.type}`}
+                className="rounded-md border border-leaf-700 bg-leaf-50 px-5 py-2.5 font-bold text-leaf-800 hover:bg-leaf-100 transition-colors"
+              >
+                Find &amp; Book Nearby Operators Directly →
+              </Link>
+              <Button type="submit" className="bg-leaf-700 text-white font-bold text-base px-6 py-2.5">
+                Broadcast Request to All Operators 🚀
+              </Button>
+            </div>
           </div>
         </form>
       )}
