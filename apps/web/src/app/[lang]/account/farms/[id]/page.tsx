@@ -11,6 +11,7 @@ import {
   AddInventoryItemForm,
   RecordFarmTransactionForm,
   AddFarmRecordForm,
+  PrintReportButton,
 } from "@/components/account/farm-operations-forms";
 import { Badge, Button, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
@@ -46,7 +47,7 @@ export default async function FarmDetailPage({
   // 2. Fetch real plots belonging to this farm
   const { data: plotsData } = await supabase
     .from("plots")
-    .select("id, name, area_ha, notes, created_at")
+    .select("id, name, area_ha, notes, soil_texture, irrigation_type, drainage, created_at")
     .eq("farm_id", id)
     .order("created_at", { ascending: false });
   const plots = plotsData ?? [];
@@ -148,8 +149,16 @@ export default async function FarmDetailPage({
   const overallExpenseKobo = totalLedgerExpenseKobo + totalSpentKobo;
   const netOperatingMarginKobo = totalIncomeKobo - overallExpenseKobo;
 
+  // Land utilization metrics
+  const measuredTotalHa = farm.area_ha ? Number(farm.area_ha) : plots.reduce((acc: number, p: any) => acc + (Number(p.area_ha) || 0), 0);
+  const totalCultivatedHa = cropCycles
+    .filter((c: any) => ["planning", "active", "harvesting"].includes(c.status))
+    .reduce((acc: number, c: any) => acc + (Number(c.target_area_ha) || 0), 0);
+  const fallowAvailableHa = Math.max(0, measuredTotalHa - totalCultivatedHa);
+
   const tabs = [
     { key: "overview", label: "Overview", icon: "📊" },
+    { key: "plots", label: `Fields & Plots (${plots.length})`, icon: "🗺️" },
     { key: "crops", label: `Crop Management (${cropCycles.length})`, icon: "🌽" },
     { key: "livestock", label: `Livestock (${totalHeadCount})`, icon: "🐄" },
     { key: "farm_books", label: "Farm Account", icon: "💰" },
@@ -238,42 +247,86 @@ export default async function FarmDetailPage({
             </Card>
           </div>
 
+          {/* Land Allocation & Cultivation Profile Card */}
+          <Card className="flex flex-col gap-3 bg-gradient-to-r from-leaf-50/40 via-surface to-surface">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
+              <div>
+                <h3 className="text-sm font-bold text-leaf-900">Land Allocation &amp; Cultivation Profile</h3>
+                <p className="text-xs text-muted">Acreage breakdown across registered fields, active crop cycles, and fallow land.</p>
+              </div>
+              <Link href={`/${lang}/account/farms/${farm.id}?tab=plots`}>
+                <Button variant="secondary" size="sm">Manage {plots.length} Fields &rarr;</Button>
+              </Link>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4 text-xs">
+              <div className="p-3 rounded-xl bg-white border border-line">
+                <span className="text-muted block text-[11px] uppercase font-semibold">Total Farm Land</span>
+                <p className="text-xl font-black text-leaf-900 mt-0.5">{measuredTotalHa.toFixed(2)} ha</p>
+                <span className="text-[11px] text-muted">{(measuredTotalHa * 2.471).toFixed(1)} acres</span>
+              </div>
+              <div className="p-3 rounded-xl bg-forest-50/80 border border-forest-200">
+                <span className="text-forest-800 block text-[11px] uppercase font-semibold">Under Active Crops</span>
+                <p className="text-xl font-black text-forest-900 mt-0.5">{totalCultivatedHa.toFixed(2)} ha</p>
+                <span className="text-[11px] text-forest-700">{Math.round((totalCultivatedHa / (measuredTotalHa || 1)) * 100)}% of land</span>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200">
+                <span className="text-amber-800 block text-[11px] uppercase font-semibold">Available / Fallow Land</span>
+                <p className="text-xl font-black text-amber-900 mt-0.5">{fallowAvailableHa.toFixed(2)} ha</p>
+                <span className="text-[11px] text-amber-700">Ready for next cycle</span>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200">
+                <span className="text-blue-800 block text-[11px] uppercase font-semibold">Registered Parcels</span>
+                <p className="text-xl font-black text-blue-900 mt-0.5">{plots.length} plots</p>
+                <span className="text-[11px] text-blue-700">{cropCycles.length} active cycles</span>
+              </div>
+            </div>
+          </Card>
+
           {/* Quick Action Dock */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <Link
+              href={`/${lang}/account/farms/${farm.id}?tab=plots`}
+              className="p-3.5 bg-leaf-50/80 hover:bg-leaf-100 rounded-xl border border-leaf-200 flex flex-col gap-1 transition-colors"
+            >
+              <span className="text-xl">🗺️</span>
+              <strong className="text-xs font-bold text-leaf-900">+ Add Field / Plot</strong>
+              <span className="text-[11px] text-leaf-700">Parcel boundary &amp; soil texture</span>
+            </Link>
+
             <Link
               href={`/${lang}/account/crops/new?farm=${farm.id}`}
-              className="p-4 bg-forest-50 hover:bg-forest-100 rounded-xl border border-forest-200 flex flex-col gap-1 transition-colors"
+              className="p-3.5 bg-forest-50/80 hover:bg-forest-100 rounded-xl border border-forest-200 flex flex-col gap-1 transition-colors"
             >
               <span className="text-xl">🌽</span>
-              <strong className="text-sm text-forest-900">+ Plan Crop Cycle</strong>
-              <span className="text-xs text-forest-700">Anchor dates, seed rates &amp; operations</span>
+              <strong className="text-xs font-bold text-forest-900">+ Plan Crop Cycle</strong>
+              <span className="text-[11px] text-forest-700">Anchor dates &amp; operations</span>
             </Link>
 
             <Link
               href={`/${lang}/account/farms/${farm.id}?tab=livestock`}
-              className="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 flex flex-col gap-1 transition-colors"
+              className="p-3.5 bg-amber-50/80 hover:bg-amber-100 rounded-xl border border-amber-200 flex flex-col gap-1 transition-colors"
             >
               <span className="text-xl">🐄</span>
-              <strong className="text-sm text-amber-900">+ Register Livestock</strong>
-              <span className="text-xs text-amber-700">Manage poultry, cattle, small ruminants</span>
+              <strong className="text-xs font-bold text-amber-900">+ Add Livestock</strong>
+              <span className="text-[11px] text-amber-700">Poultry, cattle &amp; ruminants</span>
             </Link>
 
             <Link
               href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
-              className="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 flex flex-col gap-1 transition-colors"
+              className="p-3.5 bg-emerald-50/80 hover:bg-emerald-100 rounded-xl border border-emerald-200 flex flex-col gap-1 transition-colors"
             >
               <span className="text-xl">💰</span>
-              <strong className="text-sm text-emerald-900">+ Record Transaction</strong>
-              <span className="text-xs text-emerald-700">Track harvest revenue or operational costs</span>
+              <strong className="text-xs font-bold text-emerald-900">+ Transaction</strong>
+              <span className="text-[11px] text-emerald-700">Harvest income or expenses</span>
             </Link>
 
             <Link
               href={`/${lang}/account/farms/${farm.id}?tab=workers`}
-              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 flex flex-col gap-1 transition-colors"
+              className="p-3.5 bg-blue-50/80 hover:bg-blue-100 rounded-xl border border-blue-200 flex flex-col gap-1 transition-colors"
             >
               <span className="text-xl">👥</span>
-              <strong className="text-sm text-blue-900">+ Add Farm Worker</strong>
-              <span className="text-xs text-blue-700">Log labour, wages &amp; supervisory roles</span>
+              <strong className="text-xs font-bold text-blue-900">+ Farm Worker</strong>
+              <span className="text-[11px] text-blue-700">Labour, wages &amp; supervisory</span>
             </Link>
           </div>
 
@@ -301,7 +354,159 @@ export default async function FarmDetailPage({
         </div>
       )}
 
-      {/* ------------------------------------------------------------------ TAB 2: CROP MANAGEMENT */}
+      {/* ------------------------------------------------------------------ TAB 2: FIELDS & PLOTS */}
+      {activeTab === "plots" && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">Fields &amp; Land Parcels</h2>
+              <p className="text-xs text-neutral-500">
+                Manage physical plots, soil characteristics, irrigation infrastructure, and active plantings for {farm.name}.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href={`/${lang}/account/crops/map`}>
+                <Button variant="secondary" size="sm">🗺️ Geo Parcel Map</Button>
+              </Link>
+              <Link href={`/${lang}/account/crops/new?farm=${farm.id}`}>
+                <Button variant="primary" size="sm">+ Plan Crop Cycle</Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Land Allocation Summary Banner */}
+          <div className="grid gap-3 sm:grid-cols-3 text-xs">
+            <Card className="flex flex-col gap-1 p-3.5">
+              <span className="text-[11px] font-semibold uppercase text-muted">Total Measured Land</span>
+              <p className="text-xl font-black text-leaf-900">{measuredTotalHa.toFixed(2)} ha</p>
+              <span className="text-[10px] text-muted">{(measuredTotalHa * 2.471).toFixed(1)} acres</span>
+            </Card>
+            <Card className="flex flex-col gap-1 p-3.5 bg-forest-50/50 border-forest-200">
+              <span className="text-[11px] font-semibold uppercase text-forest-800">Under Cultivation</span>
+              <p className="text-xl font-black text-forest-900">{totalCultivatedHa.toFixed(2)} ha</p>
+              <span className="text-[10px] text-forest-700">{cropCycles.filter((c: any) => ["planning", "active", "harvesting"].includes(c.status)).length} active cycles</span>
+            </Card>
+            <Card className="flex flex-col gap-1 p-3.5 bg-amber-50/50 border-amber-200">
+              <span className="text-[11px] font-semibold uppercase text-amber-800">Available / Fallow</span>
+              <p className="text-xl font-black text-amber-900">{fallowAvailableHa.toFixed(2)} ha</p>
+              <span className="text-[10px] text-amber-700">Ready for new planting</span>
+            </Card>
+          </div>
+
+          {/* Registered Fields List */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div>
+                <h3 className="text-base font-bold text-leaf-900">Registered Fields ({plots.length})</h3>
+                <p className="text-xs text-muted">Each field can host multiple crop cycles across planting seasons.</p>
+              </div>
+              <Badge className="bg-leaf-100 text-leaf-800">{plots.length} Parcels</Badge>
+            </div>
+
+            {plots.length === 0 ? (
+              <div className="py-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-300">
+                <span className="text-3xl">🗺️</span>
+                <p className="text-sm font-semibold text-neutral-800 mt-2">No fields or plots recorded yet</p>
+                <p className="text-xs text-muted mt-1 max-w-md mx-auto">
+                  Register your first plot below to begin planning crop cycles, recording soil tests, and tracking field tasks.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {plots.map((p) => {
+                  const activeCycle = cropCycles.find(
+                    (c: any) => c.plot_id === p.id && ["planning", "active", "harvesting"].includes(c.status)
+                  );
+                  const cropObj = activeCycle ? getCropById(activeCycle.crop_id) : null;
+                  const areaHaNum = p.area_ha ? Number(p.area_ha) : 1.0;
+
+                  return (
+                    <div key={p.id} className="rounded-xl border border-line bg-surface p-4 flex flex-col justify-between gap-3 shadow-xs hover:border-leaf-400 transition-colors">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <strong className="text-base font-bold text-ink block">{p.name}</strong>
+                            <span className="text-xs text-muted font-medium">
+                              {p.area_ha ? `${areaHaNum.toFixed(2)} ha (${(areaHaNum * 2.471).toFixed(1)} ac)` : "Unmeasured area"}
+                            </span>
+                          </div>
+                          {activeCycle ? (
+                            <Badge className="bg-leaf-100 text-leaf-800 text-xs">● Active Crop</Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-800 text-xs">○ Fallow / Ready</Badge>
+                          )}
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white border border-neutral-100 text-xs space-y-1">
+                          <div className="flex justify-between text-neutral-600">
+                            <span>Soil:</span>
+                            <strong className="capitalize text-neutral-900">{p.soil_texture?.replace(/_/g, " ") ?? "Sandy loam"}</strong>
+                          </div>
+                          <div className="flex justify-between text-neutral-600">
+                            <span>Irrigation:</span>
+                            <strong className="capitalize text-neutral-900">{p.irrigation_type?.replace(/_/g, " ") ?? "Rainfed"}</strong>
+                          </div>
+                          {p.notes && (
+                            <p className="text-[11px] text-muted italic pt-1 border-t border-neutral-100">{p.notes}</p>
+                          )}
+                        </div>
+
+                        {activeCycle ? (
+                          <div className="p-2.5 rounded-lg bg-leaf-50/80 border border-leaf-200 text-xs">
+                            <span className="text-leaf-800 font-semibold block">Current Planting:</span>
+                            <p className="font-bold text-leaf-950 mt-0.5">
+                              🌽 {cropObj?.name ?? activeCycle.crop_id} ({activeCycle.variety_id ?? "Certified"})
+                            </p>
+                            <span className="text-leaf-700 text-[11px]">Stage: <span className="capitalize">{activeCycle.current_stage ?? "Growing"}</span></span>
+                            <div className="mt-2">
+                              <Link
+                                href={`/${lang}/account/crops/${activeCycle.id}`}
+                                className="text-[11px] font-bold text-leaf-800 hover:underline inline-flex items-center gap-1"
+                              >
+                                View Crop Cycle Details &rarr;
+                              </Link>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-600">
+                            <span>No active crop cycle in this field. Ready for planting.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-line flex flex-wrap gap-2">
+                        <Link
+                          href={`/${lang}/account/crops/new?farm=${farm.id}&plot=${p.id}`}
+                          className="flex-1 text-center py-2 px-3 bg-leaf-600 hover:bg-leaf-700 text-white rounded-lg text-xs font-bold transition-colors"
+                        >
+                          🌽 Plan Crop on this Plot
+                        </Link>
+                        <Link
+                          href={`/${lang}/account/farms/${farm.id}?tab=records`}
+                          className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          🧪 Soil Data
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add Plot Form */}
+            <div className="border-t border-line pt-5 mt-2">
+              <h4 className="text-sm font-bold text-leaf-900 mb-1">+ Add New Field / Plot to {farm.name}</h4>
+              <p className="text-xs text-muted mb-4">
+                Define parcel area, soil texture, and irrigation infrastructure to enable accurate fertilizer and spray planning.
+              </p>
+              <AddPlotForm farmId={farm.id} lang={lang} />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ TAB 3: CROP MANAGEMENT */}
       {activeTab === "crops" && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -370,35 +575,23 @@ export default async function FarmDetailPage({
             )}
           </Card>
 
-          {/* Plots on this Farm */}
-          <Card className="flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <h3 className="text-base font-bold text-leaf-900">Farm Plots ({plots.length})</h3>
-              <Badge className="bg-leaf-100 text-leaf-800">{plots.length} Plots</Badge>
-            </div>
-
-            {plots.length === 0 ? (
-              <p className="text-xs text-muted">No plots recorded. Register a plot below to begin field operations.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {plots.map((p) => (
-                  <div key={p.id} className="rounded border border-line bg-surface p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <strong className="text-sm text-ink">{p.name}</strong>
-                      <Badge className="bg-leaf-100 text-leaf-800 text-xs">{p.area_ha ? `${p.area_ha} ha` : "— ha"}</Badge>
-                    </div>
-                    {p.notes && <p className="text-xs text-muted">{p.notes}</p>}
-                  </div>
-                ))}
+          {/* Cross-Link to Fields & Plots */}
+          <div className="p-4 bg-leaf-50/80 border border-leaf-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🗺️</span>
+              <div>
+                <strong className="text-leaf-950 font-bold block">
+                  Looking to manage physical fields or add a new parcel? ({plots.length} registered)
+                </strong>
+                <span className="text-leaf-700">
+                  Configure boundaries, soil classifications, and irrigation systems in the dedicated Fields tab.
+                </span>
               </div>
-            )}
-
-            {/* Add Plot Form */}
-            <div className="border-t border-line pt-4">
-              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Plot to {farm.name}</h4>
-              <AddPlotForm farmId={farm.id} lang={lang} />
             </div>
-          </Card>
+            <Link href={`/${lang}/account/farms/${farm.id}?tab=plots`}>
+              <Button variant="secondary" size="sm">Open Fields &amp; Plots Tab &rarr;</Button>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -489,6 +682,18 @@ export default async function FarmDetailPage({
 
         return (
           <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">Farm Books &amp; Operating Ledger</h2>
+                <p className="text-xs text-neutral-500">
+                  Income, input costs, mechanization, and gross margin analysis for {farm.name}.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <PrintReportButton farmName={farm.name} />
+              </div>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold uppercase text-muted">Total Recorded Inflow</span>

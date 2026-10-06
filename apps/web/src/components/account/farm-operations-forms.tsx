@@ -36,8 +36,33 @@ export function AddPlotForm({ farmId, lang }: { farmId: string; lang: string }) 
         </label>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Soil Texture</span>
+          <Select name="soil_texture" defaultValue="sandy_loam">
+            <option value="sandy_loam">Sandy Loam (Standard Savanna)</option>
+            <option value="loam">Loam (Humid Forest)</option>
+            <option value="clay_loam">Clay Loam (Lowland / Rice)</option>
+            <option value="silt_loam">Silt Loam (Riverine)</option>
+            <option value="loamy_sand">Loamy Sand</option>
+            <option value="sandy">Sandy (Well-drained)</option>
+            <option value="clay">Heavy Clay</option>
+          </Select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Irrigation Method</span>
+          <Select name="irrigation_type" defaultValue="rainfed">
+            <option value="rainfed">Rainfed (Seasonal rains)</option>
+            <option value="drip">Drip Irrigation (Dry season)</option>
+            <option value="sprinkler">Sprinkler Irrigation</option>
+            <option value="furrow">Furrow / Flood Irrigation</option>
+            <option value="manual">Manual / Hose Watering</option>
+          </Select>
+        </label>
+      </div>
+
       <label className="flex flex-col gap-1 text-xs font-semibold">
-        <span>Field Notes &amp; History</span>
+        <span>Field Notes &amp; Cropping History</span>
         <Input name="notes" placeholder="e.g. Fallowed last season, planned for SC510 planting" maxLength={500} />
       </label>
 
@@ -535,3 +560,16 @@ export function AddFarmRecordForm({ farmId, lang }: { farmId: string; lang: stri
   );
 }
 
+export function PrintReportButton({ farmName }: { farmName: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => window.print()}
+      className="px-3 py-1.5 text-xs font-bold bg-leaf-600 hover:bg-leaf-700 text-white rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+      title={`Print or Export PDF Statement for ${farmName}`}
+    >
+      <span>🖨️</span>
+      <span>Print / PDF Statement</span>
+    </button>
+  );
+}

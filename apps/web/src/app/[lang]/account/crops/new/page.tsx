@@ -10,12 +10,12 @@ export default async function NewCropPlanPage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ farm?: string }>;
+  searchParams: Promise<{ farm?: string; plot?: string }>;
 }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   await requireAccount(lang);
-  const { farm: farmIdParam } = await searchParams;
+  const { farm: farmIdParam, plot: plotIdParam } = await searchParams;
   const supabase = await createClient();
 
   // 1. Fetch authenticated user's farms
@@ -36,7 +36,7 @@ export default async function NewCropPlanPage({
   // 2. Fetch plots using standard schema columns guaranteed across migrations
   let plotsQuery = supabase
     .from("plots")
-    .select("id, farm_id, name, area_ha, notes")
+    .select("id, farm_id, name, area_ha, soil_texture, irrigation_type, notes")
     .order("name");
 
   if (farmIdParam) {
@@ -51,6 +51,8 @@ export default async function NewCropPlanPage({
     farm_id: string;
     name: string;
     area_ha: number | null;
+    soil_texture?: string | null;
+    irrigation_type?: string | null;
     notes: string | null;
   }>;
 
@@ -58,7 +60,16 @@ export default async function NewCropPlanPage({
   let scopedFarmName = "";
   let primaryZone = "derived_savanna";
 
-  if (farmIdParam) {
+  // If a specific plot was requested, prioritize that plot's parent farm
+  const targetInitialPlot = plotIdParam ? plotsList.find((p) => p.id === plotIdParam) : null;
+
+  if (targetInitialPlot) {
+    const plotFarm = farmMap.get(targetInitialPlot.farm_id);
+    if (plotFarm) {
+      scopedFarmName = plotFarm.name;
+      primaryZone = plotFarm.zone || "derived_savanna";
+    }
+  } else if (farmIdParam) {
     const targetFarm = farmMap.get(farmIdParam);
     if (targetFarm) {
       scopedFarmName = targetFarm.name;
@@ -80,8 +91,8 @@ export default async function NewCropPlanPage({
       id: p.id,
       name: p.name,
       area_ha: p.area_ha ? Number(p.area_ha) : 1.0,
-      soil_texture: "Sandy loam",
-      irrigation_type: "Rainfed",
+      soil_texture: p.soil_texture ? p.soil_texture.replace(/_/g, " ") : "Sandy loam",
+      irrigation_type: p.irrigation_type ? p.irrigation_type.replace(/_/g, " ") : "Rainfed",
       farm_id: p.farm_id,
       farm_name: parentFarm?.name ?? (scopedFarmName || "My Farm"),
     };
@@ -94,8 +105,8 @@ export default async function NewCropPlanPage({
           <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
             {farmIdParam ? (
               <>
-                <Link href={`/${lang}/account/farms/${farmIdParam}?tab=crops`} className="hover:text-neutral-700">
-                  {scopedFarmName || "Farm Hub"} (Crops)
+                <Link href={`/${lang}/account/farms/${farmIdParam}?tab=plots`} className="hover:text-neutral-700">
+                  {scopedFarmName || "Farm Hub"} (Fields)
                 </Link>
                 <span>/</span>
               </>
@@ -123,6 +134,7 @@ export default async function NewCropPlanPage({
         plots={plots}
         farmZone={primaryZone}
         farmId={farmIdParam}
+        initialPlotId={plotIdParam}
       />
     </div>
   );

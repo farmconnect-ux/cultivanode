@@ -30,16 +30,21 @@ export function CropPlanningWizard({
   plots,
   farmZone = "derived_savanna",
   farmId,
+  initialPlotId,
 }: {
   lang: Locale;
   plots: PlotOption[];
   farmZone?: string;
   farmId?: string;
+  initialPlotId?: string;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<number>(1);
+  const hasInitialValidPlot = Boolean(initialPlotId && plots.some((p) => p.id === initialPlotId));
+  const [step, setStep] = useState<number>(hasInitialValidPlot ? 2 : 1);
 
-  const [selectedPlotId, setSelectedPlotId] = useState<string>(plots[0]?.id ?? "");
+  const [selectedPlotId, setSelectedPlotId] = useState<string>(
+    hasInitialValidPlot ? (initialPlotId as string) : plots[0]?.id ?? ""
+  );
   const [selectedCropId, setSelectedCropId] = useState<string>("maize");
   const [selectedVarietyId, setSelectedVarietyId] = useState<string>("");
   const [season, setSeason] = useState<AgronomySeason>("early_rainy");

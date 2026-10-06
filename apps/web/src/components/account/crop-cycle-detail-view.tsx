@@ -56,6 +56,47 @@ interface CropCycleDetailProps {
   alerts: CropAlert[];
 }
 
+function buildGoogleCalendarUrl(op: CropCycleOperation, cropName: string, plotName: string, farmName: string): string {
+  const start = (op.scheduledStartDate || new Date().toISOString().split("T")[0]!).replace(/-/g, "");
+  const end = (op.scheduledEndDate || op.scheduledStartDate || new Date().toISOString().split("T")[0]!).replace(/-/g, "");
+  const title = encodeURIComponent(`${op.name} - ${cropName} (${plotName})`);
+  const details = encodeURIComponent(
+    `Agronomic field operation for ${cropName} on field ${plotName} at ${farmName}.\nStage: ${op.stage}\nDue Window: ${op.scheduledStartDate} to ${op.scheduledEndDate}\nCultivaNode Operating System`
+  );
+  const loc = encodeURIComponent(`${plotName}, ${farmName}`);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${loc}`;
+}
+
+function triggerIcsDownload(op: CropCycleOperation, cropName: string, plotName: string, farmName: string) {
+  const start = (op.scheduledStartDate || new Date().toISOString().split("T")[0]!).replace(/-/g, "");
+  const end = (op.scheduledEndDate || op.scheduledStartDate || new Date().toISOString().split("T")[0]!).replace(/-/g, "");
+  const icsLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//CultivaNode//AgriCalendar//EN",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `SUMMARY:${op.name} - ${cropName} (${plotName})`,
+    `DESCRIPTION:Field task ${op.name} for ${cropName}. Stage: ${op.stage}. Farm: ${farmName}. Due: ${op.scheduledStartDate} to ${op.scheduledEndDate}`,
+    `LOCATION:${plotName}, ${farmName}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([icsLines], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${op.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function CropCycleDetailView({
   lang,
   cycle,
@@ -396,6 +437,36 @@ export function CropCycleDetailView({
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-center">
+                  {/* Calendar Sync Dropdown */}
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      className="px-2.5 py-1.5 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg border border-neutral-300 flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Sync with Calendar"
+                    >
+                      <span>📅</span>
+                      <span className="hidden md:inline">Calendar</span>
+                      <span className="text-[10px] text-neutral-500">▾</span>
+                    </button>
+                    <div className="absolute right-0 mt-1 hidden group-hover:flex group-focus-within:flex flex-col bg-white border border-neutral-200 rounded-xl shadow-lg p-1.5 z-30 min-w-[160px] text-xs">
+                      <a
+                        href={buildGoogleCalendarUrl(op, crop?.name ?? cycle.cropId, plot.name, plot.farm.name)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 hover:bg-neutral-50 rounded-lg font-medium text-neutral-800 flex items-center gap-2"
+                      >
+                        <span>🌐</span> Google Calendar
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => triggerIcsDownload(op, crop?.name ?? cycle.cropId, plot.name, plot.farm.name)}
+                        className="px-2.5 py-1.5 hover:bg-neutral-50 rounded-lg font-medium text-neutral-800 flex items-center gap-2 text-left cursor-pointer"
+                      >
+                        <span>📥</span> Download .ICS File
+                      </button>
+                    </div>
+                  </div>
+
                   {op.requiredEquipment && op.status === "pending" && (
                     <Link
                       href={`/${lang}/account/bookings/new?farm=${plot.farm.id}&notes=${encodeURIComponent(

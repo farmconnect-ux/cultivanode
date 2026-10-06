@@ -50,17 +50,24 @@ export async function addPlot(_prev: ActionState, form: FormData): Promise<Actio
     }
   }
 
+  const soilTextureRaw = text(form, "soil_texture", 30);
+  const irrigationTypeRaw = text(form, "irrigation_type", 30);
+  const drainageRaw = text(form, "drainage", 30);
+
   const { error } = await s.supabase.from("plots").insert({
     farm_id: farmId,
     name,
     area_ha: areaHa,
     notes: notes || null,
+    soil_texture: soilTextureRaw || null,
+    irrigation_type: irrigationTypeRaw || "rainfed",
+    drainage: drainageRaw || null,
   });
 
   if (error) {
     logger.warn("plot_insert_failed", { code: error.code, message: error.message });
     if (error.code === "23505") return bad("errorDuplicatePlotName");
-    return bad("errorGeneric");
+    return bad(error.message || "errorGeneric");
   }
 
   refresh();

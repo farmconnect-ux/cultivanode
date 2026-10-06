@@ -60,6 +60,12 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
                   </a>
                   <div className="flex flex-wrap gap-1 text-[11px]">
                     <a
+                      href={`/${lang}/account/farms/${farm.id}?tab=plots`}
+                      className="px-2 py-1 rounded bg-leaf-100 hover:bg-leaf-200 text-leaf-900 font-semibold"
+                    >
+                      🗺️ Fields
+                    </a>
+                    <a
                       href={`/${lang}/account/farms/${farm.id}?tab=crops`}
                       className="px-2 py-1 rounded bg-leaf-50 hover:bg-leaf-100 text-leaf-800 font-medium"
                     >
