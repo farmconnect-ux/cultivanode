@@ -225,12 +225,15 @@ export async function addFarm(_prev: ActionState, form: FormData): Promise<Actio
     // A field agent records a farm for a farmer they registered; RLS checks that link.
     ...(forProfile && forProfile !== s.uid ? { owner_id: forProfile, onboarded_by: s.uid } : {}),
   };
-  const { error } = await s.supabase.from("farms").insert(row);
+  const { data: newFarm, error } = await s.supabase.from("farms").insert(row).select("id").single();
   if (error) {
     logger.warn("farm_insert_failed", { code: error.code });
     return bad(error.code === "42501" ? "needsFarmerRole" : "errorGeneric");
   }
   refresh();
+  if (newFarm?.id) {
+    redirect(`/${lang(form)}/account/farms/${newFarm.id}`);
+  }
   return ok();
 }
 

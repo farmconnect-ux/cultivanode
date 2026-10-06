@@ -110,6 +110,12 @@ export default async function CropManagementDashboardPage({
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href={`/${lang}/account/farms`}
+            className="px-4 py-2 text-sm font-semibold text-leaf-800 bg-leaf-50 border border-leaf-200 rounded-xl hover:bg-leaf-100 shadow-sm transition-all"
+          >
+            🌱 Go to My Farms
+          </Link>
+          <Link
             href={`/${lang}/account/crops/map`}
             className="px-4 py-2 text-sm font-semibold text-neutral-700 bg-white border border-neutral-300 rounded-xl hover:bg-neutral-50 shadow-sm transition-all"
           >
@@ -122,6 +128,27 @@ export default async function CropManagementDashboardPage({
             <span>+</span> Plan New Crop Cycle
           </Link>
         </div>
+      </div>
+
+      {/* Farm Enterprise Context Banner */}
+      <div className="p-4 bg-leaf-50/80 border border-leaf-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg">🌱</span>
+          <div>
+            <strong className="text-leaf-950 font-bold block text-sm">
+              Crops are managed within your Farm Enterprises
+            </strong>
+            <span className="text-leaf-700">
+              Each farm manages its own plots, crop cycles, livestock, workers, farm accounts, inventory, and records.
+            </span>
+          </div>
+        </div>
+        <Link
+          href={`/${lang}/account/farms`}
+          className="font-bold text-leaf-800 hover:text-leaf-950 underline"
+        >
+          Manage by Farm &rarr;
+        </Link>
       </div>
 
       {/* KPI Cards Grid */}

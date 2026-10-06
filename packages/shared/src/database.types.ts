@@ -1276,6 +1276,259 @@ export type Database = {
           },
         ]
       }
+      farm_livestock: {
+        Row: {
+          id: string
+          farm_id: string
+          animal_type: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
+          breed: string
+          identifier: string
+          head_count: number
+          housing_location: string | null
+          health_status: "healthy" | "treatment" | "quarantine" | "critical"
+          purpose: "meat" | "dairy" | "eggs" | "breeding" | "multi"
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          animal_type: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
+          breed: string
+          identifier: string
+          head_count?: number
+          housing_location?: string | null
+          health_status?: "healthy" | "treatment" | "quarantine" | "critical"
+          purpose?: "meat" | "dairy" | "eggs" | "breeding" | "multi"
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          animal_type?: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
+          breed?: string
+          identifier?: string
+          head_count?: number
+          housing_location?: string | null
+          health_status?: "healthy" | "treatment" | "quarantine" | "critical"
+          purpose?: "meat" | "dairy" | "eggs" | "breeding" | "multi"
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_livestock_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_workers: {
+        Row: {
+          id: string
+          farm_id: string
+          full_name: string
+          phone: string | null
+          role: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
+          employment_type: "permanent" | "seasonal" | "daily_casual"
+          daily_wage_kobo: number
+          status: "active" | "inactive" | "on_leave"
+          joined_date: string | null
+          emergency_contact: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          full_name: string
+          phone?: string | null
+          role: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
+          employment_type?: "permanent" | "seasonal" | "daily_casual"
+          daily_wage_kobo?: number
+          status?: "active" | "inactive" | "on_leave"
+          joined_date?: string | null
+          emergency_contact?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          full_name?: string
+          phone?: string | null
+          role?: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
+          employment_type?: "permanent" | "seasonal" | "daily_casual"
+          daily_wage_kobo?: number
+          status?: "active" | "inactive" | "on_leave"
+          joined_date?: string | null
+          emergency_contact?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_workers_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_inventory: {
+        Row: {
+          id: string
+          farm_id: string
+          item_name: string
+          category: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
+          quantity: number
+          unit: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
+          reorder_threshold: number
+          storage_location: string | null
+          unit_cost_kobo: number
+          expiry_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          item_name: string
+          category: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
+          quantity?: number
+          unit: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
+          reorder_threshold?: number
+          storage_location?: string | null
+          unit_cost_kobo?: number
+          expiry_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          item_name?: string
+          category?: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
+          quantity?: number
+          unit?: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
+          reorder_threshold?: number
+          storage_location?: string | null
+          unit_cost_kobo?: number
+          expiry_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_inventory_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_financial_transactions: {
+        Row: {
+          id: string
+          farm_id: string
+          crop_cycle_id: string | null
+          type: "income" | "expense"
+          category: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
+          amount_kobo: number
+          transaction_date: string
+          receipt_number: string | null
+          payment_method: "cash" | "bank_transfer" | "escrow" | "mobile_money"
+          description: string
+          recorded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          crop_cycle_id?: string | null
+          type: "income" | "expense"
+          category: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
+          amount_kobo: number
+          transaction_date?: string
+          receipt_number?: string | null
+          payment_method?: "cash" | "bank_transfer" | "escrow" | "mobile_money"
+          description: string
+          recorded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          crop_cycle_id?: string | null
+          type?: "income" | "expense"
+          category?: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
+          amount_kobo?: number
+          transaction_date?: string
+          receipt_number?: string | null
+          payment_method?: "cash" | "bank_transfer" | "escrow" | "mobile_money"
+          description?: string
+          recorded_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_financial_transactions_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_general_records: {
+        Row: {
+          id: string
+          farm_id: string
+          record_type: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
+          title: string
+          details: string | null
+          document_url: string | null
+          recorded_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          record_type: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
+          title: string
+          details?: string | null
+          document_url?: string | null
+          recorded_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          record_type?: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
+          title?: string
+          details?: string | null
+          document_url?: string | null
+          recorded_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_general_records_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       feature_flags: {
         Row: {
           description: string

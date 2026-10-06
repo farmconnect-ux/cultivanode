@@ -1,11 +1,21 @@
 "use client";
 
 import { useActionState } from "react";
-import { addPlot, addSoilRecord, updateFarmBoundary, type ActionState } from "@/actions/farm-operations";
+import {
+  addPlot,
+  addSoilRecord,
+  updateFarmBoundary,
+  addLivestockAction,
+  addFarmWorkerAction,
+  addInventoryItemAction,
+  recordFarmTransactionAction,
+  addFarmRecordAction,
+  type ActionState,
+} from "@/actions/farm-operations";
 import { Alert, Button, Input, Select } from "@/components/ui";
 
 export function AddPlotForm({ farmId, lang }: { farmId: string; lang: string }) {
-  const [state, formAction, pending] = useActionState(addPlot, {});
+  const [state, formAction, pending] = useActionState(addPlot, {} as ActionState);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -47,7 +57,7 @@ export function AddSoilRecordForm({
   plots: Array<{ id: string; name: string }>;
   lang: string;
 }) {
-  const [state, formAction, pending] = useActionState(addSoilRecord, {});
+  const [state, formAction, pending] = useActionState(addSoilRecord, {} as ActionState);
 
   if (plots.length === 0) {
     return (
@@ -137,7 +147,7 @@ export function UpdateBoundaryForm({
   currentBoundary?: string | null;
   lang: string;
 }) {
-  const [state, formAction, pending] = useActionState(updateFarmBoundary, {});
+  const [state, formAction, pending] = useActionState(updateFarmBoundary, {} as ActionState);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -171,3 +181,357 @@ export function UpdateBoundaryForm({
     </form>
   );
 }
+
+export function AddLivestockForm({ farmId, lang }: { farmId: string; lang: string }) {
+  const [state, formAction, pending] = useActionState(addLivestockAction, {} as ActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="farm_id" value={farmId} />
+      <input type="hidden" name="lang" value={lang} />
+
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.ok && <Alert tone="success">Livestock group registered successfully in database.</Alert>}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Animal Type *</span>
+          <Select name="animal_type" defaultValue="cattle">
+            <option value="cattle">Cattle / Beef & Dairy</option>
+            <option value="poultry">Poultry / Layers & Broilers</option>
+            <option value="goat">Goat (Red Sokoto / West African Dwarf)</option>
+            <option value="sheep">Sheep (Yankasa / Balami)</option>
+            <option value="pig">Pig</option>
+            <option value="fish">Fish (Catfish / Tilapia)</option>
+            <option value="snail">Snail (Archachatina)</option>
+            <option value="rabbit">Rabbit</option>
+            <option value="other">Other</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Breed / Strain *</span>
+          <Input name="breed" required placeholder="e.g. White Fulani, Noiler, Cobb 500" maxLength={80} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Identifier / Tag / Pen *</span>
+          <Input name="identifier" required placeholder="e.g. Pen A, Herd 1, Flock B" maxLength={80} />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Head Count / Stock Quantity *</span>
+          <Input name="head_count" type="number" defaultValue="50" min="0" required />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Housing Location</span>
+          <Input name="housing_location" placeholder="e.g. East Brooder House, Pasture North" maxLength={120} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Production Purpose</span>
+          <Select name="purpose" defaultValue="meat">
+            <option value="meat">Meat / Finishing</option>
+            <option value="eggs">Egg Production</option>
+            <option value="dairy">Milk / Dairy</option>
+            <option value="breeding">Breeding Stock</option>
+            <option value="multi">Dual / Multi Purpose</option>
+          </Select>
+        </label>
+      </div>
+
+      <div className="pt-1">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Registering Livestock..." : "+ Register Livestock / Flock"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function AddFarmWorkerForm({ farmId, lang }: { farmId: string; lang: string }) {
+  const [state, formAction, pending] = useActionState(addFarmWorkerAction, {} as ActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="farm_id" value={farmId} />
+      <input type="hidden" name="lang" value={lang} />
+
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.ok && <Alert tone="success">Farm worker recorded in database.</Alert>}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Full Name *</span>
+          <Input name="full_name" required placeholder="e.g. Babatunde Alabi" maxLength={120} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Phone Number</span>
+          <Input name="phone" placeholder="e.g. 08031234567" maxLength={30} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Assigned Role *</span>
+          <Select name="role" defaultValue="field_worker">
+            <option value="farm_manager">Farm Manager / Supervisor</option>
+            <option value="tractor_operator">Tractor / Machine Operator</option>
+            <option value="field_worker">Field Operations / Labourer</option>
+            <option value="scout">Crop Scout / Agronomy Lead</option>
+            <option value="harvester">Harvester</option>
+            <option value="livestock_keeper">Livestock Keeper / Herder</option>
+            <option value="security">Security / Farm Guard</option>
+            <option value="casual">Casual / Day Labourer</option>
+          </Select>
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Employment Agreement</span>
+          <Select name="employment_type" defaultValue="permanent">
+            <option value="permanent">Permanent / Full-Time</option>
+            <option value="seasonal">Seasonal Contract</option>
+            <option value="daily_casual">Daily Casual / Daily Paid</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Daily Wage (₦)</span>
+          <Input name="daily_wage_ngn" type="number" defaultValue="4500" min="0" placeholder="e.g. 4500" />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Emergency Contact</span>
+          <Input name="emergency_contact" placeholder="Next of kin / phone" maxLength={120} />
+        </label>
+      </div>
+
+      <div className="pt-1">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Adding Worker..." : "+ Add Farm Worker"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function AddInventoryItemForm({ farmId, lang }: { farmId: string; lang: string }) {
+  const [state, formAction, pending] = useActionState(addInventoryItemAction, {} as ActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="farm_id" value={farmId} />
+      <input type="hidden" name="lang" value={lang} />
+
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.ok && <Alert tone="success">Inventory item recorded in database.</Alert>}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Item / Product Name *</span>
+          <Input name="item_name" required placeholder="e.g. NPK 15-15-15, SC510 Seed" maxLength={120} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Category *</span>
+          <Select name="category" defaultValue="fertiliser">
+            <option value="fertiliser">Fertiliser</option>
+            <option value="seed">Certified Seeds / Planting Material</option>
+            <option value="chemical">NAFDAC Cleared Agrochemicals</option>
+            <option value="feed">Livestock / Fish Feed</option>
+            <option value="tool_equipment">Hand Tools & Equipment</option>
+            <option value="harvest_produce">Harvested Stored Produce</option>
+            <option value="fuel">Diesel / Petrol / Fuel</option>
+            <option value="other">Other Supply</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Storage Location</span>
+          <Input name="storage_location" placeholder="e.g. Store Room 1, Silo 3" maxLength={120} />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Stock Quantity *</span>
+          <Input name="quantity" type="number" step="0.1" defaultValue="10" min="0" required />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Unit *</span>
+          <Select name="unit" defaultValue="bags">
+            <option value="bags">Bags (50kg)</option>
+            <option value="kg">kg</option>
+            <option value="liters">Liters</option>
+            <option value="units">Units / Pieces</option>
+            <option value="tons">Tons</option>
+            <option value="crates">Crates</option>
+            <option value="bundles">Bundles</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Reorder Threshold</span>
+          <Input name="reorder_threshold" type="number" step="0.1" defaultValue="2" min="0" />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Unit Purchase Cost (₦)</span>
+          <Input name="unit_cost_ngn" type="number" defaultValue="35000" min="0" />
+        </label>
+      </div>
+
+      <div className="pt-1">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Saving Stock..." : "+ Add Inventory Item"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function RecordFarmTransactionForm({
+  farmId,
+  cropCycles,
+  lang,
+}: {
+  farmId: string;
+  cropCycles: Array<{ id: string; cropName: string }>;
+  lang: string;
+}) {
+  const [state, formAction, pending] = useActionState(recordFarmTransactionAction, {} as ActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="farm_id" value={farmId} />
+      <input type="hidden" name="lang" value={lang} />
+
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.ok && <Alert tone="success">Transaction recorded in farm books.</Alert>}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Transaction Type *</span>
+          <Select name="type" defaultValue="expense">
+            <option value="expense">Expense (Outflow)</option>
+            <option value="income">Income / Revenue (Inflow)</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Category *</span>
+          <Select name="category" defaultValue="machinery_service">
+            <option value="machinery_service">Machinery Hire / Tractor Service</option>
+            <option value="labour_wages">Labour Wages & Daily Work</option>
+            <option value="seeds">Seeds & Seedlings</option>
+            <option value="fertilisers">Fertilisers & Nutrients</option>
+            <option value="chemicals">Agrochemicals & Crop Protection</option>
+            <option value="feed">Livestock Feed</option>
+            <option value="fuel">Fuel & Energy</option>
+            <option value="harvest_sale">Crop Harvest Sale (Revenue)</option>
+            <option value="livestock_sale">Livestock Sale (Revenue)</option>
+            <option value="repairs">Equipment Repairs & Maintenance</option>
+            <option value="other">Other Operational Flow</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Amount (₦) *</span>
+          <Input name="amount_ngn" type="number" defaultValue="50000" min="1" required />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Transaction Date</span>
+          <Input name="transaction_date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Payment Method</span>
+          <Select name="payment_method" defaultValue="bank_transfer">
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="cash">Cash</option>
+            <option value="escrow">CultivaNode Escrow</option>
+            <option value="mobile_money">Mobile Money</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Link to Crop Cycle (Optional)</span>
+          <Select name="crop_cycle_id" defaultValue="">
+            <option value="">General Farm Level</option>
+            {cropCycles.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.cropName}
+              </option>
+            ))}
+          </Select>
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1 text-xs font-semibold">
+        <span>Description / Notes *</span>
+        <Input name="description" required placeholder="e.g. Paid for 4 ha disc plowing by local tractor provider" maxLength={500} />
+      </label>
+
+      <div className="pt-1">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Recording..." : "+ Record Transaction in Farm Books"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function AddFarmRecordForm({ farmId, lang }: { farmId: string; lang: string }) {
+  const [state, formAction, pending] = useActionState(addFarmRecordAction, {} as ActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <input type="hidden" name="farm_id" value={farmId} />
+      <input type="hidden" name="lang" value={lang} />
+
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.ok && <Alert tone="success">Farm record / document saved in database.</Alert>}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Record Type *</span>
+          <Select name="record_type" defaultValue="land_title">
+            <option value="land_title">Land Title / Certificate of Occupancy</option>
+            <option value="lease_agreement">Lease Agreement / Tenancy</option>
+            <option value="water_source">Water Source / Borehole Log</option>
+            <option value="irrigation_system">Irrigation Infrastructure Record</option>
+            <option value="environmental_audit">Environmental & Soil Audit</option>
+            <option value="certification">Agricultural Certification / Organic / GAP</option>
+            <option value="inspection">Extension Agent Inspection Report</option>
+            <option value="general">General Administrative Document</option>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold">
+          <span>Record Title *</span>
+          <Input name="title" required placeholder="e.g. 5-Year Farmland Lease Agreement" maxLength={150} />
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1 text-xs font-semibold">
+        <span>Record Details &amp; Summary</span>
+        <Input name="details" placeholder="e.g. Agreement with Iseyin Agricultural Community Council" maxLength={2000} />
+      </label>
+
+      <div className="pt-1">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Saving Record..." : "+ Save Farm Record"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+

@@ -40,8 +40,8 @@ export function AccountNav({
   if (activeWorkspace === "farmer") {
     items = [
       { href: `${base}?${wsParam}`, label: "Overview", icon: "🏠" },
-      { href: `${base}/crops?${wsParam}`, label: "Crop Management", icon: "🌽" },
       { href: `${base}/farms?${wsParam}`, label: "My Farms", icon: "🌱" },
+      { href: `${base}/crops?${wsParam}`, label: "All Crops", icon: "🌽" },
       { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
       { href: `${base}/bookings?${wsParam}`, label: "My Jobs", icon: "🚜" },
       { href: `${base}/bookings/new?${wsParam}`, label: "Request Service", icon: "➕" },
