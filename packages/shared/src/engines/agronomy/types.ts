@@ -7,17 +7,47 @@ export interface CropVariety {
   name: string;
   daysToMaturity: number;
   expectedYieldTonnesPerHa: number;
+  typicalYieldTonsPerHa?: number;
   description: string;
   droughtTolerant?: boolean;
+}
+
+export interface GrowthStageDefinition {
+  id: string;
+  name: string;
+  order: number;
+  relativeStartDay: number;
+  relativeEndDay: number;
+  description: string;
 }
 
 export interface CropDefinition {
   id: string;
   commonName: string;
+  name?: string;
   scientificName: string;
+  localNames?: {
+    yo?: string;
+    pcm?: string;
+    ha?: string;
+    ig?: string;
+  };
   category: 'cereal' | 'tuber' | 'vegetable' | 'legume' | 'tree_crop';
   suitableZones: FarmZone[];
   varieties: CropVariety[];
+  growthStages?: GrowthStageDefinition[];
+  stages?: GrowthStageDefinition[];
+  spacing?: {
+    interRowCm: number;
+    intraRowCm: number;
+  };
+  seedRate?: {
+    amountPerHa: number;
+    unit: string;
+  };
+  typicalDurationDays?: number;
+  harvestIndicators?: string[];
+  postHarvestRequirements?: string[];
 }
 
 export interface OperationRequirement {

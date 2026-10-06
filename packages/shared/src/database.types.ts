@@ -596,6 +596,411 @@ export type Database = {
           },
         ]
       }
+      crop_alerts: {
+        Row: {
+          action_url: string | null
+          category: Database["public"]["Enums"]["crop_alert_category"]
+          created_at: string
+          cycle_id: string
+          id: string
+          is_dismissed: boolean
+          message: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          category: Database["public"]["Enums"]["crop_alert_category"]
+          created_at?: string
+          cycle_id: string
+          id?: string
+          is_dismissed?: boolean
+          message: string
+          severity: string
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          category?: Database["public"]["Enums"]["crop_alert_category"]
+          created_at?: string
+          cycle_id?: string
+          id?: string
+          is_dismissed?: boolean
+          message?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_alerts_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_cycles: {
+        Row: {
+          actual_cost_kobo: number
+          actual_harvest_date: string | null
+          actual_yield_kg: number
+          created_at: string
+          created_by: string
+          crop_id: string
+          current_stage: string
+          estimated_budget_kobo: number
+          expected_harvest_date: string
+          health_score: number
+          health_status: Database["public"]["Enums"]["crop_health_status"]
+          id: string
+          planting_date: string
+          plot_id: string
+          season: string
+          status: Database["public"]["Enums"]["crop_cycle_status"]
+          target_area_ha: number
+          target_yield_kg: number
+          updated_at: string
+          variety_id: string
+        }
+        Insert: {
+          actual_cost_kobo?: number
+          actual_harvest_date?: string | null
+          actual_yield_kg?: number
+          created_at?: string
+          created_by?: string
+          crop_id: string
+          current_stage?: string
+          estimated_budget_kobo?: number
+          expected_harvest_date: string
+          health_score?: number
+          health_status?: Database["public"]["Enums"]["crop_health_status"]
+          id?: string
+          planting_date: string
+          plot_id: string
+          season?: string
+          status?: Database["public"]["Enums"]["crop_cycle_status"]
+          target_area_ha: number
+          target_yield_kg: number
+          updated_at?: string
+          variety_id: string
+        }
+        Update: {
+          actual_cost_kobo?: number
+          actual_harvest_date?: string | null
+          actual_yield_kg?: number
+          created_at?: string
+          created_by?: string
+          crop_id?: string
+          current_stage?: string
+          estimated_budget_kobo?: number
+          expected_harvest_date?: string
+          health_score?: number
+          health_status?: Database["public"]["Enums"]["crop_health_status"]
+          id?: string
+          planting_date?: string
+          plot_id?: string
+          season?: string
+          status?: Database["public"]["Enums"]["crop_cycle_status"]
+          target_area_ha?: number
+          target_yield_kg?: number
+          updated_at?: string
+          variety_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_cycles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crop_cycles_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_cycle_operations: {
+        Row: {
+          actual_cost_kobo: number
+          actual_date: string | null
+          booking_id: string | null
+          completed_by: string | null
+          created_at: string
+          cycle_id: string
+          id: string
+          name: string
+          notes: string | null
+          relative_end_day: number
+          relative_start_day: number
+          required_equipment: string | null
+          scheduled_end_date: string
+          scheduled_start_date: string
+          stage: string
+          status: Database["public"]["Enums"]["crop_operation_status"]
+          updated_at: string
+        }
+        Insert: {
+          actual_cost_kobo?: number
+          actual_date?: string | null
+          booking_id?: string | null
+          completed_by?: string | null
+          created_at?: string
+          cycle_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          relative_end_day: number
+          relative_start_day: number
+          required_equipment?: string | null
+          scheduled_end_date: string
+          scheduled_start_date: string
+          stage: string
+          status?: Database["public"]["Enums"]["crop_operation_status"]
+          updated_at?: string
+        }
+        Update: {
+          actual_cost_kobo?: number
+          actual_date?: string | null
+          booking_id?: string | null
+          completed_by?: string | null
+          created_at?: string
+          cycle_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          relative_end_day?: number
+          relative_start_day?: number
+          required_equipment?: string | null
+          scheduled_end_date?: string
+          scheduled_start_date?: string
+          stage?: string
+          status?: Database["public"]["Enums"]["crop_operation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_cycle_operations_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_harvests: {
+        Row: {
+          batch_code: string
+          created_at: string
+          cycle_id: string
+          harvest_date: string
+          id: string
+          loss_pct: number | null
+          moisture_pct: number | null
+          notes: string | null
+          quality_grade: string
+          quantity_kg: number
+          recorded_by: string | null
+          storage_location: string | null
+        }
+        Insert: {
+          batch_code: string
+          created_at?: string
+          cycle_id: string
+          harvest_date: string
+          id?: string
+          loss_pct?: number | null
+          moisture_pct?: number | null
+          notes?: string | null
+          quality_grade: string
+          quantity_kg: number
+          recorded_by?: string | null
+          storage_location?: string | null
+        }
+        Update: {
+          batch_code?: string
+          created_at?: string
+          cycle_id?: string
+          harvest_date?: string
+          id?: string
+          loss_pct?: number | null
+          moisture_pct?: number | null
+          notes?: string | null
+          quality_grade?: string
+          quantity_kg?: number
+          recorded_by?: string | null
+          storage_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_harvests_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_input_applications: {
+        Row: {
+          active_ingredient: string | null
+          applied_by: string | null
+          applied_date: string
+          area_applied_ha: number
+          category: Database["public"]["Enums"]["crop_input_category"]
+          chemical_id: string | null
+          cost_kobo: number
+          created_at: string
+          cycle_id: string
+          id: string
+          operation_id: string | null
+          pre_harvest_interval_days: number | null
+          product_name: string
+          rate_per_ha: number
+          re_entry_interval_hours: number | null
+          total_quantity: number
+          unit: string
+        }
+        Insert: {
+          active_ingredient?: string | null
+          applied_by?: string | null
+          applied_date: string
+          area_applied_ha: number
+          category: Database["public"]["Enums"]["crop_input_category"]
+          chemical_id?: string | null
+          cost_kobo?: number
+          created_at?: string
+          cycle_id: string
+          id?: string
+          operation_id?: string | null
+          pre_harvest_interval_days?: number | null
+          product_name: string
+          rate_per_ha: number
+          re_entry_interval_hours?: number | null
+          total_quantity: number
+          unit: string
+        }
+        Update: {
+          active_ingredient?: string | null
+          applied_by?: string | null
+          applied_date?: string
+          area_applied_ha?: number
+          category?: Database["public"]["Enums"]["crop_input_category"]
+          chemical_id?: string | null
+          cost_kobo?: number
+          created_at?: string
+          cycle_id?: string
+          id?: string
+          operation_id?: string | null
+          pre_harvest_interval_days?: number | null
+          product_name?: string
+          rate_per_ha?: number
+          re_entry_interval_hours?: number | null
+          total_quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_input_applications_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_measurements: {
+        Row: {
+          cycle_id: string
+          id: string
+          metric_name: string
+          metric_value: number
+          recorded_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          cycle_id: string
+          id?: string
+          metric_name: string
+          metric_value: number
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          cycle_id?: string
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_measurements_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crop_observations: {
+        Row: {
+          category: Database["public"]["Enums"]["scouting_category"]
+          created_at: string
+          cycle_id: string
+          description: string
+          id: string
+          location: unknown
+          observer_id: string
+          photo_paths: string[] | null
+          recommended_action: string | null
+          resolved: boolean
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["scouting_severity"]
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["scouting_category"]
+          created_at?: string
+          cycle_id: string
+          description: string
+          id?: string
+          location?: unknown
+          observer_id?: string
+          photo_paths?: string[] | null
+          recommended_action?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          severity: Database["public"]["Enums"]["scouting_severity"]
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["scouting_category"]
+          created_at?: string
+          cycle_id?: string
+          description?: string
+          id?: string
+          location?: unknown
+          observer_id?: string
+          photo_paths?: string[] | null
+          recommended_action?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["scouting_severity"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crop_observations_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           channel: string
@@ -2833,6 +3238,13 @@ export type Database = {
         | "share_with_buyers"
         | "share_with_investors"
         | "share_with_partners"
+      crop_cycle_status: "planning" | "active" | "harvesting" | "completed" | "abandoned"
+      crop_operation_status: "pending" | "in_progress" | "completed" | "skipped" | "blocked"
+      crop_health_status: "excellent" | "good" | "watch" | "critical"
+      scouting_category: "pest" | "disease" | "weed" | "nutrient_deficiency" | "water_stress" | "general"
+      scouting_severity: "low" | "medium" | "high" | "severe"
+      crop_input_category: "seed" | "fertiliser" | "herbicide" | "insecticide" | "fungicide" | "irrigation" | "other"
+      crop_alert_category: "weather" | "pest_outbreak" | "phi_violation" | "harvest_window" | "operation_overdue"
       data_request_kind: "export" | "deletion"
       data_request_status: "open" | "completed" | "rejected" | "cancelled"
       equipment_type:
