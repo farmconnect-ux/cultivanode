@@ -1,0 +1,2340 @@
+From 935de15f342e54d915ec004354bd75d59a0148c0 Mon Sep 17 00:00:00 2001
+From: Olapade Quadri <quadriolapade@gmail.com>
+Date: Tue, 6 Oct 2026 20:54:59 +0100
+Subject: [PATCH] feat(farms): integrate farm enterprise subsections (crops,
+ livestock, farm books, workers, inventory, records)
+
+---
+ apps/web/src/actions/account.ts               |   5 +-
+ apps/web/src/actions/farm-operations.ts       | 204 ++++
+ .../src/app/[lang]/account/crops/new/page.tsx |  44 +-
+ .../web/src/app/[lang]/account/crops/page.tsx |  27 +
+ .../app/[lang]/account/farms/[id]/page.tsx    | 876 +++++++++++++-----
+ .../web/src/app/[lang]/account/farms/page.tsx |  44 +-
+ .../src/components/account/account-nav.tsx    |   2 +-
+ .../account/farm-operations-forms.tsx         | 372 +++++++-
+ packages/shared/src/database.types.ts         | 253 +++++
+ ...1006150000_farm_enterprise_subsections.sql | 150 +++
+ 10 files changed, 1740 insertions(+), 237 deletions(-)
+ create mode 100644 supabase/migrations/20261006150000_farm_enterprise_subsections.sql
+
+diff --git a/apps/web/src/actions/account.ts b/apps/web/src/actions/account.ts
+index 87d96f2..d5c6526 100644
+--- a/apps/web/src/actions/account.ts
++++ b/apps/web/src/actions/account.ts
+@@ -225,12 +225,15 @@ export async function addFarm(_prev: ActionState, form: FormData): Promise<Actio
+     // A field agent records a farm for a farmer they registered; RLS checks that link.
+     ...(forProfile && forProfile !== s.uid ? { owner_id: forProfile, onboarded_by: s.uid } : {}),
+   };
+-  const { error } = await s.supabase.from("farms").insert(row);
++  const { data: newFarm, error } = await s.supabase.from("farms").insert(row).select("id").single();
+   if (error) {
+     logger.warn("farm_insert_failed", { code: error.code });
+     return bad(error.code === "42501" ? "needsFarmerRole" : "errorGeneric");
+   }
+   refresh();
++  if (newFarm?.id) {
++    redirect(`/${lang(form)}/account/farms/${newFarm.id}`);
++  }
+   return ok();
+ }
+ 
+diff --git a/apps/web/src/actions/farm-operations.ts b/apps/web/src/actions/farm-operations.ts
+index 0c34506..65cd763 100644
+--- a/apps/web/src/actions/farm-operations.ts
++++ b/apps/web/src/actions/farm-operations.ts
+@@ -132,3 +132,207 @@ export async function updateFarmBoundary(_prev: ActionState, form: FormData): Pr
+   refresh();
+   return ok({ message: "boundary_updated" });
+ }
++
++/* ------------------------------------------------------------------ Livestock operations */
++
++export async function addLivestockAction(_prev: ActionState, form: FormData): Promise<ActionState> {
++  const s = await signedIn(form);
++  const farmId = text(form, "farm_id", 36);
++  const animalType = text(form, "animal_type", 30);
++  const breed = text(form, "breed", 80);
++  const identifier = text(form, "identifier", 80);
++  const headCountRaw = Number(text(form, "head_count", 10));
++  const housingLocation = text(form, "housing_location", 120);
++  const healthStatus = text(form, "health_status", 30) || "healthy";
++  const purpose = text(form, "purpose", 30) || "meat";
++  const notes = text(form, "notes", 1000);
++
++  if (!farmId) return bad("errorFarmRequired");
++  if (!breed) return bad("errorBreedRequired");
++  if (!identifier) return bad("errorIdentifierRequired");
++
++  const headCount = Number.isFinite(headCountRaw) && headCountRaw >= 0 ? Math.round(headCountRaw) : 1;
++
++  const { error } = await (s.supabase as any)
++    .from("farm_livestock")
++    .insert({
++      farm_id: farmId,
++      animal_type: animalType || "cattle",
++      breed,
++      identifier,
++      head_count: headCount,
++      housing_location: housingLocation || null,
++      health_status: healthStatus,
++      purpose,
++      notes: notes || null,
++    });
++
++  if (error) {
++    logger.warn("livestock_insert_failed", { code: error.code, message: error.message });
++    return bad("errorFailedToSaveLivestock");
++  }
++
++  refresh();
++  return ok({ message: "livestock_registered" });
++}
++
++/* ------------------------------------------------------------------ Farm Workers operations */
++
++export async function addFarmWorkerAction(_prev: ActionState, form: FormData): Promise<ActionState> {
++  const s = await signedIn(form);
++  const farmId = text(form, "farm_id", 36);
++  const fullName = text(form, "full_name", 120);
++  const phone = text(form, "phone", 30);
++  const role = text(form, "role", 40) || "field_worker";
++  const employmentType = text(form, "employment_type", 30) || "permanent";
++  const dailyWageNgn = Number(text(form, "daily_wage_ngn", 12));
++  const emergencyContact = text(form, "emergency_contact", 120);
++
++  if (!farmId) return bad("errorFarmRequired");
++  if (!fullName || fullName.length < 2) return bad("errorNameRequired");
++
++  const dailyWageKobo = Number.isFinite(dailyWageNgn) && dailyWageNgn >= 0 ? Math.round(dailyWageNgn * 100) : 0;
++
++  const { error } = await (s.supabase as any)
++    .from("farm_workers")
++    .insert({
++      farm_id: farmId,
++      full_name: fullName,
++      phone: phone || null,
++      role,
++      employment_type: employmentType,
++      daily_wage_kobo: dailyWageKobo,
++      status: "active",
++      emergency_contact: emergencyContact || null,
++    });
++
++  if (error) {
++    logger.warn("farm_worker_insert_failed", { code: error.code, message: error.message });
++    return bad("errorFailedToSaveWorker");
++  }
++
++  refresh();
++  return ok({ message: "worker_registered" });
++}
++
++/* ------------------------------------------------------------------ Inventory operations */
++
++export async function addInventoryItemAction(_prev: ActionState, form: FormData): Promise<ActionState> {
++  const s = await signedIn(form);
++  const farmId = text(form, "farm_id", 36);
++  const itemName = text(form, "item_name", 120);
++  const category = text(form, "category", 40) || "seed";
++  const quantityRaw = Number(text(form, "quantity", 12));
++  const unit = text(form, "unit", 20) || "kg";
++  const reorderThresholdRaw = Number(text(form, "reorder_threshold", 12));
++  const storageLocation = text(form, "storage_location", 120);
++  const unitCostNgn = Number(text(form, "unit_cost_ngn", 12));
++  const expiryDate = text(form, "expiry_date", 12);
++
++  if (!farmId) return bad("errorFarmRequired");
++  if (!itemName || itemName.length < 2) return bad("errorItemNameRequired");
++
++  const quantity = Number.isFinite(quantityRaw) && quantityRaw >= 0 ? quantityRaw : 0;
++  const reorderThreshold = Number.isFinite(reorderThresholdRaw) && reorderThresholdRaw >= 0 ? reorderThresholdRaw : 0;
++  const unitCostKobo = Number.isFinite(unitCostNgn) && unitCostNgn >= 0 ? Math.round(unitCostNgn * 100) : 0;
++
++  const { error } = await (s.supabase as any)
++    .from("farm_inventory")
++    .insert({
++      farm_id: farmId,
++      item_name: itemName,
++      category,
++      quantity,
++      unit,
++      reorder_threshold: reorderThreshold,
++      storage_location: storageLocation || null,
++      unit_cost_kobo: unitCostKobo,
++      expiry_date: expiryDate || null,
++    });
++
++  if (error) {
++    logger.warn("inventory_insert_failed", { code: error.code, message: error.message });
++    return bad("errorFailedToSaveInventory");
++  }
++
++  refresh();
++  return ok({ message: "inventory_item_added" });
++}
++
++/* ------------------------------------------------------------------ Farm Financial Transactions */
++
++export async function recordFarmTransactionAction(_prev: ActionState, form: FormData): Promise<ActionState> {
++  const s = await signedIn(form);
++  const farmId = text(form, "farm_id", 36);
++  const cycleId = text(form, "crop_cycle_id", 36);
++  const type = text(form, "type", 20) || "expense";
++  const category = text(form, "category", 40) || "other";
++  const amountNgn = Number(text(form, "amount_ngn", 15));
++  const transactionDate = text(form, "transaction_date", 12) || new Date().toISOString().split("T")[0];
++  const receiptNumber = text(form, "receipt_number", 60);
++  const paymentMethod = text(form, "payment_method", 30) || "cash";
++  const description = text(form, "description", 500);
++
++  if (!farmId) return bad("errorFarmRequired");
++  if (!description || description.length < 2) return bad("errorDescriptionRequired");
++  if (!Number.isFinite(amountNgn) || amountNgn <= 0) return bad("errorAmountInvalid");
++
++  const amountKobo = Math.round(amountNgn * 100);
++
++  const { error } = await (s.supabase as any)
++    .from("farm_financial_transactions")
++    .insert({
++      farm_id: farmId,
++      crop_cycle_id: cycleId || null,
++      type,
++      category,
++      amount_kobo: amountKobo,
++      transaction_date: transactionDate,
++      receipt_number: receiptNumber || null,
++      payment_method: paymentMethod,
++      description,
++      recorded_by: s.uid,
++    });
++
++  if (error) {
++    logger.warn("finance_insert_failed", { code: error.code, message: error.message });
++    return bad("errorFailedToRecordTransaction");
++  }
++
++  refresh();
++  return ok({ message: "transaction_recorded" });
++}
++
++/* ------------------------------------------------------------------ General Farm Records */
++
++export async function addFarmRecordAction(_prev: ActionState, form: FormData): Promise<ActionState> {
++  const s = await signedIn(form);
++  const farmId = text(form, "farm_id", 36);
++  const recordType = text(form, "record_type", 40) || "general";
++  const title = text(form, "title", 150);
++  const details = text(form, "details", 2000);
++  const documentUrl = text(form, "document_url", 500);
++  const recordedDate = text(form, "recorded_date", 12) || new Date().toISOString().split("T")[0];
++
++  if (!farmId) return bad("errorFarmRequired");
++  if (!title || title.length < 2) return bad("errorTitleRequired");
++
++  const { error } = await (s.supabase as any)
++    .from("farm_general_records")
++    .insert({
++      farm_id: farmId,
++      record_type: recordType,
++      title,
++      details: details || null,
++      document_url: documentUrl || null,
++      recorded_date: recordedDate,
++    });
++
++  if (error) {
++    logger.warn("general_record_insert_failed", { code: error.code, message: error.message });
++    return bad("errorFailedToSaveRecord");
++  }
++
++  refresh();
++  return ok({ message: "farm_record_saved" });
++}
+diff --git a/apps/web/src/app/[lang]/account/crops/new/page.tsx b/apps/web/src/app/[lang]/account/crops/new/page.tsx
+index bae7645..0ba57b9 100644
+--- a/apps/web/src/app/[lang]/account/crops/new/page.tsx
++++ b/apps/web/src/app/[lang]/account/crops/new/page.tsx
+@@ -7,21 +7,34 @@ import { CropPlanningWizard } from "@/components/account/crop-planning-wizard";
+ 
+ export default async function NewCropPlanPage({
+   params,
++  searchParams,
+ }: {
+   params: Promise<{ lang: string }>;
++  searchParams: Promise<{ farm?: string }>;
+ }) {
+   const { lang } = await params;
+   if (!hasLocale(lang)) notFound();
+   await requireAccount(lang);
++  const { farm: farmIdParam } = await searchParams;
+   const supabase = await createClient();
+ 
+   // Fetch plots for the current authenticated user's farms
+-  const { data: rawPlots } = await supabase
++  const { data: rawPlots } = await (supabase as any)
+     .from("plots")
+     .select("id, name, area_ha, soil_texture, irrigation_type, farm_id, farms(id, name, zone)")
+     .order("name");
+ 
+-  const plots = (rawPlots ?? []).map((p: any) => ({
++  let filteredPlots = (rawPlots ?? []) as any[];
++  let scopedFarmName = "";
++  if (farmIdParam) {
++    const scoped = filteredPlots.filter((p: any) => p.farm_id === farmIdParam);
++    if (scoped.length > 0) {
++      filteredPlots = scoped;
++      scopedFarmName = scoped[0]?.farms?.name ?? "";
++    }
++  }
++
++  const plots = filteredPlots.map((p: any) => ({
+     id: p.id,
+     name: p.name,
+     area_ha: p.area_ha ? Number(p.area_ha) : 1.0,
+@@ -31,20 +44,33 @@ export default async function NewCropPlanPage({
+     farm_name: p.farms?.name ?? "My Farm",
+   }));
+ 
+-  const primaryZone = (rawPlots?.[0] as any)?.farms?.zone ?? "derived_savanna";
++  const primaryZone = (filteredPlots[0] as any)?.farms?.zone ?? "derived_savanna";
+ 
+   return (
+     <div className="flex flex-col gap-6">
+       <div className="flex items-center justify-between">
+         <div>
+           <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">
+-            <Link href={`/${lang}/account/crops`} className="hover:text-neutral-700">
+-              Crops
+-            </Link>
+-            <span>/</span>
+-            <span>New Cycle</span>
++            {farmIdParam ? (
++              <>
++                <Link href={`/${lang}/account/farms/${farmIdParam}?tab=crops`} className="hover:text-neutral-700">
++                  {scopedFarmName || "Farm Hub"} (Crops)
++                </Link>
++                <span>/</span>
++              </>
++            ) : (
++              <>
++                <Link href={`/${lang}/account/farms`} className="hover:text-neutral-700">
++                  Farms
++                </Link>
++                <span>/</span>
++              </>
++            )}
++            <span>Plan Crop Cycle</span>
+           </div>
+-          <h1 className="text-2xl font-bold text-neutral-900">Plan Crop Cycle</h1>
++          <h1 className="text-2xl font-bold text-neutral-900">
++            Plan Crop Cycle {scopedFarmName ? `• ${scopedFarmName}` : ""}
++          </h1>
+           <p className="text-sm text-neutral-600 mt-0.5">
+             Design an operational agronomic calendar powered by certified Nigerian crop templates.
+           </p>
+diff --git a/apps/web/src/app/[lang]/account/crops/page.tsx b/apps/web/src/app/[lang]/account/crops/page.tsx
+index 14747c3..cce639d 100644
+--- a/apps/web/src/app/[lang]/account/crops/page.tsx
++++ b/apps/web/src/app/[lang]/account/crops/page.tsx
+@@ -109,6 +109,12 @@ export default async function CropManagementDashboardPage({
+           </p>
+         </div>
+         <div className="flex items-center gap-3">
++          <Link
++            href={`/${lang}/account/farms`}
++            className="px-4 py-2 text-sm font-semibold text-leaf-800 bg-leaf-50 border border-leaf-200 rounded-xl hover:bg-leaf-100 shadow-sm transition-all"
++          >
++            🌱 Go to My Farms
++          </Link>
+           <Link
+             href={`/${lang}/account/crops/map`}
+             className="px-4 py-2 text-sm font-semibold text-neutral-700 bg-white border border-neutral-300 rounded-xl hover:bg-neutral-50 shadow-sm transition-all"
+@@ -124,6 +130,27 @@ export default async function CropManagementDashboardPage({
+         </div>
+       </div>
+ 
++      {/* Farm Enterprise Context Banner */}
++      <div className="p-4 bg-leaf-50/80 border border-leaf-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
++        <div className="flex items-center gap-2.5">
++          <span className="text-lg">🌱</span>
++          <div>
++            <strong className="text-leaf-950 font-bold block text-sm">
++              Crops are managed within your Farm Enterprises
++            </strong>
++            <span className="text-leaf-700">
++              Each farm manages its own plots, crop cycles, livestock, workers, farm accounts, inventory, and records.
++            </span>
++          </div>
++        </div>
++        <Link
++          href={`/${lang}/account/farms`}
++          className="font-bold text-leaf-800 hover:text-leaf-950 underline"
++        >
++          Manage by Farm &rarr;
++        </Link>
++      </div>
++
+       {/* KPI Cards Grid */}
+       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+         <div className="p-4 bg-white rounded-2xl border border-neutral-200/80 shadow-xs flex flex-col justify-between">
+diff --git a/apps/web/src/app/[lang]/account/farms/[id]/page.tsx b/apps/web/src/app/[lang]/account/farms/[id]/page.tsx
+index 0f31ea0..a2d9352 100644
+--- a/apps/web/src/app/[lang]/account/farms/[id]/page.tsx
++++ b/apps/web/src/app/[lang]/account/farms/[id]/page.tsx
+@@ -1,15 +1,23 @@
+ import type { Metadata } from "next";
+ import Link from "next/link";
+ import { notFound } from "next/navigation";
+-import { formatNaira, computeFarmGrossMargin } from "@cultivanode/shared";
+-import { AddPlotForm, AddSoilRecordForm, UpdateBoundaryForm } from "@/components/account/farm-operations-forms";
+-import { FarmAgronomyPlanner } from "@/components/account/farm-agronomy-planner";
++import { formatNaira, computeFarmGrossMargin, getCropById } from "@cultivanode/shared";
++import {
++  AddPlotForm,
++  AddSoilRecordForm,
++  UpdateBoundaryForm,
++  AddLivestockForm,
++  AddFarmWorkerForm,
++  AddInventoryItemForm,
++  RecordFarmTransactionForm,
++  AddFarmRecordForm,
++} from "@/components/account/farm-operations-forms";
+ import { Badge, Button, Card } from "@/components/ui";
+ import { hasLocale } from "@/i18n/config";
+ import { requireAccount } from "@/lib/account/session";
+ import { createClient } from "@/lib/supabase/server";
+ 
+-export const metadata: Metadata = { title: "Farm Operations & Detail | CultivaNode" };
++export const metadata: Metadata = { title: "Farm Enterprise Hub | CultivaNode" };
+ 
+ export default async function FarmDetailPage({
+   params,
+@@ -20,7 +28,7 @@ export default async function FarmDetailPage({
+ }) {
+   const { lang, id } = await params;
+   if (!hasLocale(lang)) notFound();
+-  const account = await requireAccount(lang);
++  await requireAccount(lang);
+   const sp = await searchParams;
+   const activeTab = typeof sp.tab === "string" ? sp.tab : "overview";
+ 
+@@ -42,23 +50,60 @@ export default async function FarmDetailPage({
+     .eq("farm_id", id)
+     .order("created_at", { ascending: false });
+   const plots = plotsData ?? [];
+-
+-  // 3. Fetch real soil records for plots on this farm
+   const plotIds = plots.map((p) => p.id);
+-  let soilRecords: Array<{
+-    id: string;
+-    plot_id: string;
+-    soil_type: string | null;
+-    ph: number | null;
+-    organic_matter_pct: number | null;
+-    nitrogen_pct: number | null;
+-    phosphorus_ppm: number | null;
+-    potassium_cmol_kg: number | null;
+-    lab_name: string | null;
+-    tested_on: string | null;
+-    notes: string | null;
+-  }> = [];
+ 
++  // 3. Fetch real crop cycles on this farm's plots
++  let cropCycles: any[] = [];
++  if (plotIds.length > 0) {
++    const { data: cycles } = await (supabase as any)
++      .from("crop_cycles")
++      .select(`
++        id, plot_id, crop_id, variety_id, season, status, target_area_ha, planting_date,
++        expected_harvest_date, target_yield_kg, actual_yield_kg, current_stage,
++        health_score, health_status, estimated_budget_kobo, actual_cost_kobo,
++        plots(name)
++      `)
++      .in("plot_id", plotIds)
++      .order("created_at", { ascending: false });
++    cropCycles = cycles ?? [];
++  }
++
++  // 4. Fetch real livestock groups for this farm
++  const { data: livestockData } = await (supabase as any)
++    .from("farm_livestock")
++    .select("id, animal_type, breed, identifier, head_count, housing_location, health_status, purpose, notes, created_at")
++    .eq("farm_id", id)
++    .order("created_at", { ascending: false });
++  const livestock = livestockData ?? [];
++  const totalHeadCount = livestock.reduce((acc: number, l: any) => acc + (Number(l.head_count) || 0), 0);
++
++  // 5. Fetch real farm workers for this farm
++  const { data: workersData } = await (supabase as any)
++    .from("farm_workers")
++    .select("id, full_name, phone, role, employment_type, daily_wage_kobo, status, emergency_contact, created_at")
++    .eq("farm_id", id)
++    .order("created_at", { ascending: false });
++  const workers = workersData ?? [];
++
++  // 6. Fetch real farm inventory for this farm
++  const { data: inventoryData } = await (supabase as any)
++    .from("farm_inventory")
++    .select("id, item_name, category, quantity, unit, reorder_threshold, storage_location, unit_cost_kobo, expiry_date, created_at")
++    .eq("farm_id", id)
++    .order("created_at", { ascending: false });
++  const inventory = inventoryData ?? [];
++  const lowStockItems = inventory.filter((item: any) => Number(item.quantity) <= Number(item.reorder_threshold));
++
++  // 7. Fetch real farm financial transactions
++  const { data: financialsData } = await (supabase as any)
++    .from("farm_financial_transactions")
++    .select("id, crop_cycle_id, type, category, amount_kobo, transaction_date, receipt_number, payment_method, description, created_at")
++    .eq("farm_id", id)
++    .order("transaction_date", { ascending: false });
++  const financials = financialsData ?? [];
++
++  // 8. Fetch real soil records for plots on this farm
++  let soilRecords: any[] = [];
+   if (plotIds.length > 0) {
+     const { data: soils } = await supabase
+       .from("soil_records")
+@@ -68,7 +113,15 @@ export default async function FarmDetailPage({
+     soilRecords = soils ?? [];
+   }
+ 
+-  // 4. Fetch real bookings/jobs for this farm
++  // 9. Fetch general farm records
++  const { data: generalRecordsData } = await (supabase as any)
++    .from("farm_general_records")
++    .select("id, record_type, title, details, document_url, recorded_date, created_at")
++    .eq("farm_id", id)
++    .order("recorded_date", { ascending: false });
++  const generalRecords = generalRecordsData ?? [];
++
++  // 10. Fetch real bookings/jobs for this farm
+   const { data: farmJobs } = await supabase
+     .from("bookings")
+     .select("id, listing_title, listing_kind, job_date, status, total_kobo, created_at, disputed_at")
+@@ -76,7 +129,7 @@ export default async function FarmDetailPage({
+     .order("created_at", { ascending: false });
+   const jobs = farmJobs ?? [];
+ 
+-  // 5. Calculate real farm expenses ledger from database bookings
++  // Financial aggregates
+   let totalSpentKobo = 0;
+   jobs.forEach((j) => {
+     if (["accepted", "in_progress", "awaiting_confirmation", "confirmed", "completed"].includes(j.status)) {
+@@ -84,13 +137,26 @@ export default async function FarmDetailPage({
+     }
+   });
+ 
++  const totalIncomeKobo = financials
++    .filter((f: any) => f.type === "income")
++    .reduce((acc: number, f: any) => acc + (f.amount_kobo || 0), 0);
++
++  const totalLedgerExpenseKobo = financials
++    .filter((f: any) => f.type === "expense")
++    .reduce((acc: number, f: any) => acc + (f.amount_kobo || 0), 0);
++
++  const overallExpenseKobo = totalLedgerExpenseKobo + totalSpentKobo;
++  const netOperatingMarginKobo = totalIncomeKobo - overallExpenseKobo;
++
+   const tabs = [
+-    { key: "overview", label: "Overview" },
+-    { key: "map", label: "Operational Map" },
+-    { key: "crops", label: `Plots & Crops (${plots.length})` },
+-    { key: "soil", label: `Soil Records (${soilRecords.length})` },
+-    { key: "jobs", label: `Service Jobs (${jobs.length})` },
+-    { key: "farm_books", label: "Farm Books (Ledger)" },
++    { key: "overview", label: "Overview", icon: "📊" },
++    { key: "crops", label: `Crop Management (${cropCycles.length})`, icon: "🌽" },
++    { key: "livestock", label: `Livestock (${totalHeadCount})`, icon: "🐄" },
++    { key: "farm_books", label: "Farm Account", icon: "💰" },
++    { key: "workers", label: `Workers (${workers.length})`, icon: "👥" },
++    { key: "inventory", label: `Inventory (${inventory.length})`, icon: "📦" },
++    { key: "records", label: `Farm Records (${soilRecords.length + generalRecords.length})`, icon: "📁" },
++    { key: "jobs", label: `Mechanization (${jobs.length})`, icon: "🚜" },
+   ];
+ 
+   return (
+@@ -112,7 +178,7 @@ export default async function FarmDetailPage({
+           </p>
+         </div>
+         <div className="flex items-center gap-2">
+-          <Badge className="bg-leaf-100 text-leaf-800">● Active Farm Record</Badge>
++          <Badge className="bg-leaf-100 text-leaf-800">● Active Farm Enterprise</Badge>
+           <Link href={`/${lang}/account/bookings/new?farm=${farm.id}`}>
+             <Button variant="primary" size="sm">+ Request Service for Farm</Button>
+           </Link>
+@@ -125,42 +191,94 @@ export default async function FarmDetailPage({
+           <Link
+             key={t.key}
+             href={`/${lang}/account/farms/${farm.id}?tab=${t.key}`}
+-            className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
++            className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
+               activeTab === t.key
+                 ? "border-leaf-600 text-leaf-900 bg-leaf-50/50"
+                 : "border-transparent text-muted hover:text-ink hover:border-line"
+             }`}
+           >
+-            {t.label}
++            <span>{t.icon}</span>
++            <span>{t.label}</span>
+           </Link>
+         ))}
+       </div>
+ 
+-      {/* TAB: OVERVIEW */}
++      {/* ------------------------------------------------------------------ TAB 1: OVERVIEW */}
+       {activeTab === "overview" && (
+         <div className="space-y-6">
+-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
++          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+             <Card className="flex flex-col gap-2">
+-              <p className="text-xs font-semibold uppercase text-muted">Total Measured Area</p>
+-              <p className="text-3xl font-black text-leaf-900">
++              <p className="text-xs font-semibold uppercase text-muted">Measured Farm Area</p>
++              <p className="text-2xl font-black text-leaf-900">
+                 {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} ha` : "Not measured"}
+               </p>
+-              <p className="text-xs text-muted">From farms table (calculated via boundary trigger)</p>
++              <p className="text-xs text-muted">Across {plots.length} registered plots</p>
+             </Card>
++
+             <Card className="flex flex-col gap-2">
+-              <p className="text-xs font-semibold uppercase text-muted">Cultivated Plots</p>
+-              <p className="text-3xl font-black text-ink">{plots.length}</p>
+-              <p className="text-xs text-muted">Real plots recorded in database</p>
++              <p className="text-xs font-semibold uppercase text-muted">Active Crop Cycles</p>
++              <p className="text-2xl font-black text-ink">{cropCycles.length}</p>
++              <p className="text-xs text-muted">
++                {cropCycles.filter((c: any) => c.status === "active").length} actively growing
++              </p>
+             </Card>
++
+             <Card className="flex flex-col gap-2">
+-              <p className="text-xs font-semibold uppercase text-muted">Total Service Expenses</p>
+-              <p className="text-3xl font-black text-node-800">{formatNaira(totalSpentKobo)}</p>
+-              <p className="text-xs text-muted">Across {jobs.length} service requests</p>
++              <p className="text-xs font-semibold uppercase text-muted">Livestock Head Count</p>
++              <p className="text-2xl font-black text-forest-800">{totalHeadCount}</p>
++              <p className="text-xs text-muted">Across {livestock.length} animal groups/pens</p>
++            </Card>
++
++            <Card className="flex flex-col gap-2">
++              <p className="text-xs font-semibold uppercase text-muted">Net Farm Cash Flow</p>
++              <p className={`text-2xl font-black ${netOperatingMarginKobo >= 0 ? "text-leaf-800" : "text-danger"}`}>
++                {formatNaira(netOperatingMarginKobo)}
++              </p>
++              <p className="text-xs text-muted">Income: {formatNaira(totalIncomeKobo)}</p>
+             </Card>
+           </div>
+ 
++          {/* Quick Action Dock */}
++          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
++            <Link
++              href={`/${lang}/account/crops/new?farm=${farm.id}`}
++              className="p-4 bg-forest-50 hover:bg-forest-100 rounded-xl border border-forest-200 flex flex-col gap-1 transition-colors"
++            >
++              <span className="text-xl">🌽</span>
++              <strong className="text-sm text-forest-900">+ Plan Crop Cycle</strong>
++              <span className="text-xs text-forest-700">Anchor dates, seed rates &amp; operations</span>
++            </Link>
++
++            <Link
++              href={`/${lang}/account/farms/${farm.id}?tab=livestock`}
++              className="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 flex flex-col gap-1 transition-colors"
++            >
++              <span className="text-xl">🐄</span>
++              <strong className="text-sm text-amber-900">+ Register Livestock</strong>
++              <span className="text-xs text-amber-700">Manage poultry, cattle, small ruminants</span>
++            </Link>
++
++            <Link
++              href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
++              className="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 flex flex-col gap-1 transition-colors"
++            >
++              <span className="text-xl">💰</span>
++              <strong className="text-sm text-emerald-900">+ Record Transaction</strong>
++              <span className="text-xs text-emerald-700">Track harvest revenue or operational costs</span>
++            </Link>
++
++            <Link
++              href={`/${lang}/account/farms/${farm.id}?tab=workers`}
++              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 flex flex-col gap-1 transition-colors"
++            >
++              <span className="text-xl">👥</span>
++              <strong className="text-sm text-blue-900">+ Add Farm Worker</strong>
++              <span className="text-xs text-blue-700">Log labour, wages &amp; supervisory roles</span>
++            </Link>
++          </div>
++
+           <Card className="flex flex-col gap-3">
+-            <h2 className="text-lg font-bold text-leaf-900">Farm Information</h2>
++            <h2 className="text-lg font-bold text-leaf-900">Farm Information &amp; Agro-Ecological Profile</h2>
+             <div className="grid gap-3 sm:grid-cols-2 text-xs">
+               <div className="rounded border border-line bg-surface p-3">
+                 <span className="text-muted">Registered State &amp; LGA:</span>
+@@ -171,31 +289,475 @@ export default async function FarmDetailPage({
+                 <p className="font-semibold text-ink">{farm.organizations?.name ?? "Individual Farm"}</p>
+               </div>
+               <div className="rounded border border-line bg-surface p-3">
+-                <span className="text-muted">Date Created:</span>
++                <span className="text-muted">Registration Date:</span>
+                 <p className="font-semibold text-ink">{new Date(farm.created_at).toLocaleDateString()}</p>
+               </div>
+               <div className="rounded border border-line bg-surface p-3">
+-                <span className="text-muted">Soil Test Records:</span>
+-                <p className="font-semibold text-ink">{soilRecords.length} lab records on file</p>
++                <span className="text-muted">Soil Tests On File:</span>
++                <p className="font-semibold text-ink">{soilRecords.length} laboratory test records</p>
++              </div>
++            </div>
++          </Card>
++        </div>
++      )}
++
++      {/* ------------------------------------------------------------------ TAB 2: CROP MANAGEMENT */}
++      {activeTab === "crops" && (
++        <div className="space-y-6">
++          <div className="flex flex-wrap items-center justify-between gap-4">
++            <div>
++              <h2 className="text-xl font-bold text-neutral-900">Crop Production Management</h2>
++              <p className="text-xs text-neutral-500">
++                Manage crop cycles, growth stages, field tasks, and harvest for {farm.name}.
++              </p>
++            </div>
++            <div className="flex items-center gap-2">
++              <Link href={`/${lang}/account/crops/map`}>
++                <Button variant="secondary" size="sm">🗺️ Field Parcel Map</Button>
++              </Link>
++              <Link href={`/${lang}/account/crops/new?farm=${farm.id}`}>
++                <Button variant="primary" size="sm">+ Plan Crop Cycle</Button>
++              </Link>
++            </div>
++          </div>
++
++          {/* Active Crop Cycles on this Farm */}
++          <Card className="flex flex-col gap-4">
++            <div className="flex items-center justify-between border-b border-line pb-3">
++              <h3 className="text-base font-bold text-leaf-900">Active Crop Cycles ({cropCycles.length})</h3>
++              <Badge className="bg-leaf-100 text-leaf-800">{cropCycles.length} Cycles on Farm</Badge>
++            </div>
++
++            {cropCycles.length === 0 ? (
++              <div className="py-8 text-center flex flex-col items-center gap-3">
++                <p className="text-sm text-neutral-500">No crop cycles planned on this farm yet.</p>
++                <Link href={`/${lang}/account/crops/new?farm=${farm.id}`}>
++                  <Button variant="primary" size="sm">+ Plan First Crop Cycle for {farm.name}</Button>
++                </Link>
++              </div>
++            ) : (
++              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
++                {cropCycles.map((c: any) => {
++                  const crop = getCropById(c.crop_id);
++                  return (
++                    <div key={c.id} className="p-4 rounded-xl border border-line bg-white flex flex-col justify-between gap-3 shadow-xs">
++                      <div>
++                        <div className="flex items-start justify-between">
++                          <div>
++                            <strong className="text-base text-neutral-900">{crop?.name ?? c.crop_id}</strong>
++                            <p className="text-xs text-forest-700 font-medium">Field: {c.plots?.name ?? "Assigned Plot"}</p>
++                          </div>
++                          <Badge className="bg-leaf-100 text-leaf-800 capitalize text-xs">
++                            {c.status}
++                          </Badge>
++                        </div>
++                        <div className="mt-3 text-xs text-neutral-600 flex flex-col gap-1">
++                          <div>Stage: <strong className="capitalize">{c.current_stage?.replace(/_/g, " ")}</strong></div>
++                          <div>Health: <strong>{Math.round(Number(c.health_score || 1) * 100)}%</strong> ({c.health_status})</div>
++                          <div>Planted: <strong>{c.planting_date}</strong></div>
++                          <div>Harvest ~ <strong>{c.expected_harvest_date}</strong></div>
++                        </div>
++                      </div>
++                      <div className="pt-2 border-t border-line flex justify-end">
++                        <Link href={`/${lang}/account/crops/${c.id}`} className="text-xs font-bold text-forest-700 hover:underline">
++                          View Crop Operations &rarr;
++                        </Link>
++                      </div>
++                    </div>
++                  );
++                })}
++              </div>
++            )}
++          </Card>
++
++          {/* Plots on this Farm */}
++          <Card className="flex flex-col gap-4">
++            <div className="flex items-center justify-between border-b border-line pb-3">
++              <h3 className="text-base font-bold text-leaf-900">Farm Plots ({plots.length})</h3>
++              <Badge className="bg-leaf-100 text-leaf-800">{plots.length} Plots</Badge>
++            </div>
++
++            {plots.length === 0 ? (
++              <p className="text-xs text-muted">No plots recorded. Register a plot below to begin field operations.</p>
++            ) : (
++              <div className="grid gap-3 sm:grid-cols-3">
++                {plots.map((p) => (
++                  <div key={p.id} className="rounded border border-line bg-surface p-3 space-y-1">
++                    <div className="flex items-center justify-between">
++                      <strong className="text-sm text-ink">{p.name}</strong>
++                      <Badge className="bg-leaf-100 text-leaf-800 text-xs">{p.area_ha ? `${p.area_ha} ha` : "— ha"}</Badge>
++                    </div>
++                    {p.notes && <p className="text-xs text-muted">{p.notes}</p>}
++                  </div>
++                ))}
++              </div>
++            )}
++
++            {/* Add Plot Form */}
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Plot to {farm.name}</h4>
++              <AddPlotForm farmId={farm.id} lang={lang} />
++            </div>
++          </Card>
++        </div>
++      )}
++
++      {/* ------------------------------------------------------------------ TAB 3: LIVESTOCK MANAGEMENT */}
++      {activeTab === "livestock" && (
++        <div className="space-y-6">
++          <div className="flex items-center justify-between">
++            <div>
++              <h2 className="text-xl font-bold text-neutral-900">Livestock &amp; Animal Husbandry</h2>
++              <p className="text-xs text-neutral-500">
++                Track poultry, cattle, small ruminants, health and housing for {farm.name}.
++              </p>
++            </div>
++            <Badge className="bg-amber-100 text-amber-800 font-bold">{totalHeadCount} Total Head</Badge>
++          </div>
++
++          <Card className="flex flex-col gap-4">
++            <div className="flex items-center justify-between border-b border-line pb-3">
++              <h3 className="text-base font-bold text-leaf-900">Livestock Groups ({livestock.length})</h3>
++            </div>
++
++            {livestock.length === 0 ? (
++              <p className="text-xs text-muted py-4 text-center">No livestock recorded for this farm yet.</p>
++            ) : (
++              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
++                {livestock.map((l: any) => (
++                  <div key={l.id} className="p-4 rounded-xl border border-line bg-white flex flex-col justify-between gap-3 shadow-xs">
++                    <div>
++                      <div className="flex items-start justify-between">
++                        <div>
++                          <strong className="text-base capitalize text-neutral-900">{l.animal_type}</strong>
++                          <p className="text-xs text-amber-800 font-semibold">{l.breed}</p>
++                        </div>
++                        <Badge
++                          className={
++                            l.health_status === "healthy"
++                              ? "bg-leaf-100 text-leaf-800"
++                              : l.health_status === "treatment"
++                              ? "bg-harvest-100 text-harvest-800"
++                              : "bg-red-100 text-red-800"
++                          }
++                        >
++                          {l.health_status}
++                        </Badge>
++                      </div>
++                      <div className="mt-3 text-xs text-neutral-600 flex flex-col gap-1">
++                        <div>Head Count: <strong className="text-sm font-bold text-neutral-900">{l.head_count}</strong></div>
++                        <div>Housing / Pen: <strong>{l.housing_location || "Open Pasture"}</strong></div>
++                        <div>Purpose: <strong className="capitalize">{l.purpose}</strong></div>
++                        <div>Identifier: <strong>{l.identifier}</strong></div>
++                      </div>
++                    </div>
++                  </div>
++                ))}
++              </div>
++            )}
++
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register Livestock / Flock</h4>
++              <AddLivestockForm farmId={farm.id} lang={lang} />
++            </div>
++          </Card>
++        </div>
++      )}
++
++      {/* ------------------------------------------------------------------ TAB 4: FARM ACCOUNT (FARM BOOKS) */}
++      {activeTab === "farm_books" && (() => {
++        const measuredHa = farm.area_ha ? Number(farm.area_ha) : 1.0;
++        const totalYieldKg = Math.round(measuredHa * 3800);
++        const estimatedRevenueKobo = Math.round(totalYieldKg * 35000);
++        const estimatedInputsKobo = Math.round(measuredHa * 18000000);
++        const estimatedLabourKobo = Math.round(measuredHa * 7000000);
++
++        const marginReport = computeFarmGrossMargin({
++          cropId: "maize",
++          plotId: plots[0]?.id ?? farm.id,
++          areaHectares: measuredHa,
++          totalYieldKg,
++          revenueKobo: totalIncomeKobo > 0 ? totalIncomeKobo : estimatedRevenueKobo,
++          costs: {
++            machineryKobo: totalSpentKobo,
++            labourKobo: estimatedLabourKobo,
++            seedsKobo: Math.round(estimatedInputsKobo * 0.3),
++            fertiliserKobo: Math.round(estimatedInputsKobo * 0.5),
++            chemicalsKobo: Math.round(estimatedInputsKobo * 0.2),
++          },
++        });
++
++        return (
++          <div className="space-y-6">
++            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
++              <Card className="flex flex-col gap-1">
++                <span className="text-[11px] font-semibold uppercase text-muted">Total Recorded Inflow</span>
++                <p className="text-2xl font-black text-leaf-800">{formatNaira(totalIncomeKobo)}</p>
++                <span className="text-[10px] text-muted">Harvest &amp; produce sales</span>
++              </Card>
++
++              <Card className="flex flex-col gap-1">
++                <span className="text-[11px] font-semibold uppercase text-muted">Total Recorded Outflow</span>
++                <p className="text-2xl font-black text-accent-700">{formatNaira(overallExpenseKobo)}</p>
++                <span className="text-[10px] text-muted">Inputs, wages &amp; mechanization</span>
++              </Card>
++
++              <Card className="flex flex-col gap-1">
++                <span className="text-[11px] font-semibold uppercase text-muted">Net Operating Cash</span>
++                <p className={`text-2xl font-black ${netOperatingMarginKobo >= 0 ? "text-leaf-800" : "text-danger"}`}>
++                  {formatNaira(netOperatingMarginKobo)}
++                </p>
++                <span className="text-[10px] text-muted">Ledger gross position</span>
++              </Card>
++
++              <Card className="flex flex-col gap-1">
++                <span className="text-[11px] font-semibold uppercase text-muted">Direct Mechanization</span>
++                <p className="text-2xl font-black text-ink">{formatNaira(totalSpentKobo)}</p>
++                <span className="text-[10px] text-muted">Across {jobs.length} service requests</span>
++              </Card>
++            </div>
++
++            {/* Enterprise Gross Margin Card */}
++            <Card className="flex flex-col gap-4">
++              <div className="flex items-center justify-between border-b border-line pb-3">
++                <div>
++                  <h3 className="text-base font-bold text-leaf-900">Enterprise Gross Margin Analysis</h3>
++                  <p className="text-xs text-muted">Automated agricultural economics per hectare.</p>
++                </div>
++                <Badge className="bg-leaf-100 text-leaf-800">Farm Books Engine</Badge>
++              </div>
++
++              <div className="grid gap-3 sm:grid-cols-3 text-xs">
++                <div className="p-3 rounded bg-surface border border-line">
++                  <span className="text-muted">Gross Margin / Hectare:</span>
++                  <p className="text-lg font-bold text-leaf-800 mt-1">{formatNaira(marginReport.grossMarginPerHectareKobo)}</p>
++                </div>
++                <div className="p-3 rounded bg-surface border border-line">
++                  <span className="text-muted">Direct Cost / kg produced:</span>
++                  <p className="text-lg font-bold text-ink mt-1">{formatNaira(marginReport.costOfProductionPerKgKobo)}</p>
++                </div>
++                <div className="p-3 rounded bg-surface border border-line">
++                  <span className="text-muted">Return on Investment (ROI):</span>
++                  <p className="text-lg font-bold text-harvest-800 mt-1">{marginReport.roiPercentage}%</p>
++                </div>
++              </div>
++            </Card>
++
++            {/* Transaction Ledger Table */}
++            <Card className="flex flex-col gap-4">
++              <div className="flex items-center justify-between border-b border-line pb-3">
++                <h3 className="text-base font-bold text-leaf-900">Financial Ledger ({financials.length})</h3>
++              </div>
++
++              {financials.length === 0 ? (
++                <p className="text-xs text-muted py-4 text-center">No ledger entries recorded yet. Record your first transaction below.</p>
++              ) : (
++                <div className="overflow-x-auto">
++                  <table className="w-full text-xs text-left">
++                    <thead className="bg-neutral-50 text-neutral-600 border-b">
++                      <tr>
++                        <th className="p-2.5">Date</th>
++                        <th className="p-2.5">Type</th>
++                        <th className="p-2.5">Category</th>
++                        <th className="p-2.5">Description</th>
++                        <th className="p-2.5">Method</th>
++                        <th className="p-2.5 text-right">Amount (₦)</th>
++                      </tr>
++                    </thead>
++                    <tbody className="divide-y divide-neutral-100">
++                      {financials.map((f: any) => (
++                        <tr key={f.id} className="hover:bg-neutral-50/50">
++                          <td className="p-2.5">{f.transaction_date}</td>
++                          <td className="p-2.5 font-bold">
++                            <span className={f.type === "income" ? "text-leaf-700" : "text-red-700"}>
++                              {f.type.toUpperCase()}
++                            </span>
++                          </td>
++                          <td className="p-2.5 capitalize">{f.category?.replace(/_/g, " ")}</td>
++                          <td className="p-2.5">{f.description}</td>
++                          <td className="p-2.5 capitalize">{f.payment_method?.replace(/_/g, " ")}</td>
++                          <td className="p-2.5 text-right font-bold">
++                            <span className={f.type === "income" ? "text-leaf-800" : "text-neutral-900"}>
++                              {f.type === "income" ? "+" : "-"}{formatNaira(f.amount_kobo)}
++                            </span>
++                          </td>
++                        </tr>
++                      ))}
++                    </tbody>
++                  </table>
++                </div>
++              )}
++
++              <div className="border-t border-line pt-4">
++                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Transaction in Farm Books</h4>
++                <RecordFarmTransactionForm
++                  farmId={farm.id}
++                  cropCycles={cropCycles.map((c: any) => ({
++                    id: c.id,
++                    cropName: `${getCropById(c.crop_id)?.name ?? c.crop_id} (${c.plots?.name ?? "Field"})`,
++                  }))}
++                  lang={lang}
++                />
+               </div>
++            </Card>
++          </div>
++        );
++      })()}
++
++      {/* ------------------------------------------------------------------ TAB 5: WORKERS MANAGEMENT */}
++      {activeTab === "workers" && (
++        <div className="space-y-6">
++          <div className="flex items-center justify-between">
++            <div>
++              <h2 className="text-xl font-bold text-neutral-900">Farm Workers &amp; Labour Directory</h2>
++              <p className="text-xs text-neutral-500">
++                Permanent staff, machine operators, seasonal scouts, and daily wage records.
++              </p>
++            </div>
++            <Badge className="bg-leaf-100 text-leaf-800">{workers.length} Personnel</Badge>
++          </div>
++
++          <Card className="flex flex-col gap-4">
++            <div className="flex items-center justify-between border-b border-line pb-3">
++              <h3 className="text-base font-bold text-leaf-900">Worker Directory ({workers.length})</h3>
++            </div>
++
++            {workers.length === 0 ? (
++              <p className="text-xs text-muted py-4 text-center">No workers registered on this farm yet.</p>
++            ) : (
++              <div className="overflow-x-auto">
++                <table className="w-full text-xs text-left">
++                  <thead className="bg-neutral-50 text-neutral-600 border-b">
++                    <tr>
++                      <th className="p-2.5">Full Name</th>
++                      <th className="p-2.5">Phone</th>
++                      <th className="p-2.5">Role</th>
++                      <th className="p-2.5">Employment</th>
++                      <th className="p-2.5">Daily Wage</th>
++                      <th className="p-2.5">Status</th>
++                    </tr>
++                  </thead>
++                  <tbody className="divide-y divide-neutral-100">
++                    {workers.map((w: any) => (
++                      <tr key={w.id} className="hover:bg-neutral-50/50">
++                        <td className="p-2.5 font-bold text-neutral-900">{w.full_name}</td>
++                        <td className="p-2.5">{w.phone || "—"}</td>
++                        <td className="p-2.5 capitalize">{w.role?.replace(/_/g, " ")}</td>
++                        <td className="p-2.5 capitalize">{w.employment_type?.replace(/_/g, " ")}</td>
++                        <td className="p-2.5 font-semibold">{formatNaira(w.daily_wage_kobo)}/day</td>
++                        <td className="p-2.5">
++                          <Badge className="bg-leaf-100 text-leaf-800 capitalize text-xs">{w.status}</Badge>
++                        </td>
++                      </tr>
++                    ))}
++                  </tbody>
++                </table>
++              </div>
++            )}
++
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register New Farm Worker</h4>
++              <AddFarmWorkerForm farmId={farm.id} lang={lang} />
+             </div>
+           </Card>
+         </div>
+       )}
+ 
+-      {/* TAB: OPERATIONAL MAP & BOUNDARY */}
+-      {activeTab === "map" && (
++      {/* ------------------------------------------------------------------ TAB 6: INVENTORY MANAGEMENT */}
++      {activeTab === "inventory" && (
+         <div className="space-y-6">
++          <div className="flex items-center justify-between">
++            <div>
++              <h2 className="text-xl font-bold text-neutral-900">Farm Inventory &amp; Stores</h2>
++              <p className="text-xs text-neutral-500">
++                Seeds, fertilisers, agrochemicals, animal feed, and harvest stock in storage.
++              </p>
++            </div>
++            <Badge className="bg-leaf-100 text-leaf-800">{inventory.length} Stock Items</Badge>
++          </div>
++
++          {lowStockItems.length > 0 && (
++            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-center justify-between">
++              <div>
++                <strong>Reorder Alert:</strong> {lowStockItems.length} items at or below reorder threshold (
++                {lowStockItems.map((i: any) => i.item_name).join(", ")})
++              </div>
++            </div>
++          )}
++
++          <Card className="flex flex-col gap-4">
++            <div className="flex items-center justify-between border-b border-line pb-3">
++              <h3 className="text-base font-bold text-leaf-900">Current Inventory ({inventory.length})</h3>
++            </div>
++
++            {inventory.length === 0 ? (
++              <p className="text-xs text-muted py-4 text-center">No inventory items recorded yet.</p>
++            ) : (
++              <div className="overflow-x-auto">
++                <table className="w-full text-xs text-left">
++                  <thead className="bg-neutral-50 text-neutral-600 border-b">
++                    <tr>
++                      <th className="p-2.5">Item Name</th>
++                      <th className="p-2.5">Category</th>
++                      <th className="p-2.5">Quantity</th>
++                      <th className="p-2.5">Reorder At</th>
++                      <th className="p-2.5">Location</th>
++                      <th className="p-2.5">Unit Cost</th>
++                    </tr>
++                  </thead>
++                  <tbody className="divide-y divide-neutral-100">
++                    {inventory.map((item: any) => (
++                      <tr key={item.id} className="hover:bg-neutral-50/50">
++                        <td className="p-2.5 font-bold text-neutral-900">{item.item_name}</td>
++                        <td className="p-2.5 capitalize">{item.category}</td>
++                        <td className="p-2.5 font-semibold">
++                          {item.quantity} {item.unit}
++                        </td>
++                        <td className="p-2.5 text-neutral-500">
++                          {item.reorder_threshold} {item.unit}
++                        </td>
++                        <td className="p-2.5">{item.storage_location || "Main Store"}</td>
++                        <td className="p-2.5 font-semibold">{formatNaira(item.unit_cost_kobo)}</td>
++                      </tr>
++                    ))}
++                  </tbody>
++                </table>
++              </div>
++            )}
++
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Inventory Item</h4>
++              <AddInventoryItemForm farmId={farm.id} lang={lang} />
++            </div>
++          </Card>
++        </div>
++      )}
++
++      {/* ------------------------------------------------------------------ TAB 7: FARM RECORDS */}
++      {activeTab === "records" && (
++        <div className="space-y-6">
++          <div className="flex items-center justify-between">
++            <div>
++              <h2 className="text-xl font-bold text-neutral-900">Farm Records &amp; Cadastral Documentation</h2>
++              <p className="text-xs text-neutral-500">
++                Soil test analyses, PostGIS boundary polygon, land titles, water sources, and inspection reports.
++              </p>
++            </div>
++            <Badge className="bg-leaf-100 text-leaf-800">
++              {soilRecords.length + generalRecords.length} Records
++            </Badge>
++          </div>
++
++          {/* 1. Cadastral Boundary */}
+           <Card className="flex flex-col gap-4 border border-line">
+             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+               <div>
+-                <h2 className="text-lg font-bold text-leaf-900">PostGIS Boundary Polygon &amp; Geofence</h2>
+-                <p className="text-xs text-muted">Real geometric boundary stored in PostgreSQL geography column.</p>
++                <h3 className="text-base font-bold text-leaf-900">PostGIS Boundary Polygon &amp; Geofence</h3>
++                <p className="text-xs text-muted">Stored as PostGIS geography column (SRID 4326).</p>
+               </div>
+               <Badge className="bg-leaf-100 text-leaf-800">EPSG:4326 PostGIS</Badge>
+             </div>
+ 
+-            {/* Visualizer */}
+             <div className="relative aspect-[16/9] w-full rounded-lg bg-leaf-950 p-6 text-white overflow-hidden shadow-inner flex flex-col justify-between">
+               <svg viewBox="0 0 800 450" className="absolute inset-0 h-full w-full">
+                 <defs>
+@@ -204,8 +766,6 @@ export default async function FarmDetailPage({
+                   </pattern>
+                 </defs>
+                 <rect width="100%" height="100%" fill="url(#soilGrid)" />
+-
+-                {/* Farm Polygon */}
+                 <polygon
+                   points="240,90 620,110 590,340 190,310"
+                   fill="rgba(76, 175, 80, 0.25)"
+@@ -216,8 +776,6 @@ export default async function FarmDetailPage({
+                 <text x="360" y="210" fill="#ffffff" fontSize="18" fontWeight="bold" opacity="0.9">
+                   {farm.name.toUpperCase()} ({farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} HA` : "PARCEL"})
+                 </text>
+-
+-                {/* Gate Pin */}
+                 <g>
+                   <circle cx="210" cy="300" r="8" fill="#F44336" stroke="#ffffff" strokeWidth="2" />
+                   <text x="225" y="305" fill="#ffffff" fontSize="13" fontWeight="bold">
+@@ -233,125 +791,92 @@ export default async function FarmDetailPage({
+               </div>
+             </div>
+ 
+-            {/* Boundary Update Form (Active Database Operation) */}
+             <div className="border-t border-line pt-4">
+-              <h3 className="text-sm font-bold text-leaf-900 mb-2">Update Boundary Coordinates</h3>
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">Update Boundary Coordinates</h4>
+               <UpdateBoundaryForm farmId={farm.id} lang={lang} />
+             </div>
+           </Card>
+-        </div>
+-      )}
+-
+-      {/* TAB: PLOTS & CROPS (Active Database Operation) */}
+-      {activeTab === "crops" && (
+-        <div className="space-y-6">
+-          {/* Operations Schedule & Calendar Sync */}
+-          {plots.length > 0 && (
+-            <FarmAgronomyPlanner
+-              farmId={farm.id}
+-              farmName={farm.name}
+-              farmZone={farm.zone}
+-              plots={plots.map((p) => ({ id: p.id, name: p.name, area_ha: p.area_ha }))}
+-              soilRecords={soilRecords.map((s) => ({
+-                id: s.id,
+-                plot_id: s.plot_id,
+-                soil_type: s.soil_type,
+-                ph: s.ph,
+-                organic_matter_pct: s.organic_matter_pct,
+-                nitrogen_pct: s.nitrogen_pct,
+-                phosphorus_ppm: s.phosphorus_ppm,
+-                potassium_cmol_kg: s.potassium_cmol_kg,
+-                tested_on: s.tested_on,
+-              }))}
+-              lang={lang}
+-            />
+-          )}
+ 
++          {/* 2. Soil Analysis */}
+           <Card className="flex flex-col gap-4">
+             <div className="flex items-center justify-between border-b border-line pb-3">
+-              <h2 className="text-lg font-bold text-leaf-900">Recorded Farm Plots</h2>
+-              <Badge className="bg-leaf-100 text-leaf-800">{plots.length} Plots in Database</Badge>
++              <h3 className="text-base font-bold text-leaf-900">Laboratory Soil Test Records ({soilRecords.length})</h3>
+             </div>
+ 
+-            {plots.length === 0 ? (
+-              <p className="text-sm text-muted">No plots recorded for this farm yet. Create one below to begin field tracking.</p>
++            {soilRecords.length === 0 ? (
++              <p className="text-xs text-muted py-2">No soil tests on file for this farm yet.</p>
+             ) : (
+-              <div className="grid gap-3 sm:grid-cols-2">
+-                {plots.map((p) => (
+-                  <div key={p.id} className="rounded border border-line bg-surface p-4 space-y-1">
++              <div className="divide-y divide-line">
++                {soilRecords.map((s: any) => (
++                  <div key={s.id} className="py-3 space-y-1">
+                     <div className="flex items-center justify-between">
+-                      <p className="font-bold text-sm text-ink">{p.name}</p>
+-                      <Badge className="bg-leaf-100 text-leaf-800">{p.area_ha ? `${p.area_ha} ha` : "Area not set"}</Badge>
++                      <strong className="text-sm text-ink">Soil Test: {s.soil_type || "Standard"}</strong>
++                      <span className="text-xs text-muted">Tested on: {s.tested_on}</span>
+                     </div>
+-                    {p.notes && <p className="text-xs text-muted">{p.notes}</p>}
+-                    <p className="text-[11px] text-muted">Recorded on {new Date(p.created_at).toLocaleDateString()}</p>
++                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
++                      <div className="rounded bg-earth-50 p-2">pH: <strong>{s.ph ?? "—"}</strong></div>
++                      <div className="rounded bg-earth-50 p-2">Nitrogen: <strong>{s.nitrogen_pct ? `${s.nitrogen_pct}%` : "—"}</strong></div>
++                      <div className="rounded bg-earth-50 p-2">Phosphorus: <strong>{s.phosphorus_ppm ? `${s.phosphorus_ppm} ppm` : "—"}</strong></div>
++                      <div className="rounded bg-earth-50 p-2">Potassium: <strong>{s.potassium_cmol_kg ? `${s.potassium_cmol_kg} cmol` : "—"}</strong></div>
++                    </div>
++                    {s.lab_name && <p className="text-xs text-muted">Lab: {s.lab_name}</p>}
+                   </div>
+                 ))}
+               </div>
+             )}
+-          </Card>
+ 
+-          {/* Add Plot Form */}
+-          <Card className="flex flex-col gap-3">
+-            <h2 className="text-lg font-bold text-leaf-900">+ Add New Plot to {farm.name}</h2>
+-            <AddPlotForm farmId={farm.id} lang={lang} />
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Laboratory Soil Analysis</h4>
++              <AddSoilRecordForm plots={plots.map((p) => ({ id: p.id, name: p.name }))} lang={lang} />
++            </div>
+           </Card>
+-        </div>
+-      )}
+ 
+-      {/* TAB: SOIL RECORDS (Active Database Operation) */}
+-      {activeTab === "soil" && (
+-        <div className="space-y-6">
++          {/* 3. General Records & Tenure Documents */}
+           <Card className="flex flex-col gap-4">
+             <div className="flex items-center justify-between border-b border-line pb-3">
+-              <h2 className="text-lg font-bold text-leaf-900">Laboratory Soil Test Records</h2>
+-              <Badge className="bg-leaf-100 text-leaf-800">{soilRecords.length} Records in Database</Badge>
++              <h3 className="text-base font-bold text-leaf-900">Land Titles, Water Sources &amp; Certifications ({generalRecords.length})</h3>
+             </div>
+ 
+-            {soilRecords.length === 0 ? (
+-              <p className="text-sm text-muted">No laboratory soil tests recorded for this farm yet.</p>
++            {generalRecords.length === 0 ? (
++              <p className="text-xs text-muted py-2">No title or lease documents logged.</p>
+             ) : (
+               <div className="divide-y divide-line">
+-                {soilRecords.map((s) => (
+-                  <div key={s.id} className="py-3 space-y-1">
+-                    <div className="flex items-center justify-between">
+-                      <p className="font-bold text-sm text-ink">Soil Test: {s.soil_type || "Standard"}</p>
+-                      <span className="text-xs text-muted">Tested on: {s.tested_on}</span>
++                {generalRecords.map((r: any) => (
++                  <div key={r.id} className="py-2.5 flex items-center justify-between">
++                    <div>
++                      <strong className="text-sm text-ink">{r.title}</strong>
++                      <p className="text-xs text-muted capitalize">{r.record_type?.replace(/_/g, " ")} • {r.recorded_date}</p>
++                      {r.details && <p className="text-xs text-neutral-600 mt-1">{r.details}</p>}
+                     </div>
+-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
+-                      <div className="rounded bg-earth-50 p-2">pH: <strong>{s.ph ?? "—"}</strong></div>
+-                      <div className="rounded bg-earth-50 p-2">Nitrogen: <strong>{s.nitrogen_pct ? `${s.nitrogen_pct}%` : "—"}</strong></div>
+-                      <div className="rounded bg-earth-50 p-2">Phosphorus: <strong>{s.phosphorus_ppm ? `${s.phosphorus_ppm} ppm` : "—"}</strong></div>
+-                      <div className="rounded bg-earth-50 p-2">Potassium: <strong>{s.potassium_cmol_kg ? `${s.potassium_cmol_kg} cmol` : "—"}</strong></div>
+-                    </div>
+-                    {s.lab_name && <p className="text-xs text-muted">Lab: {s.lab_name}</p>}
+-                    {s.notes && <p className="text-xs text-muted">{s.notes}</p>}
++                    <Badge className="bg-leaf-100 text-leaf-800 capitalize text-xs">Verified</Badge>
+                   </div>
+                 ))}
+               </div>
+             )}
+-          </Card>
+ 
+-          {/* Add Soil Record Form */}
+-          <Card className="flex flex-col gap-3">
+-            <h2 className="text-lg font-bold text-leaf-900">+ Record New Soil Analysis</h2>
+-            <AddSoilRecordForm plots={plots.map((p) => ({ id: p.id, name: p.name }))} lang={lang} />
++            <div className="border-t border-line pt-4">
++              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Save New Farm Record / Agreement</h4>
++              <AddFarmRecordForm farmId={farm.id} lang={lang} />
++            </div>
+           </Card>
+         </div>
+       )}
+ 
+-      {/* TAB: SERVICE JOBS */}
++      {/* ------------------------------------------------------------------ TAB 8: SERVICE JOBS */}
+       {activeTab === "jobs" && (
+         <Card className="flex flex-col gap-4">
+           <div className="flex items-center justify-between border-b border-line pb-3">
+-            <h2 className="text-lg font-bold text-leaf-900">Service Jobs &amp; Mechanization Requests</h2>
+-            <Link href={`/${lang}/account/bookings/new`}>
+-              <Button variant="primary" size="sm">+ New Booking</Button>
++            <div>
++              <h2 className="text-lg font-bold text-leaf-900">Service Jobs &amp; Mechanization Requests</h2>
++              <p className="text-xs text-muted">Tractor plowing, harrowing, planting and spraying jobs requested for this farm.</p>
++            </div>
++            <Link href={`/${lang}/account/bookings/new?farm=${farm.id}`}>
++              <Button variant="primary" size="sm">+ Request Service for Farm</Button>
+             </Link>
+           </div>
+ 
+           {jobs.length === 0 ? (
+-            <p className="text-sm text-muted">No service requests recorded for this farm in the bookings table.</p>
++            <p className="text-sm text-muted py-4 text-center">No service requests recorded for this farm in the bookings table.</p>
+           ) : (
+             <div className="divide-y divide-line">
+               {jobs.map((j) => (
+@@ -372,93 +897,6 @@ export default async function FarmDetailPage({
+           )}
+         </Card>
+       )}
+-
+-      {/* TAB: FARM BOOKS (LEDGER & GROSS MARGIN) */}
+-      {activeTab === "farm_books" && (() => {
+-        const measuredHa = farm.area_ha ? Number(farm.area_ha) : 1.0;
+-        const totalYieldKg = Math.round(measuredHa * 3800); // 3.8 t/ha
+-        const estimatedRevenueKobo = Math.round(totalYieldKg * 35000); // ₦350/kg
+-        const estimatedInputsKobo = Math.round(measuredHa * 18000000); // ₦180,000/ha
+-        const estimatedLabourKobo = Math.round(measuredHa * 7000000); // ₦70,000/ha
+-
+-        const marginReport = computeFarmGrossMargin({
+-          cropId: "maize",
+-          plotId: plots[0]?.id ?? farm.id,
+-          areaHectares: measuredHa,
+-          totalYieldKg,
+-          revenueKobo: estimatedRevenueKobo,
+-          costs: {
+-            machineryKobo: totalSpentKobo,
+-            labourKobo: estimatedLabourKobo,
+-            seedsKobo: Math.round(estimatedInputsKobo * 0.3),
+-            fertiliserKobo: Math.round(estimatedInputsKobo * 0.5),
+-            chemicalsKobo: Math.round(estimatedInputsKobo * 0.2),
+-          },
+-        });
+-
+-        return (
+-          <div className="space-y-6">
+-            <Card className="flex flex-col gap-4">
+-              <div className="flex items-center justify-between border-b border-line pb-3">
+-                <div>
+-                  <h2 className="text-lg font-bold text-leaf-900">Enterprise Gross Margin &amp; Cost Analysis</h2>
+-                  <p className="text-xs text-muted">Financial performance calculated per hectare across mechanization, inputs, and labour.</p>
+-                </div>
+-                <Badge className="bg-leaf-100 text-leaf-800 text-xs">Farm Books Engine</Badge>
+-              </div>
+-
+-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+-                <div className="rounded border border-line bg-surface p-3">
+-                  <p className="text-[11px] font-semibold uppercase text-muted">Projected Revenue</p>
+-                  <p className="text-xl font-black text-leaf-900 mt-1">{formatNaira(marginReport.revenueKobo)}</p>
+-                  <p className="text-[10px] text-muted">{marginReport.totalYieldKg.toLocaleString()} kg total yield</p>
+-                </div>
+-                <div className="rounded border border-line bg-surface p-3">
+-                  <p className="text-[11px] font-semibold uppercase text-muted">Direct Costs (All)</p>
+-                  <p className="text-xl font-black text-accent-700 mt-1">{formatNaira(marginReport.totalDirectCostKobo)}</p>
+-                  <p className="text-[10px] text-muted">Machinery: {formatNaira(totalSpentKobo)}</p>
+-                </div>
+-                <div className="rounded border border-line bg-surface p-3">
+-                  <p className="text-[11px] font-semibold uppercase text-muted">Gross Margin / Ha</p>
+-                  <p className="text-xl font-black text-leaf-800 mt-1">{formatNaira(marginReport.grossMarginPerHectareKobo)}</p>
+-                  <p className="text-[10px] text-muted">Total: {formatNaira(marginReport.grossMarginKobo)}</p>
+-                </div>
+-                <div className="rounded border border-line bg-surface p-3">
+-                  <p className="text-[11px] font-semibold uppercase text-muted">Estimated ROI</p>
+-                  <p className="text-xl font-black text-harvest-800 mt-1">{marginReport.roiPercentage}%</p>
+-                  <p className="text-[10px] text-muted">Cost/kg: {formatNaira(marginReport.costOfProductionPerKgKobo)}</p>
+-                </div>
+-              </div>
+-            </Card>
+-
+-            <Card className="flex flex-col gap-4">
+-              <div className="flex items-center justify-between border-b border-line pb-3">
+-                <div>
+-                  <h2 className="text-base font-bold text-leaf-900">Recorded Service Outflow Ledger</h2>
+-                  <p className="text-xs text-muted">Direct aggregation of service payments, escrow locks, and disbursements for this farm.</p>
+-                </div>
+-                <p className="text-sm font-extrabold text-leaf-900">{formatNaira(totalSpentKobo)}</p>
+-              </div>
+-
+-              {jobs.length === 0 ? (
+-                <p className="text-sm text-muted">No transactions on record for this farm.</p>
+-              ) : (
+-                <div className="divide-y divide-line text-xs">
+-                  {jobs.map((j) => (
+-                    <div key={j.id} className="py-2.5 flex items-center justify-between">
+-                      <div>
+-                        <span className="font-semibold text-ink">{j.listing_title}</span>
+-                        <span className="text-muted block text-[11px]">{j.job_date} • {j.status}</span>
+-                      </div>
+-                      <span className="font-bold text-ink">-{formatNaira(j.total_kobo)}</span>
+-                    </div>
+-                  ))}
+-                </div>
+-              )}
+-            </Card>
+-          </div>
+-        );
+-      })()}
+     </div>
+   );
+ }
+diff --git a/apps/web/src/app/[lang]/account/farms/page.tsx b/apps/web/src/app/[lang]/account/farms/page.tsx
+index d93df2e..167d7df 100644
+--- a/apps/web/src/app/[lang]/account/farms/page.tsx
++++ b/apps/web/src/app/[lang]/account/farms/page.tsx
+@@ -51,13 +51,51 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
+                     <p className="text-xs font-semibold text-node-600">{farm.organizations.name}</p>
+                   )}
+                 </div>
+-                <div className="border-t border-line pt-2">
++                <div className="border-t border-line pt-3 flex flex-col gap-2">
+                   <a
+                     href={`/${lang}/account/farms/${farm.id}`}
+-                    className="inline-flex items-center justify-center rounded-md bg-leaf-100 px-3 py-1.5 text-xs font-bold text-leaf-800 hover:bg-leaf-200 transition-colors w-full"
++                    className="inline-flex items-center justify-center rounded-md bg-leaf-600 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-700 transition-colors w-full"
+                   >
+-                    View Farm (Map &amp; Operations) &rarr;
++                    Open Farm Enterprise &rarr;
+                   </a>
++                  <div className="flex flex-wrap gap-1 text-[11px]">
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=crops`}
++                      className="px-2 py-1 rounded bg-leaf-50 hover:bg-leaf-100 text-leaf-800 font-medium"
++                    >
++                      🌽 Crops
++                    </a>
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=livestock`}
++                      className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium"
++                    >
++                      🐄 Livestock
++                    </a>
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
++                      className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium"
++                    >
++                      💰 Farm Account
++                    </a>
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=workers`}
++                      className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-800 font-medium"
++                    >
++                      👥 Workers
++                    </a>
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=inventory`}
++                      className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium"
++                    >
++                      📦 Inventory
++                    </a>
++                    <a
++                      href={`/${lang}/account/farms/${farm.id}?tab=records`}
++                      className="px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium"
++                    >
++                      📁 Records
++                    </a>
++                  </div>
+                 </div>
+               </Card>
+             </li>
+diff --git a/apps/web/src/components/account/account-nav.tsx b/apps/web/src/components/account/account-nav.tsx
+index 5d3e662..f0cff3c 100644
+--- a/apps/web/src/components/account/account-nav.tsx
++++ b/apps/web/src/components/account/account-nav.tsx
+@@ -40,8 +40,8 @@ export function AccountNav({
+   if (activeWorkspace === "farmer") {
+     items = [
+       { href: `${base}?${wsParam}`, label: "Overview", icon: "🏠" },
+-      { href: `${base}/crops?${wsParam}`, label: "Crop Management", icon: "🌽" },
+       { href: `${base}/farms?${wsParam}`, label: "My Farms", icon: "🌱" },
++      { href: `${base}/crops?${wsParam}`, label: "All Crops", icon: "🌽" },
+       { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
+       { href: `${base}/bookings?${wsParam}`, label: "My Jobs", icon: "🚜" },
+       { href: `${base}/bookings/new?${wsParam}`, label: "Request Service", icon: "➕" },
+diff --git a/apps/web/src/components/account/farm-operations-forms.tsx b/apps/web/src/components/account/farm-operations-forms.tsx
+index f374ce8..2b46631 100644
+--- a/apps/web/src/components/account/farm-operations-forms.tsx
++++ b/apps/web/src/components/account/farm-operations-forms.tsx
+@@ -1,11 +1,21 @@
+ "use client";
+ 
+ import { useActionState } from "react";
+-import { addPlot, addSoilRecord, updateFarmBoundary, type ActionState } from "@/actions/farm-operations";
++import {
++  addPlot,
++  addSoilRecord,
++  updateFarmBoundary,
++  addLivestockAction,
++  addFarmWorkerAction,
++  addInventoryItemAction,
++  recordFarmTransactionAction,
++  addFarmRecordAction,
++  type ActionState,
++} from "@/actions/farm-operations";
+ import { Alert, Button, Input, Select } from "@/components/ui";
+ 
+ export function AddPlotForm({ farmId, lang }: { farmId: string; lang: string }) {
+-  const [state, formAction, pending] = useActionState(addPlot, {});
++  const [state, formAction, pending] = useActionState(addPlot, {} as ActionState);
+ 
+   return (
+     <form action={formAction} className="flex flex-col gap-3">
+@@ -47,7 +57,7 @@ export function AddSoilRecordForm({
+   plots: Array<{ id: string; name: string }>;
+   lang: string;
+ }) {
+-  const [state, formAction, pending] = useActionState(addSoilRecord, {});
++  const [state, formAction, pending] = useActionState(addSoilRecord, {} as ActionState);
+ 
+   if (plots.length === 0) {
+     return (
+@@ -137,7 +147,7 @@ export function UpdateBoundaryForm({
+   currentBoundary?: string | null;
+   lang: string;
+ }) {
+-  const [state, formAction, pending] = useActionState(updateFarmBoundary, {});
++  const [state, formAction, pending] = useActionState(updateFarmBoundary, {} as ActionState);
+ 
+   return (
+     <form action={formAction} className="flex flex-col gap-3">
+@@ -171,3 +181,357 @@ export function UpdateBoundaryForm({
+     </form>
+   );
+ }
++
++export function AddLivestockForm({ farmId, lang }: { farmId: string; lang: string }) {
++  const [state, formAction, pending] = useActionState(addLivestockAction, {} as ActionState);
++
++  return (
++    <form action={formAction} className="flex flex-col gap-3">
++      <input type="hidden" name="farm_id" value={farmId} />
++      <input type="hidden" name="lang" value={lang} />
++
++      {state.error && <Alert tone="danger">{state.error}</Alert>}
++      {state.ok && <Alert tone="success">Livestock group registered successfully in database.</Alert>}
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Animal Type *</span>
++          <Select name="animal_type" defaultValue="cattle">
++            <option value="cattle">Cattle / Beef & Dairy</option>
++            <option value="poultry">Poultry / Layers & Broilers</option>
++            <option value="goat">Goat (Red Sokoto / West African Dwarf)</option>
++            <option value="sheep">Sheep (Yankasa / Balami)</option>
++            <option value="pig">Pig</option>
++            <option value="fish">Fish (Catfish / Tilapia)</option>
++            <option value="snail">Snail (Archachatina)</option>
++            <option value="rabbit">Rabbit</option>
++            <option value="other">Other</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Breed / Strain *</span>
++          <Input name="breed" required placeholder="e.g. White Fulani, Noiler, Cobb 500" maxLength={80} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Identifier / Tag / Pen *</span>
++          <Input name="identifier" required placeholder="e.g. Pen A, Herd 1, Flock B" maxLength={80} />
++        </label>
++      </div>
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Head Count / Stock Quantity *</span>
++          <Input name="head_count" type="number" defaultValue="50" min="0" required />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Housing Location</span>
++          <Input name="housing_location" placeholder="e.g. East Brooder House, Pasture North" maxLength={120} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Production Purpose</span>
++          <Select name="purpose" defaultValue="meat">
++            <option value="meat">Meat / Finishing</option>
++            <option value="eggs">Egg Production</option>
++            <option value="dairy">Milk / Dairy</option>
++            <option value="breeding">Breeding Stock</option>
++            <option value="multi">Dual / Multi Purpose</option>
++          </Select>
++        </label>
++      </div>
++
++      <div className="pt-1">
++        <Button type="submit" variant="primary" disabled={pending}>
++          {pending ? "Registering Livestock..." : "+ Register Livestock / Flock"}
++        </Button>
++      </div>
++    </form>
++  );
++}
++
++export function AddFarmWorkerForm({ farmId, lang }: { farmId: string; lang: string }) {
++  const [state, formAction, pending] = useActionState(addFarmWorkerAction, {} as ActionState);
++
++  return (
++    <form action={formAction} className="flex flex-col gap-3">
++      <input type="hidden" name="farm_id" value={farmId} />
++      <input type="hidden" name="lang" value={lang} />
++
++      {state.error && <Alert tone="danger">{state.error}</Alert>}
++      {state.ok && <Alert tone="success">Farm worker recorded in database.</Alert>}
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Full Name *</span>
++          <Input name="full_name" required placeholder="e.g. Babatunde Alabi" maxLength={120} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Phone Number</span>
++          <Input name="phone" placeholder="e.g. 08031234567" maxLength={30} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Assigned Role *</span>
++          <Select name="role" defaultValue="field_worker">
++            <option value="farm_manager">Farm Manager / Supervisor</option>
++            <option value="tractor_operator">Tractor / Machine Operator</option>
++            <option value="field_worker">Field Operations / Labourer</option>
++            <option value="scout">Crop Scout / Agronomy Lead</option>
++            <option value="harvester">Harvester</option>
++            <option value="livestock_keeper">Livestock Keeper / Herder</option>
++            <option value="security">Security / Farm Guard</option>
++            <option value="casual">Casual / Day Labourer</option>
++          </Select>
++        </label>
++      </div>
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Employment Agreement</span>
++          <Select name="employment_type" defaultValue="permanent">
++            <option value="permanent">Permanent / Full-Time</option>
++            <option value="seasonal">Seasonal Contract</option>
++            <option value="daily_casual">Daily Casual / Daily Paid</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Daily Wage (₦)</span>
++          <Input name="daily_wage_ngn" type="number" defaultValue="4500" min="0" placeholder="e.g. 4500" />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Emergency Contact</span>
++          <Input name="emergency_contact" placeholder="Next of kin / phone" maxLength={120} />
++        </label>
++      </div>
++
++      <div className="pt-1">
++        <Button type="submit" variant="primary" disabled={pending}>
++          {pending ? "Adding Worker..." : "+ Add Farm Worker"}
++        </Button>
++      </div>
++    </form>
++  );
++}
++
++export function AddInventoryItemForm({ farmId, lang }: { farmId: string; lang: string }) {
++  const [state, formAction, pending] = useActionState(addInventoryItemAction, {} as ActionState);
++
++  return (
++    <form action={formAction} className="flex flex-col gap-3">
++      <input type="hidden" name="farm_id" value={farmId} />
++      <input type="hidden" name="lang" value={lang} />
++
++      {state.error && <Alert tone="danger">{state.error}</Alert>}
++      {state.ok && <Alert tone="success">Inventory item recorded in database.</Alert>}
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Item / Product Name *</span>
++          <Input name="item_name" required placeholder="e.g. NPK 15-15-15, SC510 Seed" maxLength={120} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Category *</span>
++          <Select name="category" defaultValue="fertiliser">
++            <option value="fertiliser">Fertiliser</option>
++            <option value="seed">Certified Seeds / Planting Material</option>
++            <option value="chemical">NAFDAC Cleared Agrochemicals</option>
++            <option value="feed">Livestock / Fish Feed</option>
++            <option value="tool_equipment">Hand Tools & Equipment</option>
++            <option value="harvest_produce">Harvested Stored Produce</option>
++            <option value="fuel">Diesel / Petrol / Fuel</option>
++            <option value="other">Other Supply</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Storage Location</span>
++          <Input name="storage_location" placeholder="e.g. Store Room 1, Silo 3" maxLength={120} />
++        </label>
++      </div>
++
++      <div className="grid gap-3 sm:grid-cols-4">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Stock Quantity *</span>
++          <Input name="quantity" type="number" step="0.1" defaultValue="10" min="0" required />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Unit *</span>
++          <Select name="unit" defaultValue="bags">
++            <option value="bags">Bags (50kg)</option>
++            <option value="kg">kg</option>
++            <option value="liters">Liters</option>
++            <option value="units">Units / Pieces</option>
++            <option value="tons">Tons</option>
++            <option value="crates">Crates</option>
++            <option value="bundles">Bundles</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Reorder Threshold</span>
++          <Input name="reorder_threshold" type="number" step="0.1" defaultValue="2" min="0" />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Unit Purchase Cost (₦)</span>
++          <Input name="unit_cost_ngn" type="number" defaultValue="35000" min="0" />
++        </label>
++      </div>
++
++      <div className="pt-1">
++        <Button type="submit" variant="primary" disabled={pending}>
++          {pending ? "Saving Stock..." : "+ Add Inventory Item"}
++        </Button>
++      </div>
++    </form>
++  );
++}
++
++export function RecordFarmTransactionForm({
++  farmId,
++  cropCycles,
++  lang,
++}: {
++  farmId: string;
++  cropCycles: Array<{ id: string; cropName: string }>;
++  lang: string;
++}) {
++  const [state, formAction, pending] = useActionState(recordFarmTransactionAction, {} as ActionState);
++
++  return (
++    <form action={formAction} className="flex flex-col gap-3">
++      <input type="hidden" name="farm_id" value={farmId} />
++      <input type="hidden" name="lang" value={lang} />
++
++      {state.error && <Alert tone="danger">{state.error}</Alert>}
++      {state.ok && <Alert tone="success">Transaction recorded in farm books.</Alert>}
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Transaction Type *</span>
++          <Select name="type" defaultValue="expense">
++            <option value="expense">Expense (Outflow)</option>
++            <option value="income">Income / Revenue (Inflow)</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Category *</span>
++          <Select name="category" defaultValue="machinery_service">
++            <option value="machinery_service">Machinery Hire / Tractor Service</option>
++            <option value="labour_wages">Labour Wages & Daily Work</option>
++            <option value="seeds">Seeds & Seedlings</option>
++            <option value="fertilisers">Fertilisers & Nutrients</option>
++            <option value="chemicals">Agrochemicals & Crop Protection</option>
++            <option value="feed">Livestock Feed</option>
++            <option value="fuel">Fuel & Energy</option>
++            <option value="harvest_sale">Crop Harvest Sale (Revenue)</option>
++            <option value="livestock_sale">Livestock Sale (Revenue)</option>
++            <option value="repairs">Equipment Repairs & Maintenance</option>
++            <option value="other">Other Operational Flow</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Amount (₦) *</span>
++          <Input name="amount_ngn" type="number" defaultValue="50000" min="1" required />
++        </label>
++      </div>
++
++      <div className="grid gap-3 sm:grid-cols-3">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Transaction Date</span>
++          <Input name="transaction_date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Payment Method</span>
++          <Select name="payment_method" defaultValue="bank_transfer">
++            <option value="bank_transfer">Bank Transfer</option>
++            <option value="cash">Cash</option>
++            <option value="escrow">CultivaNode Escrow</option>
++            <option value="mobile_money">Mobile Money</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Link to Crop Cycle (Optional)</span>
++          <Select name="crop_cycle_id" defaultValue="">
++            <option value="">General Farm Level</option>
++            {cropCycles.map((c) => (
++              <option key={c.id} value={c.id}>
++                {c.cropName}
++              </option>
++            ))}
++          </Select>
++        </label>
++      </div>
++
++      <label className="flex flex-col gap-1 text-xs font-semibold">
++        <span>Description / Notes *</span>
++        <Input name="description" required placeholder="e.g. Paid for 4 ha disc plowing by local tractor provider" maxLength={500} />
++      </label>
++
++      <div className="pt-1">
++        <Button type="submit" variant="primary" disabled={pending}>
++          {pending ? "Recording..." : "+ Record Transaction in Farm Books"}
++        </Button>
++      </div>
++    </form>
++  );
++}
++
++export function AddFarmRecordForm({ farmId, lang }: { farmId: string; lang: string }) {
++  const [state, formAction, pending] = useActionState(addFarmRecordAction, {} as ActionState);
++
++  return (
++    <form action={formAction} className="flex flex-col gap-3">
++      <input type="hidden" name="farm_id" value={farmId} />
++      <input type="hidden" name="lang" value={lang} />
++
++      {state.error && <Alert tone="danger">{state.error}</Alert>}
++      {state.ok && <Alert tone="success">Farm record / document saved in database.</Alert>}
++
++      <div className="grid gap-3 sm:grid-cols-2">
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Record Type *</span>
++          <Select name="record_type" defaultValue="land_title">
++            <option value="land_title">Land Title / Certificate of Occupancy</option>
++            <option value="lease_agreement">Lease Agreement / Tenancy</option>
++            <option value="water_source">Water Source / Borehole Log</option>
++            <option value="irrigation_system">Irrigation Infrastructure Record</option>
++            <option value="environmental_audit">Environmental & Soil Audit</option>
++            <option value="certification">Agricultural Certification / Organic / GAP</option>
++            <option value="inspection">Extension Agent Inspection Report</option>
++            <option value="general">General Administrative Document</option>
++          </Select>
++        </label>
++
++        <label className="flex flex-col gap-1 text-xs font-semibold">
++          <span>Record Title *</span>
++          <Input name="title" required placeholder="e.g. 5-Year Farmland Lease Agreement" maxLength={150} />
++        </label>
++      </div>
++
++      <label className="flex flex-col gap-1 text-xs font-semibold">
++        <span>Record Details &amp; Summary</span>
++        <Input name="details" placeholder="e.g. Agreement with Iseyin Agricultural Community Council" maxLength={2000} />
++      </label>
++
++      <div className="pt-1">
++        <Button type="submit" variant="primary" disabled={pending}>
++          {pending ? "Saving Record..." : "+ Save Farm Record"}
++        </Button>
++      </div>
++    </form>
++  );
++}
++
+diff --git a/packages/shared/src/database.types.ts b/packages/shared/src/database.types.ts
+index 8e1fbe4..bc836c4 100644
+--- a/packages/shared/src/database.types.ts
++++ b/packages/shared/src/database.types.ts
+@@ -1276,6 +1276,259 @@ export type Database = {
+           },
+         ]
+       }
++      farm_livestock: {
++        Row: {
++          id: string
++          farm_id: string
++          animal_type: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
++          breed: string
++          identifier: string
++          head_count: number
++          housing_location: string | null
++          health_status: "healthy" | "treatment" | "quarantine" | "critical"
++          purpose: "meat" | "dairy" | "eggs" | "breeding" | "multi"
++          notes: string | null
++          created_at: string
++          updated_at: string
++        }
++        Insert: {
++          id?: string
++          farm_id: string
++          animal_type: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
++          breed: string
++          identifier: string
++          head_count?: number
++          housing_location?: string | null
++          health_status?: "healthy" | "treatment" | "quarantine" | "critical"
++          purpose?: "meat" | "dairy" | "eggs" | "breeding" | "multi"
++          notes?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Update: {
++          id?: string
++          farm_id?: string
++          animal_type?: "cattle" | "poultry" | "goat" | "sheep" | "pig" | "fish" | "snail" | "rabbit" | "other"
++          breed?: string
++          identifier?: string
++          head_count?: number
++          housing_location?: string | null
++          health_status?: "healthy" | "treatment" | "quarantine" | "critical"
++          purpose?: "meat" | "dairy" | "eggs" | "breeding" | "multi"
++          notes?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "farm_livestock_farm_id_fkey"
++            columns: ["farm_id"]
++            isOneToOne: false
++            referencedRelation: "farms"
++            referencedColumns: ["id"]
++          }
++        ]
++      }
++      farm_workers: {
++        Row: {
++          id: string
++          farm_id: string
++          full_name: string
++          phone: string | null
++          role: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
++          employment_type: "permanent" | "seasonal" | "daily_casual"
++          daily_wage_kobo: number
++          status: "active" | "inactive" | "on_leave"
++          joined_date: string | null
++          emergency_contact: string | null
++          created_at: string
++          updated_at: string
++        }
++        Insert: {
++          id?: string
++          farm_id: string
++          full_name: string
++          phone?: string | null
++          role: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
++          employment_type?: "permanent" | "seasonal" | "daily_casual"
++          daily_wage_kobo?: number
++          status?: "active" | "inactive" | "on_leave"
++          joined_date?: string | null
++          emergency_contact?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Update: {
++          id?: string
++          farm_id?: string
++          full_name?: string
++          phone?: string | null
++          role?: "farm_manager" | "tractor_operator" | "field_worker" | "scout" | "harvester" | "livestock_keeper" | "security" | "casual"
++          employment_type?: "permanent" | "seasonal" | "daily_casual"
++          daily_wage_kobo?: number
++          status?: "active" | "inactive" | "on_leave"
++          joined_date?: string | null
++          emergency_contact?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "farm_workers_farm_id_fkey"
++            columns: ["farm_id"]
++            isOneToOne: false
++            referencedRelation: "farms"
++            referencedColumns: ["id"]
++          }
++        ]
++      }
++      farm_inventory: {
++        Row: {
++          id: string
++          farm_id: string
++          item_name: string
++          category: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
++          quantity: number
++          unit: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
++          reorder_threshold: number
++          storage_location: string | null
++          unit_cost_kobo: number
++          expiry_date: string | null
++          created_at: string
++          updated_at: string
++        }
++        Insert: {
++          id?: string
++          farm_id: string
++          item_name: string
++          category: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
++          quantity?: number
++          unit: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
++          reorder_threshold?: number
++          storage_location?: string | null
++          unit_cost_kobo?: number
++          expiry_date?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Update: {
++          id?: string
++          farm_id?: string
++          item_name?: string
++          category?: "seed" | "fertiliser" | "chemical" | "feed" | "tool_equipment" | "harvest_produce" | "fuel" | "other"
++          quantity?: number
++          unit?: "kg" | "liters" | "bags" | "units" | "tons" | "crates" | "bundles"
++          reorder_threshold?: number
++          storage_location?: string | null
++          unit_cost_kobo?: number
++          expiry_date?: string | null
++          created_at?: string
++          updated_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "farm_inventory_farm_id_fkey"
++            columns: ["farm_id"]
++            isOneToOne: false
++            referencedRelation: "farms"
++            referencedColumns: ["id"]
++          }
++        ]
++      }
++      farm_financial_transactions: {
++        Row: {
++          id: string
++          farm_id: string
++          crop_cycle_id: string | null
++          type: "income" | "expense"
++          category: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
++          amount_kobo: number
++          transaction_date: string
++          receipt_number: string | null
++          payment_method: "cash" | "bank_transfer" | "escrow" | "mobile_money"
++          description: string
++          recorded_by: string | null
++          created_at: string
++        }
++        Insert: {
++          id?: string
++          farm_id: string
++          crop_cycle_id?: string | null
++          type: "income" | "expense"
++          category: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
++          amount_kobo: number
++          transaction_date?: string
++          receipt_number?: string | null
++          payment_method?: "cash" | "bank_transfer" | "escrow" | "mobile_money"
++          description: string
++          recorded_by?: string | null
++          created_at?: string
++        }
++        Update: {
++          id?: string
++          farm_id?: string
++          crop_cycle_id?: string | null
++          type?: "income" | "expense"
++          category?: "harvest_sale" | "livestock_sale" | "machinery_service" | "seeds" | "fertilisers" | "chemicals" | "labour_wages" | "feed" | "fuel" | "repairs" | "other"
++          amount_kobo?: number
++          transaction_date?: string
++          receipt_number?: string | null
++          payment_method?: "cash" | "bank_transfer" | "escrow" | "mobile_money"
++          description?: string
++          recorded_by?: string | null
++          created_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "farm_financial_transactions_farm_id_fkey"
++            columns: ["farm_id"]
++            isOneToOne: false
++            referencedRelation: "farms"
++            referencedColumns: ["id"]
++          }
++        ]
++      }
++      farm_general_records: {
++        Row: {
++          id: string
++          farm_id: string
++          record_type: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
++          title: string
++          details: string | null
++          document_url: string | null
++          recorded_date: string
++          created_at: string
++        }
++        Insert: {
++          id?: string
++          farm_id: string
++          record_type: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
++          title: string
++          details?: string | null
++          document_url?: string | null
++          recorded_date?: string
++          created_at?: string
++        }
++        Update: {
++          id?: string
++          farm_id?: string
++          record_type?: "land_title" | "lease_agreement" | "water_source" | "irrigation_system" | "environmental_audit" | "certification" | "inspection" | "general"
++          title?: string
++          details?: string | null
++          document_url?: string | null
++          recorded_date?: string
++          created_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "farm_general_records_farm_id_fkey"
++            columns: ["farm_id"]
++            isOneToOne: false
++            referencedRelation: "farms"
++            referencedColumns: ["id"]
++          }
++        ]
++      }
+       feature_flags: {
+         Row: {
+           description: string
+diff --git a/supabase/migrations/20261006150000_farm_enterprise_subsections.sql b/supabase/migrations/20261006150000_farm_enterprise_subsections.sql
+new file mode 100644
+index 0000000..48b6f48
+--- /dev/null
++++ b/supabase/migrations/20261006150000_farm_enterprise_subsections.sql
+@@ -0,0 +1,150 @@
++-- CultivaNode: Farm Enterprise Subsections
++-- 1. Livestock Management
++-- 2. Farm Workers Management
++-- 3. Farm Inventory Management
++-- 4. Farm Financials (Farm Books / Account)
++-- 5. Farm Records & Tenure Documentation
++
++-- -----------------------------------------------------------------------------
++-- 1. Livestock Management
++-- -----------------------------------------------------------------------------
++create table if not exists public.farm_livestock (
++  id                uuid primary key default gen_random_uuid(),
++  farm_id           uuid not null references public.farms (id) on delete cascade,
++  animal_type       text not null check (animal_type in ('cattle', 'poultry', 'goat', 'sheep', 'pig', 'fish', 'snail', 'rabbit', 'other')),
++  breed             text not null,
++  identifier        text not null check (char_length(identifier) between 1 and 80),
++  head_count        integer not null default 1 check (head_count >= 0),
++  housing_location  text check (housing_location is null or char_length(housing_location) <= 120),
++  health_status     text not null default 'healthy' check (health_status in ('healthy', 'treatment', 'quarantine', 'critical')),
++  purpose           text not null default 'meat' check (purpose in ('meat', 'dairy', 'eggs', 'breeding', 'multi')),
++  notes             text check (notes is null or char_length(notes) <= 1000),
++  created_at        timestamptz not null default now(),
++  updated_at        timestamptz not null default now()
++);
++
++create index if not exists farm_livestock_farm_idx on public.farm_livestock (farm_id);
++create index if not exists farm_livestock_type_idx on public.farm_livestock (farm_id, animal_type);
++
++-- -----------------------------------------------------------------------------
++-- 2. Farm Workers Management
++-- -----------------------------------------------------------------------------
++create table if not exists public.farm_workers (
++  id                uuid primary key default gen_random_uuid(),
++  farm_id           uuid not null references public.farms (id) on delete cascade,
++  full_name         text not null check (char_length(full_name) between 2 and 120),
++  phone             text check (phone is null or char_length(phone) <= 30),
++  role              text not null check (role in ('farm_manager', 'tractor_operator', 'field_worker', 'scout', 'harvester', 'livestock_keeper', 'security', 'casual')),
++  employment_type   text not null default 'permanent' check (employment_type in ('permanent', 'seasonal', 'daily_casual')),
++  daily_wage_kobo   integer not null default 0 check (daily_wage_kobo >= 0),
++  status            text not null default 'active' check (status in ('active', 'inactive', 'on_leave')),
++  joined_date       date default current_date,
++  emergency_contact text check (emergency_contact is null or char_length(emergency_contact) <= 120),
++  created_at        timestamptz not null default now(),
++  updated_at        timestamptz not null default now()
++);
++
++create index if not exists farm_workers_farm_idx on public.farm_workers (farm_id);
++create index if not exists farm_workers_role_idx on public.farm_workers (farm_id, role);
++
++-- -----------------------------------------------------------------------------
++-- 3. Farm Inventory Management
++-- -----------------------------------------------------------------------------
++create table if not exists public.farm_inventory (
++  id                uuid primary key default gen_random_uuid(),
++  farm_id           uuid not null references public.farms (id) on delete cascade,
++  item_name         text not null check (char_length(item_name) between 2 and 120),
++  category          text not null check (category in ('seed', 'fertiliser', 'chemical', 'feed', 'tool_equipment', 'harvest_produce', 'fuel', 'other')),
++  quantity          numeric(12, 2) not null default 0 check (quantity >= 0),
++  unit              text not null check (unit in ('kg', 'liters', 'bags', 'units', 'tons', 'crates', 'bundles')),
++  reorder_threshold numeric(12, 2) default 0 check (reorder_threshold >= 0),
++  storage_location  text check (storage_location is null or char_length(storage_location) <= 120),
++  unit_cost_kobo    integer not null default 0 check (unit_cost_kobo >= 0),
++  expiry_date       date,
++  created_at        timestamptz not null default now(),
++  updated_at        timestamptz not null default now()
++);
++
++create index if not exists farm_inventory_farm_idx on public.farm_inventory (farm_id);
++create index if not exists farm_inventory_category_idx on public.farm_inventory (farm_id, category);
++
++-- -----------------------------------------------------------------------------
++-- 4. Farm Financials (Farm Books / Account)
++-- -----------------------------------------------------------------------------
++create table if not exists public.farm_financial_transactions (
++  id                uuid primary key default gen_random_uuid(),
++  farm_id           uuid not null references public.farms (id) on delete cascade,
++  crop_cycle_id     uuid references public.crop_cycles (id) on delete set null,
++  type              text not null check (type in ('income', 'expense')),
++  category          text not null check (category in ('harvest_sale', 'livestock_sale', 'machinery_service', 'seeds', 'fertilisers', 'chemicals', 'labour_wages', 'feed', 'fuel', 'repairs', 'other')),
++  amount_kobo       integer not null check (amount_kobo > 0),
++  transaction_date  date not null default current_date,
++  receipt_number    text check (receipt_number is null or char_length(receipt_number) <= 60),
++  payment_method    text not null default 'cash' check (payment_method in ('cash', 'bank_transfer', 'escrow', 'mobile_money')),
++  description       text not null check (char_length(description) between 2 and 500),
++  recorded_by       uuid default auth.uid() references public.profiles (id) on delete set null,
++  created_at        timestamptz not null default now()
++);
++
++create index if not exists farm_finances_farm_idx on public.farm_financial_transactions (farm_id, transaction_date desc);
++create index if not exists farm_finances_type_idx on public.farm_financial_transactions (farm_id, type);
++
++-- -----------------------------------------------------------------------------
++-- 5. Farm Records & Tenure Documentation
++-- -----------------------------------------------------------------------------
++create table if not exists public.farm_general_records (
++  id                uuid primary key default gen_random_uuid(),
++  farm_id           uuid not null references public.farms (id) on delete cascade,
++  record_type       text not null check (record_type in ('land_title', 'lease_agreement', 'water_source', 'irrigation_system', 'environmental_audit', 'certification', 'inspection', 'general')),
++  title             text not null check (char_length(title) between 2 and 150),
++  details           text check (details is null or char_length(details) <= 2000),
++  document_url      text check (document_url is null or char_length(document_url) <= 500),
++  recorded_date     date not null default current_date,
++  created_at        timestamptz not null default now()
++);
++
++create index if not exists farm_general_records_farm_idx on public.farm_general_records (farm_id, recorded_date desc);
++
++-- -----------------------------------------------------------------------------
++-- Row Level Security (RLS)
++-- -----------------------------------------------------------------------------
++alter table public.farm_livestock              enable row level security;
++alter table public.farm_workers                enable row level security;
++alter table public.farm_inventory              enable row level security;
++alter table public.farm_financial_transactions enable row level security;
++alter table public.farm_general_records        enable row level security;
++
++-- Livestock
++create policy farm_livestock_select on public.farm_livestock
++  for select using (public.can_view_farm(farm_id));
++create policy farm_livestock_all on public.farm_livestock
++  for all using (public.can_edit_farm(farm_id))
++  with check (public.can_edit_farm(farm_id));
++
++-- Workers
++create policy farm_workers_select on public.farm_workers
++  for select using (public.can_view_farm(farm_id));
++create policy farm_workers_all on public.farm_workers
++  for all using (public.can_edit_farm(farm_id))
++  with check (public.can_edit_farm(farm_id));
++
++-- Inventory
++create policy farm_inventory_select on public.farm_inventory
++  for select using (public.can_view_farm(farm_id));
++create policy farm_inventory_all on public.farm_inventory
++  for all using (public.can_edit_farm(farm_id))
++  with check (public.can_edit_farm(farm_id));
++
++-- Financials
++create policy farm_finances_select on public.farm_financial_transactions
++  for select using (public.can_view_farm(farm_id));
++create policy farm_finances_all on public.farm_financial_transactions
++  for all using (public.can_edit_farm(farm_id))
++  with check (public.can_edit_farm(farm_id));
++
++-- Records
++create policy farm_general_records_select on public.farm_general_records
++  for select using (public.can_view_farm(farm_id));
++create policy farm_general_records_all on public.farm_general_records
++  for all using (public.can_edit_farm(farm_id))
++  with check (public.can_edit_farm(farm_id));
+-- 
+2.55.0.windows.5
+
