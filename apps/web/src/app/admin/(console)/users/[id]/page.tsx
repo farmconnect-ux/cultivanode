@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DbConstants } from "@cultivanode/shared";
+import { DbConstants, formatNaira } from "@cultivanode/shared";
 import { forceSignOut, grantAdminRole, revokeAdminRole, setAccountFlag, setAccountSuspension } from "@/actions/admin-console";
 import { AdminForm } from "@/components/admin/admin-form";
 import { Alert, Badge, Card, Field, Input, Select } from "@/components/ui";
@@ -26,7 +26,7 @@ export default async function UserPage({ params }: PageProps<"/admin/users/[id]"
   if (!p) notFound();
 
   const manage = can(staff, "admin.manage");
-  const [roles, requests, checks, banks, consents, orgs, farms, staffRoles] = await Promise.all([
+  const [roles, requests, checks, banks, consents, orgs, farms, staffRoles, userBookings, userRatings] = await Promise.all([
     supabase.from("user_roles").select("role, provider_type, granted_at").eq("profile_id", id),
     supabase.from("role_requests").select("id, role, provider_type, status, review_note, created_at").eq("profile_id", id).order("created_at", { ascending: false }),
     supabase.from("verifications").select("kind, status, masked_value, failure_reason, created_at").eq("profile_id", id).order("created_at", { ascending: false }),
@@ -37,7 +37,16 @@ export default async function UserPage({ params }: PageProps<"/admin/users/[id]"
     supabase.from("org_members").select("member_role, organizations(name)").eq("profile_id", id),
     can(staff, "farms.read") ? supabase.from("farms").select("name, state, area_ha, created_at").eq("owner_id", id) : Promise.resolve({ data: null }),
     manage ? supabase.from("admin_roles").select("admin_role, created_at").eq("profile_id", id) : Promise.resolve({ data: null }),
+    supabase.from("bookings").select("id, status, total_kobo, farmer_id, provider_id").or(`farmer_id.eq.${id},provider_id.eq.${id}`),
+    supabase.from("ratings").select("stars, comment").eq("ratee_id", id),
   ]);
+
+  const allBookings = (userBookings.data ?? []) as Array<{ id: string; status: string; total_kobo: number; farmer_id: string; provider_id: string }>;
+  const completedJobs = allBookings.filter((b) => b.status === "completed");
+  const disputedJobs = allBookings.filter((b) => b.status === "disputed");
+  const totalVolumeKobo = completedJobs.reduce((acc, b) => acc + (b.total_kobo || 0), 0);
+  const ratingList = userRatings.data ?? [];
+  const avgRating = ratingList.length > 0 ? (ratingList.reduce((acc, r) => acc + r.stars, 0) / ratingList.length).toFixed(1) : "–";
 
   return (
     <div className="flex flex-col gap-6">
@@ -84,6 +93,40 @@ export default async function UserPage({ params }: PageProps<"/admin/users/[id]"
           </div>
         </Card>
       )}
+
+      {/* 360° OPERATIONAL ACTIVITY DOSSIER (Section 20) */}
+      <Card className="flex flex-col gap-4 border-2 border-line bg-cream/40 p-5">
+        <h2 className="text-xl font-bold text-leaf-900 border-b border-line pb-2">
+          360° Operational Activity & Financial Dossier
+        </h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-lg bg-white p-4 border border-line">
+            <span className="block text-xs font-bold uppercase text-muted">Jobs Completed</span>
+            <span className="mt-1 block text-3xl font-extrabold text-leaf-800">{completedJobs.length}</span>
+            <span className="text-xs text-muted">Executed successfully</span>
+          </div>
+
+          <div className="rounded-lg bg-white p-4 border border-line">
+            <span className="block text-xs font-bold uppercase text-muted">Disputed Jobs</span>
+            <span className="mt-1 block text-3xl font-extrabold text-danger">{disputedJobs.length}</span>
+            <span className="text-xs text-muted">Contested work</span>
+          </div>
+
+          <div className="rounded-lg bg-white p-4 border border-line">
+            <span className="block text-xs font-bold uppercase text-muted">Average Rating</span>
+            <span className="mt-1 block text-3xl font-extrabold text-harvest-600">{avgRating} ★</span>
+            <span className="text-xs text-muted">From {ratingList.length} review(s)</span>
+          </div>
+
+          <div className="rounded-lg bg-white p-4 border border-line">
+            <span className="block text-xs font-bold uppercase text-muted">Settlement Volume</span>
+            <span className="mt-1 block text-2xl font-extrabold text-leaf-900 tabular-nums">
+              {formatNaira(totalVolumeKobo)}
+            </span>
+            <span className="text-xs text-muted">Confirmed transactions</span>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-2">

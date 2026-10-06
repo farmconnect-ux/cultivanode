@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { DbConstants } from "@cultivanode/shared";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import { can, requireStaff } from "@/lib/admin/staff";
 
 // Staff actions. Each database function checks the staff member's permission itself (has_permission),
 // so a forged post from someone without it fails there. Messages here are shown to staff only.
@@ -184,3 +185,95 @@ export async function removeOrgMember(_prev: AdminResult | null, form: FormData)
   const { error } = await supabase.rpc("admin_remove_org_member", { p_org: org, p_profile: profile, p_reason: reasonOf(form) });
   return explain(error, "Removed from the business.");
 }
+
+/* ------------------------------------------------------------------ MVP week 4: dispute and job administration */
+
+export async function adminResolveDispute(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const bookingId = id(form, "booking_id");
+  const decision = field(form, "decision", 30);
+  const reason = reasonOf(form);
+  const note = field(form, "internal_note", 1000);
+  if (!bookingId || !["uphold_farmer", "uphold_provider", "settlement"].includes(decision)) {
+    return failed("Invalid decision option chosen.");
+  }
+  if (reason.length < 5) return failed(needReason);
+  const staff = await requireStaff();
+  if (!staff || !can(staff, "disputes.decide")) {
+    return failed("You do not have the disputes.decide permission.");
+  }
+  const supabase = await createClient();
+
+  const nextStatus = decision === "uphold_provider" ? "completed" : "cancelled";
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: nextStatus,
+      closed_reason: `Arbitration: ${reason}`,
+    })
+    .eq("id", bookingId);
+
+  if (error) return explain(error, "Dispute resolved.");
+
+  await Promise.all([
+    supabase.from("admin_actions").insert({
+      actor_id: staff.userId,
+      permission: "disputes.decide",
+      action: "resolve_dispute",
+      entity: "bookings",
+      entity_id: bookingId,
+      reason: `${decision}: ${reason} (Note: ${note})`,
+    }),
+    supabase.from("audit_log").insert({
+      actor_id: staff.userId,
+      action: "dispute_resolved",
+      entity: "bookings",
+      entity_id: bookingId,
+      metadata: { decision, reason, note, nextStatus },
+    }),
+  ]);
+
+  return explain(null, `Dispute resolved successfully as ${decision.replaceAll("_", " ")}.`);
+}
+
+export async function adminCancelJob(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const bookingId = id(form, "booking_id");
+  const reason = reasonOf(form);
+  if (!bookingId) return failed("Invalid booking ID.");
+  if (reason.length < 5) return failed(needReason);
+  const staff = await requireStaff();
+  if (!staff || (!can(staff, "bookings.read") && !can(staff, "disputes.decide"))) {
+    return failed("Permission required.");
+  }
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "cancelled",
+      closed_reason: `Staff intervention: ${reason}`,
+    })
+    .eq("id", bookingId);
+
+  if (error) return explain(error, "Job cancelled.");
+
+  await Promise.all([
+    supabase.from("admin_actions").insert({
+      actor_id: staff.userId,
+      permission: "disputes.decide",
+      action: "cancel_job",
+      entity: "bookings",
+      entity_id: bookingId,
+      reason,
+    }),
+    supabase.from("audit_log").insert({
+      actor_id: staff.userId,
+      action: "job_cancelled",
+      entity: "bookings",
+      entity_id: bookingId,
+      metadata: { reason },
+    }),
+  ]);
+
+  return explain(null, "Job cancelled by staff.");
+}
+

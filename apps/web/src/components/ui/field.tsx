@@ -49,10 +49,11 @@ export function Select({ className, ...rest }: ComponentProps<"select">) {
   return <select className={cx(control, "appearance-auto", className)} {...rest} />;
 }
 
-export function Alert({ tone = "success", children }: { tone?: "success" | "danger"; children: ReactNode }) {
+export function Alert({ tone = "success", children }: { tone?: "success" | "danger" | "warning"; children: ReactNode }) {
   const tones = {
     success: "border-leaf-300 bg-leaf-50 text-leaf-800",
     danger: "border-danger/40 bg-red-50 text-danger",
+    warning: "border-harvest-400 bg-harvest-50 text-harvest-900",
   } as const;
   return (
     <div role={tone === "danger" ? "alert" : "status"} className={cx("rounded-md border-2 px-4 py-3 font-medium", tones[tone])}>

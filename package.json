@@ -29,5 +29,9 @@
   "devDependencies": {
     "supabase": "^2.118.0",
     "turbo": "^2.11.4"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "expo-sqlite": "~57.0.3"
   }
 }

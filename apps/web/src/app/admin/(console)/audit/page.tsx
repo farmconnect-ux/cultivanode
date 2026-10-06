@@ -64,6 +64,19 @@ export default async function AuditPage({ searchParams }: PageProps<"/admin/audi
           <Input id="action" name="action" defaultValue={action} placeholder="Filter by action, e.g. role_approved" className="max-w-sm" />
           <Button type="submit" variant="secondary">Filter</Button>
         </form>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick filters">
+          {["", "dispute", "role", "suspend", "job", "verification"].map((f) => (
+            <Link
+              key={f}
+              href={f ? `/admin/audit?action=${f}` : "/admin/audit"}
+              className={`rounded-full border border-line px-3 py-1 text-xs font-semibold ${
+                action === f || (!action && !f) ? "bg-leaf-700 text-white" : "bg-white text-ink hover:bg-leaf-50"
+              }`}
+            >
+              {f ? f.toUpperCase() : "ALL"}
+            </Link>
+          ))}
+        </div>
         <Card className="overflow-x-auto p-0">
           <table className="w-full min-w-[44rem] text-left text-sm">
             <thead className="border-b border-line bg-cream"><tr><th className="p-3">When</th><th className="p-3">Who</th><th className="p-3">Action</th><th className="p-3">Record</th><th className="p-3">Details</th></tr></thead>

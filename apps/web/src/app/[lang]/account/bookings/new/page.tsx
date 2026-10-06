@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RequestForm } from "@/components/account/booking-forms";
+import { ServiceRequestWizard } from "@/components/account/service-request-wizard";
 import { Badge, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -37,8 +38,46 @@ export default async function NewBookingPage({ params, searchParams }: PageProps
   const q = await searchParams;
   const listingId = one(q.listing);
   const farmId = one(q.farm);
-  const back = `/${lang}/account/find${UUID.test(farmId) ? `?farm=${farmId}` : ""}`;
+  const supabase = await createClient();
 
+  // If user is requesting without a specific listing, launch the 5-step guided wizard!
+  if (!listingId) {
+    const scope = [
+      `owner_id.eq.${account.userId}`,
+      ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
+    ];
+    const { data: farms } = await supabase
+      .from("farms")
+      .select("id, name, state, lga, area_ha")
+      .or(scope.join(","))
+      .order("created_at");
+
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <Link href={`/${lang}/account?ws=farmer`} className="font-semibold text-leaf-700 underline">
+            ← Back to Dashboard
+          </Link>
+          <h1 className="mt-3 text-3xl font-extrabold text-leaf-800">Request a Field Service</h1>
+          <p className="mt-1 text-muted">Guided 5-step booking for verified tractors, implements, and agronomy operators.</p>
+        </div>
+
+        {account.profile.verification_tier < 1 && (
+          <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
+            {k.tierNeeded}{" "}
+            <Link href={`/${lang}/account/verification?ws=farmer`} className="font-semibold text-leaf-700 underline">
+              {k.verifyNow}
+            </Link>
+          </p>
+        )}
+
+        <ServiceRequestWizard lang={lang} farms={farms ?? []} t={t} />
+      </div>
+    );
+  }
+
+  // Otherwise, user is booking a specific listing
+  const back = `/${lang}/account/find${UUID.test(farmId) ? `?farm=${farmId}` : ""}`;
   const header = (
     <div>
       <Link href={back} className="font-semibold text-leaf-700 underline">← {k.backToSearch}</Link>
@@ -61,7 +100,6 @@ export default async function NewBookingPage({ params, searchParams }: PageProps
   }
   if (!UUID.test(listingId) || !UUID.test(farmId)) return <>{header}<p>{k.notAvailable}</p></>;
 
-  const supabase = await createClient();
   const { data, error } = await supabase.rpc("listing_for_booking", { p_listing: listingId, p_farm: farmId });
   if (error || !data) return <>{header}<p role="alert">{k.notAvailable}</p></>;
   const x = data as unknown as ForBooking;

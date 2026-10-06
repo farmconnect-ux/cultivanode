@@ -80,11 +80,31 @@ export default async function ApprovalsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-leaf-800">Approvals</h1>
+        <h1 className="text-3xl font-extrabold text-leaf-800">Verification & Approvals Queue</h1>
         <p className="mt-1 max-w-3xl text-muted">
           Oldest first. Roles that need documents can only be approved after at least one document is accepted; field agents
           must have a verified NIN. You cannot review your own requests.
         </p>
+      </div>
+
+      {/* VERIFICATION QUEUE METRICS (Section 19) */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="rounded-xl border border-line bg-white p-4">
+          <span className="block text-xs font-bold uppercase text-muted">Pending Total</span>
+          <span className="mt-1 block text-3xl font-extrabold text-leaf-800">{reqs.length + shownDocs.length}</span>
+        </div>
+        <div className="rounded-xl border border-line bg-white p-4">
+          <span className="block text-xs font-bold uppercase text-muted">Manual Review</span>
+          <span className="mt-1 block text-3xl font-extrabold text-harvest-700">{shownDocs.length}</span>
+        </div>
+        <div className="rounded-xl border border-line bg-white p-4">
+          <span className="block text-xs font-bold uppercase text-muted">Role Requests</span>
+          <span className="mt-1 block text-3xl font-extrabold text-node-800">{reqs.length}</span>
+        </div>
+        <div className="rounded-xl border border-line bg-white p-4">
+          <span className="block text-xs font-bold uppercase text-muted">ID Provider Status</span>
+          <span className="mt-1 block text-sm font-bold text-leaf-700">● Prembly Verified</span>
+        </div>
       </div>
 
       {reviewRoles && (

@@ -4,6 +4,7 @@ import { formatNaira } from "@cultivanode/shared";
 import {
   BookingActions, CheckInButton, ConfirmWork, DisputeForm, EvidenceUpload, FinishWork, MarkPaidForm, ProofFlow, RatingForm,
 } from "@/components/account/booking-forms";
+import { JobLifecycleTracker } from "@/components/account/job-lifecycle-tracker";
 import { Badge, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -65,6 +66,15 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
         </div>
         <Badge className={BOOKING_TONE[x.status]}>{t.bookingStatus[x.status]}</Badge>
       </div>
+
+      {/* Visual 9-Step Lifecycle Progress Bar */}
+      <JobLifecycleTracker
+        status={x.status}
+        hasCheckedIn={Boolean(x.checked_in_at)}
+        hasProof={x.proofs.length > 0}
+        isDisputed={x.status === "disputed"}
+        isCompleted={x.status === "completed"}
+      />
 
       {x.status === "requested" && x.my_side === "farmer" && (
         <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">

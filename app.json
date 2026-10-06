@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c36ad497-003b-4a46-882a-afa17e16b65d"
+      }
+    },
+    "android": {
+      "package": "com.cultivanode.cultivanode"
+    },
+    "ios": {
+      "bundleIdentifier": "com.cultivanode.cultivanode",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
+  }
+}

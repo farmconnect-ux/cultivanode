@@ -83,72 +83,184 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
   const showAnalytics = can(staff, "analytics.read");
 
   const supabase = await createClient();
-  const [{ data }, analyticsRes, weather] = await Promise.all([
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [
+    { data },
+    analyticsRes,
+    weather,
+    { count: disputedCount },
+    { count: activeJobsCount },
+    { count: jobsTodayCount },
+    { count: completedJobsCount },
+    { count: farmersCount },
+    { count: providersCount },
+    { count: equipmentCount },
+    { count: agentsCount },
+  ] = await Promise.all([
     supabase.rpc("admin_dashboard"),
     showAnalytics ? supabase.rpc("admin_analytics", { p_days: days }) : Promise.resolve({ data: null }),
     showAnalytics ? loadPilotWeather() : Promise.resolve<WeatherResponse>({ ok: false, error: "forbidden" }),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "disputed"),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).in("status", ["accepted", "in_progress", "awaiting_confirmation"]),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("job_date", todayIso),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "completed"),
+    supabase.from("user_roles").select("profile_id", { count: "exact", head: true }).in("role", ["crop_farmer", "animal_farmer"]),
+    supabase.from("user_roles").select("profile_id", { count: "exact", head: true }).in("role", ["machinery_owner", "service_provider"]),
+    supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("user_roles").select("profile_id", { count: "exact", head: true }).eq("role", "field_agent"),
   ]);
   const c = (data ?? {}) as Counts;
   const a = (analyticsRes.data ?? null) as Analytics | null;
 
-  const tiles = [
-    { label: "Role requests waiting", value: c.pending_role_requests, href: "/admin/approvals" },
-    { label: "Documents waiting", value: c.pending_documents, href: "/admin/approvals" },
-    { label: "Open contact messages", value: c.open_contact_messages, href: "/admin/inbox" },
-    { label: "Deletion requests open", value: c.open_data_requests, href: "/admin/privacy" },
-    { label: "Marketplace waitlist", value: c.waitlist_signups, href: "/admin/inbox" },
-    { label: "Flagged accounts", value: c.flagged_accounts, href: "/admin/users?filter=flagged" },
-    { label: "Suspended accounts", value: c.suspended_accounts, href: "/admin/users?filter=suspended" },
-    { label: "Live listings", value: c.active_listings, href: "/admin/marketplace?status=active" },
-    { label: "Suspended listings", value: c.suspended_listings, href: "/admin/marketplace?status=suspended" },
-    // Shown here only for staff who cannot see the analytics section below.
-    ...(a ? [] : [
-      { label: "People signed up", value: c.users, href: "/admin/users" },
-      { label: "New this week", value: c.users_last_7_days, href: "/admin/users" },
-    ]),
-  ].filter((t) => typeof t.value === "number");
-
   return (
     <div className="flex flex-col gap-10">
-      <div>
-        <h1 className="text-3xl font-extrabold text-leaf-800">Welcome{staff.name ? `, ${staff.name}` : ""}</h1>
-        <p className="mt-1 text-muted">What needs attention today.</p>
+      {/* Operations Control Centre Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-leaf-800">CultivaNode Operations Control</h1>
+          <p className="mt-1 text-sm text-muted">Real-time marketplace monitoring, arbitration, and governance.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-leaf-200 bg-leaf-50 px-3.5 py-1 text-xs font-bold text-leaf-800">
+          <span className="size-2 rounded-full bg-leaf-600 animate-pulse" aria-hidden="true" />
+          <span>Lagos Node · All Systems Operational</span>
+        </div>
       </div>
 
-      {(c.median_approval_hours_30d !== undefined || c.marketplace_live) && (
-        <p className="flex flex-wrap gap-x-6 gap-y-1 rounded-lg border border-line bg-white px-5 py-3">
-          {c.median_approval_hours_30d !== undefined && (
-            <span>
-              <span className="text-muted">Approval time, median over 30 days: </span>
-              <strong>{hours(c.median_approval_hours_30d ?? null)}</strong>
-              {c.oldest_pending_role_request_hours != null && (
-                <span className="text-muted"> · oldest waiting {hours(c.oldest_pending_role_request_hours)}</span>
-              )}
-            </span>
-          )}
-          {c.marketplace_live && (
-            <span>
-              <span className="text-muted">Marketplace: </span>
-              <Link href="/admin/marketplace" className={`font-bold underline ${c.marketplace_live.enabled ? "text-leaf-700" : "text-danger"}`}>
-                {c.marketplace_live.enabled ? `open (${c.marketplace_live.states?.join(", ") ?? "all states"})` : "closed"}
-              </Link>
-            </span>
-          )}
-        </p>
+      {/* ATTENTION REQUIRED Alert Bar */}
+      {((disputedCount ?? 0) > 0 || (c.suspended_accounts ?? 0) > 0 || (c.flagged_accounts ?? 0) > 0) && (
+        <div className="rounded-xl border-2 border-harvest-400 bg-harvest-50/60 p-5 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">⚠️</span>
+            <h2 className="text-sm font-extrabold tracking-wider text-harvest-900 uppercase">
+              Attention Required
+            </h2>
+          </div>
+          <ul className="mt-2.5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-harvest-900">
+            {(disputedCount ?? 0) > 0 && (
+              <li>
+                <Link href="/admin/disputes" className="underline hover:text-danger">
+                  ● {disputedCount} dispute(s) awaiting arbitration
+                </Link>
+              </li>
+            )}
+            {(c.pending_role_requests ?? 0) > 0 && (
+              <li>
+                <Link href="/admin/approvals" className="underline">
+                  ● {c.pending_role_requests} role request(s) waiting
+                </Link>
+              </li>
+            )}
+            {(c.flagged_accounts ?? 0) > 0 && (
+              <li>
+                <Link href="/admin/users?filter=flagged" className="underline">
+                  ● {c.flagged_accounts} account(s) flagged for review
+                </Link>
+              </li>
+            )}
+            {(c.suspended_accounts ?? 0) > 0 && (
+              <li>
+                <Link href="/admin/users?filter=suspended" className="underline">
+                  ● {c.suspended_accounts} account(s) suspended
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
       )}
 
-      {tiles.length > 0 && (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {tiles.map((t) => (
-            <li key={t.label}>
-              <Link href={t.href} className="block h-full rounded-lg border border-line bg-white p-5 hover:border-leaf-600">
-                <span className="block text-4xl font-extrabold text-leaf-800">{t.value}</span>
-                <span className="mt-1 block font-semibold">{t.label}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* PENDING ACTIONS (Section 15) */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Pending Actions</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Link
+            href="/admin/approvals"
+            className="flex flex-col justify-between gap-1 rounded-xl border border-line bg-white p-5 hover:border-leaf-600 shadow-xs"
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">Verification Queue</span>
+            <span className="text-4xl font-extrabold text-leaf-800">{c.pending_documents ?? 0}</span>
+            <span className="text-xs text-muted">Identity & CAC documents</span>
+          </Link>
+
+          <Link
+            href="/admin/disputes"
+            className="flex flex-col justify-between gap-1 rounded-xl border-2 border-danger/30 bg-red-50/30 p-5 hover:border-danger shadow-xs"
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-danger">Disputes Awaiting Decision</span>
+            <span className="text-4xl font-extrabold text-danger">{disputedCount ?? 0}</span>
+            <span className="text-xs text-muted">Evidence-based arbitration</span>
+          </Link>
+
+          <Link
+            href="/admin/approvals"
+            className="flex flex-col justify-between gap-1 rounded-xl border border-line bg-white p-5 hover:border-leaf-600 shadow-xs"
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">Role Approvals</span>
+            <span className="text-4xl font-extrabold text-leaf-800">{c.pending_role_requests ?? 0}</span>
+            <span className="text-xs text-muted">Provider & Agent applications</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* LIVE OPERATIONS (Section 15) */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Live Field Operations</h2>
+          <Link href="/admin/jobs" className="text-xs font-bold text-leaf-700 hover:underline">
+            Open Jobs Console →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Active In-Field</span>
+            <span className="mt-1 block text-3xl font-extrabold text-node-800">{activeJobsCount ?? 0}</span>
+            <span className="text-xs text-muted">Jobs in progress</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Jobs Today</span>
+            <span className="mt-1 block text-3xl font-extrabold text-leaf-800">{jobsTodayCount ?? 0}</span>
+            <span className="text-xs text-muted">Scheduled today</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Completed Total</span>
+            <span className="mt-1 block text-3xl font-extrabold text-leaf-700">{completedJobsCount ?? 0}</span>
+            <span className="text-xs text-muted">Executed & confirmed</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Disputed / Failed</span>
+            <span className="mt-1 block text-3xl font-extrabold text-danger">{disputedCount ?? 0}</span>
+            <span className="text-xs text-muted">Requiring staff review</span>
+          </div>
+        </div>
+      </section>
+
+      {/* MARKETPLACE COUNTERS (Section 15) */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Marketplace Liquidity</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Registered Farmers</span>
+            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{farmersCount ?? 0}</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Providers</span>
+            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{providersCount ?? 0}</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Active Equipment</span>
+            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{equipmentCount ?? 0}</span>
+          </div>
+
+          <div className="rounded-xl border border-line bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Field Agents</span>
+            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{agentsCount ?? 0}</span>
+          </div>
+        </div>
+      </section>
 
       {a && (
         <section aria-labelledby="analytics-h" className="flex flex-col gap-5">
