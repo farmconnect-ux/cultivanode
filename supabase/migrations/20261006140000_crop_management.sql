@@ -217,6 +217,43 @@ create index if not exists crop_alerts_cycle_active_idx on public.crop_alerts (c
 -- 10. Triggers & Helpers
 ------------------------------------------------------------------------------------------------
 
+create or replace function public.can_view_farm(p_farm uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $$
+  select private.can_view_farm(p_farm);
+$$;
+
+create or replace function public.can_edit_farm(p_farm uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $$
+  select private.can_edit_farm(p_farm);
+$$;
+
+create or replace function public.plot_farm_id(p_plot uuid)
+returns uuid
+language sql stable security definer
+set search_path = ''
+as $$
+  select p.farm_id from public.plots p where p.id = p_plot;
+$$;
+
+create or replace function private.plot_farm_id(p_plot uuid)
+returns uuid
+language sql stable security definer
+set search_path = ''
+as $$
+  select p.farm_id from public.plots p where p.id = p_plot;
+$$;
+
+grant execute on function public.can_view_farm(uuid) to authenticated, service_role;
+grant execute on function public.can_edit_farm(uuid) to authenticated, service_role;
+grant execute on function public.plot_farm_id(uuid) to authenticated, service_role;
+grant execute on function private.plot_farm_id(uuid) to authenticated, service_role;
+
 create or replace function public.cycle_farm_id(p_cycle uuid)
 returns uuid
 language sql stable security definer

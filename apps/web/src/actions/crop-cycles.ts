@@ -159,9 +159,10 @@ export async function createCropPlanAction(
   if (cycleErr || !cycleRow) {
     logger.error("crop_cycles.create_failed", { plotId, error: String(cycleErr) });
     if (cycleErr?.code === "23505") {
-      return bad("errorPlotHasActiveCycle");
+      return bad("This plot already has an active or planned crop cycle. Complete or archive the active cycle before planning a new one.");
     }
-    return bad("errorFailedToSavePlan");
+    const details = cycleErr?.message || cycleErr?.details || "Failed to save crop cycle in database";
+    return bad(details, { error: details });
   }
 
   const cycleId = (cycleRow as any).id as string;
