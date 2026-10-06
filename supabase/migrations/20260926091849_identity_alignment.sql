@@ -1,4 +1,4 @@
--- Tillmate: align identity and administration with the Phase 1 master specification.
+-- CultivaNode: align identity and administration with the Phase 1 master specification.
 --
 --   1. Role and admin sub-role names follow the spec (buyer_offtaker, vet, extension_agent,
 --      support_disputes, agronomy_editor).
@@ -144,7 +144,7 @@ insert into public.roles (role, description, auto_approve, requires_documents, m
   ('input_supplier',        'Sells seeds, fertiliser and agrochemicals (Phase 2 marketplace)',  false, true,  0, false),
   ('buyer_offtaker',        'Buys produce (Phase 2 marketplace)',                               false, false, 0, false),
   ('logistics_provider',    'Moves produce and inputs (Phase 2)',                               false, true,  0, false),
-  ('field_agent',           'Registers and supports farmers in the field for Tillmate',         false, true,  1, true),
+  ('field_agent',           'Registers and supports farmers in the field for CultivaNode',      false, true,  1, true),
   ('institutional_partner', 'Government, NGO or development partner (Phase 2)',                  false, true,  0, false),
   ('investor',              'Invests in farms or the platform (Phase 3)',                        false, true,  0, false);
 

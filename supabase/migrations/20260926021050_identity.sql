@@ -1,4 +1,4 @@
--- Tillmate: identity
+-- CultivaNode: identity
 -- profiles, business accounts (organizations + staff), admin roles, platform roles,
 -- role requests with admin approval, identity verifications, audit log.
 --

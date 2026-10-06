@@ -12,7 +12,7 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-M0-001 | Monorepo (Turborepo, TypeScript, shared package) | – | – | apps/web | apps/mobile | CI | ✅ (npm workspaces, not pnpm: kept deliberately) |
 | REQ-M0-002 | Supabase project, PostGIS, migration framework | supabase/migrations | – | – | – | pgTAP in CI | ✅ |
 | REQ-M0-003 | CI: typecheck, lint, tests, DB tests | – | – | – | – | .github/workflows/ci.yml | ✅ |
-| REQ-M0-004 | Web deploys | – | – | Vercel `tillmate` | – | live check | ✅ |
+| REQ-M0-004 | Web deploys | – | – | Vercel `cultivanode` | – | live check | ✅ |
 | REQ-M0-005 | Android build | – | – | – | android.yml APK | CI build green | 🟡 builds; first on-device launch still to confirm |
 | REQ-M0-006 | Environment management, `.env.example` for every provider | – | shared/config.ts | .env.example | .env.example | validation.test.ts (payment mode) | ✅ |
 | REQ-M0-007 | Shared types from the database | database.types.ts | – | typed clients | typed client | shared.test.ts | ✅ |

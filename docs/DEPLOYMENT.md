@@ -1,8 +1,8 @@
 # Deployment
 
 ## Web (Vercel)
-- Project `tillmate` in team `quadriolapadegmailcoms-projects`, root directory `apps/web`, framework Next.js.
-- Every push to `main` deploys to production (https://tillmate.vercel.app); other branches get previews.
+- Project `cultivanode` in team `quadriolapadegmailcoms-projects`, root directory `apps/web`, framework Next.js.
+- Every push to `main` deploys to production (https://cultivanode.vercel.app); other branches get previews.
 - Environment variables (Project > Settings > Environment Variables):
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (set);
   optional `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CONTACT_WHATSAPP`, `NEXT_PUBLIC_CONTACT_PHONE`,
@@ -10,7 +10,7 @@
   Do not leave a variable present but empty: remove it instead.
 
 ## Database (Supabase)
-- Project `tillmate`, ref `vqbtnftnxyfaembwgfrk`, region eu-west-1, Postgres 17, Free plan
+- Project `cultivanode`, ref `vqbtnftnxyfaembwgfrk`, region eu-west-1, Postgres 17, Free plan
   (upgrade to a paid plan with backups/PITR before the pilot).
 - Apply migrations with `npx supabase db push` after `npx supabase link --project-ref vqbtnftnxyfaembwgfrk`.
   Never change the production schema by hand; every change is a reviewed migration.
@@ -47,7 +47,7 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
 3. Supabase > Authentication > URL Configuration: add the domain to Site URL / Redirect URLs.
 
 ## Mobile (Android)
-- Test APK: GitHub Actions > Android build > Run workflow > download `cultivanode-android-apk`. The app ID is `com.cultivanode.app` (changed from `ng.tillmate.app` before any store release).
+- Test APK: GitHub Actions > Android build > Run workflow > download `cultivanode-android-apk`. The app ID is `com.cultivanode.app`.
 - Store builds: EAS (`npx eas-cli build -p android --profile production`), which manages the upload key.
 
 ## CI (GitHub Actions)

@@ -1,4 +1,4 @@
--- Tillmate: move row-level-security helper functions out of the API.
+-- CultivaNode: move row-level-security helper functions out of the API.
 --
 -- Everything in `public` is reachable at /rest/v1/rpc/<name>. These helpers exist only for
 -- policies, and a few could answer questions about other people (is this profile a farmer?

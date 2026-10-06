@@ -17,10 +17,19 @@ type Note = {
   created_at: string;
 };
 
-export default async function InboxPage({ params }: PageProps<"/[lang]/account/inbox">) {
+export default async function InboxPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lang: string }>;
+  searchParams?: Promise<{ cat?: string }>;
+}) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   await requireAccount(lang);
+  const sp = searchParams ? await searchParams : {};
+  const currentCat = typeof sp.cat === "string" ? sp.cat : "all";
+
   const t = await getDictionary(lang);
   const m = t.acct.inbox;
   const supabase = await createClient();
@@ -29,16 +38,55 @@ export default async function InboxPage({ params }: PageProps<"/[lang]/account/i
     .select("id, kind, booking_id, data, read_at, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
-  const notes = (data ?? []) as unknown as Note[];
-  const unread = notes.some((n) => !n.read_at);
+  const rawNotes = (data ?? []) as unknown as Note[];
+  
+  const notes = rawNotes.filter((n) => {
+    if (currentCat === "all") return true;
+    if (currentCat === "jobs") return n.booking_id || n.kind.includes("booking");
+    if (currentCat === "verification") return n.kind.includes("verification") || n.kind.includes("tier");
+    if (currentCat === "payments") return n.kind.includes("payment") || n.kind.includes("payout");
+    if (currentCat === "disputes") return n.kind.includes("dispute");
+    return true;
+  });
+
+  const unread = rawNotes.some((n) => !n.read_at);
+
+  const categories = [
+    { key: "all", label: "All Notifications" },
+    { key: "jobs", label: "Jobs" },
+    { key: "verification", label: "Verification" },
+    { key: "payments", label: "Payments" },
+    { key: "disputes", label: "Disputes" },
+    { key: "system", label: "System" },
+  ];
 
   return (
     <>
-      <div>
-        <h1 className="text-3xl font-extrabold text-leaf-800">{m.title}</h1>
-        <p className="mt-2 text-muted">{m.intro}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-leaf-800">{m.title}</h1>
+          <p className="mt-2 text-muted">{m.intro}</p>
+        </div>
+        {unread && <MarkAllRead lang={lang} t={t.acct} />}
       </div>
-      {unread && <MarkAllRead lang={lang} t={t.acct} />}
+
+      {/* Category Filter Pills (Section 27) */}
+      <div className="flex gap-2 overflow-x-auto pb-1 border-b border-line">
+        {categories.map((c) => (
+          <Link
+            key={c.key}
+            href={`/${lang}/account/inbox${c.key === "all" ? "" : `?cat=${c.key}`}`}
+            className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-colors ${
+              currentCat === c.key
+                ? "bg-leaf-800 text-white"
+                : "bg-surface border border-line text-muted hover:text-ink hover:border-leaf-600"
+            }`}
+          >
+            {c.label}
+          </Link>
+        ))}
+      </div>
+
       {notes.length === 0 ? (
         <p className="text-muted">{m.none}</p>
       ) : (

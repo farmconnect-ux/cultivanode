@@ -1,4 +1,4 @@
--- Tillmate: farms, plots and soil records
+-- CultivaNode: farms, plots and soil records
 --
 -- Coordinates are stored as PostGIS geography (WGS84, SRID 4326), longitude first.
 -- From the app, send WKT/EWKT text, e.g. location = 'SRID=4326;POINT(3.8967 7.3775)'

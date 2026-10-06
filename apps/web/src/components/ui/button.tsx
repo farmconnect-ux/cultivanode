@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cx } from "./cx";
 
 type Variant = "primary" | "secondary" | "ghost" | "gold" | "accent" | "onDark";
-type Size = "md" | "lg";
+type Size = "sm" | "md" | "lg";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors " +
@@ -20,6 +20,7 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
+  sm: "px-3 py-1.5 text-xs min-h-8",
   md: "px-5 text-base",
   lg: "px-7 text-lg",
 };

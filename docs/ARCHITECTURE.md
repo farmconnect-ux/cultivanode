@@ -16,9 +16,9 @@ supabase      Postgres + PostGIS migrations, pgTAP tests, local config. The data
 docs          This folder.
 ```
 
-Hosting: web on Vercel (project `tillmate`, root `apps/web`, auto-deploys from `main`), database/auth/
-storage on Supabase (`tillmate`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on GitHub
-(`farmconnect-ux/tillmate`). Android test builds come from GitHub Actions (`.github/workflows/android.yml`).
+Hosting: web on Vercel (project `cultivanode`, root `apps/web`, auto-deploys from `main`), database/auth/
+storage on Supabase (`cultivanode`, ref `vqbtnftnxyfaembwgfrk`, eu-west-1), code on GitHub
+(`farmconnect-ux/cultivanode`). Android test builds come from GitHub Actions (`.github/workflows/android.yml`).
 
 ## Principles in force
 

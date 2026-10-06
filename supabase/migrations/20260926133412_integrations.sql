@@ -1,4 +1,4 @@
--- Tillmate: switchable service providers (SMS, identity checks), configured by staff in the admin console.
+-- CultivaNode: switchable service providers (SMS, identity checks), configured by staff in the admin console.
 --
 -- * integration_providers  catalogue of providers the code has an adapter for (changed by migrations only)
 -- * integration_settings   which provider is active for each kind (sms, identity)
@@ -154,7 +154,7 @@ do $$
 begin
   if not exists (select 1 from vault.secrets where name = 'id_hash_pepper') then
     perform vault.create_secret(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
-                                'id_hash_pepper', 'Tillmate: HMAC key for ID fingerprints');
+                                'id_hash_pepper', 'CultivaNode: HMAC key for ID fingerprints');
   end if;
 end $$;
 
@@ -314,7 +314,7 @@ begin
     insert into public.integration_secrets (provider, mode, field, vault_secret_id, hint, updated_by)
     values (p_provider, p_mode, p_field,
             vault.create_secret(v_value, 'integration:' || p_provider || ':' || p_mode || ':' || p_field,
-                                'Tillmate integration key'),
+                                'CultivaNode integration key'),
             case when char_length(v_value) >= 12 then right(v_value, 4) end, auth.uid());
   else
     perform vault.update_secret(v_existing, v_value);

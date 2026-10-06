@@ -1,4 +1,4 @@
--- Tillmate: marketplace listings (first slice) and nearby search
+-- CultivaNode: marketplace listings (first slice) and nearby search
 --
 -- Ported from the prototype's /equipment/nearby query (ST_DWithin + ST_Distance), with fixes:
 --   * radius and result count are capped; coordinates are validated

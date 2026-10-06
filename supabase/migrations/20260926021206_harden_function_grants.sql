@@ -1,4 +1,4 @@
--- Tillmate: close function grants that Supabase's default privileges gave to `authenticated`.
+-- CultivaNode: close function grants that Supabase's default privileges gave to `authenticated`.
 --
 -- Supabase grants EXECUTE on every new public function directly to anon, authenticated and
 -- service_role. The earlier migrations revoked from `public` and `anon` only, so signed-in users

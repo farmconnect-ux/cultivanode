@@ -1,4 +1,4 @@
--- Tillmate: public website forms - marketplace waitlist and contact messages.
+-- CultivaNode: public website forms - marketplace waitlist and contact messages.
 --
 -- Visitors are not signed in, so the website calls two functions with the publishable key.
 -- The tables themselves are closed to anon and authenticated users; only staff can read them.

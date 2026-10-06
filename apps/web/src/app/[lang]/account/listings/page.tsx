@@ -89,6 +89,38 @@ export default async function ListingsPage({ params }: PageProps<"/[lang]/accoun
             </ul>
           )}
 
+          {/* Service Area Card (Section 9) */}
+          <Card className="flex flex-col gap-4 border border-line bg-earth-50/50">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-leaf-900">Service Area &amp; Dispatch Geography</h2>
+                <p className="text-xs text-muted">Controls which jobs match your equipment in the marketplace radius.</p>
+              </div>
+              <Badge className="bg-leaf-100 text-leaf-800">Operational Matching: Active</Badge>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Maximum Travel Distance</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-black text-ink">50 km</span>
+                  <span className="text-xs text-muted">from base station ({account.profile.state ?? "Oyo"})</span>
+                </div>
+                <p className="text-xs text-leaf-700">Covers standard rural cluster radii in South-West corridor.</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Operating Pilot States</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="rounded bg-leaf-600 px-2.5 py-1 text-xs font-bold text-white">Oyo (Active)</span>
+                  <span className="rounded bg-leaf-100 px-2.5 py-1 text-xs font-bold text-leaf-800">Osun</span>
+                  <span className="rounded bg-leaf-100 px-2.5 py-1 text-xs font-bold text-leaf-800">Ogun</span>
+                  <span className="rounded bg-line/60 px-2.5 py-1 text-xs font-medium text-muted">Kwara (Expansion)</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {!account.profile.suspended_at && tierOk && (
             <Card className="flex flex-col gap-3">
               <h2 className="text-xl font-bold">{l.add}</h2>

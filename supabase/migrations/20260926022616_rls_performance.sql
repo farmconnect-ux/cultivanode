@@ -1,4 +1,4 @@
--- Tillmate: Row Level Security performance fixes flagged by the Supabase advisor.
+-- CultivaNode: Row Level Security performance fixes flagged by the Supabase advisor.
 --
 -- 1. Wrap auth.uid() (and row-independent helper calls) in a sub-select so Postgres evaluates
 --    them once per query instead of once per row (lint 0003_auth_rls_initplan).

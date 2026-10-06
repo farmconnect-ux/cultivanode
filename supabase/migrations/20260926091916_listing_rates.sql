@@ -1,4 +1,4 @@
--- Tillmate: listings follow the Phase 1 specification.
+-- CultivaNode: listings follow the Phase 1 specification.
 --
 --   * Equipment listings name an equipment_type from a fixed list; service listings name the
 --     provider_type (service type). The free-text `category` column is removed.

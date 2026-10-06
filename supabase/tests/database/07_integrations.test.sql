@@ -56,7 +56,7 @@ select throws_ok($$ select public.admin_save_integration_config('termii', 'test'
   '22023', null, 'settings outside their allowed options are refused');
 select throws_ok($$ select public.admin_save_integration_config('termii', 'test', '{"base_url":"http://evil.example"}') $$,
   '22023', null, 'provider addresses must use https');
-select lives_ok($$ select public.admin_save_integration_config('termii', 'test', '{"sender_id":"Tillmate","channel":"dnd"}') $$,
+select lives_ok($$ select public.admin_save_integration_config('termii', 'test', '{"sender_id":"CultivaNode","channel":"dnd"}') $$,
   'valid Termii settings are saved');
 select throws_ok($$ select public.admin_set_integration_secret('termii', 'test', 'api_key', 'has space in it') $$, '22023', null,
   'keys with spaces are refused');
@@ -72,7 +72,7 @@ select lives_ok($$ select public.admin_set_integration_secret('termii', 'test', 
   'the key can be replaced');
 select throws_ok($$ select public.admin_set_integration_mode('termii', 'live') $$, '22023', null,
   'an active provider cannot switch to a mode that has no key');
-select lives_ok($$ select public.admin_save_integration_config('termii', 'live', '{"sender_id":"Tillmate"}') $$,
+select lives_ok($$ select public.admin_save_integration_config('termii', 'live', '{"sender_id":"CultivaNode"}') $$,
   'live settings can be prepared while test mode stays in use');
 select is((public.admin_integration_overview() #>> '{providers}')::jsonb @? '$[*] ? (@.code == "termii" && @.mode == "test")',
   true, 'saving live settings does not switch the mode');

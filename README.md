@@ -4,10 +4,8 @@
 and, later, marketplace, IoT and AI, starting with farmers in South-West Nigeria. Web and mobile apps on one
 Supabase backend.
 
-> **Name.** CultivaNode is the final name (it replaced the working name "Tillmate" on 2026-09-26). The word
-> mark is not registered yet: file with NIPO before calling it a trademark. Name, taglines and logo come from
-> `packages/shared/src/brand.ts`. GitHub repo, Vercel project and Supabase project keep the old `tillmate`
-> identifiers until they are renamed in those dashboards.
+> **Name.** CultivaNode. Name, taglines and logo come from
+> `packages/shared/src/brand.ts`.
 
 The authoritative product specification is the Phase 1 master build prompt. Build order: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 (M0 and M1 done; next is the four-week "first real jobs" MVP). Status by requirement:
@@ -35,7 +33,7 @@ Status:
 - [x] Farms schema: farms with GPS pin and walked boundary (area calculated), plots, soil records
 - [x] `nearby_listings()` search, ported from the prototype with fixes and tests
 - [x] CI: typecheck, lint, unit tests, database tests
-- [x] Hosted Supabase project `tillmate` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1) with all migrations applied
+- [x] Hosted Supabase project `cultivanode` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1) with all migrations applied
 - [x] Design system: shared tokens (`packages/shared/src/design/tokens.ts`), web components (`apps/web/src/components/ui`), mobile components (`apps/mobile/src/ui`)
 - [x] Public website in English and Yorùbá: home, how it works, about, FAQ, contact form, Marketplace waitlist
 - [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
@@ -51,13 +49,13 @@ Status:
 
 - Node.js 22 (`.nvmrc`)
 - Docker Desktop, only for running Supabase locally and the database tests
-- The hosted Supabase project `tillmate` (ref `vqbtnftnxyfaembwgfrk`). Migrations are already applied.
+- The hosted Supabase project (ref `vqbtnftnxyfaembwgfrk`). Migrations are already applied.
 
 ## First-time setup
 
 ```bash
-git clone https://github.com/farmconnect-ux/tillmate.git
-cd tillmate
+git clone https://github.com/farmconnect-ux/cultivanode.git
+cd cultivanode
 npm install
 ```
 

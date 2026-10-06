@@ -31,11 +31,34 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
         <ul className="grid gap-4 sm:grid-cols-2">
           {(farms ?? []).map((farm) => (
             <li key={farm.id}>
-              <Card className="flex h-full flex-col gap-1">
-                <h2 className="text-lg font-bold">{farm.name}</h2>
-                <p className="text-muted">{[farm.lga, farm.state].filter(Boolean).join(", ")}</p>
-                {farm.organizations?.name && <p className="text-sm font-semibold text-node-600">{farm.organizations.name}</p>}
-                <p>{farm.area_ha ? fill(f.area, { area: Number(farm.area_ha).toLocaleString(lang === "yo" ? "yo-NG" : "en-NG", { maximumFractionDigits: 2 }) }) : f.areaUnknown}</p>
+              <Card className="flex h-full flex-col justify-between gap-3 border border-line hover:border-leaf-400 transition-colors">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-leaf-900">{farm.name}</h2>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-leaf-700">
+                      <span className="h-2 w-2 rounded-full bg-leaf-500" />
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-ink">
+                    {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} hectares` : "Boundary calculated"}
+                  </p>
+                  <p className="text-xs text-muted">{[farm.lga, farm.state].filter(Boolean).join(", ")}</p>
+                  <p className="text-xs font-medium text-harvest-800">
+                    {farm.state === "Oyo" ? "Derived Savannah Zone" : farm.state === "Osun" ? "Guinea Savannah Zone" : "Humid Forest Zone"}
+                  </p>
+                  {farm.organizations?.name && (
+                    <p className="text-xs font-semibold text-node-600">{farm.organizations.name}</p>
+                  )}
+                </div>
+                <div className="border-t border-line pt-2">
+                  <a
+                    href={`/${lang}/account/farms/${farm.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-leaf-100 px-3 py-1.5 text-xs font-bold text-leaf-800 hover:bg-leaf-200 transition-colors w-full"
+                  >
+                    View Farm (Map &amp; Operations) &rarr;
+                  </a>
+                </div>
               </Card>
             </li>
           ))}

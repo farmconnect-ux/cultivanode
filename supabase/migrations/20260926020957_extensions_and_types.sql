@@ -1,4 +1,4 @@
--- Tillmate: extensions and shared types
+-- CultivaNode: extensions and shared types
 -- PostGIS lives in the `extensions` schema, as Supabase recommends.
 
 create extension if not exists postgis with schema extensions;

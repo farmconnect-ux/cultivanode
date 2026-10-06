@@ -1,4 +1,4 @@
--- Tillmate: M1 accounts - onboarding, business staff, privacy requests, staff tools, assisted onboarding.
+-- CultivaNode: M1 accounts - onboarding, business staff, privacy requests, staff tools, assisted onboarding.
 --
 --   1. Onboarding: profiles.onboarded_at and complete_onboarding(), which records the person's details,
 --      business account, consents and role requests in one transaction.
