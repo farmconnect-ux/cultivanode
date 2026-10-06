@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatNaira } from "@cultivanode/shared";
+import { formatNaira, computeFarmGrossMargin } from "@cultivanode/shared";
 import { AddPlotForm, AddSoilRecordForm, UpdateBoundaryForm } from "@/components/account/farm-operations-forms";
+import { FarmAgronomyPlanner } from "@/components/account/farm-agronomy-planner";
 import { Badge, Button, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -244,6 +245,28 @@ export default async function FarmDetailPage({
       {/* TAB: PLOTS & CROPS (Active Database Operation) */}
       {activeTab === "crops" && (
         <div className="space-y-6">
+          {/* Operations Schedule & Calendar Sync */}
+          {plots.length > 0 && (
+            <FarmAgronomyPlanner
+              farmId={farm.id}
+              farmName={farm.name}
+              farmZone={farm.zone}
+              plots={plots.map((p) => ({ id: p.id, name: p.name, area_ha: p.area_ha }))}
+              soilRecords={soilRecords.map((s) => ({
+                id: s.id,
+                plot_id: s.plot_id,
+                soil_type: s.soil_type,
+                ph: s.ph,
+                organic_matter_pct: s.organic_matter_pct,
+                nitrogen_pct: s.nitrogen_pct,
+                phosphorus_ppm: s.phosphorus_ppm,
+                potassium_cmol_kg: s.potassium_cmol_kg,
+                tested_on: s.tested_on,
+              }))}
+              lang={lang}
+            />
+          )}
+
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h2 className="text-lg font-bold text-leaf-900">Recorded Farm Plots</h2>
@@ -350,34 +373,92 @@ export default async function FarmDetailPage({
         </Card>
       )}
 
-      {/* TAB: FARM BOOKS (LEDGER) */}
-      {activeTab === "farm_books" && (
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-leaf-900">Farm Books (Financial Service Ledger)</h2>
-          <p className="text-xs text-muted">Direct aggregation of service payments, escrow locks, and disbursements for this farm.</p>
+      {/* TAB: FARM BOOKS (LEDGER & GROSS MARGIN) */}
+      {activeTab === "farm_books" && (() => {
+        const measuredHa = farm.area_ha ? Number(farm.area_ha) : 1.0;
+        const totalYieldKg = Math.round(measuredHa * 3800); // 3.8 t/ha
+        const estimatedRevenueKobo = Math.round(totalYieldKg * 35000); // ₦350/kg
+        const estimatedInputsKobo = Math.round(measuredHa * 18000000); // ₦180,000/ha
+        const estimatedLabourKobo = Math.round(measuredHa * 7000000); // ₦70,000/ha
 
-          <div className="rounded border border-line bg-surface p-4">
-            <p className="text-xs font-semibold uppercase text-muted">Total Recorded Service Outflow</p>
-            <p className="text-3xl font-black text-leaf-900">{formatNaira(totalSpentKobo)}</p>
-          </div>
+        const marginReport = computeFarmGrossMargin({
+          cropId: "maize",
+          plotId: plots[0]?.id ?? farm.id,
+          areaHectares: measuredHa,
+          totalYieldKg,
+          revenueKobo: estimatedRevenueKobo,
+          costs: {
+            machineryKobo: totalSpentKobo,
+            labourKobo: estimatedLabourKobo,
+            seedsKobo: Math.round(estimatedInputsKobo * 0.3),
+            fertiliserKobo: Math.round(estimatedInputsKobo * 0.5),
+            chemicalsKobo: Math.round(estimatedInputsKobo * 0.2),
+          },
+        });
 
-          {jobs.length === 0 ? (
-            <p className="text-sm text-muted">No transactions on record for this farm.</p>
-          ) : (
-            <div className="divide-y divide-line text-xs">
-              {jobs.map((j) => (
-                <div key={j.id} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-ink">{j.listing_title}</span>
-                    <span className="text-muted block text-[11px]">{j.job_date} • {j.status}</span>
-                  </div>
-                  <span className="font-bold text-ink">-{formatNaira(j.total_kobo)}</span>
+        return (
+          <div className="space-y-6">
+            <Card className="flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <div>
+                  <h2 className="text-lg font-bold text-leaf-900">Enterprise Gross Margin &amp; Cost Analysis</h2>
+                  <p className="text-xs text-muted">Financial performance calculated per hectare across mechanization, inputs, and labour.</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
+                <Badge className="bg-leaf-100 text-leaf-800 text-xs">Farm Books Engine</Badge>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded border border-line bg-surface p-3">
+                  <p className="text-[11px] font-semibold uppercase text-muted">Projected Revenue</p>
+                  <p className="text-xl font-black text-leaf-900 mt-1">{formatNaira(marginReport.revenueKobo)}</p>
+                  <p className="text-[10px] text-muted">{marginReport.totalYieldKg.toLocaleString()} kg total yield</p>
+                </div>
+                <div className="rounded border border-line bg-surface p-3">
+                  <p className="text-[11px] font-semibold uppercase text-muted">Direct Costs (All)</p>
+                  <p className="text-xl font-black text-accent-700 mt-1">{formatNaira(marginReport.totalDirectCostKobo)}</p>
+                  <p className="text-[10px] text-muted">Machinery: {formatNaira(totalSpentKobo)}</p>
+                </div>
+                <div className="rounded border border-line bg-surface p-3">
+                  <p className="text-[11px] font-semibold uppercase text-muted">Gross Margin / Ha</p>
+                  <p className="text-xl font-black text-leaf-800 mt-1">{formatNaira(marginReport.grossMarginPerHectareKobo)}</p>
+                  <p className="text-[10px] text-muted">Total: {formatNaira(marginReport.grossMarginKobo)}</p>
+                </div>
+                <div className="rounded border border-line bg-surface p-3">
+                  <p className="text-[11px] font-semibold uppercase text-muted">Estimated ROI</p>
+                  <p className="text-xl font-black text-harvest-800 mt-1">{marginReport.roiPercentage}%</p>
+                  <p className="text-[10px] text-muted">Cost/kg: {formatNaira(marginReport.costOfProductionPerKgKobo)}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-leaf-900">Recorded Service Outflow Ledger</h2>
+                  <p className="text-xs text-muted">Direct aggregation of service payments, escrow locks, and disbursements for this farm.</p>
+                </div>
+                <p className="text-sm font-extrabold text-leaf-900">{formatNaira(totalSpentKobo)}</p>
+              </div>
+
+              {jobs.length === 0 ? (
+                <p className="text-sm text-muted">No transactions on record for this farm.</p>
+              ) : (
+                <div className="divide-y divide-line text-xs">
+                  {jobs.map((j) => (
+                    <div key={j.id} className="py-2.5 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-ink">{j.listing_title}</span>
+                        <span className="text-muted block text-[11px]">{j.job_date} • {j.status}</span>
+                      </div>
+                      <span className="font-bold text-ink">-{formatNaira(j.total_kobo)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -13,10 +13,11 @@ describe('Cancellation Engine', () => {
     reason: 'Change of schedule',
   };
 
-  it('allows free 100% refund for early farmer cancellation (>24h)', () => {
+  it('allows free 100% refund for early farmer cancellation (>48h)', () => {
     const result = evaluateCancellation({
       ...baseBooking,
       actor: 'farmer',
+      jobStartTimestamp: 100000 + 50 * 60 * 60 * 1000, // 50h in advance (>48h)
     });
 
     expect(result.allowed).toBe(true);
@@ -25,17 +26,29 @@ describe('Cancellation Engine', () => {
     expect(result.reasonCode).toBe('free_early_cancellation');
   });
 
-  it('charges 20% late cancellation fee for late farmer cancellation (<24h)', () => {
+  it('charges 10% cancellation fee for moderate farmer cancellation (24–48h)', () => {
     const result = evaluateCancellation({
       ...baseBooking,
       actor: 'farmer',
-      requestTimestamp: 100000,
-      jobStartTimestamp: 100000 + 5 * 60 * 60 * 1000, // Only 5h in advance
+      jobStartTimestamp: 100000 + 36 * 60 * 60 * 1000, // 36h in advance (24-48h)
     });
 
     expect(result.allowed).toBe(true);
-    expect(result.refundFarmerKobo).toBe(4000000); // 80% of ₦50,000 = ₦40,000
-    expect(result.payoutProviderKobo).toBe(1000000); // 20% of ₦50,000 = ₦10,000
+    expect(result.refundFarmerKobo).toBe(4500000); // 90% of ₦50,000 = ₦45,000
+    expect(result.payoutProviderKobo).toBe(500000); // 10% of ₦50,000 = ₦5,000
+    expect(result.reasonCode).toBe('moderate_farmer_cancellation');
+  });
+
+  it('charges 25% late cancellation fee for late farmer cancellation (<24h)', () => {
+    const result = evaluateCancellation({
+      ...baseBooking,
+      actor: 'farmer',
+      jobStartTimestamp: 100000 + 5 * 60 * 60 * 1000, // Only 5h in advance (<24h)
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.refundFarmerKobo).toBe(3750000); // 75% of ₦50,000 = ₦37,500
+    expect(result.payoutProviderKobo).toBe(1250000); // 25% of ₦50,000 = ₦12,500
     expect(result.reasonCode).toBe('late_farmer_cancellation');
   });
 

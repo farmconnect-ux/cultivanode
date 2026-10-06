@@ -9,8 +9,10 @@ export interface WeatherCondition {
 }
 
 export interface CancellationPolicySettings {
-  freeCancellationNoticeHours: number; // default 24
-  lateCancellationFeePercent: number; // default 20
+  freeCancellationNoticeHours: number; // default 48
+  moderateCancellationNoticeHours: number; // default 24
+  moderateCancellationFeePercent: number; // default 10 (24-48h before)
+  lateCancellationFeePercent: number; // default 25 (< 24h before)
   providerStrikeThreshold: number; // default 3
   weatherRainMmThreshold: number; // default 15
 }
@@ -38,6 +40,7 @@ export interface CancellationOutcome {
   weatherWaiverApplied: boolean;
   reasonCode:
     | 'free_early_cancellation'
+    | 'moderate_farmer_cancellation'
     | 'late_farmer_cancellation'
     | 'weather_reschedule_waiver'
     | 'provider_default_penalty'

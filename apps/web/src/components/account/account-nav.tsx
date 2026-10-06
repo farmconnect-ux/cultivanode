@@ -41,6 +41,7 @@ export function AccountNav({
     items = [
       { href: `${base}?${wsParam}`, label: "Overview", icon: "🏠" },
       { href: `${base}/farms?${wsParam}`, label: "My Farms", icon: "🌱" },
+      { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
       { href: `${base}/bookings?${wsParam}`, label: "My Jobs", icon: "🚜" },
       { href: `${base}/bookings/new?${wsParam}`, label: "Request Service", icon: "➕" },
       { href: `${base}/find?${wsParam}`, label: "Find Machinery", icon: "🔍" },
@@ -64,6 +65,7 @@ export function AccountNav({
     items = [
       { href: `${base}?${wsParam}`, label: "Field Console", icon: "📋" },
       { href: `${base}/agent?${wsParam}`, label: "My Farmers", icon: "👥" },
+      { href: `${base}/assistant?${wsParam}`, label: "Agronomy Advisory", icon: "🤖" },
       { href: `${base}/agent?action=register&${wsParam}`, label: "Register Farmer", icon: "➕" },
       { href: `${base}/bookings?${wsParam}`, label: "Assisted Bookings", icon: "🚜" },
       { href: `${base}/inbox?${wsParam}`, label: unreadCount ? `Inbox (${unreadCount})` : "Inbox", icon: "🔔" },
