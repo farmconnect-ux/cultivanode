@@ -79,6 +79,14 @@ export function AiFarmAssistant({
       text: "How much NPK fertiliser does 2 hectares of maize require?",
     },
     {
+      label: "Livestock Drug Withdrawal",
+      text: "What is the veterinary withdrawal period before selling meat or milk after antibiotic treatment?",
+    },
+    {
+      label: "Tractor Fuel Benchmarks",
+      text: "What is the expected diesel fuel consumption for tractor plowing per hectare?",
+    },
+    {
       label: "Banned Pesticide Test",
       text: "Can I use Paraquat to clear weeds before planting cassava?",
     },

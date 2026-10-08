@@ -12,6 +12,16 @@ import {
   RecordFarmTransactionForm,
   AddFarmRecordForm,
   PrintReportButton,
+  AddMachineryForm,
+  LogMachineryUsageForm,
+  AddEquipmentForm,
+  RecordAttendanceForm,
+  AddOperationalTaskForm,
+  AddIndividualLivestockForm,
+  LogLivestockHealthForm,
+  MoveInventoryTransactionalForm,
+  RecordPlanActualVarianceForm,
+  AddFarmBudgetForm,
 } from "@/components/account/farm-operations-forms";
 import { Badge, Button, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
@@ -130,6 +140,61 @@ export default async function FarmDetailPage({
     .order("created_at", { ascending: false });
   const jobs = farmJobs ?? [];
 
+  // 11. Fetch Machinery Fleet & Equipment
+  const { data: machineryData } = await (supabase as any)
+    .from("farm_machinery_assets")
+    .select("id, asset_code, machinery_type, make, model, registration_number, engine_hours, current_status, fuel_type, purchase_cost_kobo, created_at")
+    .eq("farm_id", id)
+    .order("created_at", { ascending: false });
+  const machinery = machineryData ?? [];
+
+  const { data: equipmentData } = await (supabase as any)
+    .from("farm_equipment_assets")
+    .select("id, equipment_name, category, quantity, storage_location, condition, status, created_at")
+    .eq("farm_id", id)
+    .order("created_at", { ascending: false });
+  const equipment = equipmentData ?? [];
+
+  // 12. Fetch Tasks & Attendance
+  const { data: tasksData } = await (supabase as any)
+    .from("farm_operational_tasks")
+    .select("id, title, priority, status, start_date, due_date, estimated_duration_hours, actual_duration_hours, estimated_cost_kobo, assigned_worker_id, created_at")
+    .eq("farm_id", id)
+    .order("due_date", { ascending: true });
+  const tasks = tasksData ?? [];
+
+  const { data: attendanceData } = await (supabase as any)
+    .from("farm_attendance_records")
+    .select("id, worker_id, attendance_date, status, overtime_minutes, daily_wage_kobo, created_at")
+    .eq("farm_id", id)
+    .order("attendance_date", { ascending: false })
+    .limit(20);
+  const attendance = attendanceData ?? [];
+
+  // 13. Fetch Individual Livestock Pedigree & Health
+  const { data: animalsData } = await (supabase as any)
+    .from("farm_livestock_animals")
+    .select("id, tag_number, rfid_number, animal_type, breed, sex, date_of_birth, status, current_weight_kg, housing_location, created_at")
+    .eq("farm_id", id)
+    .order("created_at", { ascending: false });
+  const individualAnimals = animalsData ?? [];
+
+  // 14. Fetch Standard vs Plan vs Actual Variances
+  const { data: variancesData } = await (supabase as any)
+    .from("farm_plan_actual_variances")
+    .select("id, entity_type, metric_name, unit, standard_value, plan_value, actual_value, standard_vs_plan_variance, standard_vs_actual_variance, plan_vs_actual_variance, is_farmer_override, farmer_deviation_reason, created_at")
+    .eq("farm_id", id)
+    .order("created_at", { ascending: false });
+  const variances = variancesData ?? [];
+
+  // 15. Fetch Farm Budgets
+  const { data: budgetsData } = await (supabase as any)
+    .from("farm_budgets")
+    .select("id, name, fiscal_year, enterprise_type, total_budgeted_expense_kobo, total_budgeted_income_kobo, status, created_at")
+    .eq("farm_id", id)
+    .order("fiscal_year", { ascending: false });
+  const budgets = budgetsData ?? [];
+
   // Financial aggregates
   let totalSpentKobo = 0;
   jobs.forEach((j) => {
@@ -160,12 +225,14 @@ export default async function FarmDetailPage({
     { key: "overview", label: "Overview", icon: "📊" },
     { key: "plots", label: `Fields & Plots (${plots.length})`, icon: "🗺️" },
     { key: "crops", label: `Crop Management (${cropCycles.length})`, icon: "🌽" },
-    { key: "livestock", label: `Livestock (${totalHeadCount})`, icon: "🐄" },
-    { key: "farm_books", label: "Farm Account", icon: "💰" },
-    { key: "workers", label: `Workers (${workers.length})`, icon: "👥" },
+    { key: "livestock", label: `Livestock (${totalHeadCount + individualAnimals.length})`, icon: "🐄" },
+    { key: "tasks", label: `Tasks & Labour (${tasks.length})`, icon: "✅" },
+    { key: "machinery", label: `Machinery & Fleet (${machinery.length + equipment.length})`, icon: "🚜" },
     { key: "inventory", label: `Inventory (${inventory.length})`, icon: "📦" },
+    { key: "farm_books", label: `Farm Account & Budgets (${financials.length})`, icon: "💰" },
+    { key: "variance", label: `Standard vs Actual (${variances.length})`, icon: "⚖️" },
     { key: "records", label: `Farm Records (${soilRecords.length + generalRecords.length})`, icon: "📁" },
-    { key: "jobs", label: `Mechanization (${jobs.length})`, icon: "🚜" },
+    { key: "jobs", label: `Service Bookings (${jobs.length})`, icon: "🛠️" },
   ];
 
   return (
@@ -650,8 +717,53 @@ export default async function FarmDetailPage({
             )}
 
             <div className="border-t border-line pt-4">
-              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register Livestock / Flock</h4>
+              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register Livestock Group / Flock</h4>
               <AddLivestockForm farmId={farm.id} lang={lang} />
+            </div>
+          </Card>
+
+          {/* Individual Pedigree Tracking Card */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div>
+                <h3 className="text-base font-bold text-leaf-900">Individual Animals &amp; Pedigree ({individualAnimals.length})</h3>
+                <p className="text-xs text-muted">Tag-tracked breeding stock, dairy cows, and individual medical records.</p>
+              </div>
+              <Badge className="bg-amber-100 text-amber-800 font-bold">{individualAnimals.length} Tagged</Badge>
+            </div>
+
+            {individualAnimals.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">No individual animals registered with tag IDs yet.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {individualAnimals.map((a: any) => (
+                  <div key={a.id} className="p-3.5 rounded-xl border border-line bg-surface flex flex-col justify-between gap-2 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <strong className="text-sm text-ink">{a.tag_number}</strong>
+                        <p className="text-xs text-muted capitalize">{a.animal_type} • {a.breed}</p>
+                      </div>
+                      <Badge className="bg-leaf-100 text-leaf-800 text-xs capitalize">{a.status}</Badge>
+                    </div>
+                    <div className="text-xs text-neutral-600 flex flex-col gap-0.5">
+                      <div>Sex: <strong className="capitalize">{a.sex}</strong></div>
+                      <div>Weight: <strong>{a.current_weight_kg ? `${a.current_weight_kg} kg` : "Not weighed"}</strong></div>
+                      {a.rfid_number && <div>RFID: <strong>{a.rfid_number}</strong></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-line pt-4 grid gap-6 md:grid-cols-2">
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register Individual Animal</h4>
+                <AddIndividualLivestockForm farmId={farm.id} lang={lang} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Health / Vet Event</h4>
+                <LogLivestockHealthForm farmId={farm.id} animals={individualAnimals} groups={livestock} lang={lang} />
+              </div>
             </div>
           </Card>
         </div>
@@ -809,19 +921,134 @@ export default async function FarmDetailPage({
         );
       })()}
 
-      {/* ------------------------------------------------------------------ TAB 5: WORKERS MANAGEMENT */}
-      {activeTab === "workers" && (
+      {/* ------------------------------------------------------------------ TAB 5: TASKS & LABOUR MANAGEMENT */}
+      {(activeTab === "tasks" || activeTab === "workers") && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-neutral-900">Farm Workers &amp; Labour Directory</h2>
+              <h2 className="text-xl font-bold text-neutral-900">Farm Tasks, Labour &amp; Daily Attendance</h2>
               <p className="text-xs text-neutral-500">
-                Permanent staff, machine operators, seasonal scouts, and daily wage records.
+                Assign tasks to plots and crops, log field attendance with GPS, and track worker wages.
               </p>
             </div>
-            <Badge className="bg-leaf-100 text-leaf-800">{workers.length} Personnel</Badge>
+            <div className="flex gap-2">
+              <Badge className="bg-leaf-100 text-leaf-800">{tasks.length} Operational Tasks</Badge>
+              <Badge className="bg-node-100 text-node-800">{workers.length} Personnel</Badge>
+            </div>
           </div>
 
+          {/* Operational Tasks Console */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-base font-bold text-leaf-900">Operational Tasks ({tasks.length})</h3>
+              <span className="text-xs text-muted">Planned, Assigned, In-Progress, and Completed</span>
+            </div>
+
+            {tasks.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">No tasks assigned yet. Assign work below.</p>
+            ) : (
+              <div className="divide-y divide-line">
+                {tasks.map((t: any) => (
+                  <div key={t.id} className="py-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-sm text-ink">{t.title}</strong>
+                        <Badge
+                          className={
+                            t.priority === "urgent"
+                              ? "bg-red-100 text-red-800"
+                              : t.priority === "high"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-surface text-muted"
+                          }
+                        >
+                          {t.priority.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted mt-0.5">
+                        Due: <strong>{t.due_date}</strong> • Est: {t.estimated_duration_hours}h • Cost: {formatNaira(t.estimated_cost_kobo)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={
+                          t.status === "COMPLETED"
+                            ? "bg-leaf-100 text-leaf-800"
+                            : t.status === "IN_PROGRESS"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-neutral-100 text-neutral-800"
+                        }
+                      >
+                        {t.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-line pt-4">
+              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Assign New Operational Task</h4>
+              <AddOperationalTaskForm
+                farmId={farm.id}
+                workers={workers}
+                plots={plots}
+                cropCycles={cropCycles}
+                lang={lang}
+              />
+            </div>
+          </Card>
+
+          {/* Daily Attendance & Labour Shift Card */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div>
+                <h3 className="text-base font-bold text-leaf-900">Attendance Log ({attendance.length})</h3>
+                <p className="text-xs text-muted">Daily clock-in records, shift status, and overtime verification.</p>
+              </div>
+            </div>
+
+            {attendance.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">No attendance logged yet. Record worker clock-in below.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-neutral-50 text-neutral-600 border-b">
+                    <tr>
+                      <th className="p-2.5">Date</th>
+                      <th className="p-2.5">Worker</th>
+                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5">Overtime</th>
+                      <th className="p-2.5">Daily Wage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {attendance.map((a: any) => {
+                      const worker = workers.find((w: any) => w.id === a.worker_id);
+                      return (
+                        <tr key={a.id} className="hover:bg-neutral-50/50">
+                          <td className="p-2.5 font-semibold text-neutral-900">{a.attendance_date}</td>
+                          <td className="p-2.5">{worker?.full_name || "Worker"}</td>
+                          <td className="p-2.5 capitalize">
+                            <Badge className="bg-leaf-100 text-leaf-800 text-xs">{a.status}</Badge>
+                          </td>
+                          <td className="p-2.5">{a.overtime_minutes ? `${a.overtime_minutes} mins` : "None"}</td>
+                          <td className="p-2.5 font-bold">{formatNaira(a.daily_wage_kobo)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="border-t border-line pt-4">
+              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Daily Attendance</h4>
+              <RecordAttendanceForm farmId={farm.id} workers={workers} lang={lang} />
+            </div>
+          </Card>
+
+          {/* Worker Directory Card */}
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="text-base font-bold text-leaf-900">Worker Directory ({workers.length})</h3>
@@ -930,9 +1157,189 @@ export default async function FarmDetailPage({
               </div>
             )}
 
+            <div className="border-t border-line pt-4 grid gap-6 md:grid-cols-2">
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Inventory Item</h4>
+                <AddInventoryItemForm farmId={farm.id} lang={lang} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Transactional Movement</h4>
+                <MoveInventoryTransactionalForm farmId={farm.id} items={inventory} lang={lang} />
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ TAB: MACHINERY & FLEET */}
+      {activeTab === "machinery" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">Machinery Fleet &amp; Small Equipment</h2>
+              <p className="text-xs text-neutral-500">
+                Track tractors, implements, engine hours, maintenance schedules, and farm equipment.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Badge className="bg-leaf-100 text-leaf-800">{machinery.length} Machines</Badge>
+              <Badge className="bg-node-100 text-node-800">{equipment.length} Equipment</Badge>
+            </div>
+          </div>
+
+          {/* Machinery Fleet Card */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-base font-bold text-leaf-900">Machinery Registry ({machinery.length})</h3>
+            </div>
+
+            {machinery.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">No heavy machinery registered yet.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {machinery.map((m: any) => (
+                  <div key={m.id} className="p-4 rounded-xl border border-line bg-surface flex flex-col justify-between gap-2 shadow-xs">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <strong className="text-sm text-ink">{m.asset_code}</strong>
+                        <p className="text-xs text-muted capitalize">{m.make} {m.model} ({m.machinery_type})</p>
+                      </div>
+                      <Badge className="bg-leaf-100 text-leaf-800 text-xs">{m.current_status}</Badge>
+                    </div>
+                    <div className="text-xs text-neutral-600 flex flex-col gap-0.5 mt-2">
+                      <div>Engine Hours: <strong className="text-ink">{m.engine_hours} hrs</strong></div>
+                      <div>Fuel: <strong className="capitalize">{m.fuel_type}</strong></div>
+                      {m.registration_number && <div>Reg: <strong>{m.registration_number}</strong></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-line pt-4 grid gap-6 md:grid-cols-2">
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Register Machinery Asset</h4>
+                <AddMachineryForm farmId={farm.id} lang={lang} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Machine Operation / Hours</h4>
+                <LogMachineryUsageForm
+                  farmId={farm.id}
+                  machinery={machinery}
+                  workers={workers}
+                  plots={plots}
+                  lang={lang}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Small Equipment Card */}
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-base font-bold text-leaf-900">Farm Equipment &amp; Tools ({equipment.length})</h3>
+              <span className="text-xs text-muted">Sprayers, irrigation fittings, PPE, and hand tools</span>
+            </div>
+
+            {equipment.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">No equipment items registered yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-neutral-50 text-neutral-600 border-b">
+                    <tr>
+                      <th className="p-2.5">Name</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Quantity</th>
+                      <th className="p-2.5">Condition</th>
+                      <th className="p-2.5">Location</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {equipment.map((e: any) => (
+                      <tr key={e.id} className="hover:bg-neutral-50/50">
+                        <td className="p-2.5 font-bold text-ink">{e.equipment_name}</td>
+                        <td className="p-2.5 capitalize">{e.category?.replace(/_/g, " ")}</td>
+                        <td className="p-2.5">{e.quantity}</td>
+                        <td className="p-2.5 capitalize">{e.condition}</td>
+                        <td className="p-2.5">{e.storage_location || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <div className="border-t border-line pt-4">
-              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Inventory Item</h4>
-              <AddInventoryItemForm farmId={farm.id} lang={lang} />
+              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Add Equipment Asset</h4>
+              <AddEquipmentForm farmId={farm.id} lang={lang} />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ TAB: VARIANCE ENGINE */}
+      {activeTab === "variance" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">Standard &rarr; Plan &rarr; Actual Variance Engine</h2>
+              <p className="text-xs text-neutral-500">
+                CultivaNode recommends. The farmer decides. CultivaNode learns from the difference.
+              </p>
+            </div>
+            <Badge className="bg-leaf-100 text-leaf-800">{variances.length} Variance Records</Badge>
+          </div>
+
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-base font-bold text-leaf-900">Recorded Variances &amp; Farmer Decisions ({variances.length})</h3>
+            </div>
+
+            {variances.length === 0 ? (
+              <p className="text-xs text-muted py-4 text-center">
+                No farmer overrides or variance records logged for this farm yet.
+              </p>
+            ) : (
+              <div className="divide-y divide-line">
+                {variances.map((v: any) => (
+                  <div key={v.id} className="py-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <strong className="text-sm text-ink">{v.metric_name}</strong>
+                        <span className="text-xs text-muted ml-2">({v.entity_type})</span>
+                      </div>
+                      <Badge className={v.is_farmer_override ? "bg-amber-100 text-amber-800" : "bg-leaf-100 text-leaf-800"}>
+                        {v.is_farmer_override ? "Farmer Override" : "Standard"}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs bg-surface p-2.5 rounded-lg border border-line">
+                      <div>
+                        <span className="text-muted block text-[10px] uppercase font-bold">Standard Recommendation</span>
+                        <strong className="text-ink">{v.standard_value} {v.unit}</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted block text-[10px] uppercase font-bold">Farmer Plan</span>
+                        <strong className="text-ink">{v.plan_value} {v.unit}</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted block text-[10px] uppercase font-bold">Actual Field Result</span>
+                        <strong className="text-leaf-800">{v.actual_value} {v.unit}</strong>
+                      </div>
+                    </div>
+                    {v.farmer_deviation_reason && (
+                      <p className="text-xs text-neutral-600 italic">
+                        &ldquo;{v.farmer_deviation_reason}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-line pt-4">
+              <h4 className="text-sm font-bold text-leaf-900 mb-2">+ Record Farmer Decision &amp; Variance</h4>
+              <RecordPlanActualVarianceForm farmId={farm.id} lang={lang} />
             </div>
           </Card>
         </div>

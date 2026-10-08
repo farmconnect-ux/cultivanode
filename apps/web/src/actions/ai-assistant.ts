@@ -103,6 +103,57 @@ function generateAgronomicAdvisorAnswer(
 3. Post-Emergence: Perform primary hoe weeding between 21–28 days after planting before canopy closure.`;
   }
 
+  // 5. Livestock Drug Withdrawal & Feed Management
+  if (q.includes("withdrawal") || q.includes("antibiotic") || q.includes("oxytet") || (q.includes("livestock") && (q.includes("health") || q.includes("feed") || q.includes("fcr")))) {
+    if (lang === "yo") {
+      return `Aabo Itọju Ẹran-Ọ̀sìn & Akoko Idaduro (NAFDAC / Veterinary Safety):
+1. Akoko Idaduro (Withdrawal Period): Nigbati o ba fun ẹran tabi adìyẹ ni oogun apakokoro (bii Oxytetracycline tabi Penicillin), ẹyin tabi wara wọn kò gbọdọ jẹ tita fun jijẹ titi akoko idaduro yoo fi pari (ọjọ 7 si 14).
+2. Ewu Oogun ninu Ounje: Tita eran tabi wara ṣaaju ki akoko idaduro to pari n fa arun ati aibikita oogun (antibiotic resistance) ninu eniyan.
+3. Iwọn Ounjẹ (FCR): Bojuto iye ounjẹ ti ẹran jẹ si iye iwuwo ti wọn fi kun lati dinku inawo oko.`;
+    }
+    if (lang === "pcm") {
+      return `Livestock Drug Withdrawal & Feed Safety Guidelines:
+1. Withdrawal Period: Once you give your cows, goats, or birds antibiotics like Oxytetracycline, you MUST NOT sell their meat, milk, or eggs until the withdrawal days finish (typically 7 to 14 days depending on medication).
+2. Human Health Danger: If people eat meat with active drug residue, e go spoil human health and make future sickness hard to cure.
+3. Feed Conversion Ratio (FCR): Measure how many bags of feed your animals chop compare to their weight gain so you no go waste money.`;
+    }
+    return `Veterinary Drug Withdrawal & Livestock Management Protocol:
+1. Food Safety & Withdrawal Period: When administering antibiotics or anthelmintics (e.g. Oxytetracycline, Tylosin), observe the manufacturer and veterinary withdrawal period (typically 7–14 days for meat, 3–5 days for milk/eggs). Products must NOT enter the food supply during this window.
+2. Drug Residue Compliance: Violating withdrawal periods leads to consumer antibiotic resistance and rejects from institutional buyers.
+3. Feed Conversion Ratio (FCR): For broilers, target an FCR between 1.5–1.8 kg feed per kg live weight. Feed issues should be logged synchronously to update inventory.`;
+  }
+
+  // 6. Machinery Maintenance & Fuel Benchmarks
+  if (q.includes("machinery") || q.includes("tractor") || q.includes("diesel") || q.includes("fuel") || q.includes("implement") || q.includes("plough")) {
+    if (lang === "yo") {
+      return `Itọju Ẹrọ Oko & Lilo Epo (Diesel Benchmarks):
+1. Lilo Epo: Titulẹ pẹlu tirakito (Plowing) ma n gba lita 12 si 18 fun wakati kan (15–25 L/ha lori ilẹ to le).
+2. Itọju Ẹrọ: Ṣe ayẹwo epo ẹrọ (engine oil) ati fẹlẹfẹlẹ afẹfẹ (air filter) ni gbogbo wakati 100 si 250 ti ẹrọ ba ṣiṣẹ.
+3. Ifipamọ & Aabo: Maṣe jẹ ki epo doti, ki o si forukọsilẹ wakati iṣẹ ati agbegbe ti a kọja sinu CultivaNode Machinery Fleet Log.`;
+    }
+    if (lang === "pcm") {
+      return `Machinery Fuel & Maintenance Standards:
+1. Fuel Usage: Tractor plowing normally dey chop between 12 to 18 litres of diesel per hour (around 15 to 25 L per hectare).
+2. Regular Service: Change engine oil and clean air filter every 100 to 250 working hours make tractor no knock.
+3. Fleet Records: Always log operator hours and diesel consumed inside your CultivaNode machinery dashboard to detect fuel theft or engine issues early.`;
+    }
+    return `Mechanization & Fuel Consumption Benchmarks:
+1. Fuel Consumption Rates:
+   - Primary Tillage (Disc Plowing): 12–18 L/hr (18–25 L/ha depending on soil compaction).
+   - Secondary Tillage (Harrowing/Ridging): 8–12 L/hr (10–15 L/ha).
+   - Spraying / Boom Sprayers: 4–6 L/hr.
+2. Preventive Maintenance: Conduct oil and filter service every 250 operating hours or at seasonal transitions. Inspect hydraulic seals and tyre pressures before heavy field entry.
+3. Accountability: Record operator hours and diesel issued directly into the Machinery Fleet tab to automatically track operational costs per hectare.`;
+  }
+
+  // 7. Standard-Plan-Actual & Farm Variance
+  if (q.includes("variance") || q.includes("plan") || q.includes("benchmark") || q.includes("target") || q.includes("standard")) {
+    return `CultivaNode Standard-Plan-Actual Farm Operational Protocol:
+1. Advisory Principle: "CultivaNode recommends (agronomic GAP benchmark). The farmer decides (sets planning targets). The farmer records (field actuals). CultivaNode learns from the variance."
+2. Variance Tracking: Monitor variances across Yield (bags/ha), Seed rate, Fertiliser quantity, and Mechanization hours.
+3. Decision Autonomy: Agronomic standards provide calibrated starting baselines without restricting managerial freedom or land use decisions.`;
+  }
+
   // 5. Default grounded GAP advice
   if (lang === "yo") {
     return `Imọran Ogbin IITA/NIHORT fun ${context.cropId ?? "ohun ogbin rẹ"}:
