@@ -17,7 +17,7 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
   const supabase = await createClient();
   // My own farms and farms of businesses I belong to (not every farm staff permissions could show).
   const scope = [`owner_id.eq.${account.userId}`, ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : [])];
-  const { data: farms } = await supabase.from("farms").select("id, name, state, lga, area_ha, organization_id, organizations(name), plots(count)")
+  const { data: farms } = await supabase.from("farms").select("id, name, state, lga, area_ha, organization_id, organizations(name)")
     .or(scope.join(",")).order("created_at");
 
   return (
@@ -38,11 +38,11 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
                     <h2 className="text-lg font-bold text-leaf-900">{farm.name}</h2>
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-leaf-700">
                       <span className="h-2 w-2 rounded-full bg-leaf-500" />
-                      Active
+                      Active Pin
                     </span>
                   </div>
                   <p className="text-sm font-semibold text-ink">
-                    {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} hectares` : "Boundary calculated"}
+                    {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} hectares` : "Location mapped"}
                   </p>
                   <p className="text-xs text-muted">{[farm.lga, farm.state].filter(Boolean).join(", ")}</p>
                   <p className="text-xs font-medium text-harvest-800">
@@ -52,47 +52,19 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
                     <p className="text-xs font-semibold text-node-600">{farm.organizations.name}</p>
                   )}
                 </div>
-                <div className="border-t border-line pt-3 flex flex-col gap-2">
+                <div className="border-t border-line pt-3 flex flex-wrap gap-2">
                   <a
-                    href={`/${lang}/account/farms/${farm.id}`}
-                    className="inline-flex items-center justify-center rounded-md bg-leaf-600 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-700 transition-colors w-full"
+                    href={`/${lang}/account/find?farm=${farm.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-leaf-600 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-700 transition-colors flex-1 text-center"
                   >
-                    Open Farm Enterprise &rarr;
+                    🚜 Find Machinery
                   </a>
-                  <div className="space-y-2 border-t border-line pt-3">
-                    <div className="flex items-center justify-between text-[11px] text-muted font-bold uppercase tracking-wider">
-                      <span>Quick Domain Jump</span>
-                      <a
-                        href={`/${lang}/account/farms/${farm.id}`}
-                        className="text-leaf-700 hover:text-leaf-900 font-bold lowercase"
-                      >
-                        view all &rarr;
-                      </a>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5 text-center text-[11px]">
-                      <a
-                        href={`/${lang}/account/farms/${farm.id}?tab=plots`}
-                        className="p-1.5 rounded-lg bg-leaf-50 hover:bg-leaf-100 text-leaf-900 font-semibold border border-leaf-200/60 transition-colors flex flex-col items-center gap-0.5"
-                      >
-                        <span>🗺️</span>
-                        <span className="truncate w-full">Fields</span>
-                      </a>
-                      <a
-                        href={`/${lang}/account/farms/${farm.id}?tab=tasks`}
-                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold border border-emerald-200/60 transition-colors flex flex-col items-center gap-0.5"
-                      >
-                        <span>✅</span>
-                        <span className="truncate w-full">Tasks</span>
-                      </a>
-                      <a
-                        href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
-                        className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200/60 transition-colors flex flex-col items-center gap-0.5"
-                      >
-                        <span>💰</span>
-                        <span className="truncate w-full">Ledger</span>
-                      </a>
-                    </div>
-                  </div>
+                  <a
+                    href={`/${lang}/account/bookings/new?farm=${farm.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-800 hover:bg-neutral-200 transition-colors flex-1 text-center"
+                  >
+                    ➕ Request Service
+                  </a>
                 </div>
               </Card>
             </li>

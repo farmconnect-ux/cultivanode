@@ -275,7 +275,7 @@ export async function addFarm(_prev: ActionState, form: FormData): Promise<Actio
   }
   refresh();
   if (newFarm?.id) {
-    redirect(`/${lang(form)}/account/farms/${newFarm.id}`);
+    redirect(`/${lang(form)}/account/farms`);
   }
   return ok();
 }
