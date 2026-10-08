@@ -46,11 +46,28 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
   return <div className={cx("rounded-lg border border-line bg-white p-6", className)} {...rest} />;
 }
 
-export function Badge({ className, ...rest }: ComponentProps<"span">) {
+export type BadgeTone = "default" | "leaf" | "warning" | "danger";
+
+export function Badge({
+  className,
+  tone = "default",
+  ...rest
+}: ComponentProps<"span"> & { tone?: BadgeTone }) {
+  const tones: Record<BadgeTone, string> = {
+    default: "bg-neutral-100 text-neutral-800",
+    leaf: "bg-leaf-100 text-leaf-800",
+    warning: "bg-harvest-100 text-harvest-800",
+    danger: "bg-danger-100 text-danger-800",
+  };
   return (
     <span
-      className={cx("inline-flex items-center rounded-full bg-harvest-100 px-3 py-1 text-sm font-semibold text-harvest-700", className)}
+      className={cx(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        tones[tone] || tones.default,
+        className
+      )}
       {...rest}
     />
   );
 }
+

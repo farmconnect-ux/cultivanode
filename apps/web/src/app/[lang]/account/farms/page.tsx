@@ -54,16 +54,22 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
                 </div>
                 <div className="border-t border-line pt-3 flex flex-wrap gap-2">
                   <a
-                    href={`/${lang}/account/find?farm=${farm.id}`}
-                    className="inline-flex items-center justify-center rounded-md bg-leaf-600 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-700 transition-colors flex-1 text-center"
+                    href={`/${lang}/account/farms/${farm.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-leaf-700 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-800 transition-colors flex-1 text-center"
                   >
-                    🚜 Find Machinery
+                    🗺️ Plots & Land
+                  </a>
+                  <a
+                    href={`/${lang}/account/find?farm=${farm.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-leaf-100 px-3 py-2 text-xs font-bold text-leaf-800 hover:bg-leaf-200 transition-colors flex-1 text-center"
+                  >
+                    🚜 Machinery
                   </a>
                   <a
                     href={`/${lang}/account/bookings/new?farm=${farm.id}`}
                     className="inline-flex items-center justify-center rounded-md bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-800 hover:bg-neutral-200 transition-colors flex-1 text-center"
                   >
-                    ➕ Request Service
+                    ➕ Book Service
                   </a>
                 </div>
               </Card>

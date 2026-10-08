@@ -82,20 +82,35 @@ export function AccountNav({
           { href: `${base}?${wsParam}`, label: "Farm Overview", icon: "🏠" },
           { href: `${base}/farms?${wsParam}`, label: "Farms & Land", icon: "🗺️" },
           { href: `${base}/crops?${wsParam}`, label: "Crop Cycles & GAP", icon: "🌽" },
-          { href: `${base}/farms?tab=livestock&${wsParam}`, label: "Livestock Enterprise", icon: "🐄" },
-          { href: `${base}/farms?tab=machinery&${wsParam}`, label: "Machinery Fleet", icon: "🚜" },
-          { href: `${base}/farms?tab=inventory&${wsParam}`, label: "Multi-Location Inventory", icon: "📦" },
+          { href: `${base}/livestock?${wsParam}`, label: "Livestock Enterprise", icon: "🐄" },
         ],
       },
       {
         id: "operations_tasks",
-        label: "Field Operations",
+        label: "Operations & Fleet",
         icon: "🛠️",
         items: [
-          { href: `${base}/farms?tab=tasks&${wsParam}`, label: "Daily Tasks & Labour", icon: "✅" },
-          { href: `${base}/find?${wsParam}`, label: "Find Machinery & Hire", icon: "🔍" },
+          { href: `${base}/tasks?${wsParam}`, label: "Daily Tasks & Labour", icon: "✅" },
+          { href: `${base}/machinery?${wsParam}`, label: "Machinery Fleet", icon: "🚜" },
+          { href: `${base}/inventory?${wsParam}`, label: "Multi-Location Inventory", icon: "📦" },
           { href: `${base}/bookings?${wsParam}`, label: "Service Bookings", icon: "📋" },
-          { href: `${base}/bookings/new?${wsParam}`, label: "Request Field Service", icon: "➕" },
+        ],
+      },
+      {
+        id: "financials_governance",
+        label: "Financials & Advisory",
+        icon: "💰",
+        items: [
+          { href: `${base}/finance?${wsParam}`, label: "Farm Budgets & Cost", icon: "💰" },
+          { href: `${base}/variance?${wsParam}`, label: "Standard vs Actual", icon: "⚖️" },
+          { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
+          {
+            href: `${base}/inbox?${wsParam}`,
+            label: "Notification Inbox",
+            icon: "🔔",
+            badge: unreadCount > 0 ? unreadCount : undefined,
+            badgeTone: "danger",
+          },
         ],
       },
       {
@@ -107,30 +122,6 @@ export function AccountNav({
           { href: `${base}/marketplace/seller?${wsParam}`, label: "Seller Hub & Produce", icon: "🏪" },
           { href: `${base}/marketplace/new-listing?${wsParam}`, label: "List on Market", icon: "➕" },
           { href: `/${lang}/marketplace/rfq`, label: "RFQs & Bulk Orders", icon: "📑" },
-        ],
-      },
-      {
-        id: "financials_governance",
-        label: "Financials & Variance",
-        icon: "💰",
-        items: [
-          { href: `${base}/farms?tab=farm_books&${wsParam}`, label: "Farm Accounts & Ledger", icon: "💰" },
-          { href: `${base}/farms?tab=variance&${wsParam}`, label: "Standard vs Actual", icon: "⚖️" },
-        ],
-      },
-      {
-        id: "intelligence_support",
-        label: "Advisory & Alerts",
-        icon: "🤖",
-        items: [
-          { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
-          {
-            href: `${base}/inbox?${wsParam}`,
-            label: "Notification Inbox",
-            icon: "🔔",
-            badge: unreadCount > 0 ? unreadCount : undefined,
-            badgeTone: "danger",
-          },
         ],
       },
       {

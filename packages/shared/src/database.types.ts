@@ -741,23 +741,30 @@ export type Database = {
       }
       crop_cycle_operations: {
         Row: {
-          actual_cost_kobo: number
-          actual_date: string | null
-          booking_id: string | null
-          completed_by: string | null
+          actual_cost_kobo?: number
+          actual_date?: string | null
+          booking_id?: string | null
+          completed_by?: string | null
           created_at: string
-          cycle_id: string
+          cycle_id?: string
+          crop_cycle_id?: string
+          operation_type?: string
+          scheduled_date?: string
+          completed_date?: string | null
+          direct_cost_minor?: number
+          planned_inputs?: Json | null
+          actual_inputs?: Json | null
           id: string
-          name: string
+          name?: string
           notes: string | null
-          relative_end_day: number
-          relative_start_day: number
-          required_equipment: string | null
-          scheduled_end_date: string
-          scheduled_start_date: string
-          stage: string
-          status: Database["public"]["Enums"]["crop_operation_status"]
-          updated_at: string
+          relative_end_day?: number
+          relative_start_day?: number
+          required_equipment?: string | null
+          scheduled_end_date?: string
+          scheduled_start_date?: string
+          stage?: string
+          status?: string
+          updated_at?: string
         }
         Insert: {
           actual_cost_kobo?: number
@@ -765,26 +772,14 @@ export type Database = {
           booking_id?: string | null
           completed_by?: string | null
           created_at?: string
-          cycle_id: string
-          id?: string
-          name: string
-          notes?: string | null
-          relative_end_day: number
-          relative_start_day: number
-          required_equipment?: string | null
-          scheduled_end_date: string
-          scheduled_start_date: string
-          stage: string
-          status?: Database["public"]["Enums"]["crop_operation_status"]
-          updated_at?: string
-        }
-        Update: {
-          actual_cost_kobo?: number
-          actual_date?: string | null
-          booking_id?: string | null
-          completed_by?: string | null
-          created_at?: string
           cycle_id?: string
+          crop_cycle_id?: string
+          operation_type?: string
+          scheduled_date?: string
+          completed_date?: string | null
+          direct_cost_minor?: number
+          planned_inputs?: Json | null
+          actual_inputs?: Json | null
           id?: string
           name?: string
           notes?: string | null
@@ -794,7 +789,33 @@ export type Database = {
           scheduled_end_date?: string
           scheduled_start_date?: string
           stage?: string
-          status?: Database["public"]["Enums"]["crop_operation_status"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_cost_kobo?: number
+          actual_date?: string | null
+          booking_id?: string | null
+          completed_by?: string | null
+          created_at?: string
+          cycle_id?: string
+          crop_cycle_id?: string
+          operation_type?: string
+          scheduled_date?: string
+          completed_date?: string | null
+          direct_cost_minor?: number
+          planned_inputs?: Json | null
+          actual_inputs?: Json | null
+          id?: string
+          name?: string
+          notes?: string | null
+          relative_end_day?: number
+          relative_start_day?: number
+          required_equipment?: string | null
+          scheduled_end_date?: string
+          scheduled_start_date?: string
+          stage?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -823,70 +844,88 @@ export type Database = {
       }
       crop_cycles: {
         Row: {
-          actual_cost_kobo: number
+          actual_cost_kobo?: number
           actual_harvest_date: string | null
-          actual_yield_kg: number
+          actual_yield_kg: number | null
           created_at: string
-          created_by: string
-          crop_id: string
-          current_stage: string
-          estimated_budget_kobo: number
-          expected_harvest_date: string
-          health_score: number
-          health_status: Database["public"]["Enums"]["crop_health_status"]
+          created_by?: string | null
+          crop_id?: string | null
+          crop_name: string
+          variety: string | null
+          current_stage?: string | null
+          estimated_budget_kobo?: number
+          expected_harvest_date?: string | null
+          target_harvest_date?: string | null
+          health_score?: number
           id: string
-          planting_date: string
+          farm_id?: string
           plot_id: string
-          season: string
-          status: Database["public"]["Enums"]["crop_cycle_status"]
-          target_area_ha: number
-          target_yield_kg: number
+          season?: string | null
+          status: string
+          target_area_ha?: number
+          planted_area_hectares?: number
+          target_yield_kg: number | null
+          budget_cap_minor?: number
           updated_at: string
-          variety_id: string
+          start_date?: string
+          planting_date?: string
+          variety_id?: string | null
         }
         Insert: {
           actual_cost_kobo?: number
           actual_harvest_date?: string | null
-          actual_yield_kg?: number
+          actual_yield_kg?: number | null
           created_at?: string
-          created_by?: string
-          crop_id: string
-          current_stage?: string
+          created_by?: string | null
+          crop_id?: string | null
+          crop_name: string
+          variety?: string | null
+          current_stage?: string | null
           estimated_budget_kobo?: number
-          expected_harvest_date: string
+          expected_harvest_date?: string | null
+          target_harvest_date?: string | null
           health_score?: number
-          health_status?: Database["public"]["Enums"]["crop_health_status"]
           id?: string
-          planting_date: string
+          farm_id?: string
           plot_id: string
-          season?: string
-          status?: Database["public"]["Enums"]["crop_cycle_status"]
-          target_area_ha: number
-          target_yield_kg: number
+          season?: string | null
+          status?: string
+          target_area_ha?: number
+          planted_area_hectares?: number
+          target_yield_kg?: number | null
+          budget_cap_minor?: number
           updated_at?: string
-          variety_id: string
+          start_date?: string
+          planting_date?: string
+          variety_id?: string | null
         }
         Update: {
           actual_cost_kobo?: number
           actual_harvest_date?: string | null
-          actual_yield_kg?: number
+          actual_yield_kg?: number | null
           created_at?: string
-          created_by?: string
-          crop_id?: string
-          current_stage?: string
+          created_by?: string | null
+          crop_id?: string | null
+          crop_name?: string
+          variety?: string | null
+          current_stage?: string | null
           estimated_budget_kobo?: number
-          expected_harvest_date?: string
+          expected_harvest_date?: string | null
+          target_harvest_date?: string | null
           health_score?: number
-          health_status?: Database["public"]["Enums"]["crop_health_status"]
           id?: string
-          planting_date?: string
+          farm_id?: string
           plot_id?: string
-          season?: string
-          status?: Database["public"]["Enums"]["crop_cycle_status"]
+          season?: string | null
+          status?: string
           target_area_ha?: number
-          target_yield_kg?: number
+          planted_area_hectares?: number
+          target_yield_kg?: number | null
+          budget_cap_minor?: number
           updated_at?: string
-          variety_id?: string
+          start_date?: string
+          planting_date?: string
+          variety_id?: string | null
         }
         Relationships: [
           {
@@ -901,6 +940,13 @@ export type Database = {
             columns: ["plot_id"]
             isOneToOne: false
             referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crop_cycles_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
             referencedColumns: ["id"]
           },
         ]
@@ -1091,62 +1137,43 @@ export type Database = {
       }
       crop_observations: {
         Row: {
-          category: Database["public"]["Enums"]["scouting_category"]
-          created_at: string
-          cycle_id: string
-          description: string
           id: string
-          location: unknown
-          observer_id: string
-          photo_paths: string[] | null
+          crop_cycle_id: string
+          observation_type: string
+          severity: string
+          title: string
+          description: string | null
           recommended_action: string | null
-          resolved: boolean
-          resolved_at: string | null
-          severity: Database["public"]["Enums"]["scouting_severity"]
+          observed_at: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["scouting_category"]
-          created_at?: string
-          cycle_id: string
-          description: string
           id?: string
-          location?: unknown
-          observer_id?: string
-          photo_paths?: string[] | null
+          crop_cycle_id: string
+          observation_type: string
+          severity: string
+          title: string
+          description?: string | null
           recommended_action?: string | null
-          resolved?: boolean
-          resolved_at?: string | null
-          severity: Database["public"]["Enums"]["scouting_severity"]
+          observed_at?: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["scouting_category"]
-          created_at?: string
-          cycle_id?: string
-          description?: string
           id?: string
-          location?: unknown
-          observer_id?: string
-          photo_paths?: string[] | null
+          crop_cycle_id?: string
+          observation_type?: string
+          severity?: string
+          title?: string
+          description?: string | null
           recommended_action?: string | null
-          resolved?: boolean
-          resolved_at?: string | null
-          severity?: Database["public"]["Enums"]["scouting_severity"]
+          observed_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "crop_observations_cycle_id_fkey"
-            columns: ["cycle_id"]
+            foreignKeyName: "crop_observations_crop_cycle_id_fkey"
+            columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "crop_cycles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crop_observations_observer_id_fkey"
-            columns: ["observer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
+          }
         ]
       }
       data_requests: {
@@ -1313,45 +1340,54 @@ export type Database = {
       }
       farm_inventory: {
         Row: {
-          category: string
-          created_at: string
-          expiry_date: string | null
-          farm_id: string
           id: string
+          farm_id: string
+          location_id: string
+          item_category: string
           item_name: string
-          quantity: number
-          reorder_threshold: number | null
-          storage_location: string | null
+          sku: string | null
           unit: string
-          unit_cost_kobo: number
+          current_quantity: number
+          reserved_quantity: number
+          reorder_level: number
+          average_cost_minor: number
+          lot_number: string | null
+          expiry_date: string | null
+          created_at: string
           updated_at: string
         }
         Insert: {
-          category: string
-          created_at?: string
-          expiry_date?: string | null
-          farm_id: string
           id?: string
+          farm_id: string
+          location_id: string
+          item_category: string
           item_name: string
-          quantity?: number
-          reorder_threshold?: number | null
-          storage_location?: string | null
+          sku?: string | null
           unit: string
-          unit_cost_kobo?: number
+          current_quantity?: number
+          reserved_quantity?: number
+          reorder_level?: number
+          average_cost_minor?: number
+          lot_number?: string | null
+          expiry_date?: string | null
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          category?: string
-          created_at?: string
-          expiry_date?: string | null
-          farm_id?: string
           id?: string
+          farm_id?: string
+          location_id?: string
+          item_category?: string
           item_name?: string
-          quantity?: number
-          reorder_threshold?: number | null
-          storage_location?: string | null
+          sku?: string | null
           unit?: string
-          unit_cost_kobo?: number
+          current_quantity?: number
+          reserved_quantity?: number
+          reorder_level?: number
+          average_cost_minor?: number
+          lot_number?: string | null
+          expiry_date?: string | null
+          created_at?: string
           updated_at?: string
         }
         Relationships: [
@@ -1362,6 +1398,13 @@ export type Database = {
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "farm_inventory_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "farm_inventory_locations"
+            referencedColumns: ["id"]
+          }
         ]
       }
       farm_livestock: {
@@ -1419,46 +1462,37 @@ export type Database = {
       }
       farm_workers: {
         Row: {
-          created_at: string
-          daily_wage_kobo: number
-          emergency_contact: string | null
-          employment_type: string
+          id: string
           farm_id: string
           full_name: string
-          id: string
-          joined_date: string | null
-          phone: string | null
           role: string
+          employment_type: string
+          phone: string | null
+          daily_rate_minor: number
           status: string
-          updated_at: string
+          created_at: string
         }
         Insert: {
-          created_at?: string
-          daily_wage_kobo?: number
-          emergency_contact?: string | null
-          employment_type?: string
+          id?: string
           farm_id: string
           full_name: string
-          id?: string
-          joined_date?: string | null
+          role?: string
+          employment_type?: string
           phone?: string | null
-          role: string
+          daily_rate_minor?: number
           status?: string
-          updated_at?: string
+          created_at?: string
         }
         Update: {
-          created_at?: string
-          daily_wage_kobo?: number
-          emergency_contact?: string | null
-          employment_type?: string
+          id?: string
           farm_id?: string
           full_name?: string
-          id?: string
-          joined_date?: string | null
-          phone?: string | null
           role?: string
+          employment_type?: string
+          phone?: string | null
+          daily_rate_minor?: number
           status?: string
-          updated_at?: string
+          created_at?: string
         }
         Relationships: [
           {
@@ -1467,7 +1501,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "farms"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       farm_zones: {
@@ -2219,23 +2253,35 @@ export type Database = {
       plots: {
         Row: {
           area_ha: number | null
-          area_is_measured: boolean
-          boundary: unknown
+          size_hectares?: number
+          code?: string | null
+          soil_type?: string | null
+          slope?: string
+          irrigation_status?: string
+          accessibility?: string
+          area_is_measured?: boolean
+          boundary?: unknown
           created_at: string
-          created_by: string | null
-          drainage: string | null
+          created_by?: string | null
+          drainage?: string | null
           farm_id: string
           id: string
-          irrigation_type: string | null
+          irrigation_type?: string | null
           name: string
           notes: string | null
-          slope_pct: number | null
-          soil_texture: string | null
+          slope_pct?: number | null
+          soil_texture?: string | null
           updated_at: string
-          water_source: string | null
+          water_source?: string | null
         }
         Insert: {
           area_ha?: number | null
+          size_hectares?: number
+          code?: string | null
+          soil_type?: string | null
+          slope?: string
+          irrigation_status?: string
+          accessibility?: string
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
@@ -2253,6 +2299,12 @@ export type Database = {
         }
         Update: {
           area_ha?: number | null
+          size_hectares?: number
+          code?: string | null
+          soil_type?: string | null
+          slope?: string
+          irrigation_status?: string
+          accessibility?: string
           area_is_measured?: boolean
           boundary?: unknown
           created_at?: string
@@ -2921,6 +2973,619 @@ export type Database = {
           },
         ]
       }
+      farm_agronomic_standards: {
+        Row: {
+          id: string
+          crop_name: string
+          variety: string | null
+          agro_ecological_zone: string | null
+          version: number
+          expected_yield_kg_per_ha: number
+          expected_duration_days: number
+          seed_rate_kg_per_ha: number
+          recommended_operations: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          crop_name: string
+          variety?: string | null
+          agro_ecological_zone?: string | null
+          version?: number
+          expected_yield_kg_per_ha: number
+          expected_duration_days: number
+          seed_rate_kg_per_ha: number
+          recommended_operations?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          crop_name?: string
+          variety?: string | null
+          agro_ecological_zone?: string | null
+          version?: number
+          expected_yield_kg_per_ha?: number
+          expected_duration_days?: number
+          seed_rate_kg_per_ha?: number
+          recommended_operations?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_livestock_animals: {
+        Row: {
+          id: string
+          farm_id: string
+          group_id: string | null
+          tag_number: string
+          species: string
+          breed: string | null
+          sex: string
+          birth_date: string | null
+          status: string
+          current_weight_kg: number | null
+          last_weighed_date: string | null
+          rfid_tag: string | null
+          sire_tag: string | null
+          dam_tag: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          group_id?: string | null
+          tag_number: string
+          species: string
+          breed?: string | null
+          sex: string
+          birth_date?: string | null
+          status?: string
+          current_weight_kg?: number | null
+          last_weighed_date?: string | null
+          rfid_tag?: string | null
+          sire_tag?: string | null
+          dam_tag?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          group_id?: string | null
+          tag_number?: string
+          species?: string
+          breed?: string | null
+          sex?: string
+          birth_date?: string | null
+          status?: string
+          current_weight_kg?: number | null
+          last_weighed_date?: string | null
+          rfid_tag?: string | null
+          sire_tag?: string | null
+          dam_tag?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_livestock_animals_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_livestock_health_events: {
+        Row: {
+          id: string
+          animal_id: string | null
+          group_id: string | null
+          treatment_type: string
+          treatment_name: string
+          medication_name: string | null
+          dosage: string | null
+          withdrawal_days: number
+          withdrawal_end_date: string | null
+          cost_minor: number
+          notes: string | null
+          administered_at: string
+        }
+        Insert: {
+          id?: string
+          animal_id?: string | null
+          group_id?: string | null
+          treatment_type: string
+          treatment_name: string
+          medication_name?: string | null
+          dosage?: string | null
+          withdrawal_days?: number
+          withdrawal_end_date?: string | null
+          cost_minor?: number
+          notes?: string | null
+          administered_at?: string
+        }
+        Update: {
+          id?: string
+          animal_id?: string | null
+          group_id?: string | null
+          treatment_type?: string
+          treatment_name?: string
+          medication_name?: string | null
+          dosage?: string | null
+          withdrawal_days?: number
+          withdrawal_end_date?: string | null
+          cost_minor?: number
+          notes?: string | null
+          administered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_livestock_health_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "farm_livestock_animals"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_livestock_feedings: {
+        Row: {
+          id: string
+          farm_id: string
+          animal_id: string | null
+          group_id: string | null
+          feed_type: string
+          quantity_kg: number
+          cost_minor: number
+          fed_date: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          animal_id?: string | null
+          group_id?: string | null
+          feed_type: string
+          quantity_kg: number
+          cost_minor?: number
+          fed_date?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          animal_id?: string | null
+          group_id?: string | null
+          feed_type?: string
+          quantity_kg?: number
+          cost_minor?: number
+          fed_date?: string
+        }
+        Relationships: []
+      }
+      farm_livestock_production_logs: {
+        Row: {
+          id: string
+          farm_id: string
+          product_type: string
+          quantity: number
+          unit: string
+          revenue_minor: number
+          log_date: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          product_type: string
+          quantity: number
+          unit: string
+          revenue_minor?: number
+          log_date?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          product_type?: string
+          quantity?: number
+          unit?: string
+          revenue_minor?: number
+          log_date?: string
+        }
+        Relationships: []
+      }
+      farm_attendance_records: {
+        Row: {
+          id: string
+          worker_id: string
+          work_date: string
+          status: string
+          hours_worked: number
+          labor_cost_minor: number
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          worker_id: string
+          work_date: string
+          status?: string
+          hours_worked?: number
+          labor_cost_minor?: number
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          worker_id?: string
+          work_date?: string
+          status?: string
+          hours_worked?: number
+          labor_cost_minor?: number
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_attendance_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "farm_workers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_operational_tasks: {
+        Row: {
+          id: string
+          farm_id: string
+          plot_id: string | null
+          crop_cycle_id: string | null
+          assigned_worker_id: string | null
+          title: string
+          description: string | null
+          priority: string
+          status: string
+          due_date: string | null
+          direct_cost_minor: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          plot_id?: string | null
+          crop_cycle_id?: string | null
+          assigned_worker_id?: string | null
+          title: string
+          description?: string | null
+          priority?: string
+          status?: string
+          due_date?: string | null
+          direct_cost_minor?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          plot_id?: string | null
+          crop_cycle_id?: string | null
+          assigned_worker_id?: string | null
+          title?: string
+          description?: string | null
+          priority?: string
+          status?: string
+          due_date?: string | null
+          direct_cost_minor?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_operational_tasks_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "farm_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_operational_tasks_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_machinery_assets: {
+        Row: {
+          id: string
+          farm_id: string
+          name: string
+          category: string
+          make: string | null
+          model: string | null
+          serial_number: string | null
+          fuel_type: string
+          fuel_consumption_rate: number | null
+          total_operating_hours: number
+          next_service_hours: number | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          name: string
+          category: string
+          make?: string | null
+          model?: string | null
+          serial_number?: string | null
+          fuel_type?: string
+          fuel_consumption_rate?: number | null
+          total_operating_hours?: number
+          next_service_hours?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          name?: string
+          category?: string
+          make?: string | null
+          model?: string | null
+          serial_number?: string | null
+          fuel_type?: string
+          fuel_consumption_rate?: number | null
+          total_operating_hours?: number
+          next_service_hours?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_machinery_assets_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_machinery_usage_logs: {
+        Row: {
+          id: string
+          machinery_id: string
+          plot_id: string | null
+          crop_cycle_id: string | null
+          activity: string
+          hours_run: number
+          fuel_litres_used: number
+          fuel_cost_minor: number
+          operator_labor_cost_minor: number
+          area_covered_ha: number | null
+          log_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          machinery_id: string
+          plot_id?: string | null
+          crop_cycle_id?: string | null
+          activity: string
+          hours_run: number
+          fuel_litres_used?: number
+          fuel_cost_minor?: number
+          operator_labor_cost_minor?: number
+          area_covered_ha?: number | null
+          log_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          machinery_id?: string
+          plot_id?: string | null
+          crop_cycle_id?: string | null
+          activity?: string
+          hours_run?: number
+          fuel_litres_used?: number
+          fuel_cost_minor?: number
+          operator_labor_cost_minor?: number
+          area_covered_ha?: number | null
+          log_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_machinery_usage_logs_machinery_id_fkey"
+            columns: ["machinery_id"]
+            isOneToOne: false
+            referencedRelation: "farm_machinery_assets"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_inventory_locations: {
+        Row: {
+          id: string
+          farm_id: string
+          name: string
+          location_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          name: string
+          location_type?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          name?: string
+          location_type?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_inventory_locations_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_budgets: {
+        Row: {
+          id: string
+          farm_id: string
+          enterprise_name: string
+          season: string | null
+          year: number
+          planned_revenue_minor: number
+          planned_cost_minor: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          enterprise_name: string
+          season?: string | null
+          year: number
+          planned_revenue_minor?: number
+          planned_cost_minor?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          enterprise_name?: string
+          season?: string | null
+          year?: number
+          planned_revenue_minor?: number
+          planned_cost_minor?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_budgets_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_budget_lines: {
+        Row: {
+          id: string
+          budget_id: string
+          category: string
+          cost_type: string
+          description: string
+          planned_minor: number
+          actual_minor: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          budget_id: string
+          category: string
+          cost_type?: string
+          description: string
+          planned_minor?: number
+          actual_minor?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          budget_id?: string
+          category?: string
+          cost_type?: string
+          description?: string
+          planned_minor?: number
+          actual_minor?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "farm_budgets"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      farm_plan_actual_variances: {
+        Row: {
+          id: string
+          farm_id: string
+          crop_cycle_id: string | null
+          metric: string
+          standard_value: number
+          planned_value: number
+          actual_value: number
+          variance_percentage: number
+          variance_nature: string
+          root_cause: string | null
+          corrective_action: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          crop_cycle_id?: string | null
+          metric: string
+          standard_value: number
+          planned_value: number
+          actual_value: number
+          variance_percentage?: number
+          variance_nature: string
+          root_cause?: string | null
+          corrective_action?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          crop_cycle_id?: string | null
+          metric?: string
+          standard_value?: number
+          planned_value?: number
+          actual_value?: number
+          variance_percentage?: number
+          variance_nature?: string
+          root_cause?: string | null
+          corrective_action?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_plan_actual_variances_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_plan_actual_variances_crop_cycle_id_fkey"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       current_consents: {
@@ -2944,6 +3609,19 @@ export type Database = {
       }
     }
     Functions: {
+      record_farm_inventory_movement: {
+        Args: {
+          p_inventory_item_id: string
+          p_movement_type: string
+          p_quantity: number
+          p_unit_cost_minor?: number
+          p_reference_type?: string | null
+          p_reference_id?: string | null
+          p_notes?: string | null
+          p_lot_number?: string | null
+        }
+        Returns: Json
+      }
       accept_booking: { Args: { p_booking: string }; Returns: undefined }
       add_dispute_evidence: {
         Args: {

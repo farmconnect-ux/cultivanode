@@ -165,37 +165,65 @@ export function FarmerDashboard({
         )}
       </Card>
 
-      {/* Quick Action Buttons */}
+      {/* Farm Enterprise Navigation Modules */}
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Quick Actions</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Farm Enterprise Domains</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Link
-            href={`/${lang}/account/bookings/new?ws=farmer`}
-            className="flex min-h-14 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50"
+            href={`/${lang}/account/farms?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
+          >
+            <span className="text-xl" aria-hidden="true">🗺️</span>
+            <span className="mt-1 text-xs">Farms & Plots</span>
+          </Link>
+          <Link
+            href={`/${lang}/account/crops?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
+          >
+            <span className="text-xl" aria-hidden="true">🌽</span>
+            <span className="mt-1 text-xs">Crop Cycles (GAP)</span>
+          </Link>
+          <Link
+            href={`/${lang}/account/livestock?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
+          >
+            <span className="text-xl" aria-hidden="true">🐄</span>
+            <span className="mt-1 text-xs">Livestock Herd</span>
+          </Link>
+          <Link
+            href={`/${lang}/account/machinery?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
           >
             <span className="text-xl" aria-hidden="true">🚜</span>
-            <span className="mt-1 text-xs">Request Service</span>
+            <span className="mt-1 text-xs">Machinery Fleet</span>
           </Link>
           <Link
-            href={`/${lang}/account/farms?ws=farmer`}
-            className="flex min-h-14 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50"
+            href={`/${lang}/account/inventory?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
           >
-            <span className="text-xl" aria-hidden="true">🌱</span>
-            <span className="mt-1 text-xs">My Farms</span>
+            <span className="text-xl" aria-hidden="true">📦</span>
+            <span className="mt-1 text-xs">Stock Inventory</span>
           </Link>
           <Link
-            href={`/${lang}/account/bookings?ws=farmer`}
-            className="flex min-h-14 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50"
+            href={`/${lang}/account/tasks?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
           >
-            <span className="text-xl" aria-hidden="true">📋</span>
-            <span className="mt-1 text-xs">All Jobs</span>
+            <span className="text-xl" aria-hidden="true">✅</span>
+            <span className="mt-1 text-xs">Tasks & Attendance</span>
           </Link>
           <Link
-            href={`/${lang}/account/find?ws=farmer`}
-            className="flex min-h-14 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50"
+            href={`/${lang}/account/finance?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
           >
-            <span className="text-xl" aria-hidden="true">🔍</span>
-            <span className="mt-1 text-xs">Find Machinery</span>
+            <span className="text-xl" aria-hidden="true">💰</span>
+            <span className="mt-1 text-xs">Budgets & Cost</span>
+          </Link>
+          <Link
+            href={`/${lang}/account/variance?ws=farmer`}
+            className="flex min-h-16 flex-col items-center justify-center rounded-lg border border-line bg-white p-3 text-center font-bold text-leaf-800 shadow-xs hover:border-leaf-600 hover:bg-leaf-50 transition-colors"
+          >
+            <span className="text-xl" aria-hidden="true">⚖️</span>
+            <span className="mt-1 text-xs">Standard vs Actual</span>
           </Link>
         </div>
       </div>
