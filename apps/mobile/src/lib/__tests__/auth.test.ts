@@ -76,6 +76,20 @@ describe('mobile auth with phone and email', () => {
     });
   });
 
+  it('verifies email code with 8 digits', async () => {
+    vi.mocked(supabase.auth.verifyOtp).mockResolvedValueOnce({
+      data: { session: { access_token: 'tok' } },
+      error: null,
+    } as any);
+    const result = await verifyEmailCode('farmer@example.com', '12345678');
+    expect(result).toBeNull();
+    expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({
+      email: 'farmer@example.com',
+      token: '12345678',
+      type: 'email',
+    });
+  });
+
   it('rejects malformed code before calling API', async () => {
     const resultPhone = await verifyCode('2348031234567', '123');
     expect(resultPhone).toBe('errorCode');

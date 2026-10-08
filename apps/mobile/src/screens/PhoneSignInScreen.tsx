@@ -183,13 +183,13 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
         label={t.auth.code}
         value={code}
         onChangeText={(v) => {
-          setCode(v.replace(/[^0-9]/g, '').slice(0, 6));
+          setCode(v.replace(/[^0-9]/g, '').slice(0, 10));
           if (error) setError(null);
         }}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="sms-otp"
-        maxLength={6}
+        maxLength={10}
         style={styles.code}
         returnKeyType="done"
         onSubmitEditing={submitCode}
@@ -239,6 +239,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  code: { fontSize: 28, letterSpacing: 10, textAlign: 'center', fontWeight: '700' },
+  code: { fontSize: 24, letterSpacing: 6, textAlign: 'center', fontWeight: '700' },
   link: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
 });

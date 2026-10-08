@@ -32,7 +32,7 @@ export async function sendEmailCode(email: string): Promise<AuthErrorKey | null>
 /** Checks the SMS code; on success Supabase stores the (encrypted) session and fires onAuthStateChange. */
 export async function verifyCode(phone: string, code: string): Promise<AuthErrorKey | null> {
   const token = code.replace(/\s+/g, '');
-  if (!/^[0-9]{6}$/.test(token)) return 'errorCode';
+  if (!/^[0-9]{6,10}$/.test(token)) return 'errorCode';
   const { data, error } = await supabase.auth.verifyOtp({ phone: `+${phone}`, token, type: 'sms' });
   if (error && isNetworkError(error)) return 'offline';
   if (error?.status === 429) return 'errorBusy';
@@ -43,7 +43,7 @@ export async function verifyCode(phone: string, code: string): Promise<AuthError
 /** Checks the email code; on success Supabase stores the (encrypted) session and fires onAuthStateChange. */
 export async function verifyEmailCode(email: string, code: string): Promise<AuthErrorKey | null> {
   const token = code.replace(/\s+/g, '');
-  if (!/^[0-9]{6}$/.test(token)) return 'errorCode';
+  if (!/^[0-9]{6,10}$/.test(token)) return 'errorCode';
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
   if (error && isNetworkError(error)) return 'offline';
   if (error?.status === 429) return 'errorBusy';

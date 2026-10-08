@@ -38,8 +38,8 @@ function CodeStep({ start }: { start: Extract<SignInState, { step: "code" }> }) 
     <form action={verify} className="flex flex-col gap-4" noValidate>
       <p role="status">Code sent to {local.slice(0, 4)} {local.slice(4, 7)} {local.slice(7)}.</p>
       {state.error && <Alert tone="danger">{state.error}</Alert>}
-      <Field id="code" label="6-digit code">
-        <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" required autoFocus />
+      <Field id="code" label="Verification code">
+        <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} pattern="[0-9]{6,10}" required autoFocus />
       </Field>
       <Button type="submit" disabled={checking}>
         {checking ? "Checking..." : "Sign in"}

@@ -140,11 +140,11 @@ function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthS
             name="code"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
-            pattern="[0-9]{6}"
+            maxLength={10}
+            pattern="[0-9]{6,10}"
             required
             autoFocus
-            className="text-center text-2xl tracking-[0.5em]"
+            className="text-center text-2xl tracking-[0.25em] font-mono"
             aria-invalid={state.error === "errorCode" || state.error === "errorWrongCode" || undefined}
           />
         </Field>

@@ -65,7 +65,7 @@ export async function requestCode(prev: AuthState, form: FormData): Promise<Auth
 export async function verifyCode(prev: AuthState, form: FormData): Promise<AuthState> {
   if (prev.step !== "code") return { step: "input", method: "phone" };
   const token = String(form.get("code") ?? "").replace(/\s+/g, "");
-  if (!/^[0-9]{6}$/.test(token)) return { ...prev, error: "errorCode" };
+  if (!/^[0-9]{6,10}$/.test(token)) return { ...prev, error: "errorCode" };
 
   const supabase = await createClient();
   const method = prev.method;

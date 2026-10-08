@@ -37,7 +37,7 @@ export async function verifySignInCode(prev: SignInState, form: FormData): Promi
   const phone = prev.step === "code" ? prev.phone : "";
   const token = String(form.get("code") ?? "").replace(/\s+/g, "");
   if (!phone) return { step: "phone" };
-  if (!/^[0-9]{6}$/.test(token)) return { step: "code", phone, error: "Enter the 6-digit code from the SMS." };
+  if (!/^[0-9]{6,10}$/.test(token)) return { step: "code", phone, error: "Enter the verification code from the SMS." };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ phone: `+${phone}`, token, type: "sms" });
