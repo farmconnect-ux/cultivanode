@@ -138,6 +138,7 @@ export function AccountNav({
         label: "Account & Trust",
         icon: "⚙️",
         items: [
+          { href: `${base}/roles?${wsParam}`, label: "Roles & Permissions", icon: "🎖️" },
           { href: `${base}/verification?${wsParam}`, label: "Identity Verification", icon: "🛡️" },
           { href: `${base}/profile?${wsParam}`, label: "Profile & Farm Org", icon: "👤" },
           { href: `${base}/privacy?${wsParam}`, label: "Data & Privacy", icon: "🔒" },
@@ -179,6 +180,7 @@ export function AccountNav({
             badge: unreadCount > 0 ? unreadCount : undefined,
             badgeTone: "danger",
           },
+          { href: `${base}/roles?${wsParam}`, label: "Roles & Permissions", icon: "🎖️" },
           { href: `${base}/verification?${wsParam}`, label: "Verification & Bank", icon: "🛡️" },
           { href: `${base}/profile?${wsParam}`, label: "Profile Settings", icon: "👤" },
         ],
@@ -218,6 +220,7 @@ export function AccountNav({
         label: "Account & Accreditation",
         icon: "⚙️",
         items: [
+          { href: `${base}/roles?${wsParam}`, label: "Roles & Permissions", icon: "🎖️" },
           { href: `${base}/verification?${wsParam}`, label: "Accreditation Status", icon: "🛡️" },
           { href: `${base}/profile?${wsParam}`, label: "Agent Profile", icon: "👤" },
         ],

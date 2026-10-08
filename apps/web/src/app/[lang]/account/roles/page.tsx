@@ -16,8 +16,12 @@ const tone: Record<string, string> = {
   cancelled: "bg-line text-muted",
 };
 
-export default async function RolesPage({ params }: PageProps<"/[lang]/account/roles">) {
+export default async function RolesPage({
+  params,
+  searchParams,
+}: PageProps<"/[lang]/account/roles"> & { searchParams?: Promise<{ role?: string }> }) {
   const { lang } = await params;
+  const sParams = searchParams ? await searchParams : undefined;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
   const t = await getDictionary(lang);
@@ -113,7 +117,16 @@ export default async function RolesPage({ params }: PageProps<"/[lang]/account/r
 
       <Card className="flex flex-col gap-3">
         <h2 className="text-xl font-bold">{r.request}</h2>
-        {requestable.length === 0 ? <p className="text-muted">{r.noneLeft}</p> : <RequestRoleForm lang={lang} roles={requestable} t={t} />}
+        {requestable.length === 0 ? (
+          <p className="text-muted">{r.noneLeft}</p>
+        ) : (
+          <RequestRoleForm
+            lang={lang}
+            roles={requestable}
+            initialRole={sParams?.role}
+            t={t}
+          />
+        )}
       </Card>
     </>
   );

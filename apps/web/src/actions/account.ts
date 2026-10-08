@@ -100,6 +100,49 @@ export async function requestRole(_prev: ActionState, form: FormData): Promise<A
   return ok();
 }
 
+/** Instant activation of auto-approved farmer roles (crop_farmer or animal_farmer). */
+export async function enableFarmerRole(form: FormData): Promise<void> {
+  const s = await signedIn();
+  if (!s) redirect(`/${lang(form)}/sign-in`);
+  const requestedRole = text(form, "role", 40);
+  const role = (requestedRole === "animal_farmer" ? "animal_farmer" : "crop_farmer") as "crop_farmer" | "animal_farmer";
+
+  // Check if role is already held
+  const { data: held } = await s.supabase
+    .from("user_roles")
+    .select("id")
+    .eq("profile_id", s.uid)
+    .eq("role", role)
+    .maybeSingle();
+
+  if (!held) {
+    // Check if there is already a pending request
+    const { data: pending } = await s.supabase
+      .from("role_requests")
+      .select("id")
+      .eq("profile_id", s.uid)
+      .eq("role", role)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (pending) {
+      // Cancel pending request so re-inserting triggers auto-approval
+      await s.supabase.rpc("cancel_role_request", { p_request_id: pending.id });
+    }
+
+    const { error } = await s.supabase.from("role_requests").insert({
+      role,
+      provider_type: null,
+      details: { source: "farmer_quick_activation" },
+    });
+    if (error && error.code !== "23505" && error.code !== "P0001") {
+      logger.warn("enable_farmer_role_failed", { code: error.code });
+    }
+  }
+
+  refresh();
+}
+
 export async function cancelRoleRequest(form: FormData): Promise<void> {
   const s = await signedIn();
   if (!s) redirect(`/${lang(form)}/sign-in`);

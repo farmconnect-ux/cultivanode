@@ -32,7 +32,7 @@ export function OnboardingForm({ lang, roles, t }: Props) {
   const o = t.onboarding;
   const [state, submit, saving] = useActionState(completeOnboarding, {} as OnboardingState);
   const v = state.values ?? {};
-  const initialRoles = Array.isArray(v.roles) ? v.roles : [];
+  const initialRoles = Array.isArray(v.roles) && v.roles.length > 0 ? v.roles : ["crop_farmer"];
   const [accountType, setAccountType] = useState(String(v.account_type ?? "individual"));
   const [chosen, setChosen] = useState<string[]>(initialRoles);
   const str = (k: string) => (typeof v[k] === "string" ? (v[k] as string) : "");
@@ -112,10 +112,23 @@ export function OnboardingForm({ lang, roles, t }: Props) {
             const on = chosen.includes(r.role);
             return (
               <li key={r.role}>
-                <label className={cx("flex h-full min-h-12 cursor-pointer items-start gap-3 rounded-md border-2 p-3",
-                  on ? "border-leaf-600 bg-leaf-50" : "border-line bg-white")}>
-                  <input type="checkbox" name="roles" value={r.role} checked={on} onChange={() => toggle(r.role)}
-                         className="mt-1 size-5 accent-leaf-600" />
+                <label
+                  htmlFor={`onboard-role-${r.role}`}
+                  className={cx("flex h-full min-h-12 cursor-pointer items-start gap-3 rounded-md border-2 p-3",
+                    on ? "border-leaf-600 bg-leaf-50" : "border-line bg-white")}
+                >
+                  <input
+                    id={`onboard-role-${r.role}`}
+                    type="checkbox"
+                    name="roles"
+                    value={r.role}
+                    checked={on}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggle(r.role);
+                    }}
+                    className="mt-1 size-5 accent-leaf-600"
+                  />
                   <span>
                     <span className="block font-semibold">{t.roleNames[key]}</span>
                     <span className="block text-sm text-muted">{t.roleHints[key]}</span>

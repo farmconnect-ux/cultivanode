@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { enableFarmerRole } from "@/actions/account";
 import { FarmForm } from "@/components/account/farm-form";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
@@ -98,10 +99,49 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
           ))}
         </ul>
       )}
-      <Card className="flex flex-col gap-3">
-        <h2 className="text-xl font-bold">{f.add}</h2>
-        {account.isFarmer ? <FarmForm lang={lang} t={t} defaultState={account.profile.state} /> : <p className="text-muted">{f.needsFarmerRole}</p>}
-      </Card>
+      {account.isFarmer ? (
+        <Card className="flex flex-col gap-3">
+          <h2 className="text-xl font-bold">{f.add}</h2>
+          <FarmForm lang={lang} t={t} defaultState={account.profile.state} />
+        </Card>
+      ) : (
+        <Card className="flex flex-col gap-4 border-2 border-dashed border-harvest-300 bg-harvest-50/60 p-6">
+          <div className="flex items-start gap-3">
+            <span className="text-3xl" aria-hidden="true">🌱</span>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold text-ink">{f.add}</h2>
+              <p className="text-sm font-semibold text-harvest-900">{f.needsFarmerRole}</p>
+              <p className="text-xs text-muted">
+                {lang === "yo"
+                  ? "Tẹ bọ́tìnnì tí ó wà nísàlẹ̀ yìí láti bẹ̀rẹ̀ lẹ́sẹ̀kẹsẹ̀ láìsí ìdádúró."
+                  : "Activate your farmer role instantly with one click to start recording your farm, mapping plots, and logging tasks."}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <form action={enableFarmerRole}>
+              <input type="hidden" name="lang" value={lang} />
+              <input type="hidden" name="role" value="crop_farmer" />
+              <Button type="submit" className="bg-leaf-700 hover:bg-leaf-800 text-white font-bold">
+                🌱 {lang === "yo" ? "Muu Ipa Àgbẹ̀ Ohun Ọ̀gbìn Ṣiṣẹ́" : "Activate Crop Farmer Role"}
+              </Button>
+            </form>
+            <form action={enableFarmerRole}>
+              <input type="hidden" name="lang" value={lang} />
+              <input type="hidden" name="role" value="animal_farmer" />
+              <Button type="submit" variant="secondary" className="font-semibold">
+                🐄 {lang === "yo" ? "Muu Ipa Olùsin Ẹran Ṣiṣẹ́" : "Activate Livestock Farmer Role"}
+              </Button>
+            </form>
+            <a
+              href={`/${lang}/account/roles`}
+              className="text-xs font-bold text-leaf-700 hover:text-leaf-900 underline ml-1"
+            >
+              {lang === "yo" ? "Wo gbogbo àwọn ipa &rarr;" : "View and request other roles &rarr;"}
+            </a>
+          </div>
+        </Card>
+      )}
     </>
   );
 }

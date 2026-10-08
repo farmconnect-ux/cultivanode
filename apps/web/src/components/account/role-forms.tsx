@@ -9,9 +9,23 @@ import { ActionForm } from "./action-form";
 
 type T = Pick<Dictionary, "acct" | "onboarding" | "roleNames" | "providerTypes" | "documentTypes">;
 
-export function RequestRoleForm({ lang, roles, t }: { lang: Locale; roles: string[]; t: T }) {
+export function RequestRoleForm({
+  lang,
+  roles,
+  initialRole,
+  t,
+}: {
+  lang: Locale;
+  roles: string[];
+  initialRole?: string;
+  t: T;
+}) {
   const r = t.acct.roles;
-  const [role, setRole] = useState(roles[0] ?? "");
+  const defaultSelected = initialRole && roles.includes(initialRole) ? initialRole : (roles[0] ?? "");
+  const [role, setRole] = useState(defaultSelected);
+
+  const isInstant = role === "crop_farmer" || role === "animal_farmer";
+
   return (
     <ActionForm action={requestRole} hidden={{ lang }} messages={[r, t.onboarding, t.acct]} success={r.requestSent}>
       {(pending) => (
@@ -19,10 +33,25 @@ export function RequestRoleForm({ lang, roles, t }: { lang: Locale; roles: strin
           <Field id="role" label={t.onboarding.rolesTitle}>
             <Select id="role" name="role" value={role} onChange={(e) => setRole(e.target.value)}>
               {roles.map((k) => (
-                <option key={k} value={k}>{t.roleNames[k as keyof T["roleNames"]]}</option>
+                <option key={k} value={k}>
+                  {t.roleNames[k as keyof T["roleNames"]]}
+                  {k === "crop_farmer" || k === "animal_farmer" ? " (Instant Activation)" : " (Requires Review)"}
+                </option>
               ))}
             </Select>
           </Field>
+
+          <div className="rounded-lg border border-line bg-surface/50 p-3 text-xs">
+            <span className="font-semibold text-ink">
+              {isInstant ? "⚡ Instant Role Activation:" : "🛡️ Verification Review Required:"}
+            </span>{" "}
+            <span className="text-muted">
+              {isInstant
+                ? "This role will be approved immediately upon submission so you can access tools without waiting."
+                : "This role requires review or supporting verification documents before it is activated."}
+            </span>
+          </div>
+
           {role === "service_provider" && (
             <Field id="provider_type" label={t.onboarding.providerType}>
               <Select id="provider_type" name="provider_type" defaultValue="">
@@ -37,7 +66,7 @@ export function RequestRoleForm({ lang, roles, t }: { lang: Locale; roles: strin
             <TextArea id="details" name="details" maxLength={500} aria-describedby="details-hint" />
           </Field>
           <Button type="submit" disabled={pending} className="self-start">
-            {pending ? t.onboarding.saving : r.requestButton}
+            {pending ? t.onboarding.saving : isInstant ? "Activate Role Instantly" : r.requestButton}
           </Button>
         </>
       )}
