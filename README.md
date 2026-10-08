@@ -7,8 +7,9 @@ Supabase backend.
 > **Name.** CultivaNode. Name, taglines and logo come from
 > `packages/shared/src/brand.ts`.
 
-The authoritative product specification is the Phase 1 master build prompt. Build order: [`docs/ROADMAP.md`](docs/ROADMAP.md)
-(M0 and M1 done; next is the four-week "first real jobs" MVP). Status by requirement:
+The authoritative product specification is the Phase 1 master build prompt. The reconciled execution sequence and gates are in
+[`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md); the original milestone order is retained in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Status by requirement:
 [`docs/requirements-matrix.md`](docs/requirements-matrix.md). Architecture, database, security, payments,
 agronomy, AI, offline sync, deployment and contribution rules are in [`docs/`](docs).
 

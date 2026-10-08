@@ -42,6 +42,8 @@ export function AccountNav({
       { href: `${base}?${wsParam}`, label: "Overview", icon: "🏠" },
       { href: `${base}/farms?${wsParam}`, label: "My Farms", icon: "🌱" },
       { href: `${base}/crops?${wsParam}`, label: "All Crops", icon: "🌽" },
+      { href: `/${lang}/marketplace`, label: "Marketplace", icon: "🛒" },
+      { href: `${base}/marketplace/seller?${wsParam}`, label: "Sell Produce", icon: "🏪" },
       { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
       { href: `${base}/bookings?${wsParam}`, label: "My Jobs", icon: "🚜" },
       { href: `${base}/bookings/new?${wsParam}`, label: "Request Service", icon: "➕" },
@@ -54,6 +56,8 @@ export function AccountNav({
   } else if (activeWorkspace === "provider") {
     items = [
       { href: `${base}?${wsParam}`, label: "Overview", icon: "🏠" },
+      { href: `${base}/marketplace/seller?${wsParam}`, label: "Marketplace Hub", icon: "🏪" },
+      { href: `${base}/marketplace/new-listing?${wsParam}`, label: "List on Market", icon: "➕" },
       { href: `${base}/bookings?${wsParam}`, label: "Requests & Jobs", icon: "📋" },
       { href: `${base}/listings?${wsParam}`, label: "My Equipment", icon: "🚜" },
       { href: `${base}/business?${wsParam}`, label: "Business Details", icon: "🏢" },

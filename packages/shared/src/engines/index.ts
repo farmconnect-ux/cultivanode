@@ -6,3 +6,5 @@ export * from './ledger-escrow';
 export * from './ai-assistant';
 export * from './api-gateway';
 export * from './crop-management';
+export * from './marketplace';
+export * from './farm-management';

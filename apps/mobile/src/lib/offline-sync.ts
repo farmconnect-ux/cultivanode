@@ -2,7 +2,7 @@
 // Stores pending scouting logs, measurements, and completed operations locally
 // and synchronizes deterministically once an internet connection is re-established.
 
-export type SyncItemKind = 'scouting_observation' | 'complete_operation' | 'crop_measurement' | 'harvest_record';
+export type SyncItemKind = 'scouting_observation' | 'complete_operation' | 'crop_measurement' | 'harvest_record' | 'create_marketplace_listing';
 
 export interface PendingSyncItem {
   id: string;

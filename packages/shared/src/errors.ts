@@ -33,7 +33,10 @@ export class AppError extends Error {
   readonly fields: Record<string, string>;
 
   constructor(code: ErrorCode, options: { message?: string; fields?: Record<string, string>; cause?: unknown } = {}) {
-    super(options.message ?? code, { cause: options.cause });
+    super(options.message ?? code);
+    if (options.cause !== undefined) {
+      (this as any).cause = options.cause;
+    }
     this.name = 'AppError';
     this.code = code;
     this.fields = options.fields ?? {};

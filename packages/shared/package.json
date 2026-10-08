@@ -8,7 +8,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./brand": "./src/brand.ts",
-    "./places": "./src/places.ts"
+    "./places": "./src/places.ts",
+    "./engines": "./src/engines/index.ts",
+    "./engines/marketplace": "./src/engines/marketplace/index.ts",
+    "./engines/farm-management": "./src/engines/farm-management/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p ../../supabase/functions",
