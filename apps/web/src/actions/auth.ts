@@ -1,19 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { normalizeNgPhone } from "@cultivanode/shared";
+import { isValidEmail, normalizeNgPhone } from "@cultivanode/shared";
 import { hasLocale, type Locale } from "@/i18n/config";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
-// Phone sign-in for the public website. Codes are sent by the Supabase Auth Send SMS hook, through the
-// SMS provider chosen in the admin console. A new number gets an account; onboarding follows.
+// Sign-in for the public website with Phone Number (SMS OTP) or Email Address (Email OTP).
+// A new phone/email gets an account; onboarding follows.
 
-export type AuthErrorKey = "errorPhone" | "errorCode" | "errorWrongCode" | "errorBusy" | "errorSend";
+export type AuthErrorKey = "errorPhone" | "errorEmail" | "errorCode" | "errorWrongCode" | "errorBusy" | "errorSend";
+export type AuthMethod = "phone" | "email";
 
 export type AuthState =
-  | { step: "phone"; error?: AuthErrorKey; raw?: string }
-  | { step: "code"; phone: string; sentAt: number; error?: AuthErrorKey };
+  | { step: "phone" | "input"; method?: AuthMethod; error?: AuthErrorKey; raw?: string }
+  | { step: "code"; method: AuthMethod; target: string; phone?: string; email?: string; sentAt: number; error?: AuthErrorKey };
 
 function locale(form: FormData): Locale {
   const l = String(form.get("lang") ?? "");
@@ -24,30 +25,57 @@ async function sendCode(phone: string): Promise<AuthErrorKey | null> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ phone: `+${phone}`, options: { shouldCreateUser: true } });
   if (!error) return null;
-  logger.warn("sign_in_code_failed", { reason: error.code ?? error.name, status: error.status });
+  logger.warn("sign_in_phone_code_failed", { reason: error.code ?? error.name, status: error.status });
   return error.status === 429 ? "errorBusy" : "errorSend";
 }
 
-/** Step 1 (and "send a new code"): text a 6-digit code. */
+async function sendEmailCode(email: string): Promise<AuthErrorKey | null> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (!error) return null;
+  logger.warn("sign_in_email_code_failed", { reason: error.code ?? error.name, status: error.status });
+  return error.status === 429 ? "errorBusy" : "errorSend";
+}
+
+/** Step 1 (and "send a new code"): send a 6-digit code via SMS or Email. */
 export async function requestCode(prev: AuthState, form: FormData): Promise<AuthState> {
-  const raw = String(form.get("phone") ?? (prev.step === "code" ? prev.phone : "")).slice(0, 30);
+  const method = (form.get("method") as AuthMethod) || (prev.step === "code" ? prev.method : "phone") || "phone";
+
+  if (method === "email") {
+    const raw = String(form.get("email") ?? (prev.step === "code" ? (prev.email ?? prev.target) : "")).slice(0, 200).trim().toLowerCase();
+    if (!isValidEmail(raw)) return { step: "input", method: "email", raw, error: "errorEmail" };
+    const error = await sendEmailCode(raw);
+    if (error) {
+      return prev.step === "code" ? { ...prev, error } : { step: "input", method: "email", raw, error };
+    }
+    return { step: "code", method: "email", target: raw, email: raw, sentAt: Date.now() };
+  }
+
+  const raw = String(form.get("phone") ?? (prev.step === "code" ? (prev.phone ?? prev.target) : "")).slice(0, 30);
   const phone = normalizeNgPhone(raw);
-  if (!phone || phone === "invalid") return { step: "phone", raw, error: "errorPhone" };
+  if (!phone || phone === "invalid") return { step: "phone", method: "phone", raw, error: "errorPhone" };
   const error = await sendCode(phone);
   if (error) {
-    return prev.step === "code" ? { ...prev, error } : { step: "phone", raw, error };
+    return prev.step === "code" ? { ...prev, error } : { step: "phone", method: "phone", raw, error };
   }
-  return { step: "code", phone, sentAt: Date.now() };
+  return { step: "code", method: "phone", target: phone, phone, sentAt: Date.now() };
 }
 
 /** Step 2: check the code. Supabase sets the session cookie; new people continue to onboarding. */
 export async function verifyCode(prev: AuthState, form: FormData): Promise<AuthState> {
-  if (prev.step !== "code") return { step: "phone" };
+  if (prev.step !== "code") return { step: "input", method: "phone" };
   const token = String(form.get("code") ?? "").replace(/\s+/g, "");
   if (!/^[0-9]{6}$/.test(token)) return { ...prev, error: "errorCode" };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ phone: `+${prev.phone}`, token, type: "sms" });
+  const method = prev.method;
+  const target = prev.target;
+
+  const { data, error } =
+    method === "email"
+      ? await supabase.auth.verifyOtp({ email: target, token, type: "email" })
+      : await supabase.auth.verifyOtp({ phone: `+${target}`, token, type: "sms" });
+
   if (error || !data.user) return { ...prev, error: error?.status === 429 ? "errorBusy" : "errorWrongCode" };
 
   const { data: profile } = await supabase.from("profiles").select("onboarded_at").eq("id", data.user.id).maybeSingle();

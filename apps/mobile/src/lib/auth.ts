@@ -3,7 +3,7 @@
 import { reportError } from './monitoring';
 import { SESSION_KEY, sessionStorage, supabase } from './supabase';
 
-export type AuthErrorKey = 'errorPhone' | 'errorCode' | 'errorWrongCode' | 'errorBusy' | 'errorSend' | 'offline';
+export type AuthErrorKey = 'errorPhone' | 'errorEmail' | 'errorCode' | 'errorWrongCode' | 'errorBusy' | 'errorSend' | 'offline';
 
 function isNetworkError(error: { name?: string; message?: string; status?: number }): boolean {
   return error.name === 'AuthRetryableFetchError' || error.status === 0 || /network|fetch/i.test(error.message ?? '');
@@ -19,11 +19,32 @@ export async function sendCode(phone: string): Promise<AuthErrorKey | null> {
   return 'errorSend';
 }
 
-/** Checks the code; on success Supabase stores the (encrypted) session and fires onAuthStateChange. */
+/** Sends a 6-digit code to an email address. */
+export async function sendEmailCode(email: string): Promise<AuthErrorKey | null> {
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (!error) return null;
+  if (isNetworkError(error)) return 'offline';
+  if (error.status === 429) return 'errorBusy';
+  reportError('sign_in_email_code_failed', error, { reason: error.code ?? error.name, status: error.status ?? 0 });
+  return 'errorSend';
+}
+
+/** Checks the SMS code; on success Supabase stores the (encrypted) session and fires onAuthStateChange. */
 export async function verifyCode(phone: string, code: string): Promise<AuthErrorKey | null> {
   const token = code.replace(/\s+/g, '');
   if (!/^[0-9]{6}$/.test(token)) return 'errorCode';
   const { data, error } = await supabase.auth.verifyOtp({ phone: `+${phone}`, token, type: 'sms' });
+  if (error && isNetworkError(error)) return 'offline';
+  if (error?.status === 429) return 'errorBusy';
+  if (error || !data.session) return 'errorWrongCode';
+  return null;
+}
+
+/** Checks the email code; on success Supabase stores the (encrypted) session and fires onAuthStateChange. */
+export async function verifyEmailCode(email: string, code: string): Promise<AuthErrorKey | null> {
+  const token = code.replace(/\s+/g, '');
+  if (!/^[0-9]{6}$/.test(token)) return 'errorCode';
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
   if (error && isNetworkError(error)) return 'offline';
   if (error?.status === 429) return 'errorBusy';
   if (error || !data.session) return 'errorWrongCode';
