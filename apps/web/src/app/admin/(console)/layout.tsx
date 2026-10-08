@@ -24,49 +24,55 @@ export default async function ConsoleLayout({ children }: LayoutProps<"/admin">)
   const navSections = [
     {
       title: "OPERATIONS",
+      icon: "⚙️",
       links: [
-        { href: "/admin", label: "Overview", show: true },
-        { href: "/admin/jobs", label: "Jobs Console", show: true },
-        { href: "/admin/disputes", label: "Disputes Workstation", show: can(staff, "disputes.decide") || can(staff, "bookings.read") },
-        { href: "/admin/cancellations", label: "Cancellations", show: true },
+        { href: "/admin", label: "Overview", icon: "📊", show: true },
+        { href: "/admin/jobs", label: "Jobs Console", icon: "📋", show: true },
+        { href: "/admin/disputes", label: "Disputes Workstation", icon: "⚖️", show: can(staff, "disputes.decide") || can(staff, "bookings.read") },
+        { href: "/admin/cancellations", label: "Cancellations", icon: "❌", show: true },
       ],
     },
     {
       title: "PEOPLE & VERIFICATION",
+      icon: "👥",
       links: [
-        { href: "/admin/users", label: "User Directory (360°)", show: can(staff, "users.read") },
-        { href: "/admin/approvals", label: "Verification Queue", show: can(staff, "roles.review") || can(staff, "verification.review") },
-        { href: "/admin/access", label: "Staff & Field Agents", show: can(staff, "users.read") },
+        { href: "/admin/users", label: "User Directory (360°)", icon: "👤", show: can(staff, "users.read") },
+        { href: "/admin/approvals", label: "Verification Queue", icon: "🛡️", show: can(staff, "roles.review") || can(staff, "verification.review") },
+        { href: "/admin/access", label: "Staff & Field Agents", icon: "🧑‍💼", show: can(staff, "users.read") },
       ],
     },
     {
       title: "MARKETPLACE",
+      icon: "🛒",
       links: [
-        { href: "/admin/marketplace", label: "Equipment & Listings", show: can(staff, "listings.moderate") || can(staff, "settings.manage") },
+        { href: "/admin/marketplace", label: "Equipment & Listings", icon: "🚜", show: can(staff, "listings.moderate") || can(staff, "settings.manage") },
       ],
     },
     {
       title: "ANALYTICS & GEOGRAPHY",
+      icon: "📈",
       links: [
-        { href: "/admin/analytics", label: "Operations Analytics", show: true },
-        { href: "/admin/geo", label: "Geographic Map", show: true },
+        { href: "/admin/analytics", label: "Operations Analytics", icon: "📊", show: true },
+        { href: "/admin/geo", label: "Geographic Map", icon: "🗺️", show: true },
       ],
     },
     {
       title: "CONFIGURATION",
+      icon: "🛠️",
       links: [
-        { href: "/admin/agronomy", label: "Agronomy Standards", show: true },
-        { href: "/admin/integrations", label: "Integrations & APIs", show: can(staff, "integrations.manage") },
-        { href: "/admin/content", label: "Website Content", show: can(staff, "site_content.manage") },
+        { href: "/admin/agronomy", label: "Agronomy Standards", icon: "🌱", show: true },
+        { href: "/admin/integrations", label: "Integrations & APIs", icon: "🔌", show: can(staff, "integrations.manage") },
+        { href: "/admin/content", label: "Website Content", icon: "📝", show: can(staff, "site_content.manage") },
       ],
     },
     {
       title: "TRUST & SYSTEM",
+      icon: "🔒",
       links: [
-        { href: "/admin/audit", label: "Tamper-Evident Audit", show: can(staff, "audit.read") },
-        { href: "/admin/health", label: "System Health", show: true },
-        { href: "/admin/privacy", label: "Privacy Requests", show: can(staff, "privacy.manage") },
-        { href: "/admin/inbox", label: "Website Inbox", show: can(staff, "website_inbox.manage") },
+        { href: "/admin/audit", label: "Tamper-Evident Audit", icon: "📜", show: can(staff, "audit.read") },
+        { href: "/admin/health", label: "System Health", icon: "💓", show: true },
+        { href: "/admin/privacy", label: "Privacy Requests", icon: "🛡️", show: can(staff, "privacy.manage") },
+        { href: "/admin/inbox", label: "Website Inbox", icon: "📬", show: can(staff, "website_inbox.manage") },
       ],
     },
   ];
@@ -98,22 +104,26 @@ export default async function ConsoleLayout({ children }: LayoutProps<"/admin">)
 
       {/* Main Console Layout: Sidebar + Main Workspace */}
       <div className="flex flex-1">
-        <aside className="w-64 shrink-0 border-r border-line bg-earth-50/40 p-4 hidden md:block">
-          <nav aria-label="Admin Navigation" className="space-y-6">
+        <aside className="w-68 shrink-0 border-r border-line bg-earth-50/40 p-4 hidden md:block">
+          <nav aria-label="Admin Navigation" className="space-y-4">
             {navSections.map((sec) => {
               const activeLinks = sec.links.filter((l) => l.show);
               if (activeLinks.length === 0) return null;
               return (
-                <div key={sec.title} className="space-y-1">
-                  <p className="px-2 text-[11px] font-bold tracking-wider text-muted uppercase">{sec.title}</p>
-                  <ul className="space-y-0.5">
+                <div key={sec.title} className="rounded-xl border border-line/60 bg-white/70 p-2 space-y-1">
+                  <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold tracking-wider text-muted uppercase">
+                    <span>{sec.icon}</span>
+                    <span>{sec.title}</span>
+                  </div>
+                  <ul className="space-y-0.5 border-l-2 border-line/50 ml-2 pl-2">
                     {activeLinks.map((l) => (
                       <li key={l.href}>
                         <Link
                           href={l.href}
-                          className="flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium text-ink/80 hover:bg-leaf-100/60 hover:text-leaf-900 transition-colors"
+                          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-ink/80 hover:bg-leaf-100/60 hover:text-leaf-900 transition-colors"
                         >
-                          {l.label}
+                          <span className="text-xs">{l.icon}</span>
+                          <span>{l.label}</span>
                         </Link>
                       </li>
                     ))}

@@ -221,19 +221,67 @@ export default async function FarmDetailPage({
     .reduce((acc: number, c: any) => acc + (Number(c.target_area_ha) || 0), 0);
   const fallowAvailableHa = Math.max(0, measuredTotalHa - totalCultivatedHa);
 
-  const tabs = [
-    { key: "overview", label: "Overview", icon: "📊" },
-    { key: "plots", label: `Fields & Plots (${plots.length})`, icon: "🗺️" },
-    { key: "crops", label: `Crop Management (${cropCycles.length})`, icon: "🌽" },
-    { key: "livestock", label: `Livestock (${totalHeadCount + individualAnimals.length})`, icon: "🐄" },
-    { key: "tasks", label: `Tasks & Labour (${tasks.length})`, icon: "✅" },
-    { key: "machinery", label: `Machinery & Fleet (${machinery.length + equipment.length})`, icon: "🚜" },
-    { key: "inventory", label: `Inventory (${inventory.length})`, icon: "📦" },
-    { key: "farm_books", label: `Farm Account & Budgets (${financials.length})`, icon: "💰" },
-    { key: "variance", label: `Standard vs Actual (${variances.length})`, icon: "⚖️" },
-    { key: "records", label: `Farm Records (${soilRecords.length + generalRecords.length})`, icon: "📁" },
-    { key: "jobs", label: `Service Bookings (${jobs.length})`, icon: "🛠️" },
+  type FarmSubMenu = {
+    key: string;
+    label: string;
+    icon: string;
+    count?: number | null;
+  };
+
+  type FarmParentDomain = {
+    id: string;
+    label: string;
+    icon: string;
+    description: string;
+    subMenus: FarmSubMenu[];
+  };
+
+  const parentDomains: FarmParentDomain[] = [
+    {
+      id: "land_production",
+      label: "Land & Production",
+      icon: "🌾",
+      description: "Land parcels, crop production cycles, and livestock herds",
+      subMenus: [
+        { key: "overview", label: "Overview", icon: "📊" },
+        { key: "plots", label: "Fields & Plots", icon: "🗺️", count: plots.length },
+        { key: "crops", label: "Crop Cycles & GAP", icon: "🌽", count: cropCycles.length },
+        { key: "livestock", label: "Livestock Enterprise", icon: "🐄", count: totalHeadCount + individualAnimals.length },
+      ],
+    },
+    {
+      id: "operations_assets",
+      label: "Operations & Fleet",
+      icon: "🚜",
+      description: "Daily task rosters, attendance, machinery fleet, and warehouse stock",
+      subMenus: [
+        { key: "tasks", label: "Tasks & Labour", icon: "✅", count: tasks.length },
+        { key: "machinery", label: "Machinery & Equipment", icon: "🚜", count: machinery.length + equipment.length },
+        { key: "inventory", label: "Multi-Location Inventory", icon: "📦", count: inventory.length },
+        { key: "jobs", label: "Service Bookings", icon: "🛠️", count: jobs.length },
+      ],
+    },
+    {
+      id: "financials_intelligence",
+      label: "Financials & Variance",
+      icon: "💰",
+      description: "Farm books, enterprise budgets, agronomic standard-plan-actual variances, and soil documents",
+      subMenus: [
+        { key: "farm_books", label: "Accounts & Budgets", icon: "💰", count: financials.length },
+        { key: "variance", label: "Standard vs Actual", icon: "⚖️", count: variances.length },
+        { key: "records", label: "Soil & Documents", icon: "📁", count: soilRecords.length + generalRecords.length },
+      ],
+    },
   ];
+
+  // Auto-detect which parent domain the active tab belongs to
+  const activeDomain =
+    parentDomains.find((d) => d.subMenus.some((m) => m.key === activeTab)) ??
+    parentDomains[0];
+
+  const activeSubMenu =
+    activeDomain.subMenus.find((m) => m.key === activeTab) ??
+    activeDomain.subMenus[0];
 
   return (
     <div className="flex flex-col gap-6">
@@ -261,22 +309,90 @@ export default async function FarmDetailPage({
         </div>
       </div>
 
-      {/* Tabs navigation */}
-      <div className="flex border-b border-line overflow-x-auto gap-2">
-        {tabs.map((t) => (
-          <Link
-            key={t.key}
-            href={`/${lang}/account/farms/${farm.id}?tab=${t.key}`}
-            className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === t.key
-                ? "border-leaf-600 text-leaf-900 bg-leaf-50/50"
-                : "border-transparent text-muted hover:text-ink hover:border-line"
-            }`}
-          >
-            <span>{t.icon}</span>
-            <span>{t.label}</span>
-          </Link>
-        ))}
+      {/* Two-Level Parent and Sub-Menu Navigation */}
+      <div className="flex flex-col gap-3">
+        {/* Level 1: Parent Domains */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="tablist" aria-label="Farm enterprise domains">
+          {parentDomains.map((domain) => {
+            const isDomainActive = domain.id === activeDomain.id;
+            const targetSub = domain.subMenus[0].key;
+            const totalDomainCount = domain.subMenus.reduce((sum, sm) => sum + (sm.count || 0), 0);
+
+            return (
+              <Link
+                key={domain.id}
+                href={`/${lang}/account/farms/${farm.id}?tab=${isDomainActive ? activeTab : targetSub}`}
+                className={`p-3 rounded-xl border transition-all text-left flex items-center justify-between ${
+                  isDomainActive
+                    ? "bg-leaf-800 text-white border-leaf-900 shadow-sm"
+                    : "bg-white text-neutral-800 border-line hover:border-leaf-300 hover:bg-neutral-50"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl" aria-hidden="true">{domain.icon}</span>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider">{domain.label}</h3>
+                    <p className={`text-[11px] truncate max-w-[180px] ${isDomainActive ? "text-leaf-200" : "text-muted"}`}>
+                      {domain.subMenus.length} modules
+                    </p>
+                  </div>
+                </div>
+                {totalDomainCount > 0 && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isDomainActive ? "bg-white text-leaf-900" : "bg-leaf-100 text-leaf-800"
+                    }`}
+                  >
+                    {totalDomainCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Level 2: Sub-Parent Menus for Active Domain */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-line">
+          {activeDomain.subMenus.map((m) => {
+            const isCurrent = activeTab === m.key;
+            return (
+              <Link
+                key={m.key}
+                href={`/${lang}/account/farms/${farm.id}?tab=${m.key}`}
+                className={`px-3 py-2 text-xs font-bold whitespace-nowrap rounded-lg transition-colors flex items-center gap-1.5 ${
+                  isCurrent
+                    ? "bg-leaf-100 text-leaf-900 border border-leaf-300 shadow-2xs font-extrabold"
+                    : "text-neutral-600 hover:text-ink hover:bg-neutral-100 border border-transparent"
+                }`}
+              >
+                <span>{m.icon}</span>
+                <span>{m.label}</span>
+                {m.count !== undefined && m.count !== null && (
+                  <span
+                    className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isCurrent ? "bg-leaf-700 text-white" : "bg-neutral-200 text-neutral-700"
+                    }`}
+                  >
+                    {m.count}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Context Breadcrumb */}
+        <div className="flex items-center justify-between text-xs text-muted px-1 bg-surface/50 py-1.5 rounded-lg border border-line/60">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-leaf-900">{activeDomain.label}</span>
+            <span>&rarr;</span>
+            <span className="font-bold text-ink flex items-center gap-1">
+              <span>{activeSubMenu.icon}</span>
+              <span>{activeSubMenu.label}</span>
+            </span>
+          </div>
+          <span className="text-[11px] hidden md:inline">{activeDomain.description}</span>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------------ TAB 1: OVERVIEW */}

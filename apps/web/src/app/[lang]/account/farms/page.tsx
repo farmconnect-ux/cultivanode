@@ -58,49 +58,39 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
                   >
                     Open Farm Enterprise &rarr;
                   </a>
-                  <div className="flex flex-wrap gap-1 text-[11px]">
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=plots`}
-                      className="px-2 py-1 rounded bg-leaf-100 hover:bg-leaf-200 text-leaf-900 font-semibold"
-                    >
-                      🗺️ Fields
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=crops`}
-                      className="px-2 py-1 rounded bg-leaf-50 hover:bg-leaf-100 text-leaf-800 font-medium"
-                    >
-                      🌽 Crops
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=livestock`}
-                      className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium"
-                    >
-                      🐄 Livestock
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
-                      className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium"
-                    >
-                      💰 Farm Account
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=workers`}
-                      className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-800 font-medium"
-                    >
-                      👥 Workers
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=inventory`}
-                      className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium"
-                    >
-                      📦 Inventory
-                    </a>
-                    <a
-                      href={`/${lang}/account/farms/${farm.id}?tab=records`}
-                      className="px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium"
-                    >
-                      📁 Records
-                    </a>
+                  <div className="space-y-2 border-t border-line pt-3">
+                    <div className="flex items-center justify-between text-[11px] text-muted font-bold uppercase tracking-wider">
+                      <span>Quick Domain Jump</span>
+                      <a
+                        href={`/${lang}/account/farms/${farm.id}`}
+                        className="text-leaf-700 hover:text-leaf-900 font-bold lowercase"
+                      >
+                        view all &rarr;
+                      </a>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+                      <a
+                        href={`/${lang}/account/farms/${farm.id}?tab=plots`}
+                        className="p-1.5 rounded-lg bg-leaf-50 hover:bg-leaf-100 text-leaf-900 font-semibold border border-leaf-200/60 transition-colors flex flex-col items-center gap-0.5"
+                      >
+                        <span>🗺️</span>
+                        <span className="truncate w-full">Fields</span>
+                      </a>
+                      <a
+                        href={`/${lang}/account/farms/${farm.id}?tab=tasks`}
+                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold border border-emerald-200/60 transition-colors flex flex-col items-center gap-0.5"
+                      >
+                        <span>✅</span>
+                        <span className="truncate w-full">Tasks</span>
+                      </a>
+                      <a
+                        href={`/${lang}/account/farms/${farm.id}?tab=farm_books`}
+                        className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200/60 transition-colors flex flex-col items-center gap-0.5"
+                      >
+                        <span>💰</span>
+                        <span className="truncate w-full">Ledger</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </Card>

@@ -26,7 +26,7 @@ export default async function AccountLayout({ children, params }: LayoutProps<"/
   const availableWorkspaces = getAvailableWorkspaces(account);
 
   return (
-    <Container className="grid gap-6 py-8 pb-24 sm:py-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10 lg:pb-12">
+    <Container className="grid gap-6 py-8 pb-24 sm:py-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:pb-12">
       <AccountNav
         lang={lang}
         signOutLabel={n.signOut}
