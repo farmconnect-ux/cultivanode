@@ -37,8 +37,17 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
    `functions_base_url` with the value `https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1`
    (`select vault.create_secret('https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1', 'functions_base_url');`).
    Check `select * from cron.job;` shows `cultivanode-expire-bookings` and `cultivanode-wake-sms-worker`.
-9. **Auth settings:** Authentication > Sign In / Providers > Phone: keep "SMS OTP expiry" at 5-10 minutes
-   and the default rate limits (Authentication > Rate Limits) so codes cannot be spammed.
+9. **Email sign-in & OTP:**
+   - In Supabase: **Authentication > Sign In / Providers > Email**: ensure Email provider is enabled.
+   - In **Authentication > Email Templates > Magic Link**: update the email body to include the 6-digit OTP code (`{{ .Token }}`). By default, Supabase only includes a magic link URL (`{{ .ConfirmationURL }}`), but CultivaNode verification asks the user for the 6-digit code.
+     ```html
+     <h2>Your CultivaNode Verification Code</h2>
+     <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2d6a4f;">{{ .Token }}</p>
+     <p>Enter this 6-digit code to complete sign-in. This code expires in 1 hour.</p>
+     ```
+   - In **Project Settings > Authentication > SMTP Settings**: enable **Custom SMTP** (e.g. Resend, Brevo, SendGrid, or Google Workspace). Supabase's built-in default email service has a hard limit of **2 to 3 emails per hour** for the entire project (`over_email_send_rate_limit`). Enabling custom SMTP lifts this restriction and ensures delivery to inboxes rather than spam folders.
+10. **Auth settings:** Authentication > Sign In / Providers > Phone: keep "SMS OTP expiry" at 5-10 minutes
+    and the default rate limits (Authentication > Rate Limits) so codes cannot be spammed.
 
 ## Custom domain (cultivanode.com)
 1. Vercel > project > Settings > Domains: add `cultivanode.com` and `www.cultivanode.com`; add the DNS records
