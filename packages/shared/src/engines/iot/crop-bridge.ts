@@ -2,7 +2,7 @@
 // CultivaNode Farm Intelligence: Crop Foundation Bridge
 // =============================================================================
 
-import type { TelemetryRollup, TrustLabel } from './types.js';
+import type { TelemetryRollup, TrustLabel } from './types';
 
 export interface CropMeasurement {
   id: string;

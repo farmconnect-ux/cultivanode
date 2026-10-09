@@ -13,7 +13,7 @@ import {
   type TelemetryRollup,
   type IHistoricalReadingsProvider,
   type IWatchdogStore,
-} from "./index.js";
+} from "./index";
 
 describe("IoT Quality Checker", () => {
   const moistureChannel: SensorChannel = {

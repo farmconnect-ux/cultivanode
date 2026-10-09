@@ -2,7 +2,7 @@
 // CultivaNode Farm Intelligence: Device Watchdog & Health Monitor
 // =============================================================================
 
-import type { Device, DeviceAlert, DeviceInstallation } from './types.js';
+import type { Device, DeviceAlert, DeviceInstallation } from './types';
 
 export interface IWatchdogStore {
   getActiveDevices(): Promise<Device[]>;

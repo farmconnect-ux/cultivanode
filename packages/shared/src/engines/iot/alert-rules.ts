@@ -8,7 +8,7 @@ import type {
   DeviceAlert,
   DeviceInstallation,
   StoredTelemetryReading,
-} from './types.js';
+} from './types';
 
 export interface IHistoricalReadingsProvider {
   getReadingsInWindow(

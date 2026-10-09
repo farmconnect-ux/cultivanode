@@ -2,7 +2,7 @@
 // CultivaNode Farm Intelligence: Telemetry Quality & Anomaly Checker
 // =============================================================================
 
-import type { SensorChannel, TelemetryQualityFlag } from './types.js';
+import type { SensorChannel, TelemetryQualityFlag } from './types';
 
 export interface QualityCheckResult {
   flag: TelemetryQualityFlag;
