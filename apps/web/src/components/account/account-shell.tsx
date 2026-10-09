@@ -53,9 +53,14 @@ export function AccountShell({
       ? (rawWs as Workspace)
       : (availableWorkspaces[0] ?? "farmer");
 
-  // The farmer home draws its own menu. Bookings, search, listings, inbox and
-  // identity pages stay in the shared nav so those workflows are reachable.
-  if (activeWorkspace === "farmer" && farmerShellOwns(pathname)) {
+  // Full-width community dashboards with dedicated sidebars.
+  const rest = pathname.replace(/^\/[a-z]{2}\/account/, "");
+  const isAccountRoot = rest === "";
+  const drawsOwnSidebar = 
+    (activeWorkspace === "farmer" && farmerShellOwns(pathname)) ||
+    ((activeWorkspace === "provider" || activeWorkspace === "agent") && isAccountRoot);
+
+  if (drawsOwnSidebar) {
     return (
       <div className="w-full min-h-[calc(100vh-4rem)]">
         {suspendedAlert}

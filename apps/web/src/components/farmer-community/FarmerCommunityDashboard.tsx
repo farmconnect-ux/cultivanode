@@ -6,6 +6,18 @@ import { Sidebar, MobileMenuButton, menuGroups } from './Sidebar';
 import Link from "next/link";
 import { Dashboard } from "./pages/Dashboard";
 import { Farms } from "./pages/Farms";
+import { Crops } from "./pages/Crops";
+import { Livestock } from "./pages/Livestock";
+import { Equipment } from "./pages/Equipment";
+import { Labor } from "./pages/Labor";
+import { Sales } from "./pages/Sales";
+import { Marketplace } from "./pages/Marketplace";
+import { IoTDevices } from "./pages/IoTDevices";
+import { Irrigation } from "./pages/Irrigation";
+import { Weather } from "./pages/Weather";
+import { Reports } from "./pages/Reports";
+import { Tasks } from "./pages/Tasks";
+import { Settings } from "./pages/Settings";
 import { NotYourRecords } from "./NotYourRecords";
 import type { FarmerLive } from "./live";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -82,106 +94,35 @@ export function FarmerCommunityDashboard({
   };
 
   const renderContent = () => {
-    const lang = live.lang;
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard live={live} />;
       case 'farms':
         return <Farms live={live} t={t} />;
       case 'crops':
-        return (
-          <NotYourRecords
-            title="Crop cycles"
-            body="A crop plan is tied to one of your farms. Open a farm, then its crop cycles. Sample crop boards are not shown here, so they cannot be mistaken for your season."
-            href={`/${lang}/account/farms`}
-            cta="Choose a farm"
-          />
-        );
+        return <Crops />;
       case 'livestock':
-        return (
-          <NotYourRecords
-            title="Livestock"
-            body="Herd, feed and health tools are not part of this pilot yet. Your farms stay on the farms list."
-            href={`/${lang}/account/farms`}
-            cta="Back to your farms"
-          />
-        );
+        return <Livestock />;
       case 'equipment':
-        return (
-          <NotYourRecords
-            title="Machinery"
-            body="To get a tractor or sprayer onto your farm, search verified providers. To offer your own machine, publish a listing."
-            href={`/${lang}/account/find`}
-            cta="Hire nearby"
-          />
-        );
+        return <Equipment />;
       case 'labor':
-        return (
-          <NotYourRecords
-            title="Labour"
-            body="Farm hands and operators are hired through the same booking as machinery. Payment in the pilot is direct, not through CultivaNode."
-            href={`/${lang}/account/find`}
-            cta="Find a service"
-          />
-        );
+        return <Labor />;
       case 'sales':
-      case 'reports':
-        return (
-          <NotYourRecords
-            title="Books and reports"
-            body="There is no invented revenue on this screen. Costs from a confirmed job are recorded on the booking after both sides mark it paid."
-            href={`/${lang}/account/bookings`}
-            cta="Open bookings"
-          />
-        );
+        return <Sales />;
       case 'marketplace':
-        return (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <NotYourRecords
-              title="Hire for the farm"
-              body="Search machinery and labour from one of your farms. Distance uses the farm pin and the provider's service radius."
-              href={`/${lang}/account/find`}
-              cta="Search nearby"
-            />
-            <NotYourRecords
-              title="Produce market"
-              body="Buying and selling produce is a separate market. It is not mixed with your farm's private records."
-              href={`/${lang}/marketplace`}
-              cta="Open the market"
-            />
-          </div>
-        );
+        return <Marketplace />;
       case 'iot-devices':
+        return <IoTDevices />;
       case 'irrigation':
+        return <Irrigation />;
       case 'weather':
-        return (
-          <NotYourRecords
-            title="Sensors and weather"
-            body="Live probes are not connected to this account yet. Do not treat sample moisture or rainfall as your field."
-            href={`/${lang}/account`}
-            cta="Back to your overview"
-          />
-        );
+        return <Weather />;
+      case 'reports':
+        return <Reports />;
       case 'tasks':
-        return <Dashboard live={live} />;
+        return <Tasks />;
       case 'settings':
-        return (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              ["Profile", `/${lang}/account/profile`, "Name, phone and language"],
-              ["Roles", `/${lang}/account/roles`, "Farmer, machinery owner, services"],
-              ["Identity checks", `/${lang}/account/verification`, "NIN, BVN and payout details"],
-              ["Messages", `/${lang}/account/inbox`, "Booking updates"],
-              ["Privacy", `/${lang}/account/privacy`, "Consent and your data"],
-              ["Listings", `/${lang}/account/listings`, "Equipment and services you offer"],
-            ].map(([label, href, body]) => (
-              <Link key={href} href={href} className="rounded-xl border border-gray-200 bg-white p-4 hover:border-leaf-700">
-                <p className="font-bold">{label}</p>
-                <p className="mt-1 text-sm text-gray-600">{body}</p>
-              </Link>
-            ))}
-          </div>
-        );
+        return <Settings />;
       default:
         return <Dashboard live={live} />;
     }

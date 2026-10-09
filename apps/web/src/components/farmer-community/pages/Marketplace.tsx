@@ -28,8 +28,13 @@ import {
   Wheat,
   Leaf,
   BarChart3,
-  CheckCircle
+  CheckCircle,
+  Phone,
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Alert, AlertDescription } from '../ui/alert';
 
 const marketListings = [
   {
@@ -256,8 +261,80 @@ export function Marketplace() {
   const [activeTab, setActiveTab] = useState('listings');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [listings, setListings] = useState(marketListings);
+  const [requests, setRequests] = useState(buyerRequests);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  const filteredListings = marketListings.filter(listing => {
+  // Modals
+  const [isListProduceOpen, setIsListProduceOpen] = useState(false);
+  const [contactListing, setContactListing] = useState<any | null>(null);
+  const [respondRequest, setRespondRequest] = useState<any | null>(null);
+
+  // List Produce Form State
+  const [newListingForm, setNewListingForm] = useState({
+    product: '',
+    variety: '',
+    category: 'Grains',
+    quantity: '50',
+    unit: 'bags (100kg)',
+    pricePerUnit: '35000',
+    location: 'Ibadan, Oyo State',
+    quality: 'Premium',
+    image: '🌽'
+  });
+
+  // Respond Form State
+  const [proposalForm, setProposalForm] = useState({
+    offerPrice: '',
+    deliveryDate: '',
+    notes: 'Available immediately from our Ibadan estate warehouse. Certified moisture levels < 12.5%.'
+  });
+
+  const showFeedback = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleCreateListing = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newListingForm.product) return;
+    const qty = parseFloat(newListingForm.quantity) || 1;
+    const price = parseFloat(newListingForm.pricePerUnit) || 1000;
+    const newEntry = {
+      id: `ML${String(listings.length + 1).padStart(3, '0')}`,
+      product: newListingForm.product,
+      variety: newListingForm.variety || 'Certified Hybrid',
+      seller: 'My CultivaNode Estate',
+      location: newListingForm.location,
+      quantity: qty,
+      unit: newListingForm.unit,
+      pricePerUnit: price,
+      totalValue: qty * price,
+      quality: newListingForm.quality,
+      moisture: 12.0,
+      harvestDate: new Date().toISOString().split('T')[0],
+      listingDate: new Date().toISOString().split('T')[0],
+      expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      deliveryOptions: ['Pickup', 'Delivery'],
+      rating: 5.0,
+      reviews: 1,
+      status: 'active',
+      category: newListingForm.category,
+      image: newListingForm.image
+    };
+    setListings([newEntry, ...listings]);
+    setIsListProduceOpen(false);
+    showFeedback(`Your produce listing for "${newListingForm.product}" is now live on CultivaNode Marketplace!`);
+  };
+
+  const handleSendProposal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!respondRequest) return;
+    showFeedback(`Supply proposal of ${formatCurrency(parseFloat(proposalForm.offerPrice) || respondRequest.priceOffered)} per ${respondRequest.unit} submitted to ${respondRequest.buyer}!`);
+    setRespondRequest(null);
+  };
+
+  const filteredListings = listings.filter(listing => {
     const matchesSearch = listing.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -269,10 +346,10 @@ export function Marketplace() {
     selectedCategory === 'All' || p.category === selectedCategory
   );
 
-  const totalListingValue = marketListings.reduce((sum, l) => sum + l.totalValue, 0);
-  const activeListings = marketListings.filter(l => l.status === 'active').length;
-  const openRequests = buyerRequests.filter(r => r.status === 'open' || r.status === 'urgent').length;
-  const urgentRequests = buyerRequests.filter(r => r.status === 'urgent').length;
+  const totalListingValue = listings.reduce((sum, l) => sum + l.totalValue, 0);
+  const activeListings = listings.filter(l => l.status === 'active').length;
+  const openRequests = requests.filter(r => r.status === 'open' || r.status === 'urgent').length;
+  const urgentRequests = requests.filter(r => r.status === 'urgent').length;
 
   return (
     <div className="p-4 space-y-4">
@@ -282,11 +359,23 @@ export function Marketplace() {
           <h1 className="text-xl font-bold text-gray-900 font-serif">Marketplace</h1>
           <p className="text-sm text-gray-600">Buy and sell agricultural commodities, view real-time market prices and buyer contracts</p>
         </div>
-        <Button className="bg-leaf-800 hover:bg-leaf-900 text-white shadow-sm">
+        <Button 
+          className="bg-leaf-800 hover:bg-leaf-900 text-white shadow-sm"
+          onClick={() => setIsListProduceOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-1" />
           List Produce
         </Button>
       </div>
+
+      {feedback && (
+        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
+          <CheckCircle className="h-4 w-4 text-leaf-700" />
+          <AlertDescription className="text-xs font-medium">
+            {feedback}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -450,7 +539,11 @@ export function Marketplace() {
                         <Clock className="h-3 w-3" />
                         <span>Expires {new Date(listing.expiryDate).toLocaleDateString()}</span>
                       </div>
-                      <Button size="sm" className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white">
+                      <Button 
+                        size="sm" 
+                        className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white"
+                        onClick={() => setContactListing(listing)}
+                      >
                         Contact Seller
                       </Button>
                     </div>
@@ -464,7 +557,7 @@ export function Marketplace() {
         {/* Buyer Requests Tab */}
         <TabsContent value="requests" className="space-y-3 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {buyerRequests.map((req) => (
+            {requests.map((req) => (
               <Card key={req.id} className={`p-4 border-gray-100 ${req.status === 'urgent' ? 'border-red-300 bg-red-50/30' : ''}`}>
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
@@ -514,7 +607,18 @@ export function Marketplace() {
                       <Clock className="h-3 w-3" />
                       <span>Expires {new Date(req.expiryDate).toLocaleDateString()}</span>
                     </div>
-                    <Button size="sm" className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white">
+                    <Button 
+                      size="sm" 
+                      className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white"
+                      onClick={() => {
+                        setRespondRequest(req);
+                        setProposalForm({
+                          offerPrice: String(req.priceOffered),
+                          deliveryDate: req.deliveryDate,
+                          notes: 'Direct farm estate supply. Certified moisture and quality grade available.'
+                        });
+                      }}
+                    >
                       Respond
                     </Button>
                   </div>
@@ -620,6 +724,263 @@ export function Marketplace() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* List Produce Modal */}
+      <Dialog open={isListProduceOpen} onOpenChange={setIsListProduceOpen}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleCreateListing}>
+            <DialogHeader>
+              <DialogTitle>List Agricultural Produce</DialogTitle>
+              <DialogDescription>
+                Publish your harvest to verified buyers, millers, and commodity aggregators.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-3 text-xs">
+              <div>
+                <label className="text-xs font-semibold text-gray-700">Commodity Name</label>
+                <Input
+                  required
+                  placeholder="e.g. Yellow Maize, Soybeans, Seed Yam"
+                  value={newListingForm.product}
+                  onChange={(e) => setNewListingForm({ ...newListingForm, product: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Variety / Cultivar</label>
+                  <Input
+                    placeholder="e.g. OBA Super 9"
+                    value={newListingForm.variety}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, variety: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Category</label>
+                  <select
+                    className="flex h-9 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 mt-1"
+                    value={newListingForm.category}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, category: e.target.value })}
+                  >
+                    <option value="Grains">Grains</option>
+                    <option value="Tubers">Tubers</option>
+                    <option value="Vegetables">Vegetables</option>
+                    <option value="Legumes">Legumes</option>
+                    <option value="Cash Crops">Cash Crops</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Available Quantity</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newListingForm.quantity}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, quantity: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Unit of Measure</label>
+                  <Input
+                    value={newListingForm.unit}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, unit: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Price per Unit (₦)</label>
+                  <Input
+                    type="number"
+                    min="100"
+                    value={newListingForm.pricePerUnit}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, pricePerUnit: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Quality Standard</label>
+                  <select
+                    className="flex h-9 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 mt-1"
+                    value={newListingForm.quality}
+                    onChange={(e) => setNewListingForm({ ...newListingForm, quality: e.target.value })}
+                  >
+                    <option value="Premium">Premium Grade</option>
+                    <option value="Export Grade">Export Grade</option>
+                    <option value="Grade A">Grade A</option>
+                    <option value="Standard">Standard Commercial</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700">Estate / Warehouse Location</label>
+                <Input
+                  value={newListingForm.location}
+                  onChange={(e) => setNewListingForm({ ...newListingForm, location: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsListProduceOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+                Publish Listing
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contact Seller Modal */}
+      {contactListing && (
+        <Dialog open={!!contactListing} onOpenChange={() => setContactListing(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">{contactListing.image}</span>
+                <div>
+                  <DialogTitle>{contactListing.product} ({contactListing.variety})</DialogTitle>
+                  <DialogDescription>
+                    Listed by <strong className="text-gray-900">{contactListing.seller}</strong>
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3 text-xs">
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Unit Price:</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(contactListing.pricePerUnit)} / {contactListing.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Stock Available:</span>
+                  <span className="font-semibold text-gray-900">{contactListing.quantity} {contactListing.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Location:</span>
+                  <span className="font-medium text-gray-700">{contactListing.location}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Quality Rating:</span>
+                  <span className="font-medium text-harvest-600">★ {contactListing.rating} ({contactListing.reviews} reviews)</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-800">Connect Directly with Seller</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href="tel:+2348031234567"
+                    className="inline-flex items-center justify-center h-9 px-3 rounded-lg border border-gray-200 bg-white font-medium text-gray-800 hover:bg-gray-50 text-xs"
+                  >
+                    <Phone className="h-3.5 w-3.5 mr-1.5 text-leaf-700" />
+                    Call Seller
+                  </a>
+                  <a
+                    href={`https://wa.me/2348031234567?text=${encodeURIComponent(`Hello ${contactListing.seller}, I found your listing for ${contactListing.product} on CultivaNode Marketplace.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center h-9 px-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 text-xs"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                    WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button size="sm" variant="outline" onClick={() => setContactListing(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Respond to Buyer Request Modal */}
+      {respondRequest && (
+        <Dialog open={!!respondRequest} onOpenChange={() => setRespondRequest(null)}>
+          <DialogContent className="max-w-md">
+            <form onSubmit={handleSendProposal}>
+              <DialogHeader>
+                <DialogTitle>Supply Proposal for {respondRequest.buyer}</DialogTitle>
+                <DialogDescription>
+                  Contract requirement: <strong className="text-gray-900">{reqSummary(respondRequest)}</strong>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-3 text-xs">
+                <div className="bg-leaf-50 p-3 rounded-lg border border-leaf-200">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-leaf-800">Buyer Target Price:</span>
+                    <span className="font-bold text-leaf-900">{formatCurrency(respondRequest.priceOffered)} / {respondRequest.unit}</span>
+                  </div>
+                  <div className="flex justify-between text-xs mt-1">
+                    <span className="text-leaf-800">Total Contract Value:</span>
+                    <span className="font-bold text-leaf-900">{formatCurrencyCompact(respondRequest.totalBudget)}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Your Offered Unit Price (₦)</label>
+                  <Input
+                    type="number"
+                    value={proposalForm.offerPrice}
+                    onChange={(e) => setProposalForm({ ...proposalForm, offerPrice: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Earliest Delivery Date</label>
+                  <Input
+                    type="date"
+                    value={proposalForm.deliveryDate}
+                    onChange={(e) => setProposalForm({ ...proposalForm, deliveryDate: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700">Proposal Notes & Certification</label>
+                  <Input
+                    value={proposalForm.notes}
+                    onChange={(e) => setProposalForm({ ...proposalForm, notes: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => setRespondRequest(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+                  Submit Proposal
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
+}
+
+function reqSummary(req: any) {
+  return `${req.quantity.toLocaleString()} ${req.unit} of ${req.product} (${req.quality})`;
 }

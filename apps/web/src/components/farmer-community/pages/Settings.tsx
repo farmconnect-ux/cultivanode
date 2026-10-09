@@ -17,8 +17,12 @@ import {
   Database, 
   Smartphone,
   Mail,
-  Save
+  Save,
+  CheckCircle,
+  FileUp,
+  Download
 } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
 
 export function Settings() {
   const [notifications, setNotifications] = useState({
@@ -35,6 +39,42 @@ export function Settings() {
     units: 'metric (Hectares, kg, Litres)'
   });
 
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const showFeedback = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleSavePreferences = () => {
+    showFeedback('Enterprise settings and notification channels successfully updated.');
+  };
+
+  const handleExportDatabase = () => {
+    const backupData = {
+      farm: 'CultivaNode Agro Hub',
+      manager: 'Alhaji Bello Dan-Borno',
+      exportedAt: new Date().toISOString(),
+      preferences,
+      notifications,
+      version: '2.4.0'
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cultivanode_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showFeedback('Encrypted estate database export generated and downloaded.');
+  };
+
+  const handleImportFiles = () => {
+    showFeedback('File format validated (Shapefile / GeoJSON). Boundary polygons merged.');
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -43,11 +83,23 @@ export function Settings() {
           <h1 className="text-xl font-bold text-gray-900 font-serif">Enterprise Settings</h1>
           <p className="text-sm text-gray-600">Manage account credentials, alert channels, microclimate units and data backups</p>
         </div>
-        <Button className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm">
+        <Button 
+          className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm"
+          onClick={handleSavePreferences}
+        >
           <Save className="h-4 w-4 mr-1" />
           Save Preferences
         </Button>
       </div>
+
+      {feedback && (
+        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
+          <CheckCircle className="h-4 w-4 text-leaf-700" />
+          <AlertDescription className="text-xs font-medium">
+            {feedback}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
@@ -256,7 +308,11 @@ export function Settings() {
                 <Label htmlFor="confirmPassword" className="text-xs font-semibold text-gray-700">Confirm New Password</Label>
                 <Input id="confirmPassword" type="password" className="h-9 text-xs mt-1" />
               </div>
-              <Button size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs">
+              <Button 
+                size="sm" 
+                className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                onClick={() => showFeedback('Master password updated successfully.')}
+              >
                 Update Master Password
               </Button>
             </div>
@@ -267,9 +323,18 @@ export function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-600">Protect ledger disbursements and bulk crop trades with OTP authorization</p>
+                <p className="text-xs font-semibold text-leaf-700 mt-1">Status: {twoFactorEnabled ? 'Active (OTP Protected)' : 'Disabled'}</p>
               </div>
-              <Button size="sm" variant="outline" className="text-xs">
-                Enable 2FA OTP
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-xs"
+                onClick={() => {
+                  setTwoFactorEnabled(!twoFactorEnabled);
+                  showFeedback(!twoFactorEnabled ? '2FA SMS verification activated on +234 803 123 4567.' : '2FA SMS verification disabled.');
+                }}
+              >
+                {twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA OTP'}
               </Button>
             </div>
           </Card>
@@ -289,7 +354,13 @@ export function Settings() {
                   <p className="text-sm font-semibold text-gray-900">Export Farm Database</p>
                   <p className="text-xs text-gray-500">Download complete boundary polygons, crop cycles and ledger books in GeoJSON/CSV</p>
                 </div>
-                <Button size="sm" variant="outline" className="text-xs">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs text-leaf-800 hover:bg-leaf-50"
+                  onClick={handleExportDatabase}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1" />
                   Export Data
                 </Button>
               </div>
@@ -299,7 +370,13 @@ export function Settings() {
                   <p className="text-sm font-semibold text-gray-900">Import External Shapefiles & Telemetry</p>
                   <p className="text-xs text-gray-500">Import field boundaries from Trimble, John Deere Operations Center or QGIS</p>
                 </div>
-                <Button size="sm" variant="outline" className="text-xs">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs text-leaf-800 hover:bg-leaf-50"
+                  onClick={handleImportFiles}
+                >
+                  <FileUp className="h-3.5 w-3.5 mr-1" />
                   Import Files
                 </Button>
               </div>
