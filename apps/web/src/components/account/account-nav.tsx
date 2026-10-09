@@ -97,13 +97,24 @@ export function AccountNav({
         ],
       },
       {
+        id: "intelligence_iot",
+        label: "Intelligence & IoT",
+        icon: "📡",
+        items: [
+          { href: `${base}/iot?${wsParam}`, label: "IoT Sensors & Probes", icon: "📟" },
+          { href: `${base}/irrigation?${wsParam}`, label: "Smart Irrigation", icon: "💧" },
+          { href: `${base}/weather?${wsParam}`, label: "Weather Station", icon: "⛅" },
+          { href: `${base}/reports?${wsParam}`, label: "Reports & Analytics", icon: "📊" },
+          { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
+        ],
+      },
+      {
         id: "financials_governance",
-        label: "Financials & Advisory",
+        label: "Financials & Ledger",
         icon: "💰",
         items: [
           { href: `${base}/finance?${wsParam}`, label: "Farm Budgets & Cost", icon: "💰" },
           { href: `${base}/variance?${wsParam}`, label: "Standard vs Actual", icon: "⚖️" },
-          { href: `${base}/assistant?${wsParam}`, label: "AI Farm Assistant", icon: "🤖" },
           {
             href: `${base}/inbox?${wsParam}`,
             label: "Notification Inbox",

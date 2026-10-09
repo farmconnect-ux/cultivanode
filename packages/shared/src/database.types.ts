@@ -1230,6 +1230,153 @@ export type Database = {
           },
         ]
       }
+      devices: {
+        Row: {
+          id: string
+          serial_number: string
+          model_id: string
+          status: string
+          firmware_version: string
+          battery_percentage: number
+          battery_voltage: number | null
+          last_seen_at: string | null
+          assigned_owner_id: string | null
+          gateway_address: string | null
+          network_rssi: number | null
+          network_snr: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          serial_number: string
+          model_id: string
+          status?: string
+          firmware_version?: string
+          battery_percentage?: number
+          battery_voltage?: number | null
+          last_seen_at?: string | null
+          assigned_owner_id?: string | null
+          gateway_address?: string | null
+          network_rssi?: number | null
+          network_snr?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          serial_number?: string
+          model_id?: string
+          status?: string
+          firmware_version?: string
+          battery_percentage?: number
+          battery_voltage?: number | null
+          last_seen_at?: string | null
+          assigned_owner_id?: string | null
+          gateway_address?: string | null
+          network_rssi?: number | null
+          network_snr?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      device_installations: {
+        Row: {
+          id: string
+          device_id: string
+          farm_id: string
+          plot_id: string
+          crop_cycle_id: string | null
+          installed_at: string
+          installed_by: string
+          latitude: number | null
+          longitude: number | null
+          probe_depth_cm: number | null
+          status: string
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          device_id: string
+          farm_id: string
+          plot_id: string
+          crop_cycle_id?: string | null
+          installed_at?: string
+          installed_by: string
+          latitude?: number | null
+          longitude?: number | null
+          probe_depth_cm?: number | null
+          status?: string
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          device_id?: string
+          farm_id?: string
+          plot_id?: string
+          crop_cycle_id?: string | null
+          installed_at?: string
+          installed_by?: string
+          latitude?: number | null
+          longitude?: number | null
+          probe_depth_cm?: number | null
+          status?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      device_alerts: {
+        Row: {
+          id: string
+          farm_id: string
+          plot_id: string | null
+          device_id: string | null
+          rule_id: string | null
+          severity: string
+          alert_type: string
+          title: string
+          message: string
+          recommended_action: string
+          status: string
+          triggered_at: string
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          plot_id?: string | null
+          device_id?: string | null
+          rule_id?: string | null
+          severity?: string
+          alert_type?: string
+          title: string
+          message: string
+          recommended_action?: string
+          status?: string
+          triggered_at?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          plot_id?: string | null
+          device_id?: string | null
+          rule_id?: string | null
+          severity?: string
+          alert_type?: string
+          title?: string
+          message?: string
+          recommended_action?: string
+          status?: string
+          triggered_at?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+        }
+        Relationships: []
+      }
       farm_financial_transactions: {
         Row: {
           amount_kobo: number

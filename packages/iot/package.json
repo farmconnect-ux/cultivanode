@@ -1,0 +1,41 @@
+{
+  "name": "@cultivanode/iot-module",
+  "version": "1.0.0",
+  "description": "CultivaNode Farm Intelligence IoT Module: Secure Ingestion, Quality Checks, Crop-Aware Alerts, and Farmer/Installer/Admin Experiences",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "ingestion": "tsx src/ingestion/server.ts",
+    "engine": "tsx src/engine/index.ts",
+    "simulator": "tsx src/simulator/cli.ts",
+    "web": "tsx src/web/server.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "keywords": [
+    "cultivanode",
+    "iot",
+    "precision-agritech",
+    "farm-intelligence",
+    "soil-moisture",
+    "lorawan",
+    "telemetry"
+  ],
+  "author": "CultivaNode Engineering",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

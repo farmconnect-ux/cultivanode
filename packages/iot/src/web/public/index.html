@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CultivaNode Farm Intelligence — IoT Module</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand-zone">
+        <div class="brand-logo">
+          <span class="logo-icon">🌱</span>
+          <span class="brand-name">CultivaNode</span>
+        </div>
+        <span class="brand-badge">Farm Intelligence · IoT Module</span>
+      </div>
+
+      <nav class="role-nav">
+        <button class="nav-tab active" data-tab="farmer" id="tab-farmer">
+          <span class="tab-icon">👨🏾‍🌾</span> Farmer Experience
+        </button>
+        <button class="nav-tab" data-tab="installer" id="tab-installer">
+          <span class="tab-icon">🔧</span> Field Installer Flow
+        </button>
+        <button class="nav-tab" data-tab="admin" id="tab-admin">
+          <span class="tab-icon">🛡️</span> Admin Fleet
+        </button>
+        <button class="nav-tab special-tab" data-tab="simulator" id="tab-simulator">
+          <span class="tab-icon">⚡</span> Live Simulator Lab
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <!-- Language toggle (EN / YO) per CultivaNode spec -->
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="lang-en" onclick="setLanguage('en')">EN</button>
+          <button class="lang-btn" id="lang-yo" onclick="setLanguage('yo')">YOR</button>
+        </div>
+        <div class="system-status-indicator">
+          <span class="status-dot pulse"></span>
+          <span class="status-label" id="status-label">Ingestion Live</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+      
+      <!-- =================================================================== -->
+      <!-- TAB 1: FARMER EXPERIENCE -->
+      <!-- =================================================================== -->
+      <section id="view-farmer" class="view-section active">
+        <!-- Farm Anchor Info Header -->
+        <div class="farm-context-banner">
+          <div>
+            <h1 class="farm-title" id="farmer-farm-name">Al-Barakah Pilot Farm</h1>
+            <p class="farm-sub" id="farmer-farm-sub">Moniya Cluster, Oyo State · Derived Savanna Zone · 2 Monitored Plots</p>
+          </div>
+          <div class="farm-stats-pill">
+            <span class="pill-item"><strong>Soil Pro:</strong> 2 Active Nodes</span>
+            <span class="pill-divider">·</span>
+            <span class="pill-item"><strong>Water Intel:</strong> 1 Tank Node</span>
+          </div>
+        </div>
+
+        <!-- 1. TODAY CARD: Action-focused, plain language (Never raw sensor charts first!) -->
+        <div class="today-card" id="today-card">
+          <div class="today-header">
+            <div class="today-badge">
+              <span class="badge-icon">📌</span>
+              <span data-i18n="today_actions">TODAY'S FARM ACTIONS</span>
+            </div>
+            <span class="today-timestamp" id="today-timestamp">Last checked: Just now</span>
+          </div>
+
+          <div class="alerts-container" id="farmer-alerts-list">
+            <!-- Dynamic alerts rendered here -->
+            <div class="empty-alert-state">
+              <span class="check-icon">✅</span>
+              <div>
+                <h4 data-i18n="all_optimal_title">All Field Conditions Within Target</h4>
+                <p data-i18n="all_optimal_desc">Root zone moisture, temperature, and water storage are optimal. No manual irrigation or spray interventions needed today.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PLOT HEALTH CARDS -->
+        <div class="section-title-row">
+          <h2 class="section-heading" data-i18n="plot_health_heading">Plot Soil & Microclimate Health</h2>
+          <span class="trust-legend">
+            <span class="trust-chip sensor">📡 Sensor reading (Ground Truth)</span>
+            <span class="trust-chip weather">🌦️ Weather forecast (NiMet)</span>
+          </span>
+        </div>
+
+        <div class="plots-grid" id="farmer-plots-grid">
+          <!-- Rendered via JavaScript -->
+        </div>
+
+        <!-- 3. WATER INFRASTRUCTURE & WEATHER COMPARISON -->
+        <div class="two-col-grid">
+          <!-- Water Reservoir Tank -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">💧 Irrigation Reservoir & Water Readiness</h3>
+              <span class="trust-chip sensor">Ultrasonic Probe</span>
+            </div>
+            <div class="tank-visual-row">
+              <div class="tank-gauge-box">
+                <div class="tank-level-fill" id="tank-fill-bar" style="height: 82%;"></div>
+                <div class="tank-level-text" id="tank-level-val">82%</div>
+              </div>
+              <div class="tank-details">
+                <div class="tank-status-badge" id="tank-status-badge">Ready for Irrigation</div>
+                <p class="tank-desc" id="tank-desc">10,000 L Borehole reservoir has sufficient volume for scheduled 4-hour drip run on Plot 1.</p>
+                <div class="device-mini-meta" id="tank-device-meta">Node: CN-NG-2026-00103 · Battery: 98% · Last seen: 2m ago</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weather vs Plot Sensor Comparison -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">⚖️ Plot Ground Truth vs Broad Forecast</h3>
+              <span class="trust-chip calculated">Calculated recommendation</span>
+            </div>
+            <div class="comparison-body" id="weather-comparison-body">
+              <div class="comp-metric-row">
+                <div class="comp-col">
+                  <div class="col-lbl">NiMet / Open-Meteo Forecast</div>
+                  <div class="col-val" id="comp-forecast-temp">33.0°C · 0.0 mm Rain</div>
+                  <div class="col-sub">Grid Cell: Moniya North</div>
+                </div>
+                <div class="comp-vs">VS</div>
+                <div class="comp-col">
+                  <div class="col-lbl">Plot 1 Ground Sensor</div>
+                  <div class="col-val highlight" id="comp-sensor-temp">31.2°C · 0.0 mm Rain</div>
+                  <div class="col-sub">Soil Moisture: 24.5% VWC</div>
+                </div>
+              </div>
+              <div class="recommendation-callout" id="comp-recommendation">
+                <span class="callout-icon">💡</span>
+                <span id="comp-recommendation-text">Plot microclimate aligns with forecast. Root zone moisture is within optimal flowering band.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. HISTORICAL MOISTURE TRENDS (Expands when farmer requests) -->
+        <div class="card collapsible-card">
+          <div class="card-header" onclick="toggleHistoryView()">
+            <h3 class="card-title">📊 7-Day Moisture & Temperature Trend Summary</h3>
+            <button class="secondary-btn btn-sm" id="btn-toggle-history">Show Graph ▾</button>
+          </div>
+          <div class="history-content" id="history-content" style="display: none;">
+            <p class="history-summary-text">
+              Root-zone moisture has remained between <strong>23.8%</strong> and <strong>27.2% VWC</strong> over the last 7 days. Evapotranspiration is running at approximately 4.8 mm/day under current 31°C sunshine.
+            </p>
+            <div class="trend-chart-container">
+              <div class="chart-bars" id="history-chart-bars">
+                <!-- Bars dynamically rendered -->
+              </div>
+              <div class="chart-axis-labels">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: FIELD AGENT / INSTALLER FLOW -->
+      <!-- =================================================================== -->
+      <section id="view-installer" class="view-section">
+        <div class="page-intro">
+          <h2>📱 Field Agent / Installer Provisioning Flow</h2>
+          <p>QR/Serial-based hardware commissioning, site survey validation, probe depth setting, and live connectivity ping test.</p>
+        </div>
+
+        <div class="installer-grid">
+          <!-- Provisioning Form -->
+          <div class="card">
+            <h3 class="card-title">1. Device Pairing & Plot Assignment</h3>
+            <form id="form-installer" onsubmit="handleInstallerSubmit(event)">
+              <div class="form-group">
+                <label for="inst-serial">Device Serial Number (Scan QR or Enter EUI)</label>
+                <div class="input-with-button">
+                  <input type="text" id="inst-serial" value="CN-NG-2026-00199" required placeholder="e.g. CN-NG-2026-00199">
+                  <button type="button" class="secondary-btn" onclick="runPingTest()">Live Ping 📡</button>
+                </div>
+                <small class="field-hint">Spare nodes are provisioned by registered field agents.</small>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="inst-farm">Target Farm</label>
+                  <select id="inst-farm" required>
+                    <option value="farm-moniya-01">Al-Barakah Pilot Farm (Moniya, Oyo)</option>
+                    <option value="farm-obantoko-02">Funmi Agro Enterprise (Obantoko, Ogun)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inst-plot">Target Plot & Crop</label>
+                  <select id="inst-plot" required>
+                    <option value="plot-tomato-01">Plot 1: Tomato (Roma VF - Root zone)</option>
+                    <option value="plot-maize-02">Plot 2: Maize (SAMMAZ 15)</option>
+                    <option value="plot-cassava-03">Plot 3: Cassava (TME 419)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="inst-depth">Probe Sensor Depth</label>
+                  <select id="inst-depth" required>
+                    <option value="15">15 cm (Vegetable Root Zone - Tomato/Pepper)</option>
+                    <option value="30">30 cm (Field Crop Zone - Maize/Yam)</option>
+                    <option value="60">60 cm (Deep Subsoil Moisture Buffer)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inst-soil">Soil Texture at Probe</label>
+                  <select id="inst-soil">
+                    <option value="sandy_loam">Sandy Loam (Derived Savanna standard)</option>
+                    <option value="clay_loam">Clay Loam (Rainforest belt standard)</option>
+                    <option value="silt">Silt / River Alluvial</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Site Survey Checklist (NDPA / Durability compliant) -->
+              <div class="form-group checklist-group">
+                <label>Site Survey Checklist (Offline Validated)</label>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="chk-solar" checked required>
+                  <label for="chk-solar">Solar panel unshaded from 09:00 to 16:00 facing South</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="chk-water" checked required>
+                  <label for="chk-water">Enclosure mounted above flood line and clear of tractor paths</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="chk-theft" checked required>
+                  <label for="chk-theft">Theft protection & tamper seal inspected; farmer consent confirmed</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="chk-calib" checked required>
+                  <label for="chk-calib">Zero-point soil probe slurry calibration confirmed</label>
+                </div>
+              </div>
+
+              <button type="submit" class="primary-btn full-width">Complete Commissioning & Activate Node</button>
+            </form>
+          </div>
+
+          <!-- Live Connectivity Verification / Ping Test Terminal -->
+          <div class="card">
+            <h3 class="card-title">2. Live Connectivity & Health Test</h3>
+            <div class="ping-terminal" id="ping-terminal">
+              <div class="terminal-line"><span class="prompt">$</span> cultivanode-agent probe --serial CN-NG-2026-00199</div>
+              <div class="terminal-line text-muted">Ready to test connection with field node...</div>
+            </div>
+
+            <div class="installer-metrics-box" id="installer-metrics-box">
+              <div class="metric-mini">
+                <span class="m-lbl">RSSI Signal</span>
+                <span class="m-val" id="ping-rssi">-- dBm</span>
+              </div>
+              <div class="metric-mini">
+                <span class="m-lbl">Signal Quality</span>
+                <span class="m-val" id="ping-quality">--</span>
+              </div>
+              <div class="metric-mini">
+                <span class="m-lbl">Battery (LiFePO4)</span>
+                <span class="m-val" id="ping-battery">-- %</span>
+              </div>
+              <div class="metric-mini">
+                <span class="m-lbl">Commissioning State</span>
+                <span class="m-val" id="ping-state">Unassigned</span>
+              </div>
+            </div>
+
+            <div class="offline-sync-badge">
+              <span>💾 Offline Sync Cache:</span>
+              <strong id="offline-cache-count">0 pending offline records</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: ADMIN FLEET MANAGEMENT -->
+      <!-- =================================================================== -->
+      <section id="view-admin" class="view-section">
+        <div class="page-intro">
+          <h2>🛡️ Hardware Fleet Management & Ingestion Health</h2>
+          <p>Real-time gateway status, device lifecycles, calibration queues, and security monitoring.</p>
+        </div>
+
+        <!-- Fleet KPI Counters -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-title">Total Monitored Nodes</span>
+            <span class="kpi-value" id="admin-total-nodes">4</span>
+            <span class="kpi-sub">Across 2 Pilot Clusters</span>
+          </div>
+          <div class="kpi-card border-green">
+            <span class="kpi-title">Active & Healthy</span>
+            <span class="kpi-value text-green" id="admin-active-nodes">3</span>
+            <span class="kpi-sub">Transmitting within 15m window</span>
+          </div>
+          <div class="kpi-card border-amber">
+            <span class="kpi-title">Degraded / Low Battery</span>
+            <span class="kpi-value text-amber" id="admin-degraded-nodes">0</span>
+            <span class="kpi-sub">Signal or battery warning</span>
+          </div>
+          <div class="kpi-card border-red">
+            <span class="kpi-title">Offline / Silent Nodes</span>
+            <span class="kpi-value text-red" id="admin-offline-nodes">0</span>
+            <span class="kpi-sub">Advice automatically paused</span>
+          </div>
+        </div>
+
+        <!-- Device Registry Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📋 Hardware Registry & Lifecycle State</h3>
+            <button class="secondary-btn btn-sm" onclick="fetchAdminFleet()">Refresh Fleet 🔄</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Device Serial</th>
+                  <th>Model / Radio</th>
+                  <th>Assigned Plot</th>
+                  <th>Status</th>
+                  <th>Battery</th>
+                  <th>Signal</th>
+                  <th>Last Telemetry</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-devices-tbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ingestion Metrics & Watchdog Queue -->
+        <div class="two-col-grid">
+          <div class="card">
+            <h3 class="card-title">📡 Ingestion Pipeline Throughput</h3>
+            <div class="pipeline-stats" id="pipeline-stats">
+              <div class="stat-row">
+                <span>Total Telemetry Packets:</span>
+                <strong id="stat-total-packets">0</strong>
+              </div>
+              <div class="stat-row">
+                <span>Accepted Valid Readings:</span>
+                <strong class="text-green" id="stat-accepted-packets">0</strong>
+              </div>
+              <div class="stat-row">
+                <span>Deduplicated (Anti-Replay):</span>
+                <strong class="text-blue" id="stat-duplicate-packets">0</strong>
+              </div>
+              <div class="stat-row">
+                <span>Rejected (Malformed/Skewed):</span>
+                <strong class="text-red" id="stat-rejected-packets">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">⏱️ Watchdog & Maintenance Queue</h3>
+            <p class="card-desc">Sensors silent for > 12 hours pause farm recommendations immediately to protect agronomic trust.</p>
+            <div class="watchdog-action-row">
+              <button class="secondary-btn" onclick="triggerWatchdogRun()">Run 12h Silence Scan Now</button>
+              <span class="watchdog-result-label" id="watchdog-run-result">Ready</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: INTERACTIVE NODE SIMULATOR LAB -->
+      <!-- =================================================================== -->
+      <section id="view-simulator" class="view-section">
+        <div class="page-intro">
+          <h2>⚡ Live Hardware Node Simulator & Fault Injector</h2>
+          <p>Test real agronomic stress events, cellular packet loss, tamper, battery drain, and anti-replay defense in real time.</p>
+        </div>
+
+        <div class="simulator-panel-grid">
+          <!-- Normal Farm Physics Events -->
+          <div class="card">
+            <h3 class="card-title">🌱 Agronomic Scenarios</h3>
+            <p class="card-desc">Simulate realistic crop water dynamics and field operations:</p>
+            <div class="sim-buttons-stack">
+              <button class="sim-btn" onclick="sendSimulatorAction('send_clean_reading', 'CN-NG-2026-00101')">
+                <span class="btn-icon">📡</span>
+                <div>
+                  <strong>Send Normal Telemetry Pulse</strong>
+                  <small>Plot 1 Tomato (Soil moisture, temp, humidity, battery)</small>
+                </div>
+              </button>
+              <button class="sim-btn" onclick="sendSimulatorAction('trigger_moisture_stress', 'CN-NG-2026-00101')">
+                <span class="btn-icon">⚠️</span>
+                <div>
+                  <strong>Trigger 6-Hour Moisture Stress</strong>
+                  <small>Simulates sustained moisture &lt; 22% VWC (Fires conservative alert)</small>
+                </div>
+              </button>
+              <button class="sim-btn" onclick="sendSimulatorAction('trigger_rain', 'CN-NG-2026-00101', 25.0)">
+                <span class="btn-icon">🌧️</span>
+                <div>
+                  <strong>Trigger 25 mm Rain Storm</strong>
+                  <small>Replenishes soil moisture; localises forecast variance</small>
+                </div>
+              </button>
+              <button class="sim-btn" onclick="sendSimulatorAction('trigger_tank_low', 'CN-NG-2026-00101')">
+                <span class="btn-icon">🪣</span>
+                <div>
+                  <strong>Trigger Low Water Reservoir (18%)</strong>
+                  <small>Tests tank level warning before scheduled irrigation</small>
+                </div>
+              </button>
+              <button class="sim-btn" onclick="sendSimulatorAction('trigger_irrigation', 'CN-NG-2026-00101', 60.0)">
+                <span class="btn-icon">💧</span>
+                <div>
+                  <strong>Apply Drip Irrigation (60 Liters)</strong>
+                  <small>Recharges soil root zone and draws down reservoir</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Fault Injection & Security Attack Testing -->
+          <div class="card border-red">
+            <h3 class="card-title text-red">🚨 Fault Injection & Attack Simulation</h3>
+            <p class="card-desc">Validate zero-trust isolation and hardware anomaly filters:</p>
+            <div class="sim-buttons-stack">
+              <button class="sim-btn fault" onclick="sendSimulatorAction('inject_fault', 'CN-NG-2026-00101', 'replay_old_sequence')">
+                <span class="btn-icon">🔁</span>
+                <div>
+                  <strong>Replay Old Packet Sequence</strong>
+                  <small>Tests anti-replay attack defense & sequence validation</small>
+                </div>
+              </button>
+              <button class="sim-btn fault" onclick="sendSimulatorAction('inject_fault', 'CN-NG-2026-00101', 'duplicate_sequence')">
+                <span class="btn-icon">📑</span>
+                <div>
+                  <strong>Send Duplicate Packet (Same Sequence)</strong>
+                  <small>Tests idempotent deduplication without duplicate alerts</small>
+                </div>
+              </button>
+              <button class="sim-btn fault" onclick="sendSimulatorAction('inject_fault', 'CN-NG-2026-00101', 'skew_timestamp_future')">
+                <span class="btn-icon">⏰</span>
+                <div>
+                  <strong>Inject Skewed Timestamp (+2 Hours Future)</strong>
+                  <small>Tests 15-minute clock drift rejection rule</small>
+                </div>
+              </button>
+              <button class="sim-btn fault" onclick="sendSimulatorAction('inject_fault', 'CN-NG-2026-00101', 'probe_open_circuit')">
+                <span class="btn-icon">🔌</span>
+                <div>
+                  <strong>Sensor Probe Cable Cut / Open Circuit (-999)</strong>
+                  <small>Tests hardware fault quality tagging and alert suppression</small>
+                </div>
+              </button>
+              <button class="sim-btn fault" onclick="sendSimulatorAction('inject_fault', 'CN-NG-2026-00101', 'out_of_bounds_spike')">
+                <span class="btn-icon">📈</span>
+                <div>
+                  <strong>Sensor Out-of-Bounds Spike (145% VWC)</strong>
+                  <small>Tests physical range sanity rejection [0, 100%]</small>
+                </div>
+              </button>
+              <button class="sim-btn fault" onclick="sendSimulatorAction('trigger_watchdog_silence', 'CN-NG-2026-00101')">
+                <span class="btn-icon">🔕</span>
+                <div>
+                  <strong>Simulate 14-Hour Silence (Watchdog Alert)</strong>
+                  <small>Pauses crop advice: "This sensor has not reported for 12 hours"</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulator Live Log Console -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📜 Simulator Event Stream & Telemetry Feed</h3>
+            <button class="secondary-btn btn-sm" onclick="clearSimLogs()">Clear Log</button>
+          </div>
+          <div class="sim-log-terminal" id="sim-log-terminal">
+            <div class="log-entry system">[SYSTEM] Simulator initialized. Ready to execute field node commands.</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>CultivaNode Farm Intelligence · Field Pilot South-West Nigeria (Oyo & Ogun Clusters)</div>
+      <div class="footer-links">
+        <span>LoRaWAN 868MHz</span> · <span>NB-IoT</span> · <span>PostGIS RLS Verified</span> · <span>NDPA Compliant</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

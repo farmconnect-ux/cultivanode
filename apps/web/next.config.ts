@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
     // ID documents and equipment photos up to 5 MB are uploaded through a server action (see actions/account.ts).
     serverActions: { bodySizeLimit: "6mb" },
     cpus: 1,
-    workerThreads: false,
+    optimizePackageImports: ["lucide-react"],
   },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

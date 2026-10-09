@@ -7,3 +7,4 @@ export * from './ai-assistant';
 export * from './api-gateway';
 export * from './marketplace';
 export * from './farm-management';
+export * from './iot';
