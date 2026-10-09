@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AccountNav } from "@/components/account/account-nav";
-import { Alert, Container } from "@/components/ui";
+import { AccountShell } from "@/components/account/account-shell";
+import { Alert } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
@@ -25,21 +25,20 @@ export default async function AccountLayout({ children, params }: LayoutProps<"/
 
   const availableWorkspaces = getAvailableWorkspaces(account);
 
+  const suspendedAlert = account.profile.suspended_at ? (
+    <Alert tone="danger">{fill(t.acct.suspended, { reason: account.profile.suspended_reason ?? "" })}</Alert>
+  ) : null;
+
   return (
-    <Container className="grid gap-6 py-8 pb-24 sm:py-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:pb-12">
-      <AccountNav
-        lang={lang}
-        signOutLabel={n.signOut}
-        menuLabel={n.menu}
-        availableWorkspaces={availableWorkspaces}
-        unreadCount={unread ?? 0}
-      />
-      <div className="flex min-w-0 flex-col gap-6">
-        {account.profile.suspended_at && (
-          <Alert tone="danger">{fill(t.acct.suspended, { reason: account.profile.suspended_reason ?? "" })}</Alert>
-        )}
-        {children}
-      </div>
-    </Container>
+    <AccountShell
+      lang={lang}
+      signOutLabel={n.signOut}
+      menuLabel={n.menu}
+      availableWorkspaces={availableWorkspaces}
+      unreadCount={unread ?? 0}
+      suspendedAlert={suspendedAlert}
+    >
+      {children}
+    </AccountShell>
   );
 }

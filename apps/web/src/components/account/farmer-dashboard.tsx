@@ -21,19 +21,22 @@ export function FarmerDashboard({
   t,
   farms,
   bookings,
+  initialTab = "dashboard",
 }: {
-  lang: Locale;
+  lang?: Locale;
   account: Account;
-  t: Dictionary;
-  farms: Farm[];
-  bookings: BookingSummary[];
+  t?: Dictionary;
+  farms?: Farm[];
+  bookings?: BookingSummary[];
+  initialTab?: string;
 }) {
   const userName = account.profile.full_name || "Producer Admin";
   const userEmail = account.email || undefined;
 
   return (
-    <div className="w-full -m-2 sm:-m-4 md:-m-6">
+    <div className="w-full">
       <FarmerCommunityDashboard
+        initialTab={initialTab}
         userName={userName}
         userEmail={userEmail}
       />

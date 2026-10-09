@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Sidebar, MobileMenuButton, menuGroups } from './Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Farms } from './pages/Farms';
@@ -19,7 +20,8 @@ import { Settings } from './pages/Settings';
 import { QuickActionModal } from './modals/QuickActionModal';
 import { useIsMobile } from './ui/use-mobile';
 import { Button } from './ui/button';
-import { Leaf, Plus, Sparkles, Bell } from 'lucide-react';
+import { signOut } from '@/actions/auth';
+import { Leaf, Plus, Bell, LogOut } from 'lucide-react';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'Executive Dashboard',
@@ -39,28 +41,48 @@ const pageTitles: Record<string, string> = {
 };
 
 interface FarmerCommunityDashboardProps {
+  initialTab?: string;
   userName?: string;
   userEmail?: string;
   onSignOut?: () => void;
 }
 
 export function FarmerCommunityDashboard({
+  initialTab = 'dashboard',
   userName,
   userEmail,
   onSignOut,
 }: FarmerCommunityDashboardProps) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState(urlTab || initialTab);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', newTab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
   const handleQuickAction = (type: string, data?: any) => {
     console.log('Farmer Community Quick Action Triggered:', type, data);
-    if (type === 'farm') setActiveTab('farms');
-    else if (type === 'irrigation') setActiveTab('irrigation');
-    else if (type === 'report') setActiveTab('reports');
-    else if (type === 'alert') setActiveTab('tasks');
+    if (type === 'farm') handleTabChange('farms');
+    else if (type === 'irrigation') handleTabChange('irrigation');
+    else if (type === 'report') handleTabChange('reports');
+    else if (type === 'alert') handleTabChange('tasks');
   };
 
   const renderContent = () => {
@@ -105,7 +127,7 @@ export function FarmerCommunityDashboard({
     <div className="flex h-screen overflow-hidden bg-[#f0f4f2] text-gray-900 font-sans">
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         collapsed={sidebarCollapsed}
         onCollapsedChange={setSidebarCollapsed}
         mobileOpen={mobileMenuOpen}
@@ -147,7 +169,7 @@ export function FarmerCommunityDashboard({
             </Button>
             
             <button
-              onClick={() => setActiveTab('tasks')}
+              onClick={() => handleTabChange('tasks')}
               className="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition"
               title="Alerts and tasks"
             >
@@ -155,14 +177,20 @@ export function FarmerCommunityDashboard({
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-harvest-500 animate-pulse" />
             </button>
 
-            {onSignOut && (
-              <button
-                onClick={onSignOut}
-                className="hidden sm:inline-block text-xs font-medium text-gray-500 hover:text-red-700 transition px-2 py-1"
-              >
-                Sign out
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (onSignOut) {
+                  onSignOut();
+                } else {
+                  signOut();
+                }
+              }}
+              className="hidden sm:flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-700 transition px-2 py-1 rounded"
+              title="Sign out of CultivaNode"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign out</span>
+            </button>
           </div>
         </header>
 
