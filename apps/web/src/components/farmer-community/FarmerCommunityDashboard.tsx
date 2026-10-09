@@ -272,11 +272,13 @@ export function FarmerCommunityDashboard({
       </div>
 
       {/* Quick Action Modal */}
-      <QuickActionModal
-        isOpen={quickActionOpen}
-        onClose={() => setQuickActionOpen(false)}
-        onAction={handleQuickAction}
-      />
+      {quickActionOpen && (
+        <QuickActionModal
+          isOpen={quickActionOpen}
+          onClose={() => setQuickActionOpen(false)}
+          onAction={handleQuickAction}
+        />
+      )}
     </div>
   );
 }
