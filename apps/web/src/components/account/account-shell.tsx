@@ -1,11 +1,32 @@
 "use client";
 
 import React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AccountNav } from "@/components/account/account-nav";
 import { Container } from "@/components/ui";
 import type { Locale } from "@/i18n/config";
 import type { Workspace } from "@/lib/account/workspace";
+
+/** Farmer OS pages that draw their own sidebar. Every other account route needs AccountNav. */
+const FARMER_SHELL_PATHS = new Set([
+  "",
+  "/farms",
+  "/crops",
+  "/livestock",
+  "/machinery",
+  "/inventory",
+  "/tasks",
+  "/iot",
+  "/irrigation",
+  "/weather",
+  "/reports",
+  "/finance",
+]);
+
+function farmerShellOwns(pathname: string): boolean {
+  const rest = pathname.replace(/^\/[a-z]{2}\/account/, "");
+  return FARMER_SHELL_PATHS.has(rest);
+}
 
 export function AccountShell({
   lang,
@@ -24,6 +45,7 @@ export function AccountShell({
   suspendedAlert?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const rawWs = searchParams.get("ws");
   const activeWorkspace: Workspace =
@@ -31,10 +53,9 @@ export function AccountShell({
       ? (rawWs as Workspace)
       : (availableWorkspaces[0] ?? "farmer");
 
-  // In the Farmer workspace, the new FarmerCommunityDashboard manages its own complete
-  // full-width parent/sub-parent menu sidebar, navbar, and layouts without being constrained
-  // by the legacy 2-column container.
-  if (activeWorkspace === "farmer") {
+  // The farmer home draws its own menu. Bookings, search, listings, inbox and
+  // identity pages stay in the shared nav so those workflows are reachable.
+  if (activeWorkspace === "farmer" && farmerShellOwns(pathname)) {
     return (
       <div className="w-full min-h-[calc(100vh-4rem)]">
         {suspendedAlert}
@@ -43,7 +64,6 @@ export function AccountShell({
     );
   }
 
-  // Provider and Agent workspaces continue to render inside the traditional 2-column AccountNav layout.
   return (
     <Container className="grid gap-6 py-8 pb-24 sm:py-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:pb-12">
       <AccountNav

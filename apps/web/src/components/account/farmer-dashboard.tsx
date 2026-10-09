@@ -30,8 +30,9 @@ export function FarmerDashboard({
   bookings?: BookingSummary[];
   initialTab?: string;
 }) {
-  const userName = account.profile.full_name || "Producer Admin";
+  const userName = account.profile.full_name || "Farmer";
   const userEmail = account.email || undefined;
+  if (!t) return null;
 
   return (
     <div className="w-full">
@@ -39,6 +40,8 @@ export function FarmerDashboard({
         initialTab={initialTab}
         userName={userName}
         userEmail={userEmail}
+        live={{ lang: lang ?? "en", farms: farms ?? [], bookings: bookings ?? [] }}
+        t={t}
       />
     </div>
   );
