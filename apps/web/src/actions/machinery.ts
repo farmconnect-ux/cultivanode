@@ -15,12 +15,12 @@ export async function createMachineryAsset(form: FormData): Promise<void> {
   const farmId = String(form.get("farm_id") || "").trim();
   const name = String(form.get("name") || "").trim();
   const category = String(form.get("category") || "tractor").trim();
-  const make = String(form.get("make") || "").trim();
+  const make = String(form.get("make") || form.get("manufacturer") || "").trim();
   const model = String(form.get("model") || "").trim();
-  const serialNumber = String(form.get("serial_number") || "").trim();
+  const serialNumber = String(form.get("serial_number") || form.get("registration_number") || "").trim();
   const fuelType = String(form.get("fuel_type") || "diesel").trim();
   const fuelConsumptionRate = parseFloat(String(form.get("fuel_consumption_rate") || "0")) || null;
-  const initialHours = parseFloat(String(form.get("initial_hours") || "0")) || 0;
+  const initialHours = parseFloat(String(form.get("total_operating_hours") || form.get("engine_hours") || "0")) || 0;
   const nextServiceHours = parseFloat(String(form.get("next_service_hours") || "0")) || null;
 
   if (!farmId || !name) return;
@@ -47,11 +47,11 @@ export async function logMachineryUsage(form: FormData): Promise<void> {
   const machineryId = String(form.get("machinery_id") || "").trim();
   const plotId = String(form.get("plot_id") || "").trim() || null;
   const cycleId = String(form.get("crop_cycle_id") || "").trim() || null;
-  const activity = String(form.get("activity") || "").trim();
-  const hoursRun = parseFloat(String(form.get("hours_run") || "0"));
-  const fuelLitresUsed = parseFloat(String(form.get("fuel_litres_used") || "0")) || 0;
-  const fuelCostMinor = parseInt(String(form.get("fuel_cost_minor") || "0"), 10);
-  const operatorLaborCostMinor = parseInt(String(form.get("operator_labor_cost_minor") || "0"), 10);
+  const activity = String(form.get("activity") || form.get("operation_name") || "").trim();
+  const hoursRun = parseFloat(String(form.get("hours_run") || form.get("hours_operated") || "0")) || 0;
+  const fuelLitresUsed = parseFloat(String(form.get("fuel_litres_used") || form.get("fuel_litres_consumed") || "0")) || 0;
+  const fuelCostMinor = parseInt(String(form.get("fuel_cost_minor") || form.get("operational_cost_kobo") || "0"), 10) || 0;
+  const operatorLaborCostMinor = parseInt(String(form.get("operator_labor_cost_minor") || "0"), 10) || 0;
   const areaCoveredHa = parseFloat(String(form.get("area_covered_ha") || "0")) || null;
 
   if (!machineryId || hoursRun <= 0 || !activity) return;
@@ -71,6 +71,7 @@ export async function logMachineryUsage(form: FormData): Promise<void> {
 
   if (usageErr) return;
 
+  // Update total operating hours on the asset
   const { data: currentMach } = await supabase
     .from("farm_machinery_assets")
     .select("total_operating_hours")
@@ -88,4 +89,7 @@ export async function logMachineryUsage(form: FormData): Promise<void> {
   }
 
   revalidatePath("/account/machinery");
+  revalidatePath("/account/machinery/dispatch");
 }
+
+export { createMachineryAsset as registerMachineryAsset };

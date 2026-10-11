@@ -2,8 +2,9 @@
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function FieldOperationsCalendar(_props: ScreenProps) {
+export function FieldOperationsCalendar({ lang, slots }: ScreenProps<"actions" | "kpis" | "operations">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full pb-16 space-y-space-lg">
@@ -33,26 +34,33 @@ export function FieldOperationsCalendar(_props: ScreenProps) {
             <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight">Field Operations &amp; Farm Calendar</h1>
             <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl">Centralized dispatch, agro-meteorological guardrails, and asset tracking across broadacre grain, horticultural rows, poultry cycles, and aquaculture ponds.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
-              <Icon name="tune" className="text-base" />
-              <span>Filter Enterprise</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
-              <Icon name="group_add" className="text-base" />
-              <span>Bulk Assign Tasks</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
-              <Icon name="picture_as_pdf" className="text-base text-primary" />
-              <span>Export Roster (PDF)</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors" type="button">
-              <Icon name="add_circle" className="text-base" />
-              <span>Schedule New Operation</span>
-            </button>
-          </div>
+          {slot(
+            slots,
+            "actions",
+            <div className="flex flex-wrap items-center gap-space-sm">
+              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
+                <Icon name="tune" className="text-base" />
+                <span>Filter Enterprise</span>
+              </button>
+              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
+                <Icon name="group_add" className="text-base" />
+                <span>Bulk Assign Tasks</span>
+              </button>
+              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors" type="button">
+                <Icon name="picture_as_pdf" className="text-base text-primary" />
+                <span>Export Roster (PDF)</span>
+              </button>
+              <button className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors" type="button">
+                <Icon name="add_circle" className="text-base" />
+                <span>Schedule New Operation</span>
+              </button>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+        {slot(
+          slots,
+          "kpis",
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
           <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
             <div className="flex items-start justify-between">
               <div className="space-y-space-xs">
@@ -129,6 +137,7 @@ export function FieldOperationsCalendar(_props: ScreenProps) {
             </div>
           </div>
         </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-space-sm pb-1">
           <div className="flex items-center bg-surface-container-low p-1 rounded-xl shadow-sm">
             <button className="px-space-md py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5" type="button">
@@ -158,7 +167,10 @@ export function FieldOperationsCalendar(_props: ScreenProps) {
             </button>
           </div>
         </div>
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+        {slot(
+          slots,
+          "operations",
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
           <div className="px-space-lg py-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-lowest">
             <div className="space-y-0.5">
               <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">Scheduled Operations Ledger</h2>
@@ -454,6 +466,7 @@ export function FieldOperationsCalendar(_props: ScreenProps) {
             </div>
           </div>
         </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
           <div className="lg:col-span-7 bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between space-y-space-md">
             <div>

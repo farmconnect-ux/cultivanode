@@ -13,6 +13,7 @@ async function getAuth() {
 export async function createLivestockAnimal(form: FormData): Promise<void> {
   const { supabase } = await getAuth();
   const farmId = String(form.get("farm_id") || "").trim();
+  const groupId = String(form.get("group_id") || "").trim() || null;
   const tagNumber = String(form.get("tag_number") || "").trim();
   const species = String(form.get("species") || "cattle").trim();
   const breed = String(form.get("breed") || "").trim();
@@ -27,6 +28,7 @@ export async function createLivestockAnimal(form: FormData): Promise<void> {
 
   await supabase.from("farm_livestock_animals").insert({
     farm_id: farmId,
+    group_id: groupId,
     tag_number: tagNumber,
     species,
     breed: breed || null,
@@ -45,23 +47,25 @@ export async function createLivestockAnimal(form: FormData): Promise<void> {
 
 export async function logLivestockHealthTreatment(form: FormData): Promise<void> {
   const { supabase } = await getAuth();
-  const animalId = String(form.get("animal_id") || "").trim();
-  const treatmentType = String(form.get("treatment_type") || "medication").trim();
-  const treatmentName = String(form.get("treatment_name") || "").trim();
+  const animalId = String(form.get("animal_id") || "").trim() || null;
+  const groupId = String(form.get("group_id") || "").trim() || null;
+  const treatmentType = String(form.get("treatment_type") || "routine_check").trim();
+  const treatmentName = String(form.get("treatment_name") || "General Care").trim();
   const medicationName = String(form.get("medication_name") || "").trim();
   const dosage = String(form.get("dosage") || "").trim();
-  const withdrawalDays = parseInt(String(form.get("withdrawal_days") || "0"), 10);
-  const costMinor = parseInt(String(form.get("cost_minor") || "0"), 10);
+  const withdrawalDays = parseInt(String(form.get("withdrawal_days") || "0"), 10) || 0;
+  const costMinor = parseInt(String(form.get("cost_minor") || "0"), 10) || 0;
   const notes = String(form.get("notes") || "").trim();
 
-  if (!animalId || !treatmentName) return;
+  if (!treatmentName) return;
 
   const withdrawalEndDate = withdrawalDays > 0
-    ? new Date(Date.now() + withdrawalDays * 86400000).toISOString()
+    ? new Date(Date.now() + withdrawalDays * 86400000).toISOString().split("T")[0]
     : null;
 
   await supabase.from("farm_livestock_health_events").insert({
     animal_id: animalId,
+    group_id: groupId,
     treatment_type: treatmentType,
     treatment_name: treatmentName,
     medication_name: medicationName || null,
@@ -70,6 +74,7 @@ export async function logLivestockHealthTreatment(form: FormData): Promise<void>
     withdrawal_end_date: withdrawalEndDate,
     cost_minor: costMinor,
     notes: notes || null,
+    administered_at: new Date().toISOString(),
   });
 
   revalidatePath("/account/livestock");
@@ -82,7 +87,7 @@ export async function logLivestockFeeding(form: FormData): Promise<void> {
   const animalId = String(form.get("animal_id") || "").trim() || null;
   const feedType = String(form.get("feed_type") || "").trim();
   const quantityKg = parseFloat(String(form.get("quantity_kg") || "0"));
-  const costMinor = parseInt(String(form.get("cost_minor") || "0"), 10);
+  const costMinor = parseInt(String(form.get("cost_minor") || "0"), 10) || 0;
 
   if (!farmId || !feedType || quantityKg <= 0) return;
 
@@ -102,10 +107,10 @@ export async function logLivestockFeeding(form: FormData): Promise<void> {
 export async function logLivestockProduction(form: FormData): Promise<void> {
   const { supabase } = await getAuth();
   const farmId = String(form.get("farm_id") || "").trim();
-  const productType = String(form.get("product_type") || "milk").trim();
+  const productType = String(form.get("product_type") || "eggs").trim();
   const quantity = parseFloat(String(form.get("quantity") || "0"));
-  const unit = String(form.get("unit") || "litres").trim();
-  const revenueMinor = parseInt(String(form.get("revenue_minor") || "0"), 10);
+  const unit = String(form.get("unit") || "crates").trim();
+  const revenueMinor = parseInt(String(form.get("revenue_minor") || "0"), 10) || 0;
 
   if (!farmId || quantity <= 0) return;
 

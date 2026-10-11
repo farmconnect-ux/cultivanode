@@ -544,18 +544,18 @@ export function ProviderCommunityDashboard({
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-gray-500">Agreed Escrow:</span>
-                          <p className="text-base font-bold text-primary">{formatCurrency(req.total_price_kobo / 100)}</p>
+                          <p className="text-base font-bold text-primary">{formatCurrency(req.total_kobo / 100)}</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white p-3 rounded-lg border border-gray-100">
                         <div>
                           <span className="text-gray-500">Service:</span>
-                          <p className="font-semibold text-gray-800">{req.service_type || 'Tractor Tillage'}</p>
+                          <p className="font-semibold text-gray-800">{req.title || 'Tractor Tillage'}</p>
                         </div>
                         <div>
                           <span className="text-gray-500">Requested Dates:</span>
-                          <p className="font-semibold text-gray-800">{req.date_range_display || 'Immediate'}</p>
+                          <p className="font-semibold text-gray-800">{req.job_date ? new Date(req.job_date).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Immediate'}</p>
                         </div>
                         <div>
                           <span className="text-gray-500">Farm Location:</span>
@@ -563,7 +563,7 @@ export function ProviderCommunityDashboard({
                         </div>
                         <div>
                           <span className="text-gray-500">Farmer Contact:</span>
-                          <p className="font-semibold text-gray-800">{req.contact_phone || 'Verified on platform'}</p>
+                          <p className="font-semibold text-gray-800">{req.other_name || 'Verified on platform'}</p>
                         </div>
                       </div>
 
@@ -606,7 +606,7 @@ export function ProviderCommunityDashboard({
                           </div>
                           <p className="text-xs text-gray-500 mt-0.5">{req.farm_name} · {req.job_lga}, {req.job_state}</p>
                         </div>
-                        <p className="text-base font-bold text-primary">{formatCurrency(req.total_price_kobo / 100)}</p>
+                        <p className="text-base font-bold text-primary">{formatCurrency(req.total_kobo / 100)}</p>
                       </div>
 
                       <div className="flex justify-end space-x-2 pt-2 border-t border-gray-100">
@@ -638,7 +638,7 @@ export function ProviderCommunityDashboard({
                       </div>
                       <div className="text-right">
                         <Badge className="bg-secondary-container/40 text-primary mb-1">Settled to Bank</Badge>
-                        <p className="font-bold text-gray-900">{formatCurrency(req.total_price_kobo / 100)}</p>
+                        <p className="font-bold text-gray-900">{formatCurrency(req.total_kobo / 100)}</p>
                       </div>
                     </Card>
                   ))

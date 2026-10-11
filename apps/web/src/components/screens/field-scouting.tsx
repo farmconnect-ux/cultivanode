@@ -2,8 +2,9 @@
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function FieldScouting(_props: ScreenProps) {
+export function FieldScouting({ lang, slots }: ScreenProps<"actions" | "kpis" | "feed">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full pb-16">
@@ -25,87 +26,94 @@ export function FieldScouting(_props: ScreenProps) {
               <span className="text-secondary font-semibold">Lat 8.3248° N, Long 3.5831° E</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" type="button">
-              <Icon name="picture_as_pdf" className="text-lg text-secondary" />
-              <span>Export Scouting Dossier (PDF)</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" type="button">
-              <Icon name="support_agent" className="text-lg text-tertiary" />
-              <span>Escalate to ADP Agronomist</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-md hover:bg-primary-container transition-all" type="button">
-              <Icon name="add_a_photo" className="text-lg" />
-              <span>+ Log New Scouting Observation</span>
-            </button>
-          </div>
+          {slot(
+            slots,
+            "actions",
+            <div className="flex flex-wrap items-center gap-space-sm">
+              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" type="button">
+                <Icon name="picture_as_pdf" className="text-lg text-secondary" />
+                <span>Export Scouting Dossier (PDF)</span>
+              </button>
+              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" type="button">
+                <Icon name="support_agent" className="text-lg text-tertiary" />
+                <span>Escalate to ADP Agronomist</span>
+              </button>
+              <button className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-md hover:bg-primary-container transition-all" type="button">
+                <Icon name="add_a_photo" className="text-lg" />
+                <span>+ Log New Scouting Observation</span>
+              </button>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-lg">
-          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-center justify-between mb-space-sm">
-              <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Total Season Scouting</span>
-              <span className="p-1.5 rounded-lg bg-surface-container text-secondary">
-                <Icon name="fact_check" className="text-base" />
-              </span>
+        {slot(
+          slots,
+          "kpis",
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-lg">
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-space-sm">
+                <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Total Season Scouting</span>
+                <span className="p-1.5 rounded-lg bg-surface-container text-secondary">
+                  <Icon name="fact_check" className="text-base" />
+                </span>
+              </div>
+              <div className="flex items-baseline gap-space-sm">
+                <span className="font-metric-num text-metric-num text-on-surface">18</span>
+                <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center"><Icon name="trending_up" className="text-sm" /> +4 this week</span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Across 42.5 Hectares under active rotation</p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
+                <div className="bg-secondary h-1" style={{ width: "78%" }} />
+              </div>
             </div>
-            <div className="flex items-baseline gap-space-sm">
-              <span className="font-metric-num text-metric-num text-on-surface">18</span>
-              <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center"><Icon name="trending_up" className="text-sm" /> +4 this week</span>
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-space-sm">
+                <span className="font-label-sm text-label-sm uppercase text-error font-bold tracking-wider">Active Pest Alerts</span>
+                <span className="p-1.5 rounded-lg bg-error-container text-on-error-container">
+                  <Icon name="bug_report" className="text-base" />
+                </span>
+              </div>
+              <div className="flex items-baseline gap-space-sm">
+                <span className="font-metric-num text-metric-num text-error">3</span>
+                <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">Critical Threat</span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">FAW whorl &amp; African Stemborer vectors detected</p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
+                <div className="bg-error h-1" style={{ width: "90%" }} />
+              </div>
             </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Across 42.5 Hectares under active rotation</p>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
-              <div className="bg-secondary h-1" style={{ width: "78%" }} />
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-space-sm">
+                <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">CultivaVision Accuracy</span>
+                <span className="p-1.5 rounded-lg bg-primary-fixed text-on-primary-fixed-variant">
+                  <Icon name="psychology" className="text-base" />
+                </span>
+              </div>
+              <div className="flex items-baseline gap-space-sm">
+                <span className="font-metric-num text-metric-num text-on-surface">94.2%</span>
+                <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center"><Icon name="verified" className="text-sm" /> Model v4.3</span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Ground-truthed by OYSADEP diagnostic lab</p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
+                <div className="bg-secondary h-1" style={{ width: "94.2%" }} />
+              </div>
+            </div>
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-space-sm">
+                <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Avg. Extension Response</span>
+                <span className="p-1.5 rounded-lg bg-secondary-container text-on-secondary-container">
+                  <Icon name="timer" className="text-base" />
+                </span>
+              </div>
+              <div className="flex items-baseline gap-space-sm">
+                <span className="font-metric-num text-metric-num text-on-surface">4.0 <span className="font-headline-sm text-headline-sm font-normal text-on-surface-variant">Hours</span></span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Direct tie into Oyo State Extension Service</p>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
+                <div className="bg-secondary-container h-1" style={{ width: "82%" }} />
+              </div>
             </div>
           </div>
-          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-center justify-between mb-space-sm">
-              <span className="font-label-sm text-label-sm uppercase text-error font-bold tracking-wider">Active Pest Alerts</span>
-              <span className="p-1.5 rounded-lg bg-error-container text-on-error-container">
-                <Icon name="bug_report" className="text-base" />
-              </span>
-            </div>
-            <div className="flex items-baseline gap-space-sm">
-              <span className="font-metric-num text-metric-num text-error">3</span>
-              <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">Critical Threat</span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">FAW whorl &amp; African Stemborer vectors detected</p>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
-              <div className="bg-error h-1" style={{ width: "90%" }} />
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-center justify-between mb-space-sm">
-              <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">CultivaVision Accuracy</span>
-              <span className="p-1.5 rounded-lg bg-primary-fixed text-on-primary-fixed-variant">
-                <Icon name="psychology" className="text-base" />
-              </span>
-            </div>
-            <div className="flex items-baseline gap-space-sm">
-              <span className="font-metric-num text-metric-num text-on-surface">94.2%</span>
-              <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center"><Icon name="verified" className="text-sm" /> Model v4.3</span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Ground-truthed by OYSADEP diagnostic lab</p>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
-              <div className="bg-secondary h-1" style={{ width: "94.2%" }} />
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-center justify-between mb-space-sm">
-              <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Avg. Extension Response</span>
-              <span className="p-1.5 rounded-lg bg-secondary-container text-on-secondary-container">
-                <Icon name="timer" className="text-base" />
-              </span>
-            </div>
-            <div className="flex items-baseline gap-space-sm">
-              <span className="font-metric-num text-metric-num text-on-surface">4.0 <span className="font-headline-sm text-headline-sm font-normal text-on-surface-variant">Hours</span></span>
-              <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">Fast SLA</span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Direct tie into Oyo State Extension Service</p>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container">
-              <div className="bg-secondary-container h-1" style={{ width: "82%" }} />
-            </div>
-          </div>
-        </div>
+        )}
         <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm mb-space-lg flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
           <div className="flex flex-wrap items-center gap-space-sm flex-1">
             <div className="flex items-center bg-surface-container-low px-space-sm py-1.5 rounded-lg">
@@ -163,7 +171,10 @@ export function FieldScouting(_props: ScreenProps) {
           </div>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-lg">
-          <div className="xl:col-span-7 flex flex-col gap-space-lg">
+          {slot(
+            slots,
+            "feed",
+            <div className="xl:col-span-7 flex flex-col gap-space-lg">
             <article className="bg-surface-container-lowest rounded-xl shadow-md overflow-hidden relative">
               <div className="h-1.5 bg-error w-full" />
               <div className="p-space-lg">
@@ -340,6 +351,7 @@ export function FieldScouting(_props: ScreenProps) {
               </div>
             </article>
           </div>
+          )}
           <div className="xl:col-span-5 flex flex-col gap-space-lg">
             <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
               <div className="flex items-center justify-between mb-space-sm">

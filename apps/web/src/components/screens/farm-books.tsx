@@ -3,8 +3,9 @@
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogAction, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function FarmBooks(_props: ScreenProps) {
+export function FarmBooks({ lang: _lang, slots }: ScreenProps<"actions" | "kpis" | "enterprises" | "ledger">) {
   const panelModalExpense = (
     <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-xl space-y-space-md">
         <div className="flex items-center justify-between">
@@ -162,32 +163,36 @@ export function FarmBooks(_props: ScreenProps) {
             <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight">Farm Books &amp; Enterprise Margins</h1>
             <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">Real-time append-only accounting ledger for Iseyin Cluster. Tracks mechanized field works, farm inputs, and farmgate harvests with GPS telemetry reconciliation.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <ScreenDialog title="Log Farm Expense" side="center" panel={panelModalExpense}>
-              <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container transition-all" type="button">
-                <Icon name="add_card" className="text-base text-secondary" />
-                <span>Log Farm Expense</span>
-              </button>
-            </ScreenDialog>
-            <ScreenDialog title="Record Farm Income / Sale" side="center" panel={panelModalIncome}>
-              <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-primary-container transition-all" type="button">
-                <Icon name="point_of_sale" className="text-base" />
-                <span>Record Income / Sale</span>
-              </button>
-            </ScreenDialog>
-            <div className="relative inline-block text-left">
-              <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-lowest border-0 text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-low transition-all" id="exportDropdownBtn" type="button">
-                <Icon name="download" className="text-base text-secondary" />
-                <span>Audit Export</span>
-                <Icon name="expand_more" className="text-sm" />
-              </button>
-              <div className="hidden absolute right-0 mt-2 w-48 bg-surface-container-lowest rounded-lg shadow-xl z-30 py-1" id="exportDropdownMenu">
-                <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="picture_as_pdf" className="text-base text-error" /> PDF Financial Summary</a>
-                <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="table_view" className="text-base text-secondary" /> Excel / CSV Full Ledger</a>
-                <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="receipt_long" className="text-base text-tertiary" /> Tax Audit Pack (FIRS/Oyo)</a>
+          {slot(
+            slots,
+            "actions",
+            <div className="flex flex-wrap items-center gap-space-sm">
+              <ScreenDialog title="Log Farm Expense" side="center" panel={panelModalExpense}>
+                <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container transition-all" type="button">
+                  <Icon name="add_card" className="text-base text-secondary" />
+                  <span>Log Farm Expense</span>
+                </button>
+              </ScreenDialog>
+              <ScreenDialog title="Record Farm Income / Sale" side="center" panel={panelModalIncome}>
+                <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-primary-container transition-all" type="button">
+                  <Icon name="point_of_sale" className="text-base" />
+                  <span>Record Income / Sale</span>
+                </button>
+              </ScreenDialog>
+              <div className="relative inline-block text-left">
+                <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-lowest border-0 text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-low transition-all" id="exportDropdownBtn" type="button">
+                  <Icon name="download" className="text-base text-secondary" />
+                  <span>Audit Export</span>
+                  <Icon name="expand_more" className="text-sm" />
+                </button>
+                <div className="hidden absolute right-0 mt-2 w-48 bg-surface-container-lowest rounded-lg shadow-xl z-30 py-1" id="exportDropdownMenu">
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="picture_as_pdf" className="text-base text-error" /> PDF Financial Summary</a>
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="table_view" className="text-base text-secondary" /> Excel / CSV Full Ledger</a>
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="receipt_long" className="text-base text-tertiary" /> Tax Audit Pack (FIRS/Oyo)</a>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="bg-surface-container p-space-md rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md shadow-sm">
           <div className="flex items-center gap-space-md">
@@ -213,83 +218,90 @@ export function FarmBooks(_props: ScreenProps) {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Gross Season Revenue</span>
-              <div className="p-2 rounded-lg bg-surface-container text-secondary">
-                <Icon name="trending_up" />
+        {slot(
+          slots,
+          "kpis",
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Gross Season Revenue</span>
+                <div className="p-2 rounded-lg bg-surface-container text-secondary">
+                  <Icon name="trending_up" />
+                </div>
+              </div>
+              <div>
+                <div className="font-metric-num text-metric-num text-primary font-bold">₦4,850,000</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-body-sm text-body-sm text-secondary font-semibold">₦1,920,000 Realized</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">(39.6% off-take)</span>
+                </div>
+              </div>
+              <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+                <div className="bg-secondary h-1.5 rounded-full" style={{ width: "39.6%" }} />
               </div>
             </div>
-            <div>
-              <div className="font-metric-num text-metric-num text-primary font-bold">₦4,850,000</div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-body-sm text-body-sm text-secondary font-semibold">₦1,920,000 Realized</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">(39.6% off-take)</span>
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Total Operating OPEX</span>
+                <div className="p-2 rounded-lg bg-surface-container text-tertiary">
+                  <Icon name="account_balance_wallet" />
+                </div>
+              </div>
+              <div>
+                <div className="font-metric-num text-metric-num text-on-surface font-bold">₦1,240,000</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">Cap: ₦1,800,000 seasonal limit</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+                <span>Budget Burn</span>
+                <span className="font-semibold text-secondary">68.8% Deployed</span>
               </div>
             </div>
-            <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
-              <div className="bg-secondary h-1.5 rounded-full" style={{ width: "39.6%" }} />
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Net Operating Margin</span>
+                <div className="p-2 rounded-lg bg-secondary-container text-on-secondary-container">
+                  <Icon name="percent" />
+                </div>
+              </div>
+              <div>
+                <div className="font-metric-num text-metric-num text-secondary font-bold">61.4%</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-body-sm text-body-sm text-on-surface font-semibold">₦2,430,000</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">Est. Profit</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 font-label-sm text-label-sm text-secondary font-medium">
+                <Icon name="arrow_upward" className="text-sm" />
+                <span>+8.2% vs. Last Season Cohort</span>
+              </div>
+            </div>
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Ledger Integrity</span>
+                <div className="p-2 rounded-lg bg-surface-container text-primary">
+                  <Icon name="gavel" />
+                </div>
+              </div>
+              <div>
+                <div className="font-metric-num text-metric-num text-on-surface font-bold">81.8%</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">18 Verified / 22 Total Entries</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-label-sm text-label-sm text-tertiary font-semibold flex items-center gap-1"><Icon name="pending" className="text-xs" /> 4 pending slips</span>
+                <button className="font-label-sm text-label-sm text-secondary hover:underline" type="button">View logs →</button>
+              </div>
             </div>
           </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Total Operating OPEX</span>
-              <div className="p-2 rounded-lg bg-surface-container text-tertiary">
-                <Icon name="account_balance_wallet" />
-              </div>
-            </div>
-            <div>
-              <div className="font-metric-num text-metric-num text-on-surface font-bold">₦1,240,000</div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Cap: ₦1,800,000 seasonal limit</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
-              <span>Budget Burn</span>
-              <span className="font-semibold text-secondary">68.8% Deployed</span>
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Net Operating Margin</span>
-              <div className="p-2 rounded-lg bg-secondary-container text-on-secondary-container">
-                <Icon name="percent" />
-              </div>
-            </div>
-            <div>
-              <div className="font-metric-num text-metric-num text-secondary font-bold">61.4%</div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-body-sm text-body-sm text-on-surface font-semibold">₦2,430,000</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">Est. Profit</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 font-label-sm text-label-sm text-secondary font-medium">
-              <Icon name="arrow_upward" className="text-sm" />
-              <span>+8.2% vs. Last Season Cohort</span>
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Ledger Integrity</span>
-              <div className="p-2 rounded-lg bg-surface-container text-primary">
-                <Icon name="gavel" />
-              </div>
-            </div>
-            <div>
-              <div className="font-metric-num text-metric-num text-on-surface font-bold">81.8%</div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">18 Verified / 22 Total Entries</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm text-tertiary font-semibold flex items-center gap-1"><Icon name="pending" className="text-xs" /> 4 pending slips</span>
-              <button className="font-label-sm text-label-sm text-secondary hover:underline" type="button">View logs →</button>
-            </div>
-          </div>
-        </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md">
-          <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-md">
+          {slot(
+            slots,
+            "enterprises",
+            <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-md">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-headline-md text-headline-md text-primary font-bold">Enterprise &amp; Field Profitability</h2>
@@ -417,6 +429,7 @@ export function FarmBooks(_props: ScreenProps) {
               </div>
             </div>
           </div>
+          )}
           <div className="lg:col-span-5 flex flex-col gap-space-md">
             <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col space-y-space-md">
               <div className="flex items-center justify-between">
@@ -472,7 +485,10 @@ export function FarmBooks(_props: ScreenProps) {
             </div>
           </div>
         </div>
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col space-y-space-md" id="ledger-section">
+        {slot(
+          slots,
+          "ledger",
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col space-y-space-md" id="ledger-section">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
             <div>
               <div className="flex items-center gap-space-xs">
@@ -659,6 +675,7 @@ export function FarmBooks(_props: ScreenProps) {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

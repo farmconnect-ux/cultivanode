@@ -22,7 +22,7 @@ export function siteLinks(lang: Locale, t: Dictionary["nav"]): SiteLink[] {
 export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
   const links = siteLinks(lang, t);
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-surface-container-lowest/95 shadow-[0_1px_8px_rgba(0,0,0,0.03)]">
+    <header data-site-header="" className="site-header sticky top-0 z-40 border-b border-border/70 bg-surface-container-lowest/95">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:rounded-lg focus:bg-surface-container-lowest focus:px-4 focus:py-2 focus:shadow-overlay"

@@ -20,6 +20,7 @@ export function Icon({
     <span
       className={cn("material-symbol", className)}
       data-filled={filled ? "" : undefined}
+      data-icon={name}
       aria-hidden={label ? undefined : true}
       role={label ? "img" : undefined}
       aria-label={label}

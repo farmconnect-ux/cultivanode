@@ -2,8 +2,9 @@
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function LivestockManagement(_props: ScreenProps) {
+export function LivestockManagement({ lang, slots }: ScreenProps<"actions" | "kpis" | "batches">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full space-y-space-xl pb-space-xl">
@@ -22,22 +23,29 @@ export function LivestockManagement(_props: ScreenProps) {
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant">High-density livestock telemetry, feed ration conversion analytics, and veterinary cold-chain supervision across the Iseyin Cluster.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm" type="button">
-              <Icon name="add_circle" className="text-base text-primary" />
-              <span>Register New Batch</span>
-            </button>
-            <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm" type="button">
-              <Icon name="water_drop" className="text-base text-secondary" />
-              <span>Log Feed &amp; Water</span>
-            </button>
-            <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors shadow-sm" type="button">
-              <Icon name="vaccines" className="text-base" />
-              <span>Schedule Vet Visit</span>
-            </button>
-          </div>
+          {slot(
+            slots,
+            "actions",
+            <div className="flex flex-wrap items-center gap-space-sm">
+              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm" type="button">
+                <Icon name="add_circle" className="text-base text-primary" />
+                <span>Register New Batch</span>
+              </button>
+              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm" type="button">
+                <Icon name="water_drop" className="text-base text-secondary" />
+                <span>Log Feed &amp; Water</span>
+              </button>
+              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors shadow-sm" type="button">
+                <Icon name="vaccines" className="text-base" />
+                <span>Schedule Vet Visit</span>
+              </button>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-lg">
+        {slot(
+          slots,
+          "kpis",
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-lg">
           <div className="flex flex-col justify-between bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
             <div className="flex items-start justify-between">
               <div>
@@ -136,7 +144,11 @@ export function LivestockManagement(_props: ScreenProps) {
             </div>
           </div>
         </div>
-        <div className="space-y-space-md">
+        )}
+        {slot(
+          slots,
+          "batches",
+          <div className="space-y-space-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-space-sm">
               <Icon name="dataset" className="text-primary text-xl" />
@@ -314,6 +326,7 @@ export function LivestockManagement(_props: ScreenProps) {
             </div>
           </div>
         </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
           <div className="lg:col-span-7 flex flex-col bg-surface-container-lowest rounded-xl shadow-sm p-space-lg space-y-space-md">
             <div className="flex items-center justify-between">

@@ -312,6 +312,89 @@
   .screen button:active:not(:disabled) { transform: translateY(1px); }
   .screen table tbody tr { transition: background-color 120ms; }
   .screen table tbody tr:hover { background-color: color-mix(in srgb, var(--color-surface-container-low) 70%, transparent); }
+
+  /* ── Public-site motion (components/ds/motion.tsx). Subtle by intent: short travel,
+        soft easing, no looping effects. Disabled entirely under prefers-reduced-motion. ── */
+
+  /* Section reveal: only elements below the fold are marked, so nothing flashes on load. */
+  [data-motion] [data-reveal] {
+    transition: opacity 650ms var(--ease-out-soft), transform 650ms var(--ease-out-soft);
+  }
+  [data-motion] [data-reveal]:not([data-revealed]) { opacity: 0; transform: translateY(18px); }
+
+  [data-motion] [data-reveal-item] {
+    transition:
+      opacity 600ms var(--ease-out-soft) var(--reveal-delay, 0ms),
+      transform 600ms var(--ease-out-soft) var(--reveal-delay, 0ms),
+      box-shadow 220ms var(--ease-out-soft),
+      border-color 220ms;
+  }
+  [data-motion] [data-reveal-item]:not([data-revealed]) { opacity: 0; transform: translateY(12px); }
+  /* After the entrance, hover feedback must not wait for the stagger delay. */
+  [data-motion] [data-reveal-item][data-reveal-done] {
+    transition: opacity 0ms, transform 260ms var(--ease-out-soft), box-shadow 260ms var(--ease-out-soft), border-color 200ms;
+  }
+
+  /* Cards: the rounded, shadowed children of a grid lift slightly and gain depth. */
+  [data-motion] :where(.grid, [class*="grid-cols"]) > :where([class*="rounded-xl"], [class*="rounded-2xl"], [class*="rounded-lg"]):where([class*="shadow"], [class*="border"]) {
+    transition: transform 260ms var(--ease-out-soft), box-shadow 260ms var(--ease-out-soft), border-color 200ms;
+  }
+  @media (hover: hover) {
+    [data-motion] :is(.grid, [class*="grid-cols"]) > :is([class*="rounded-xl"], [class*="rounded-2xl"], [class*="rounded-lg"]):is([class*="shadow"], [class*="border"]):hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px -12px rgb(19 78 51 / 0.18), 0 4px 8px -4px rgb(15 23 42 / 0.06);
+    }
+    /* Card imagery drifts a touch inside its frame. */
+    [data-motion] :is(.grid, [class*="grid-cols"]) > [class*="overflow-hidden"] img,
+    [data-motion] :is(.grid, [class*="grid-cols"]) > * > [class*="overflow-hidden"] img {
+      transition: transform 700ms var(--ease-out-soft);
+    }
+    [data-motion] :is(.grid, [class*="grid-cols"]) > [class*="overflow-hidden"]:hover img,
+    [data-motion] :is(.grid, [class*="grid-cols"]) > *:hover > [class*="overflow-hidden"] img {
+      transform: scale(1.035);
+    }
+
+    /* Buttons and button-like links: a 1px rise and a soft shadow on hover. */
+    [data-motion] :is(button, a[class*="rounded"]):is([class*="bg-primary"], [class*="bg-secondary"], [class*="bg-tertiary"], [class*="bg-harvest"]):not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px -6px rgb(19 78 51 / 0.35);
+    }
+    [data-motion] :is(button, a[class*="rounded"]):is([class*="bg-surface"], [class*="border"]):not([class*="grid"]):not(:disabled):hover {
+      transform: translateY(-1px);
+    }
+
+    /* Directional icons nudge toward where the link goes. */
+    [data-motion] a:hover :is([data-icon="arrow_forward"], [data-icon="arrow_right_alt"], [data-icon="chevron_right"], [data-icon="east"], [data-icon="north_east"], [data-icon="open_in_new"]),
+    [data-motion] button:hover :is([data-icon="arrow_forward"], [data-icon="arrow_right_alt"], [data-icon="chevron_right"], [data-icon="east"]) {
+      transform: translateX(3px);
+    }
+  }
+  [data-motion] [data-icon] { transition: transform 220ms var(--ease-out-soft); }
+
+  /* Press feedback everywhere on the public site. */
+  [data-motion] :where(button, a[class*="rounded"]) {
+    transition: color 150ms, background-color 180ms, border-color 180ms, box-shadow 220ms var(--ease-out-soft), transform 180ms var(--ease-out-soft);
+  }
+  [data-motion] :is(button, a[class*="rounded"]):not(:disabled):active {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 80ms;
+  }
+
+  /* Header: flat at the top of the page, a soft edge once content scrolls beneath it. */
+  .site-header {
+    transition: box-shadow 250ms var(--ease-out-soft), background-color 250ms, backdrop-filter 250ms;
+  }
+  .site-header[data-scrolled] {
+    background-color: color-mix(in srgb, var(--color-surface-container-lowest) 92%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px);
+    box-shadow: 0 6px 20px -12px rgb(15 23 42 / 0.18);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-motion] [data-reveal]:not([data-revealed]),
+    [data-motion] [data-reveal-item]:not([data-revealed]) { opacity: 1; transform: none; }
+    [data-motion] *:hover, [data-motion] *:active { transform: none !important; }
+  }
 }
 
 @utility card-surface {

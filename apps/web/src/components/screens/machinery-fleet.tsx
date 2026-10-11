@@ -2,8 +2,9 @@
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function MachineryFleet(_props: ScreenProps) {
+export function MachineryFleet({ lang: _lang, slots }: ScreenProps<"actions" | "kpis" | "fleet">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -32,12 +33,19 @@ export function MachineryFleet(_props: ScreenProps) {
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">Machinery Fleet &amp; Workshop Hub</h1>
               <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">Syndicate tractor fleet tracking, booking dispatch management, telemetry diagnostics, and preventive maintenance logs.</p>
             </div>
+          {slot(
+            slots,
+            "actions",
             <div className="flex flex-wrap items-center gap-space-sm shrink-0">
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-label-lg text-label-lg font-semibold shadow-sm" type="button"><Icon name="download" className="text-lg text-primary" /> Export Telematics Report</button>
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-tertiary-container text-on-tertiary hover:bg-tertiary transition-colors font-label-lg text-label-lg font-semibold shadow-sm" type="button"><Icon name="build_circle" className="text-lg" /> Schedule Service / Overhaul</button>
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-lg text-label-lg font-semibold shadow-sm" type="button"><Icon name="add_circle" className="text-lg text-secondary-container" /> Add Machinery Asset</button>
             </div>
-          </div>
+          )}
+        </div>
+        {slot(
+          slots,
+          "kpis",
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
             <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
@@ -130,10 +138,14 @@ export function MachineryFleet(_props: ScreenProps) {
               </div>
             </div>
           </div>
+        )}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
             <div className="lg:col-span-8 flex flex-col gap-space-xl">
-              <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
-                <div className="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-md bg-surface-container-lowest">
+              {slot(
+                slots,
+                "fleet",
+                <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+                  <div className="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-md bg-surface-container-lowest">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
@@ -287,6 +299,7 @@ export function MachineryFleet(_props: ScreenProps) {
                   </div>
                 </div>
               </div>
+              )}
               <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div className="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
                   <div>

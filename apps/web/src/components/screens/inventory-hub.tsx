@@ -3,8 +3,9 @@
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogAction, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
+import { slot } from "./types";
 
-export function InventoryHub(_props: ScreenProps) {
+export function InventoryHub({ lang: _lang, slots }: ScreenProps<"actions" | "kpis" | "locations" | "items" | "movements">) {
   const panelModalReceiveStock = (
     <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
         <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
@@ -120,103 +121,115 @@ export function InventoryHub(_props: ScreenProps) {
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant">Real-time ag-input ledgering, batch quarantine, cold-chain monitoring, and automated depletion link to Farm Books (&amp;#8358;).</p>
           </div>
-          <div className="flex flex-wrap items-center gap-space-xs">
-            <ScreenDialog title="Stock In / Receive Goods" side="center" panel={panelModalReceiveStock}>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all" type="button">
-                <Icon name="add_shopping_cart" className="text-lg" />
-                <span>Receive Goods / Stock In</span>
+          {slot(
+            slots,
+            "actions",
+            <div className="flex flex-wrap items-center gap-space-xs">
+              <ScreenDialog title="Stock In / Receive Goods" side="center" panel={panelModalReceiveStock}>
+                <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all" type="button">
+                  <Icon name="add_shopping_cart" className="text-lg" />
+                  <span>Receive Goods / Stock In</span>
+                </button>
+              </ScreenDialog>
+              <ScreenDialog title="Issue Stock To Field Operation" side="center" panel={panelModalIssueStock}>
+                <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors" type="button">
+                  <Icon name="output" className="text-lg" />
+                  <span>Issue Stock to Operation</span>
+                </button>
+              </ScreenDialog>
+              <button className="flex items-center gap-space-xs px-space-sm py-2.5 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm" type="button">
+                <Icon name="fact_check" className="text-lg" />
+                <span className="hidden sm:inline">Physical Audit Count</span>
               </button>
-            </ScreenDialog>
-            <ScreenDialog title="Issue Stock To Field Operation" side="center" panel={panelModalIssueStock}>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors" type="button">
-                <Icon name="output" className="text-lg" />
-                <span>Issue Stock to Operation</span>
+              <button className="flex items-center gap-space-xs px-space-sm py-2.5 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm" title="Generate Valuation Sheet" type="button">
+                <Icon name="picture_as_pdf" className="text-lg" />
+                <span className="hidden xl:inline">Generate Stock Valuation</span>
               </button>
-            </ScreenDialog>
-            <button className="flex items-center gap-space-xs px-space-sm py-2.5 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm" type="button">
-              <Icon name="fact_check" className="text-lg" />
-              <span className="hidden sm:inline">Physical Audit Count</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-sm py-2.5 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm" title="Generate Valuation Sheet" type="button">
-              <Icon name="picture_as_pdf" className="text-lg" />
-              <span className="hidden xl:inline">Generate Stock Valuation</span>
-            </button>
-          </div>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Total Inventory Valuation</span>
-                <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-background font-bold">₦2,485,000</div>
+        {slot(
+          slots,
+          "kpis",
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Total Inventory Valuation</span>
+                  <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-background font-bold">₦2,485,000</div>
+                </div>
+                <div className="p-space-xs rounded-lg bg-primary/10 text-primary">
+                  <Icon name="account_balance_wallet" className="text-2xl" />
+                </div>
               </div>
-              <div className="p-space-xs rounded-lg bg-primary/10 text-primary">
-                <Icon name="account_balance_wallet" className="text-2xl" />
+              <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60 flex items-center justify-between text-body-sm font-body-sm">
+                <span className="text-on-surface-variant">6 Categories · 24 SKUs</span>
+                <span className="px-space-xs py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"><Icon name="trending_up" className="text-xs" />+4.2% MoM</span>
               </div>
             </div>
-            <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60 flex items-center justify-between text-body-sm font-body-sm">
-              <span className="text-on-surface-variant">6 Categories · 24 SKUs</span>
-              <span className="px-space-xs py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"><Icon name="trending_up" className="text-xs" />+4.2% MoM</span>
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="font-label-sm text-label-sm text-error font-semibold tracking-wider uppercase flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" /> Stock Out Alert</span>
+                  <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-error font-bold">3 Items Critical</div>
+                </div>
+                <div className="p-space-xs rounded-lg bg-error-container text-on-error-container">
+                  <Icon name="warning" className="text-2xl" />
+                </div>
+              </div>
+              <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60">
+                <p className="font-body-sm text-body-sm text-on-surface-variant truncate">Replenish needed: <span className="font-semibold text-on-surface">Urea 46% &amp; Broiler Finisher</span></p>
+              </div>
+            </div>
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Operational Demand (7d)</span>
+                  <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">94.2% Covered</div>
+                </div>
+                <div className="p-space-xs rounded-lg bg-secondary-container text-on-secondary-container">
+                  <Icon name="event_available" className="text-2xl" />
+                </div>
+              </div>
+              <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60 flex items-center justify-between font-body-sm text-body-sm">
+                <span className="text-on-surface-variant truncate">14 Bags Urea · 18 kg Fish Feed holds</span>
+                <span className="text-secondary font-semibold font-label-sm text-label-sm">Secured</span>
+              </div>
+            </div>
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Compliance &amp; Expiry</span>
+                  <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-secondary font-bold">100% Batches Safe</div>
+                </div>
+                <div className="p-space-xs rounded-lg bg-surface-container-high text-on-surface">
+                  <Icon name="verified" className="text-2xl" />
+                </div>
+              </div>
+              <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60">
+                <p className="font-body-sm text-body-sm text-on-surface-variant truncate">Nearest: <span className="font-semibold text-on-surface">Mancozeb #M89</span> (14 mo left)</p>
+              </div>
             </div>
           </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="font-label-sm text-label-sm text-error font-semibold tracking-wider uppercase flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" /> Stock Out Alert</span>
-                <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-error font-bold">3 Items Critical</div>
-              </div>
-              <div className="p-space-xs rounded-lg bg-error-container text-on-error-container">
-                <Icon name="warning" className="text-2xl" />
-              </div>
-            </div>
-            <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60">
-              <p className="font-body-sm text-body-sm text-on-surface-variant truncate">Replenish needed: <span className="font-semibold text-on-surface">Urea 46% &amp; Broiler Finisher</span></p>
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Operational Demand (7d)</span>
-                <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">94.2% Covered</div>
-              </div>
-              <div className="p-space-xs rounded-lg bg-secondary-container text-on-secondary-container">
-                <Icon name="event_available" className="text-2xl" />
-              </div>
-            </div>
-            <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60 flex items-center justify-between font-body-sm text-body-sm">
-              <span className="text-on-surface-variant truncate">14 Bags Urea · 18 kg Fish Feed holds</span>
-              <span className="text-secondary font-semibold font-label-sm text-label-sm">Secured</span>
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase">Compliance &amp; Expiry</span>
-                <div className="mt-space-xs font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-secondary font-bold">100% Batches Safe</div>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-high text-on-surface">
-                <Icon name="verified" className="text-2xl" />
-              </div>
-            </div>
-            <div className="mt-space-md pt-space-sm border-t border-surface-container-high/60">
-              <p className="font-body-sm text-body-sm text-on-surface-variant truncate">Nearest: <span className="font-semibold text-on-surface">Mancozeb #M89</span> (14 mo left)</p>
-            </div>
-          </div>
-        </div>
+        )}
         <div className="space-y-space-md">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-sm">
-            <div className="flex items-center gap-space-xs overflow-x-auto pb-1 scrollbar-none">
-              <span className="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mr-1">Locations:</span>
-              <button className="px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Hub Central Silo &amp; Warehouse (Iseyin)</button>
-              <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Field Store 01 (Plots A &amp; B)</button>
-              <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap flex items-center gap-1" type="button"><span className="w-2 h-2 rounded-full bg-secondary" /> Cold-Chain Bio-Cabinet (Poultry/Vet)</button>
-              <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Feed Depot (Aquaculture/Pond)</button>
+          {slot(
+            slots,
+            "locations",
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-sm">
+              <div className="flex items-center gap-space-xs overflow-x-auto pb-1 scrollbar-none">
+                <span className="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mr-1">Locations:</span>
+                <button className="px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Hub Central Silo &amp; Warehouse (Iseyin)</button>
+                <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Field Store 01 (Plots A &amp; B)</button>
+                <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap flex items-center gap-1" type="button"><span className="w-2 h-2 rounded-full bg-secondary" /> Cold-Chain Bio-Cabinet (Poultry/Vet)</button>
+                <button className="px-space-md py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md shadow-sm whitespace-nowrap" type="button">Feed Depot (Aquaculture/Pond)</button>
+              </div>
+              <div className="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-sm text-label-sm shadow-sm w-fit">
+                <Icon name="cloud_done" className="text-secondary text-base" />
+                <span>Local Storage: 24 SKUs Sync&apos;d Offline</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-sm text-label-sm shadow-sm w-fit">
-              <Icon name="cloud_done" className="text-secondary text-base" />
-              <span>Local Storage: 24 SKUs Sync&apos;d Offline</span>
-            </div>
-          </div>
+          )}
           <div className="flex items-center gap-space-xs overflow-x-auto pb-2 scrollbar-none">
             <button className="px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold whitespace-nowrap flex items-center gap-2" type="button">
               <span>All Items</span>
@@ -248,8 +261,11 @@ export function InventoryHub(_props: ScreenProps) {
             </button>
           </div>
         </div>
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-space-md bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-surface-container-high/60">
+        {slot(
+          slots,
+          "items",
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+            <div className="p-space-md bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-surface-container-high/60">
             <div className="flex items-center gap-space-sm">
               <h2 className="font-headline-md text-headline-md text-on-surface font-bold">Managed SKU Master Ledger</h2>
               <span className="px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container text-on-surface-variant font-semibold">FIFO Tracked</span>
@@ -502,75 +518,80 @@ export function InventoryHub(_props: ScreenProps) {
             </div>
           </div>
         </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
-          <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col space-y-space-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Stock In &amp; Stock Out Ledger</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Immutable Append-Only Audit Trail with Voucher Refs</p>
+          {slot(
+            slots,
+            "movements",
+            <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col space-y-space-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Stock In &amp; Stock Out Ledger</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Immutable Append-Only Audit Trail with Voucher Refs</p>
+                </div>
+                <Icon name="receipt_long" className="text-secondary" />
               </div>
-              <Icon name="receipt_long" className="text-secondary" />
+              <div className="space-y-space-sm pt-2">
+                <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
+                  <div className="flex items-start gap-space-sm">
+                    <div className="p-2 rounded-lg bg-secondary-container text-on-secondary-container mt-0.5">
+                      <Icon name="download" className="text-lg" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-label-md text-label-md font-bold text-on-surface">STOCK IN: 40 Bags NPK 15-15-15</span>
+                        <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#GRN-2026-081</span>
+                      </div>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Received by <span className="font-semibold text-on-surface">Quadri Olapade</span> · Supplier: Golden Fertilizer Syndicates</p>
+                      <div className="font-label-sm text-label-sm text-secondary mt-1 flex items-center gap-1"><Icon name="done_all" className="text-xs" />Physical seal verified · Batch GF-2025-99</div>
+                    </div>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-label-md text-label-md font-bold text-secondary">+₦1,300,000</span>
+                    <div className="font-label-sm text-label-sm text-on-surface-variant">Today, 08:30 AM</div>
+                  </div>
+                </div>
+                <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
+                  <div className="flex items-start gap-space-sm">
+                    <div className="p-2 rounded-lg bg-surface-container-high text-on-surface-variant mt-0.5">
+                      <Icon name="upload" className="text-lg" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-label-md text-label-md font-bold text-on-surface">STOCK OUT: 12 Bags Urea 46%</span>
+                        <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#ISS-2026-114</span>
+                      </div>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Issued to: <span className="font-semibold text-on-surface">Field Op #OP-MAIZE-204</span> (Plot B Top-Dressing) · Tractor Team Alpha</p>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant mt-1 flex items-center gap-1"><Icon name="link" className="text-xs" />Auto-deducted via Field Calendar Task Execution</div>
+                    </div>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-label-md text-label-md font-bold text-error">-₦336,000</span>
+                    <div className="font-label-sm text-label-sm text-on-surface-variant">Yesterday, 16:15</div>
+                  </div>
+                </div>
+                <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
+                  <div className="flex items-start gap-space-sm">
+                    <div className="p-2 rounded-lg bg-surface-container-high text-on-surface-variant mt-0.5">
+                      <Icon name="upload" className="text-lg" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-label-md text-label-md font-bold text-on-surface">STOCK OUT: 4 Bags Broiler Finisher</span>
+                        <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#ISS-2026-112</span>
+                      </div>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Issued to: <span className="font-semibold text-on-surface">Pen 3 Broiler Flock</span> (Day 36 Feed Roster) · Attendant: B. Adeleke</p>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant mt-1 flex items-center gap-1"><Icon name="savings" className="text-xs" />Livestock Feeding Log Synced with Farm Books</div>
+                    </div>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-label-md text-label-md font-bold text-error">-₦58,000</span>
+                    <div className="font-label-sm text-label-sm text-on-surface-variant">2 days ago</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-space-sm pt-2">
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
-                <div className="flex items-start gap-space-sm">
-                  <div className="p-2 rounded-lg bg-secondary-container text-on-secondary-container mt-0.5">
-                    <Icon name="download" className="text-lg" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-label-md text-label-md font-bold text-on-surface">STOCK IN: 40 Bags NPK 15-15-15</span>
-                      <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#GRN-2026-081</span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Received by <span className="font-semibold text-on-surface">Quadri Olapade</span> · Supplier: Golden Fertilizer Syndicates</p>
-                    <div className="font-label-sm text-label-sm text-secondary mt-1 flex items-center gap-1"><Icon name="done_all" className="text-xs" />Physical seal verified · Batch GF-2025-99</div>
-                  </div>
-                </div>
-                <div className="text-right whitespace-nowrap">
-                  <span className="font-label-md text-label-md font-bold text-secondary">+₦1,300,000</span>
-                  <div className="font-label-sm text-label-sm text-on-surface-variant">Today, 08:30 AM</div>
-                </div>
-              </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
-                <div className="flex items-start gap-space-sm">
-                  <div className="p-2 rounded-lg bg-surface-container-high text-on-surface-variant mt-0.5">
-                    <Icon name="upload" className="text-lg" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-label-md text-label-md font-bold text-on-surface">STOCK OUT: 12 Bags Urea 46%</span>
-                      <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#ISS-2026-114</span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Issued to: <span className="font-semibold text-on-surface">Field Op #OP-MAIZE-204</span> (Plot B Top-Dressing) · Tractor Team Alpha</p>
-                    <div className="font-label-sm text-label-sm text-on-surface-variant mt-1 flex items-center gap-1"><Icon name="link" className="text-xs" />Auto-deducted via Field Calendar Task Execution</div>
-                  </div>
-                </div>
-                <div className="text-right whitespace-nowrap">
-                  <span className="font-label-md text-label-md font-bold text-error">-₦336,000</span>
-                  <div className="font-label-sm text-label-sm text-on-surface-variant">Yesterday, 16:15</div>
-                </div>
-              </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start justify-between gap-space-sm">
-                <div className="flex items-start gap-space-sm">
-                  <div className="p-2 rounded-lg bg-surface-container-high text-on-surface-variant mt-0.5">
-                    <Icon name="upload" className="text-lg" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-label-md text-label-md font-bold text-on-surface">STOCK OUT: 4 Bags Broiler Finisher</span>
-                      <span className="px-1.5 py-0.2 rounded font-mono font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">#ISS-2026-112</span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Issued to: <span className="font-semibold text-on-surface">Pen 3 Broiler Flock</span> (Day 36 Feed Roster) · Attendant: B. Adeleke</p>
-                    <div className="font-label-sm text-label-sm text-on-surface-variant mt-1 flex items-center gap-1"><Icon name="savings" className="text-xs" />Livestock Feeding Log Synced with Farm Books</div>
-                  </div>
-                </div>
-                <div className="text-right whitespace-nowrap">
-                  <span className="font-label-md text-label-md font-bold text-error">-₦58,000</span>
-                  <div className="font-label-sm text-label-sm text-on-surface-variant">2 days ago</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
           <div className="lg:col-span-5 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between space-y-space-md">
             <div className="space-y-space-xs">
               <div className="flex items-center justify-between">

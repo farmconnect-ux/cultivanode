@@ -171,7 +171,7 @@ export function createWebApp() {
 
   // API 3: Installer Connectivity Ping Test
   app.get('/api/installer/ping-test/:serial', async (req: Request, res: Response) => {
-    const { serial } = req.params;
+    const serial = String(req.params.serial);
     const device = await store.getDeviceBySerial(serial);
     if (!device) {
       return res.status(404).json({ success: false, message: 'Device not found' });

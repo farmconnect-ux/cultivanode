@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { MarketingMotion } from "./motion";
 import { ScreenToasts } from "./screen-dialog";
 
 /**
@@ -32,9 +33,10 @@ export function SiteChrome({
     <>
       <ScreenToasts />
       {header}
-      <main id="main" className="flex-1">
+      <main id="main" data-motion="" className="flex-1">
         {children}
       </main>
+      <MarketingMotion />
       {footer}
     </>
   );

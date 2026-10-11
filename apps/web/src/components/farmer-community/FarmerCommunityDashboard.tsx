@@ -192,7 +192,7 @@ export function FarmerCommunityDashboard({
                 if (onSignOut) {
                   onSignOut();
                 } else {
-                  signOut();
+                  void signOut(new FormData());
                 }
               }}
               className="hidden sm:flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-700 transition px-2 py-1 rounded"

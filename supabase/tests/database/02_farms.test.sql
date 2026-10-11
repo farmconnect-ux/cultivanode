@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 -- Fixtures (as the database owner)
 insert into auth.users (id, phone, raw_user_meta_data) values
@@ -10,12 +10,14 @@ insert into auth.users (id, phone, raw_user_meta_data) values
   ('b2222222-0000-0000-0000-000000000002', '2348000000102', '{"full_name":"Worker Bola"}'),
   ('c3333333-0000-0000-0000-000000000003', '2348000000103', '{"full_name":"Manager Chika"}'),
   ('d4444444-0000-0000-0000-000000000004', '2348000000104', '{"full_name":"Agent Dayo"}'),
-  ('e5555555-0000-0000-0000-000000000005', '2348000000105', '{"full_name":"Assisted Farmer Efe"}');
+  ('e5555555-0000-0000-0000-000000000005', '2348000000105', '{"full_name":"Assisted Farmer Efe"}'),
+  ('f6666666-0000-0000-0000-000000000006', '2348000000106', '{"full_name":"Livestock Farmer Funmi"}');
 
 insert into public.user_roles (profile_id, role) values
   ('a1111111-0000-0000-0000-000000000001', 'crop_farmer'),
   ('d4444444-0000-0000-0000-000000000004', 'field_agent'),
-  ('e5555555-0000-0000-0000-000000000005', 'crop_farmer');
+  ('e5555555-0000-0000-0000-000000000005', 'crop_farmer'),
+  ('f6666666-0000-0000-0000-000000000006', 'animal_farmer');
 update public.profiles set onboarded_by = 'd4444444-0000-0000-0000-000000000004'
  where id = 'e5555555-0000-0000-0000-000000000005';
 
@@ -70,6 +72,12 @@ select is(count(*)::int, 0, 'other users cannot rename the farm') from u;
 select throws_ok($$
   insert into public.farms (name, location) values ('Bola Farm', 'SRID=4326;POINT(3.9 7.4)')
 $$, '42501', null, 'a user without a farmer role cannot add a farm');
+
+---------------------------------------------------------------- livestock farmer
+select set_config('request.jwt.claims', '{"sub":"f6666666-0000-0000-0000-000000000006"}', true);
+select lives_ok($$
+  insert into public.farms (name, location) values ('Funmi Livestock Farm', 'SRID=4326;POINT(3.9 7.4)')
+$$, 'a livestock farmer can add a farm');
 
 ---------------------------------------------------------------- business: Ade makes a company, adds staff
 select set_config('request.jwt.claims', '{"sub":"a1111111-0000-0000-0000-000000000001"}', true);

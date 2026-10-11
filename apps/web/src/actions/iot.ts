@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAccount } from "@/lib/account/session";
+import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 
+function langOf(form: FormData) {
+  const l = String(form.get("lang") ?? "");
+  return hasLocale(l) ? l : "en";
+}
+
 export async function provisionDevice(formData: FormData): Promise<void> {
-  const account = await requireAccount();
+  const account = await requireAccount(langOf(formData));
   const supabase = await createClient();
 
   const serialNumber = (formData.get("serial_number") as string)?.trim();
@@ -30,7 +36,7 @@ export async function provisionDevice(formData: FormData): Promise<void> {
 }
 
 export async function installDeviceOnPlot(formData: FormData): Promise<void> {
-  const account = await requireAccount();
+  const account = await requireAccount(langOf(formData));
   const supabase = await createClient();
 
   const deviceId = formData.get("device_id") as string;
@@ -66,7 +72,7 @@ export async function installDeviceOnPlot(formData: FormData): Promise<void> {
 }
 
 export async function acknowledgeDeviceAlert(formData: FormData): Promise<void> {
-  const account = await requireAccount();
+  const account = await requireAccount(langOf(formData));
   const supabase = await createClient();
 
   const alertId = formData.get("alert_id") as string;

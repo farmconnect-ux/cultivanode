@@ -31,7 +31,7 @@ export function FarmerDashboard({
   initialTab?: string;
 }) {
   const userName = account.profile.full_name || "Farmer";
-  const userEmail = account.email || undefined;
+  const userEmail = account.profile.email || undefined;
   if (!t) return null;
 
   return (
