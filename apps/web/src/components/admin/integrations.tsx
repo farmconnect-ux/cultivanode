@@ -62,7 +62,7 @@ function missingFor(p: Provider, mode: Mode): string[] {
 function Result({ state }: { state: ActionResult | null }) {
   if (!state) return null;
   return (
-    <p role={state.ok ? "status" : "alert"} className={cx("text-sm font-semibold", state.ok ? "text-leaf-700" : "text-danger")}>
+    <p role={state.ok ? "status" : "alert"} className={cx("text-sm font-semibold", state.ok ? "text-primary-container" : "text-critical")}>
       {state.message}
     </p>
   );
@@ -104,16 +104,16 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h2 id={`kind-${kind}`} className="text-2xl font-bold">{KIND_TITLES[kind].title}</h2>
-                <p className="text-muted">{KIND_TITLES[kind].intro}</p>
+                <p className="text-on-surface-variant">{KIND_TITLES[kind].intro}</p>
               </div>
               {current && (
                 <p className="font-semibold">
-                  In use: {current.name} <span className="text-muted">({current.mode})</span>
+                  In use: {current.name} <span className="text-on-surface-variant">({current.mode})</span>
                 </p>
               )}
             </div>
             {current?.test_only && (
-              <p role="note" className="rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-3">
+              <p role="note" className="rounded-md border-l-4 border-caution bg-caution-soft p-3">
                 A test provider is in use. {kind === "sms" ? "Real people cannot receive sign-in codes" : kind === "identity" ? "Real people cannot be verified" : "Weather stops"} until
                 you switch to a real provider. On the hosted project test providers are always refused; they only work in local development.
               </p>
@@ -137,23 +137,23 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
   const base = { provider: p.code, kind: p.kind };
 
   return (
-    <Card className={cx("flex flex-col gap-5", inUse && "border-2 border-leaf-600", !p.implemented && "opacity-70")}>
+    <Card className={cx("flex flex-col gap-5", inUse && "border-2 border-primary-container", !p.implemented && "opacity-70")}>
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg font-bold">{p.name}</h3>
-          {inUse && <Badge className="bg-leaf-100 text-leaf-800">In use</Badge>}
+          {inUse && <Badge className="bg-secondary-container/40 text-primary">In use</Badge>}
           {p.test_only && <Badge>Test only</Badge>}
-          {!p.implemented && <Badge className="bg-line text-muted">Not available yet</Badge>}
-          {p.implemented && hasSettings && <Badge className="bg-cream text-ink">Mode: {p.mode}</Badge>}
+          {!p.implemented && <Badge className="bg-surface-container text-on-surface-variant">Not available yet</Badge>}
+          {p.implemented && hasSettings && <Badge className="bg-surface-container-low text-on-surface">Mode: {p.mode}</Badge>}
         </div>
-        <p className="text-muted">{p.description}</p>
+        <p className="text-on-surface-variant">{p.description}</p>
         {p.docs_url && (
-          <a href={p.docs_url} target="_blank" rel="noopener noreferrer" className="w-fit text-sm font-semibold text-leaf-700 hover:underline">
+          <a href={p.docs_url} target="_blank" rel="noopener noreferrer" className="w-fit text-sm font-semibold text-primary-container hover:underline">
             Provider documentation
           </a>
         )}
         {p.last_event && (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-on-surface-variant">
             Last call ({p.last_event.operation}): {p.last_event.success ? "worked" : `failed, ${p.last_event.error_code ?? "error"}`},{" "}
             {dateFmt.format(new Date(p.last_event.created_at))}
           </p>
@@ -171,7 +171,7 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
                 onClick={() => setEditMode(m)}
                 className={cx(
                   "min-h-11 rounded-md border-2 px-4 font-semibold",
-                  editMode === m ? "border-leaf-600 bg-leaf-50 text-leaf-800" : "border-line bg-white",
+                  editMode === m ? "border-primary-container bg-surface-container-low text-primary" : "border-border bg-white",
                 )}
               >
                 {m === "test" ? "Test settings" : "Live settings"}
@@ -213,10 +213,10 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
             const saved = p.secrets.find((s) => s.mode === editMode && s.field === f.key);
             const id = `${p.code}-${editMode}-secret-${f.key}`;
             return (
-              <div key={`${editMode}-${f.key}`} className="flex flex-col gap-2 rounded-md border border-line p-4">
+              <div key={`${editMode}-${f.key}`} className="flex flex-col gap-2 rounded-md border border-border p-4">
                 <p className="font-semibold">
                   {f.label} ({editMode}){f.required ? "" : " - optional"}:{" "}
-                  <span className={saved ? "text-leaf-700" : "text-danger"}>
+                  <span className={saved ? "text-primary-container" : "text-critical"}>
                     {saved ? `saved${saved.hint ? `, ends in ${saved.hint}` : ""}, ${dateFmt.format(new Date(saved.updated_at))}` : "not set"}
                   </span>
                 </p>
@@ -248,7 +248,7 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
               <div className="flex flex-wrap items-center gap-3">
                 <p>
                   Running in <strong>{p.mode}</strong> mode.
-                  {missingNow.length > 0 && <span className="text-danger"> Missing: {missingNow.join(", ")}.</span>}
+                  {missingNow.length > 0 && <span className="text-critical"> Missing: {missingNow.join(", ")}.</span>}
                 </p>
                 <Button type="submit" variant="secondary" disabled={pending}>
                   {p.mode === "test" ? "Switch to live" : "Switch back to test"}
@@ -260,7 +260,7 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
       )}
 
       {p.implemented && (
-        <div className="flex flex-col gap-4 border-t border-line pt-4">
+        <div className="flex flex-col gap-4 border-t border-border pt-4">
           {!inUse && (
             <ActionForm action={activateIntegration} hidden={base}>
               {(pending) => (

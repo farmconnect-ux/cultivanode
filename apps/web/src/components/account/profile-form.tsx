@@ -21,10 +21,10 @@ export function ProfileForm({ lang, profile, t }: { lang: Locale; profile: Accou
         <>
           <Field id="full_name" label={o.fullName} hint={locked ? p.nameLocked : o.fullNameHint}>
             <Input id="full_name" name="full_name" defaultValue={profile.full_name ?? ""} readOnly={locked}
-                   aria-readonly={locked} className={locked ? "bg-cream" : undefined} aria-describedby="full_name-hint" />
+                   aria-readonly={locked} className={locked ? "bg-surface-container-low" : undefined} aria-describedby="full_name-hint" />
           </Field>
           <Field id="phone" label={p.phone} hint={p.phoneHint}>
-            <Input id="phone" value={localPhone(profile.phone)} readOnly className="bg-cream" aria-describedby="phone-hint" />
+            <Input id="phone" value={localPhone(profile.phone)} readOnly className="bg-surface-container-low" aria-describedby="phone-hint" />
           </Field>
           <Field id="email" label={p.email} optional={o.consentOptional}>
             <Input id="email" name="email" type="email" autoComplete="email" defaultValue={profile.email ?? ""} />

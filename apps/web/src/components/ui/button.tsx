@@ -5,24 +5,27 @@ import { cx } from "./cx";
 type Variant = "primary" | "secondary" | "ghost" | "gold" | "accent" | "onDark";
 type Size = "sm" | "md" | "lg";
 
+// Legacy API, restyled to the Agro-Enterprise suite (DESIGN.md → Buttons). New code can use
+// "@/components/shadcn/button" directly; both share the same look.
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors " +
-  "disabled:cursor-not-allowed disabled:opacity-60 min-h-12 select-none";
+  "inline-flex items-center justify-center gap-2 rounded-lg font-label-lg text-label-lg select-none " +
+  "transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 " +
+  "disabled:cursor-not-allowed disabled:opacity-50";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-leaf-600 text-white hover:bg-leaf-700 active:bg-leaf-800",
-  secondary: "border-2 border-leaf-600 bg-white text-leaf-700 hover:bg-leaf-50",
-  ghost: "text-leaf-700 hover:bg-leaf-50",
-  gold: "bg-harvest-300 text-ink hover:bg-harvest-400",
-  // For deep-green (leaf-800) backgrounds, as on the home-page hero.
-  accent: "bg-node-300 text-leaf-900 hover:bg-node-200",
-  onDark: "border-2 border-white/60 text-white hover:bg-white/10",
+  primary: "bg-primary-container text-white shadow-card hover:bg-[#0d3a26]",
+  secondary: "border border-border bg-surface-container-lowest text-[#1e293b] shadow-card hover:border-[#cbd5e1] hover:bg-[#f1f5f9]",
+  ghost: "text-primary-container hover:bg-surface-container-high",
+  gold: "bg-caution text-white shadow-card hover:bg-[#b45309]",
+  accent: "bg-secondary-container text-on-primary-fixed hover:bg-secondary-fixed-dim",
+  onDark: "border border-white/30 bg-white/5 text-white hover:bg-white/15",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-xs min-h-8",
-  md: "px-5 text-base",
-  lg: "px-7 text-lg",
+  sm: "h-8 px-3 text-label-md",
+  md: "h-10 px-4",
+  lg: "h-12 px-6 text-body-md font-semibold",
 };
 
 export function buttonClass(variant: Variant = "primary", size: Size = "md", extra?: string) {

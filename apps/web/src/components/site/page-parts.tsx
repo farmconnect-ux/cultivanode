@@ -6,8 +6,8 @@ export function PageHero({ badge, title, intro, children }: { badge?: string; ti
   return (
     <Container className="flex flex-col items-start gap-5 py-14 sm:py-20">
       {badge && <Badge>{badge}</Badge>}
-      <h1 className="max-w-3xl text-4xl font-extrabold text-leaf-800 sm:text-5xl">{title}</h1>
-      <p className="max-w-3xl text-xl text-muted">{intro}</p>
+      <h1 className="max-w-3xl text-4xl font-extrabold text-primary sm:text-5xl">{title}</h1>
+      <p className="max-w-3xl text-xl text-on-surface-variant">{intro}</p>
       {children}
     </Container>
   );
@@ -24,10 +24,10 @@ export function BenefitGrid({ items, columns = 3, soonLabel }: {
       {items.map((b) => (
         <li key={b.title}>
           <Card className="h-full">
-            <h3 className="text-lg font-bold text-leaf-700">{b.title}</h3>
-            <p className="mt-2 text-muted">{b.body}</p>
+            <h3 className="text-lg font-bold text-primary-container">{b.title}</h3>
+            <p className="mt-2 text-on-surface-variant">{b.body}</p>
             {b.soon && soonLabel && (
-              <span className="mt-3 inline-block rounded-full bg-harvest-100 px-3 py-1 text-sm font-semibold text-harvest-700">{soonLabel}</span>
+              <span className="mt-3 inline-block rounded-full bg-tertiary-fixed/60 px-3 py-1 text-sm font-semibold text-[#b45309]">{soonLabel}</span>
             )}
           </Card>
         </li>
@@ -45,12 +45,12 @@ export function Steps({ steps }: { steps: readonly (string | { title: string; bo
         const body = typeof s === "string" ? s : s.body;
         return (
           <li key={i} className="flex gap-4">
-            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-leaf-600 text-lg font-bold text-white">
+            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-lg font-bold text-white">
               {i + 1}
             </span>
             <div className="pt-1.5 text-lg">
               {title && <p className="font-bold">{title}</p>}
-              <p className={title ? "text-muted" : undefined}>{body}</p>
+              <p className={title ? "text-on-surface-variant" : undefined}>{body}</p>
             </div>
           </li>
         );
@@ -63,7 +63,7 @@ export function ChipList({ items }: { items: readonly string[] }) {
   return (
     <ul className="flex flex-wrap gap-3">
       {items.map((c) => (
-        <li key={c} className="rounded-full border-2 border-leaf-200 bg-white px-4 py-2 font-semibold text-leaf-800">
+        <li key={c} className="rounded-full border-2 border-secondary/30 bg-white px-4 py-2 font-semibold text-primary">
           {c}
         </li>
       ))}
@@ -80,9 +80,9 @@ export function CtaBox({ title, body, href, label, secondary }: {
 }) {
   return (
     <Container className="py-16">
-      <div className="flex flex-col items-start gap-5 rounded-xl bg-leaf-800 p-8 text-white sm:p-12">
+      <div className="flex flex-col items-start gap-5 rounded-xl bg-primary p-8 text-white sm:p-12">
         <h2 className="text-3xl font-extrabold">{title}</h2>
-        <p className="max-w-2xl text-lg text-leaf-100">{body}</p>
+        <p className="max-w-2xl text-lg text-on-primary/80">{body}</p>
         <div className="flex flex-wrap gap-3">
           <LinkButton href={href} variant="gold">{label}</LinkButton>
           {secondary && <LinkButton href={secondary.href} variant="secondary">{secondary.label}</LinkButton>}

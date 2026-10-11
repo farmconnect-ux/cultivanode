@@ -46,7 +46,7 @@ export function HeroCarousel({ slides, labels }: { slides: CarouselSlide[]; labe
     <section
       aria-roledescription="carousel"
       aria-label={labels.label}
-      className="overflow-hidden rounded-xl border border-line bg-white shadow-sm"
+      className="overflow-hidden rounded-xl border border-border bg-white shadow-sm"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setHovered(true)}
@@ -66,7 +66,7 @@ export function HeroCarousel({ slides, labels }: { slides: CarouselSlide[]; labe
           go(end < start ? 1 : -1);
         }}
       >
-        <div className="relative aspect-[3/2] w-full bg-leaf-50">
+        <div className="relative aspect-[3/2] w-full bg-surface-container-low">
           {slide.image ? (
             // Plain <img>: pictures come from Supabase Storage (allowed by the CSP) and are sized by CSS.
             // eslint-disable-next-line @next/next/no-img-element
@@ -87,7 +87,7 @@ export function HeroCarousel({ slides, labels }: { slides: CarouselSlide[]; labe
             {slide.title && (
               <h2 className="text-xl font-bold">
                 {slide.href ? (
-                  <Link href={slide.href} className="hover:text-leaf-700 hover:underline">
+                  <Link href={slide.href} className="hover:text-primary-container hover:underline">
                     {slide.title}
                   </Link>
                 ) : (
@@ -95,12 +95,12 @@ export function HeroCarousel({ slides, labels }: { slides: CarouselSlide[]; labe
                 )}
               </h2>
             )}
-            {slide.body && <p className="mt-1 text-muted">{slide.body}</p>}
+            {slide.body && <p className="mt-1 text-on-surface-variant">{slide.body}</p>}
           </div>
         )}
       </div>
       {count > 1 && (
-        <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
+        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
           <div className="flex items-center gap-1.5" role="group" aria-label={labels.label}>
             {slides.map((s, i) => (
               <button
@@ -111,7 +111,7 @@ export function HeroCarousel({ slides, labels }: { slides: CarouselSlide[]; labe
                 aria-current={i === index}
                 className="flex size-11 items-center justify-center"
               >
-                <span className={`block h-2.5 rounded-full transition-all ${i === index ? "w-6 bg-leaf-600" : "w-2.5 bg-line"}`} />
+                <span className={`block h-2.5 rounded-full transition-all ${i === index ? "w-6 bg-primary-container" : "w-2.5 bg-surface-container"}`} />
               </button>
             ))}
           </div>
@@ -136,7 +136,7 @@ function CarouselButton({ label, onClick, path }: { label: string; onClick: () =
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex size-11 items-center justify-center rounded-md text-leaf-700 hover:bg-leaf-50"
+      className="flex size-11 items-center justify-center rounded-md text-primary-container hover:bg-surface-container-low"
     >
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={path} />

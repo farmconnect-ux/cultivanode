@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#236639",
+  themeColor: "#134E33",
   width: "device-width",
   initialScale: 1,
 };
@@ -17,7 +17,7 @@ export const viewport: Viewport = {
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
   return (
     <html lang="en-NG" className="h-full antialiased">
-      <body className="min-h-full bg-cream">{children}</body>
+      <body className="min-h-full bg-background">{children}</body>
     </html>
   );
 }

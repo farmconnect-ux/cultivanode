@@ -55,12 +55,12 @@ export function OnboardingForm({ lang, roles, t }: Props) {
           <legend className="mb-1 font-semibold">{o.accountType}</legend>
           {(["individual", "business"] as const).map((type) => (
             <label key={type} className={cx("flex min-h-12 cursor-pointer items-start gap-3 rounded-md border-2 p-3",
-              accountType === type ? "border-leaf-600 bg-leaf-50" : "border-line bg-white")}>
+              accountType === type ? "border-primary-container bg-surface-container-low" : "border-border bg-white")}>
               <input type="radio" name="account_type" value={type} checked={accountType === type}
-                     onChange={() => setAccountType(type)} className="mt-1 size-5 accent-leaf-600" />
+                     onChange={() => setAccountType(type)} className="mt-1 size-5 accent-secondary" />
               <span>
                 <span className="block font-semibold">{o[type]}</span>
-                <span className="block text-sm text-muted">{type === "individual" ? o.individualHint : o.businessHint}</span>
+                <span className="block text-sm text-on-surface-variant">{type === "individual" ? o.individualHint : o.businessHint}</span>
               </span>
             </label>
           ))}
@@ -103,9 +103,9 @@ export function OnboardingForm({ lang, roles, t }: Props) {
       <Card className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold">{o.rolesTitle}</h2>
-          <p className="text-muted">{o.rolesIntro}</p>
+          <p className="text-on-surface-variant">{o.rolesIntro}</p>
         </div>
-        {state.error === "errorRoles" && <p className="font-medium text-danger">{o.errorRoles}</p>}
+        {state.error === "errorRoles" && <p className="font-medium text-critical">{o.errorRoles}</p>}
         <ul className="grid gap-3 sm:grid-cols-2">
           {roles.map((r) => {
             const key = r.role as keyof typeof t.roleNames;
@@ -115,7 +115,7 @@ export function OnboardingForm({ lang, roles, t }: Props) {
                 <label
                   htmlFor={`onboard-role-${r.role}`}
                   className={cx("flex h-full min-h-12 cursor-pointer items-start gap-3 rounded-md border-2 p-3",
-                    on ? "border-leaf-600 bg-leaf-50" : "border-line bg-white")}
+                    on ? "border-primary-container bg-surface-container-low" : "border-border bg-white")}
                 >
                   <input
                     id={`onboard-role-${r.role}`}
@@ -127,13 +127,13 @@ export function OnboardingForm({ lang, roles, t }: Props) {
                       e.stopPropagation();
                       toggle(r.role);
                     }}
-                    className="mt-1 size-5 accent-leaf-600"
+                    className="mt-1 size-5 accent-secondary"
                   />
                   <span>
                     <span className="block font-semibold">{t.roleNames[key]}</span>
-                    <span className="block text-sm text-muted">{t.roleHints[key]}</span>
+                    <span className="block text-sm text-on-surface-variant">{t.roleHints[key]}</span>
                     <span className={cx("mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold",
-                      r.auto_approve ? "bg-leaf-100 text-leaf-800" : "bg-harvest-100 text-harvest-700")}>
+                      r.auto_approve ? "bg-secondary-container/40 text-primary" : "bg-tertiary-fixed/60 text-[#b45309]")}>
                       {r.auto_approve ? o.autoApproved : o.needsReview}
                     </span>
                   </span>
@@ -159,18 +159,18 @@ export function OnboardingForm({ lang, roles, t }: Props) {
         <h2 className="text-2xl font-bold">{o.consentTitle}</h2>
         {[
           { name: "consent_terms", label: withLink(o.consentTerms, "terms",
-              <Link href={`/${lang}/terms`} target="_blank" className="font-semibold text-leaf-700 underline">{t.auth.terms}</Link>), required: true },
+              <Link href={`/${lang}/terms`} target="_blank" className="font-semibold text-primary-container underline">{t.auth.terms}</Link>), required: true },
           { name: "consent_privacy", label: withLink(o.consentPrivacy, "privacy",
-              <Link href={`/${lang}/privacy`} target="_blank" className="font-semibold text-leaf-700 underline">{t.auth.privacy}</Link>), required: true },
+              <Link href={`/${lang}/privacy`} target="_blank" className="font-semibold text-primary-container underline">{t.auth.privacy}</Link>), required: true },
           { name: "consent_data", label: o.consentData, required: false },
           { name: "consent_marketing", label: o.consentMarketing, required: false },
         ].map((c) => (
           <label key={c.name} className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" name={c.name} className="mt-1 size-5 shrink-0 accent-leaf-600"
+            <input type="checkbox" name={c.name} className="mt-1 size-5 shrink-0 accent-secondary"
                    aria-invalid={(c.required && state.error === "errorConsent") || undefined} />
             <span>
               {c.label}{" "}
-              <span className="text-sm text-muted">({c.required ? o.required : o.consentOptional})</span>
+              <span className="text-sm text-on-surface-variant">({c.required ? o.required : o.consentOptional})</span>
             </span>
           </label>
         ))}

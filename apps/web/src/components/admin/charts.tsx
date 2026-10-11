@@ -75,7 +75,7 @@ function Tooltip({ x, title, rows }: { x: number; title: string; rows: { label: 
   const left = `${Math.min(Math.max((x / W) * 100, 12), 88)}%`;
   return (
     <div
-      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-line bg-white px-3 py-2 text-sm shadow-md"
+      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-border bg-white px-3 py-2 text-sm shadow-md"
       style={{ left }}
       role="status"
     >
@@ -83,7 +83,7 @@ function Tooltip({ x, title, rows }: { x: number; title: string; rows: { label: 
       {rows.map((r) => (
         <p key={r.label} className="flex items-center gap-2">
           {r.color && <span className="inline-block size-2.5 rounded-sm" style={{ background: r.color }} aria-hidden="true" />}
-          <span className="text-muted">{r.label}</span>
+          <span className="text-on-surface-variant">{r.label}</span>
           <span className="ml-auto pl-3 font-semibold tabular-nums">{r.value.toLocaleString("en-NG")}</span>
         </p>
       ))}
@@ -94,24 +94,24 @@ function Tooltip({ x, title, rows }: { x: number; title: string; rows: { label: 
 function TableView({ caption, days, series, rows }: { caption: string; days: string[]; series: Series[]; rows: Record<string, number>[] }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer font-semibold text-leaf-700">Show as table</summary>
+      <summary className="cursor-pointer font-semibold text-primary-container">Show as table</summary>
       <div className="mt-2 max-h-72 overflow-auto">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr>
-              <th className="border-b border-line py-1 pr-3">Day</th>
+              <th className="border-b border-border py-1 pr-3">Day</th>
               {series.map((s) => (
-                <th key={s.key} className="border-b border-line py-1 pr-3 text-right">{s.label}</th>
+                <th key={s.key} className="border-b border-border py-1 pr-3 text-right">{s.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {days.map((d, i) => (
               <tr key={d}>
-                <td className="border-b border-line/60 py-1 pr-3">{dayLabel(d)}</td>
+                <td className="border-b border-border/60 py-1 pr-3">{dayLabel(d)}</td>
                 {series.map((s) => (
-                  <td key={s.key} className="border-b border-line/60 py-1 pr-3 text-right tabular-nums">{rows[i]?.[s.key] ?? 0}</td>
+                  <td key={s.key} className="border-b border-border/60 py-1 pr-3 text-right tabular-nums">{rows[i]?.[s.key] ?? 0}</td>
                 ))}
               </tr>
             ))}
@@ -227,12 +227,12 @@ export function BarList({ items, color = "#2F7F47", extra }: { items: { label: s
       {items.map((i) => (
         <li key={i.label} className="grid grid-cols-[minmax(6rem,12rem)_1fr_auto] items-center gap-3 text-sm" title={`${i.label}: ${i.value}${i.note ? ` (${i.note})` : ""}`}>
           <span className="truncate">{i.label}</span>
-          <span className="h-3 rounded-r bg-line/40">
+          <span className="h-3 rounded-r bg-surface-container/40">
             <span className="block h-3 rounded-r" style={{ width: `${Math.max((i.value / max) * 100, i.value > 0 ? 2 : 0)}%`, background: color }} />
           </span>
           <span className="tabular-nums">
             <span className="font-semibold">{i.value.toLocaleString("en-NG")}</span>
-            {i.note && <span className="ml-2 text-muted">{i.note}</span>}
+            {i.note && <span className="ml-2 text-on-surface-variant">{i.note}</span>}
           </span>
         </li>
       ))}

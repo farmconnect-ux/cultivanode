@@ -99,7 +99,7 @@ export function Irrigation() {
           <p className="text-sm text-gray-600">Control water distribution, borehole pressure and drip lines across your fields</p>
         </div>
         <Button 
-          className="bg-leaf-800 hover:bg-leaf-900 text-white shadow-sm"
+          className="bg-primary hover:bg-primary text-white shadow-sm"
           onClick={() => setIsScheduleModalOpen(true)}
         >
           <Droplets className="h-4 w-4 mr-1" />
@@ -108,8 +108,8 @@ export function Irrigation() {
       </div>
 
       {feedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {feedback}
           </AlertDescription>
@@ -123,7 +123,7 @@ export function Irrigation() {
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Daily Usage</p>
               <p className="text-2xl font-bold text-gray-900">2,340L</p>
-              <p className="text-xs text-leaf-700 font-medium">-5% vs yesterday</p>
+              <p className="text-xs text-primary-container font-medium">-5% vs yesterday</p>
             </div>
             <Droplets className="h-8 w-8 text-blue-600" />
           </div>
@@ -133,10 +133,10 @@ export function Irrigation() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Active Zones</p>
-              <p className="text-2xl font-bold text-leaf-700">{activeZonesCount}</p>
+              <p className="text-2xl font-bold text-primary-container">{activeZonesCount}</p>
               <p className="text-xs text-gray-500 font-medium">of {zones.length} sectors online</p>
             </div>
-            <Activity className="h-8 w-8 text-leaf-700" />
+            <Activity className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -144,10 +144,10 @@ export function Irrigation() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Water Efficiency</p>
-              <p className="text-2xl font-bold text-leaf-700">94%</p>
-              <p className="text-xs text-leaf-700 font-medium">Optimal drip delivery</p>
+              <p className="text-2xl font-bold text-primary-container">94%</p>
+              <p className="text-xs text-primary-container font-medium">Optimal drip delivery</p>
             </div>
-            <TrendingDown className="h-8 w-8 text-leaf-700" />
+            <TrendingDown className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -178,7 +178,7 @@ export function Irrigation() {
                   </p>
                 </div>
                 <Badge className={`text-xs ${
-                  zone.status === 'active' ? 'bg-leaf-100 text-leaf-800' :
+                  zone.status === 'active' ? 'bg-secondary-container/40 text-primary' :
                   zone.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                   zone.status === 'offline' ? 'bg-red-100 text-red-800' :
                   'bg-gray-100 text-gray-800'
@@ -198,7 +198,7 @@ export function Irrigation() {
                   <div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Cycle Remaining</span>
-                      <span className="font-semibold text-leaf-700">{zone.remaining} min</span>
+                      <span className="font-semibold text-primary-container">{zone.remaining} min</span>
                     </div>
                     <Progress value={(zone.remaining / (zone.duration || 1)) * 100} className="h-2 bg-gray-100" />
                   </div>
@@ -208,7 +208,7 @@ export function Irrigation() {
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className={`flex-1 h-7 text-xs ${zone.status === 'active' ? 'bg-red-50 text-red-700 border-red-200' : 'text-leaf-800'}`}
+                    className={`flex-1 h-7 text-xs ${zone.status === 'active' ? 'bg-red-50 text-red-700 border-red-200' : 'text-primary'}`}
                     onClick={() => handleToggleValve(zone.id)}
                   >
                     <Power className="h-3 w-3 mr-1" />
@@ -296,7 +296,7 @@ export function Irrigation() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsScheduleModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Save Schedule
               </Button>
             </DialogFooter>

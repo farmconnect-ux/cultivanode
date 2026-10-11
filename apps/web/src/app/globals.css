@@ -1,11 +1,159 @@
-/* CultivaNode web theme. Values mirror packages/shared/src/design/tokens.ts
-   (packages/shared/src/__tests__/tokens.test.ts checks every colour). */
+/* CultivaNode web theme.
+   1. Brand palette (leaf / node / harvest / soil …) mirrors packages/shared/src/design/tokens.ts
+      (packages/shared/src/__tests__/tokens.test.ts checks every colour).
+   2. Agro-Enterprise Operational Suite tokens (primary, surface-*, on-*, type scale, spacing)
+      come from the imported design system ("New screen"/DESIGN.md) and mirror `suite` in tokens.ts.
+   Rules of the suite: crisp 1px borders over heavy shadows, no glassmorphism, tabular numerals for
+   money and measurements, pills for status, 16px cards / 8px controls. */
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@fontsource-variable/inter/wght.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;
 
+  /* Families keyed by role, so `font-headline-lg text-headline-lg` works as in the design files. */
+  --font-display-lg: var(--font-display);
+  --font-headline-xl: var(--font-display);
+  --font-headline-xl-mobile: var(--font-display);
+  --font-headline-lg: var(--font-display);
+  --font-headline-md: var(--font-display);
+  --font-headline-sm: var(--font-display);
+  --font-metric-num: var(--font-display);
+  --font-body-lg: var(--font-sans);
+  --font-body-md: var(--font-sans);
+  --font-body-sm: var(--font-sans);
+  --font-label-lg: var(--font-sans);
+  --font-label-md: var(--font-sans);
+  --font-label-sm: var(--font-sans);
+
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 3.5rem;
+  --text-display-lg--letter-spacing: -0.03em;
+  --text-display-lg--font-weight: 700;
+  --text-headline-xl: 2.25rem;
+  --text-headline-xl--line-height: 2.75rem;
+  --text-headline-xl--letter-spacing: -0.025em;
+  --text-headline-xl--font-weight: 700;
+  --text-headline-xl-mobile: 1.75rem;
+  --text-headline-xl-mobile--line-height: 2.25rem;
+  --text-headline-xl-mobile--letter-spacing: -0.02em;
+  --text-headline-xl-mobile--font-weight: 700;
+  --text-headline-lg: 1.5rem;
+  --text-headline-lg--line-height: 2rem;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+  --text-headline-md: 1.25rem;
+  --text-headline-md--line-height: 1.75rem;
+  --text-headline-md--letter-spacing: -0.015em;
+  --text-headline-md--font-weight: 600;
+  --text-headline-sm: 1.125rem;
+  --text-headline-sm--line-height: 1.5rem;
+  --text-headline-sm--letter-spacing: -0.01em;
+  --text-headline-sm--font-weight: 600;
+  --text-metric-num: 1.75rem;
+  --text-metric-num--line-height: 2rem;
+  --text-metric-num--letter-spacing: -0.02em;
+  --text-metric-num--font-weight: 700;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.75rem;
+  --text-body-md: 0.9375rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-label-lg: 0.875rem;
+  --text-label-lg--line-height: 1.25rem;
+  --text-label-lg--letter-spacing: 0.01em;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 0.75rem;
+  --text-label-md--line-height: 1rem;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 0.6875rem;
+  --text-label-sm--line-height: 0.875rem;
+  --text-label-sm--letter-spacing: 0.04em;
+  --text-label-sm--font-weight: 600;
+
+  /* ── Suite colours (imported design system) ─────────────────── */
+  --color-primary: #003620;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #134e33;
+  --color-on-primary-container: #85be9c;
+  --color-primary-fixed: #b4f0cb;
+  --color-primary-fixed-dim: #99d3b0;
+  --color-on-primary-fixed: #002112;
+  --color-on-primary-fixed-variant: #165035;
+  --color-inverse-primary: #99d3b0;
+  --color-surface-tint: #31694c;
+
+  --color-secondary: #006c49;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #6cf8bb;
+  --color-on-secondary-container: #00714d;
+  --color-secondary-fixed: #6ffbbe;
+  --color-secondary-fixed-dim: #4edea3;
+  --color-on-secondary-fixed: #002113;
+  --color-on-secondary-fixed-variant: #005236;
+
+  --color-tertiary: #4a2400;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #6a3700;
+  --color-on-tertiary-container: #ff9939;
+  --color-tertiary-fixed: #ffdcc3;
+  --color-tertiary-fixed-dim: #ffb77d;
+  --color-on-tertiary-fixed: #2f1500;
+  --color-on-tertiary-fixed-variant: #6e3900;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+  --color-surface: #f8f9ff;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-variant: #d3e4fe;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #404943;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-outline: #707972;
+  --color-outline-variant: #c0c9c0;
+
+  /* Semantic feedback (DESIGN.md → Status pills) */
+  --color-positive: #059669;
+  --color-positive-soft: #ecfdf5;
+  --color-caution: #d97706;
+  --color-caution-soft: #fffbeb;
+  --color-critical: #dc2626;
+  --color-critical-soft: #fef2f2;
+  --color-atmos: #1d4ed8;
+  --color-atmos-soft: #eff6ff;
+
+  /* shadcn/ui contract, expressed in suite colours */
+  --color-foreground: #0b1c30;
+  --color-card: #ffffff;
+  --color-card-foreground: #0b1c30;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0b1c30;
+  --color-border: #e2e8f0;
+  --color-input: #cbd5e1;
+  --color-ring: #10b981;
+  --color-destructive: #dc2626;
+
+  /* ── Brand palette (legacy pages, logo, mobile parity) ──────── */
   --color-leaf-50: #EDF5EF;
   --color-leaf-100: #D3E7D8;
   --color-leaf-200: #A9CFB4;
@@ -47,34 +195,132 @@
   --color-danger: #B42318;
   --color-info: #1E5A8A;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* ── Shape ──────────────────────────────────────────────────── */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  /* ── Spacing names used by the design files ─────────────────── */
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-gutter: 1.25rem;
+  --spacing-gutter-desktop: 1.5rem;
+  --spacing-margin: 1rem;
+  --spacing-margin-tablet: 1.5rem;
+  --spacing-margin-desktop: 2rem;
+
+  /* ── Elevation (DESIGN.md) ──────────────────────────────────── */
+  --shadow-card: 0 1px 3px 0 rgb(15 23 42 / 0.04), 0 1px 2px -1px rgb(15 23 42 / 0.03);
+  --shadow-lift: 0 4px 6px -1px rgb(19 78 51 / 0.06), 0 2px 4px -2px rgb(19 78 51 / 0.04);
+  --shadow-overlay: 0 10px 15px -3px rgb(15 23 42 / 0.08), 0 4px 6px -4px rgb(15 23 42 / 0.04);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-fade-up: fade-up 420ms var(--ease-out-soft) both;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.45); }
+    50% { box-shadow: 0 0 0 5px rgb(16 185 129 / 0); }
+  }
+}
+
+/* ── Material Symbols (self-hosted subset, see src/components/ds/icon.tsx) ── */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/material-symbols-subset.woff2") format("woff2");
 }
 
 @layer base {
   html {
-    color: var(--color-ink);
-    background-color: var(--color-cream);
+    color: var(--color-on-surface);
+    background-color: var(--color-background);
     -webkit-text-size-adjust: 100%;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
   }
   body {
     font-family: var(--font-sans);
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
     line-height: 1.15;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     text-wrap: balance;
   }
   p { text-wrap: pretty; }
+  *, ::before, ::after { border-color: var(--color-border); }
+  ::selection { background: var(--color-primary-fixed); color: var(--color-on-primary-fixed); }
   :focus-visible {
-    outline: 3px solid var(--color-harvest-400);
+    outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
+  button:not(:disabled), [role="button"]:not(:disabled), summary { cursor: pointer; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
+}
+
+@layer components {
+  /* Icon glyphs render via code points (no ligature text flashes before the font loads). */
+  .material-symbol {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1.25em;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings: "FILL" 0;
+  }
+  .material-symbol[data-filled] { font-variation-settings: "FILL" 1; }
+
+  /* Tabular figures for money, hectares and sensor counts (DESIGN.md → Typography). */
+  .tnum, .font-metric-num { font-variant-numeric: tabular-nums; }
+
+  /* Hidden scrollbars on horizontal chip rails and the sidebar, as in the design files. */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Imported screens: consistent micro-interactions without rewriting every node. */
+  .screen a, .screen button { transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 200ms, transform 200ms var(--ease-out-soft); }
+  .screen button:active:not(:disabled) { transform: translateY(1px); }
+  .screen table tbody tr { transition: background-color 120ms; }
+  .screen table tbody tr:hover { background-color: color-mix(in srgb, var(--color-surface-container-low) 70%, transparent); }
+}
+
+@utility card-surface {
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+@utility card-interactive {
+  transition: box-shadow 200ms var(--ease-out-soft), border-color 200ms, transform 200ms var(--ease-out-soft);
+  &:hover { box-shadow: var(--shadow-lift); border-color: #cbd5e1; transform: translateY(-1px); }
 }

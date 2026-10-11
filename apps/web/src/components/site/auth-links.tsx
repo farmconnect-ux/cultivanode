@@ -17,7 +17,7 @@ export function AuthLinks({ lang, t, variant }: { lang: Locale; t: { signIn: str
       <LinkButton href={`/${lang}/account`}>{t.myAccount}</LinkButton>
     ) : (
       <>
-        <Link href={`/${lang}/sign-in`} className="rounded-md px-3 py-2 font-semibold text-leaf-700 hover:bg-leaf-50">
+        <Link href={`/${lang}/sign-in`} className="rounded-md px-3 py-2 font-semibold text-primary-container hover:bg-surface-container-low">
           {t.signIn}
         </Link>
         <LinkButton href={`/${lang}/sign-up`}>{t.signUp}</LinkButton>
@@ -25,20 +25,20 @@ export function AuthLinks({ lang, t, variant }: { lang: Locale; t: { signIn: str
     );
   }
   return signedIn ? (
-    <li className="mt-2 border-t border-line pt-2">
-      <Link href={`/${lang}/account`} className="block rounded-md bg-leaf-600 px-3 py-3 text-center font-semibold text-white">
+    <li className="mt-2 border-t border-border pt-2">
+      <Link href={`/${lang}/account`} className="block rounded-md bg-primary-container px-3 py-3 text-center font-semibold text-white">
         {t.myAccount}
       </Link>
     </li>
   ) : (
     <>
-      <li className="mt-2 border-t border-line pt-2">
-        <Link href={`/${lang}/sign-in`} className="block rounded-md px-3 py-3 font-semibold text-leaf-700 hover:bg-leaf-50">
+      <li className="mt-2 border-t border-border pt-2">
+        <Link href={`/${lang}/sign-in`} className="block rounded-md px-3 py-3 font-semibold text-primary-container hover:bg-surface-container-low">
           {t.signIn}
         </Link>
       </li>
       <li>
-        <Link href={`/${lang}/sign-up`} className="block rounded-md bg-leaf-600 px-3 py-3 text-center font-semibold text-white">
+        <Link href={`/${lang}/sign-up`} className="block rounded-md bg-primary-container px-3 py-3 text-center font-semibold text-white">
           {t.signUp}
         </Link>
       </li>

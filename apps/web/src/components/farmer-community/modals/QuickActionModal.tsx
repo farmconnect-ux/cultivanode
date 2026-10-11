@@ -325,28 +325,28 @@ export function QuickActionModal({
               <button
                 type="button"
                 onClick={() => setActiveType('farm')}
-                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'farm' ? 'bg-leaf-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'farm' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 Farm
               </button>
               <button
                 type="button"
                 onClick={() => setActiveType('irrigation')}
-                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'irrigation' ? 'bg-leaf-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'irrigation' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 Irrigation
               </button>
               <button
                 type="button"
                 onClick={() => setActiveType('report')}
-                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'report' ? 'bg-leaf-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'report' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 Report
               </button>
               <button
                 type="button"
                 onClick={() => setActiveType('alert')}
-                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'alert' ? 'bg-leaf-800 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                className={`px-2 py-1 text-[11px] rounded-md font-medium transition-colors ${activeType === 'alert' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 Alert
               </button>
@@ -360,7 +360,7 @@ export function QuickActionModal({
           <Button variant="outline" onClick={onClose} size="sm">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+          <Button onClick={handleSubmit} size="sm" className="bg-primary hover:bg-primary text-white">
             {getActionLabel()}
           </Button>
         </div>

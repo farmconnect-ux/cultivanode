@@ -21,7 +21,7 @@ export function Farms({ live, t }: { live: FarmerLive; t: Dictionary }) {
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
-          className="inline-flex min-h-11 items-center rounded-lg bg-leaf-800 px-4 text-sm font-semibold text-white"
+          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white"
         >
           {adding ? "Close" : "Add a farm"}
         </button>
@@ -50,8 +50,8 @@ export function Farms({ live, t }: { live: FarmerLive; t: Dictionary }) {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm font-semibold">
-                  <Link href={`/${lang}/account/farms/${farm.id}`} className="text-leaf-800 underline">Plots</Link>
-                  <Link href={`/${lang}/account/find?farm=${farm.id}`} className="text-leaf-800 underline">Hire nearby</Link>
+                  <Link href={`/${lang}/account/farms/${farm.id}`} className="text-primary underline">Plots</Link>
+                  <Link href={`/${lang}/account/find?farm=${farm.id}`} className="text-primary underline">Hire nearby</Link>
                 </div>
               </div>
             </li>

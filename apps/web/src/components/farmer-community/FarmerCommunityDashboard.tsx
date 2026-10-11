@@ -150,14 +150,14 @@ export function FarmerCommunityDashboard({
           <div className="flex items-center gap-3">
             {isMobile && <MobileMenuButton onClick={() => setMobileMenuOpen(true)} />}
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg bg-leaf-50 text-leaf-800">
-                <Leaf className="h-4 w-4 text-leaf-700" />
+              <div className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg bg-surface-container-low text-primary">
+                <Leaf className="h-4 w-4 text-primary-container" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium">
                   <span>{activeGroup}</span>
                   <span>/</span>
-                  <span className="text-leaf-800 font-semibold">{pageTitles[activeTab] || 'FarmOS'}</span>
+                  <span className="text-primary font-semibold">{pageTitles[activeTab] || 'FarmOS'}</span>
                 </div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-tight font-serif hidden sm:block">
                   {pageTitles[activeTab] || 'Farm Dashboard'}
@@ -170,7 +170,7 @@ export function FarmerCommunityDashboard({
             <Button
               size="sm"
               onClick={() => setQuickActionOpen(true)}
-              className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs font-semibold shadow-sm h-8 px-3"
+              className="bg-primary hover:bg-primary text-white text-xs font-semibold shadow-sm h-8 px-3"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Quick Action
@@ -183,7 +183,7 @@ export function FarmerCommunityDashboard({
             >
               <Bell className="h-4 w-4" />
               {live.bookings.some((b) => b.status === "requested" || b.status === "accepted" || b.status === "in_progress" || b.status === "awaiting_confirmation") && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-harvest-500" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-caution" />
               )}
             </button>
 

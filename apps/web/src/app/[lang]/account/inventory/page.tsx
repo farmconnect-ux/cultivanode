@@ -1,40 +1,18 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { FarmerDashboard } from "@/components/account/farmer-dashboard";
-import { hasLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
-import { requireAccount } from "@/lib/account/session";
-import { createClient } from "@/lib/supabase/server";
+import { LiveStrip } from "@/components/ds/live-strip";
+import { InventoryHub } from "@/components/screens/inventory-hub";
+import { hasLocale } from "@/i18n/config";
 
-interface Props {
-  params: Promise<{ lang: string }>;
-  searchParams: Promise<{ category?: string }>;
-}
+export const metadata: Metadata = { title: "Inventory & supplies" };
 
-export default async function InventoryPage({ params }: Props) {
+export default async function Page({ params }: PageProps<"/[lang]/account/inventory">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang as Locale);
-  const t = await getDictionary(lang as Locale);
-  const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga, area_ha")
-    .or(scope.join(","))
-    .order("created_at");
-
   return (
-    <FarmerDashboard
-      lang={lang as Locale}
-      account={account}
-      t={t}
-      farms={farms ?? []}
-      bookings={[]}
-      initialTab="marketplace"
-    />
+    <>
+      <LiveStrip tone="preview">Stock levels and movements show sample data until you add your first store and items.</LiveStrip>
+      <InventoryHub lang={lang} />
+    </>
   );
 }

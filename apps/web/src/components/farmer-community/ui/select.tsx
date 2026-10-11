@@ -72,7 +72,7 @@ export function SelectTrigger({
       type="button"
       onClick={() => context?.setOpen((prev) => !prev)}
       className={cn(
-        'flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-leaf-600 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-container disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
       {...props}
@@ -153,13 +153,13 @@ export function SelectItem({
     <div
       onClick={() => context?.onValueChange(value)}
       className={cn(
-        'relative flex cursor-pointer select-none items-center justify-between rounded-md px-3 py-2 text-sm text-gray-700 transition hover:bg-leaf-50 hover:text-leaf-900',
-        isSelected && 'bg-leaf-50 font-semibold text-leaf-800',
+        'relative flex cursor-pointer select-none items-center justify-between rounded-md px-3 py-2 text-sm text-gray-700 transition hover:bg-surface-container-low hover:text-primary',
+        isSelected && 'bg-surface-container-low font-semibold text-primary',
         className
       )}
     >
       <span>{children}</span>
-      {isSelected && <Check className="h-4 w-4 text-leaf-700" />}
+      {isSelected && <Check className="h-4 w-4 text-primary-container" />}
     </div>
   );
 }

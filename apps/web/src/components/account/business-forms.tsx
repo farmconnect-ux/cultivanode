@@ -35,7 +35,7 @@ export function AddStaffForm({ lang, orgId, t }: { lang: Locale; orgId: string; 
     <ActionForm action={addStaff} hidden={{ lang, organization_id: orgId }} messages={[b, t.acct]} success={b.added}>
       {(pending) => (
         <>
-          <p className="text-sm text-muted">{b.addStaffHint}</p>
+          <p className="text-sm text-on-surface-variant">{b.addStaffHint}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="staff-phone" label={b.staffPhone}>
               <Input id="staff-phone" name="phone" type="tel" inputMode="tel" required />

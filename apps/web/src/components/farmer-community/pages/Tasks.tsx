@@ -289,7 +289,7 @@ export function Tasks() {
       render: (value: string) => {
         const colors = {
           high: 'bg-red-100 text-red-800 border-red-200',
-          medium: 'bg-harvest-100 text-harvest-800 border-amber-200',
+          medium: 'bg-tertiary-fixed/60 text-[#92400e] border-amber-200',
           low: 'bg-gray-100 text-gray-800 border-gray-200'
         };
         return (
@@ -306,9 +306,9 @@ export function Tasks() {
       filterable: true,
       render: (value: string) => {
         const colors = {
-          completed: 'bg-leaf-100 text-leaf-800 border-leaf-200',
+          completed: 'bg-secondary-container/40 text-primary border-secondary/30',
           'in-progress': 'bg-blue-100 text-blue-800 border-blue-200',
-          pending: 'bg-harvest-100 text-harvest-800 border-harvest-200',
+          pending: 'bg-tertiary-fixed/60 text-[#92400e] border-caution/30',
           overdue: 'bg-red-100 text-red-800 border-red-200'
         };
         return (
@@ -325,7 +325,7 @@ export function Tasks() {
       filterable: true,
       render: (value: string) => (
         <div className="flex items-center space-x-1.5">
-          <User className="h-3 w-3 text-leaf-700" />
+          <User className="h-3 w-3 text-primary-container" />
           <span className="text-xs font-medium text-gray-800">{value}</span>
         </div>
       )
@@ -387,7 +387,7 @@ export function Tasks() {
       render: (value: string) => {
         const colors = {
           critical: 'bg-red-100 text-red-800 border-red-200',
-          warning: 'bg-harvest-100 text-harvest-800 border-amber-200',
+          warning: 'bg-tertiary-fixed/60 text-[#92400e] border-amber-200',
           info: 'bg-blue-100 text-blue-800 border-blue-200'
         };
         return (
@@ -437,8 +437,8 @@ export function Tasks() {
       key: 'acknowledged',
       label: 'Ack',
       render: (value: boolean) => value ? 
-        <CheckSquare className="h-4 w-4 text-leaf-700" /> : 
-        <Bell className="h-4 w-4 text-harvest-600" />
+        <CheckSquare className="h-4 w-4 text-primary-container" /> : 
+        <Bell className="h-4 w-4 text-[#b45309]" />
     }
   ];
 
@@ -472,12 +472,12 @@ export function Tasks() {
             className="text-xs"
             onClick={() => setIsAddTaskOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-1 text-leaf-700" />
+            <Plus className="h-4 w-4 mr-1 text-primary-container" />
             Add Task
           </Button>
           <Button 
             size="sm" 
-            className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm"
+            className="bg-primary hover:bg-primary text-white text-xs shadow-sm"
             onClick={() => setIsDispatchAlertOpen(true)}
           >
             <Bell className="h-4 w-4 mr-1" />
@@ -487,8 +487,8 @@ export function Tasks() {
       </div>
 
       {feedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {feedback}
           </AlertDescription>
@@ -504,7 +504,7 @@ export function Tasks() {
               <p className="text-2xl font-bold text-gray-900">{taskStats.total}</p>
               <p className="text-xs text-blue-600 font-medium">{taskStats.pending} pending</p>
             </div>
-            <CheckSquare className="h-8 w-8 text-leaf-700" />
+            <CheckSquare className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -512,10 +512,10 @@ export function Tasks() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">In Progress</p>
-              <p className="text-2xl font-bold text-harvest-600">{taskStats.inProgress}</p>
-              <p className="text-xs text-harvest-600 font-medium">Being executed</p>
+              <p className="text-2xl font-bold text-[#b45309]">{taskStats.inProgress}</p>
+              <p className="text-xs text-[#b45309] font-medium">Being executed</p>
             </div>
-            <Clock className="h-8 w-8 text-harvest-600" />
+            <Clock className="h-8 w-8 text-[#b45309]" />
           </div>
         </Card>
 
@@ -534,10 +534,10 @@ export function Tasks() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Active Alerts</p>
-              <p className="text-2xl font-bold text-harvest-600">{alertStats.total}</p>
-              <p className="text-xs text-harvest-600 font-medium">{alertStats.unacknowledged} unacknowledged</p>
+              <p className="text-2xl font-bold text-[#b45309]">{alertStats.total}</p>
+              <p className="text-xs text-[#b45309] font-medium">{alertStats.unacknowledged} unacknowledged</p>
             </div>
-            <Bell className="h-8 w-8 text-harvest-600" />
+            <Bell className="h-8 w-8 text-[#b45309]" />
           </div>
         </Card>
       </div>
@@ -613,8 +613,8 @@ export function Tasks() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Badge className={`text-xs ${
-                    task.status === 'completed' ? 'bg-leaf-100 text-leaf-800' :
-                    task.status === 'in-progress' ? 'bg-harvest-100 text-harvest-800' :
+                    task.status === 'completed' ? 'bg-secondary-container/40 text-primary' :
+                    task.status === 'in-progress' ? 'bg-tertiary-fixed/60 text-[#92400e]' :
                     'bg-blue-100 text-blue-800'
                   }`}>
                     {task.status}
@@ -626,7 +626,7 @@ export function Tasks() {
                     onClick={() => handleToggleTaskStatus(task)}
                     title="Toggle Task Completion"
                   >
-                    <Check className="h-3 w-3 text-leaf-700" />
+                    <Check className="h-3 w-3 text-primary-container" />
                   </Button>
                 </div>
               </div>
@@ -759,7 +759,7 @@ export function Tasks() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsAddTaskOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Assign Task
               </Button>
             </DialogFooter>
@@ -829,7 +829,7 @@ export function Tasks() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsDispatchAlertOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Dispatch Alert
               </Button>
             </DialogFooter>

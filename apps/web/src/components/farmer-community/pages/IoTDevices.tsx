@@ -182,8 +182,8 @@ export function IoTDevices() {
       render: (value: string) => {
         const icons = {
           'Soil Moisture': <Droplets className="h-3.5 w-3.5 text-blue-500" />,
-          'Weather Monitor': <Activity className="h-3.5 w-3.5 text-leaf-600" />,
-          'Humidity': <Thermometer className="h-3.5 w-3.5 text-harvest-600" />,
+          'Weather Monitor': <Activity className="h-3.5 w-3.5 text-secondary" />,
+          'Humidity': <Thermometer className="h-3.5 w-3.5 text-[#b45309]" />,
           'Irrigation': <Droplets className="h-3.5 w-3.5 text-node-600" />,
           'Camera': <Cpu className="h-3.5 w-3.5 text-purple-500" />
         };
@@ -220,8 +220,8 @@ export function IoTDevices() {
       render: (value: number) => (
         <div className="flex items-center space-x-2">
           <Battery className={`h-3 w-3 ${
-            value > 50 ? 'text-leaf-600' : 
-            value > 20 ? 'text-harvest-500' : 'text-red-500'
+            value > 50 ? 'text-secondary' : 
+            value > 20 ? 'text-[#b45309]' : 'text-red-500'
           }`} />
           <span className="text-xs font-medium">{value}%</span>
         </div>
@@ -254,7 +254,7 @@ export function IoTDevices() {
       filterable: true,
       render: (value: string) => (
         <div className="flex items-center space-x-1">
-          <Wifi className="h-3 w-3 text-leaf-600" />
+          <Wifi className="h-3 w-3 text-secondary" />
           <span className="text-xs font-medium text-gray-700">{value}</span>
         </div>
       )
@@ -276,12 +276,12 @@ export function IoTDevices() {
             className="text-xs"
             onClick={() => setIsAddModalOpen(true)}
           >
-            <Cpu className="h-4 w-4 mr-1 text-leaf-700" />
+            <Cpu className="h-4 w-4 mr-1 text-primary-container" />
             Add Device
           </Button>
           <Button 
             size="sm" 
-            className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs disabled:opacity-50"
+            className="bg-primary hover:bg-primary text-white text-xs disabled:opacity-50"
             onClick={handleSyncAll}
             disabled={isSyncing}
           >
@@ -293,8 +293,8 @@ export function IoTDevices() {
 
       {/* Sync feedback */}
       {syncFeedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {syncFeedback}
           </AlertDescription>
@@ -309,7 +309,7 @@ export function IoTDevices() {
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Total Devices</p>
               <p className="text-2xl font-bold text-gray-900">{deviceStats.total}</p>
             </div>
-            <Cpu className="h-8 w-8 text-leaf-700" />
+            <Cpu className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -317,12 +317,12 @@ export function IoTDevices() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Online</p>
-              <p className="text-2xl font-bold text-leaf-700">{deviceStats.online}</p>
-              <p className="text-xs text-leaf-700 font-medium">
+              <p className="text-2xl font-bold text-primary-container">{deviceStats.online}</p>
+              <p className="text-xs text-primary-container font-medium">
                 {deviceStats.total > 0 ? Math.round((deviceStats.online / deviceStats.total) * 100) : 0}% active
               </p>
             </div>
-            <CheckCircle className="h-8 w-8 text-leaf-700" />
+            <CheckCircle className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -330,10 +330,10 @@ export function IoTDevices() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Warning</p>
-              <p className="text-2xl font-bold text-harvest-600">{deviceStats.warning}</p>
-              <p className="text-xs text-harvest-600 font-medium">Low battery</p>
+              <p className="text-2xl font-bold text-[#b45309]">{deviceStats.warning}</p>
+              <p className="text-xs text-[#b45309] font-medium">Low battery</p>
             </div>
-            <AlertTriangle className="h-8 w-8 text-harvest-600" />
+            <AlertTriangle className="h-8 w-8 text-[#b45309]" />
           </div>
         </Card>
 
@@ -372,7 +372,7 @@ export function IoTDevices() {
         </Alert>
 
         <Alert className="border-amber-200 bg-amber-50/70">
-          <Battery className="h-4 w-4 text-harvest-600" />
+          <Battery className="h-4 w-4 text-[#b45309]" />
           <AlertDescription className="text-xs text-amber-800">
             <strong>Device SEN003</strong> has low battery (23%). Schedule battery swap.
           </AlertDescription>
@@ -409,8 +409,8 @@ export function IoTDevices() {
             <div className="space-y-2">
               {[
                 { type: 'Soil Moisture Sensors', count: devices.filter(d => d.type === 'Soil Moisture').length, color: 'bg-blue-100 text-blue-800' },
-                { type: 'Weather Station Nodes', count: devices.filter(d => d.type === 'Weather Monitor').length, color: 'bg-leaf-100 text-leaf-800' },
-                { type: 'Humidity & Dewpoint', count: devices.filter(d => d.type === 'Humidity').length, color: 'bg-harvest-100 text-harvest-800' },
+                { type: 'Weather Station Nodes', count: devices.filter(d => d.type === 'Weather Monitor').length, color: 'bg-secondary-container/40 text-primary' },
+                { type: 'Humidity & Dewpoint', count: devices.filter(d => d.type === 'Humidity').length, color: 'bg-tertiary-fixed/60 text-[#92400e]' },
                 { type: 'Irrigation Controllers', count: devices.filter(d => d.type === 'Irrigation').length, color: 'bg-node-100 text-node-800' },
                 { type: 'Field Cameras', count: devices.filter(d => d.type === 'Camera').length, color: 'bg-purple-100 text-purple-800' }
               ].map((item, index) => (
@@ -453,7 +453,7 @@ export function IoTDevices() {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
                 <span className="text-gray-700">SEN003 - Battery Replacement</span>
-                <Badge className="bg-harvest-100 text-harvest-800">Due</Badge>
+                <Badge className="bg-tertiary-fixed/60 text-[#92400e]">Due</Badge>
               </div>
               <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
                 <span className="text-gray-700">IRR001 - Solenoid Valve Inspection</span>
@@ -461,7 +461,7 @@ export function IoTDevices() {
               </div>
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-gray-700">CAM001 - Solar Panel Cleaning</span>
-                <Badge className="bg-leaf-100 text-leaf-800">Scheduled</Badge>
+                <Badge className="bg-secondary-container/40 text-primary">Scheduled</Badge>
               </div>
             </div>
           </Card>
@@ -561,7 +561,7 @@ export function IoTDevices() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsAddModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Pair & Save Node
               </Button>
             </DialogFooter>
@@ -575,7 +575,7 @@ export function IoTDevices() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <div className="flex items-center space-x-2">
-                <Badge className={selectedDevice.status === 'online' ? 'bg-leaf-100 text-leaf-800' : 'bg-red-100 text-red-800'}>
+                <Badge className={selectedDevice.status === 'online' ? 'bg-secondary-container/40 text-primary' : 'bg-red-100 text-red-800'}>
                   {selectedDevice.status.toUpperCase()}
                 </Badge>
                 <DialogTitle>{selectedDevice.name}</DialogTitle>
@@ -594,14 +594,14 @@ export function IoTDevices() {
                 <div>
                   <span className="text-gray-500">Battery Level</span>
                   <div className="flex items-center space-x-1.5 mt-0.5">
-                    <Battery className="h-4 w-4 text-leaf-700" />
+                    <Battery className="h-4 w-4 text-primary-container" />
                     <span className="font-bold text-gray-900">{selectedDevice.battery}%</span>
                   </div>
                 </div>
                 <div>
                   <span className="text-gray-500">Connectivity</span>
                   <div className="flex items-center space-x-1 mt-0.5 font-medium text-gray-800">
-                    <Wifi className="h-3.5 w-3.5 text-leaf-600" />
+                    <Wifi className="h-3.5 w-3.5 text-secondary" />
                     <span>{selectedDevice.connectivity}</span>
                   </div>
                 </div>
@@ -614,7 +614,7 @@ export function IoTDevices() {
               <div>
                 <span className="text-gray-500 block mb-1">Installed Location</span>
                 <div className="flex items-center space-x-1.5 text-gray-800 font-medium">
-                  <MapPin className="h-4 w-4 text-leaf-700" />
+                  <MapPin className="h-4 w-4 text-primary-container" />
                   <span>{selectedDevice.location}</span>
                 </div>
               </div>
@@ -631,7 +631,7 @@ export function IoTDevices() {
                 </Button>
                 <Button 
                   size="sm" 
-                  className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                  className="bg-primary hover:bg-primary text-white text-xs"
                   onClick={() => setSelectedDevice(null)}
                 >
                   Close

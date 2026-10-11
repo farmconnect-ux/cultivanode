@@ -69,7 +69,7 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
   const withAlerts = forecasts.filter((f) => f.alerts.length > 0).length;
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-on-surface-variant">
         {withAlerts > 0 ? `${withAlerts} of ${forecasts.length} pilot states have a farm alert in the forecast.` : "No farm alerts in the pilot states in the forecast."}{" "}
         Alerts: rain ≥ {WEATHER_THRESHOLDS.heavyRainMm} mm in a day, under {WEATHER_THRESHOLDS.dryWeekMm} mm in 7 days, ≥{" "}
         {WEATHER_THRESHOLDS.heatC}°C, wind ≥ {WEATHER_THRESHOLDS.strongWindKmh} km/h.
@@ -78,18 +78,18 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
         {forecasts.map((f) => {
           const nowKind: WeatherKind = f.now?.kind ?? "unknown";
           return (
-            <li key={f.place.state} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4">
+            <li key={f.place.state} className="flex flex-col gap-3 rounded-lg border border-border bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-bold">{f.place.state}</p>
-                  <p className="text-sm text-muted">{f.place.town}</p>
+                  <p className="text-sm text-on-surface-variant">{f.place.town}</p>
                 </div>
                 {f.now && (
                   <div className="flex items-center gap-2 text-right">
-                    <WeatherIcon kind={nowKind} className="size-8 text-leaf-700" />
+                    <WeatherIcon kind={nowKind} className="size-8 text-primary-container" />
                     <div>
                       <p className="text-2xl font-extrabold tabular-nums">{Math.round(f.now.tempC)}°C</p>
-                      <p className="text-xs text-muted">
+                      <p className="text-xs text-on-surface-variant">
                         {KIND_LABEL[nowKind]} · {Math.round(f.now.humidity)}% humid
                       </p>
                     </div>
@@ -101,7 +101,7 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
                 <thead>
                   <tr>
                     {f.days.map((d) => (
-                      <th key={d.date} scope="col" className="font-semibold text-muted">{weekday(d.date)}</th>
+                      <th key={d.date} scope="col" className="font-semibold text-on-surface-variant">{weekday(d.date)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -109,7 +109,7 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
                   <tr>
                     {f.days.map((d) => (
                       <td key={d.date} className="py-1">
-                        <span className="flex justify-center text-leaf-700" title={KIND_LABEL[d.kind]}>
+                        <span className="flex justify-center text-primary-container" title={KIND_LABEL[d.kind]}>
                           <WeatherIcon kind={d.kind} className="size-5" />
                         </span>
                         <span className="sr-only">{KIND_LABEL[d.kind]}</span>
@@ -120,13 +120,13 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
                     {f.days.map((d) => (
                       <td key={d.date} className="tabular-nums leading-tight">
                         <span className="block font-semibold">{Math.round(d.maxC)}°</span>
-                        <span className="block text-muted">{Math.round(d.minC)}°</span>
+                        <span className="block text-on-surface-variant">{Math.round(d.minC)}°</span>
                       </td>
                     ))}
                   </tr>
                   <tr>
                     {f.days.map((d) => (
-                      <td key={d.date} className={`tabular-nums ${d.rainMm >= WEATHER_THRESHOLDS.heavyRainMm ? "font-bold text-info" : "text-muted"}`}>
+                      <td key={d.date} className={`tabular-nums ${d.rainMm >= WEATHER_THRESHOLDS.heavyRainMm ? "font-bold text-info" : "text-on-surface-variant"}`}>
                         {d.rainMm >= 0.5 ? `${Math.round(d.rainMm)}mm` : "–"}
                       </td>
                     ))}
@@ -136,7 +136,7 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
               {f.alerts.length > 0 && (
                 <ul className="flex flex-col gap-1">
                   {f.alerts.map((a) => (
-                    <li key={a.kind} className="flex items-start gap-2 rounded-md bg-harvest-50 px-2 py-1.5 text-sm text-harvest-700">
+                    <li key={a.kind} className="flex items-start gap-2 rounded-md bg-caution-soft px-2 py-1.5 text-sm text-[#b45309]">
                       <svg viewBox="0 0 24 24" className="mt-0.5 size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M12 3 2 20h20L12 3ZM12 10v4M12 17h.01" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -149,10 +149,10 @@ export function WeatherPanel({ forecasts, fetchedAt, provider, stale }: PanelPro
           );
         })}
       </ul>
-      <p className="text-xs text-muted">
+      <p className="text-xs text-on-surface-variant">
         {PROVIDER_CREDIT[provider] ?? <>Weather data from {provider}.</>} Updated{" "}
         {new Date(fetchedAt).toLocaleString("en-GB", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} (Lagos time).
-        {stale && <strong className="ml-1 text-harvest-700">The weather service did not answer, so this is the last forecast we received.</strong>}
+        {stale && <strong className="ml-1 text-[#b45309]">The weather service did not answer, so this is the last forecast we received.</strong>}
       </p>
     </div>
   );

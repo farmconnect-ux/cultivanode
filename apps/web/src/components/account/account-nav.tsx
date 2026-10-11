@@ -288,8 +288,8 @@ export function AccountNav({
             className={cx(
               "rounded-xl border transition-all duration-150 overflow-hidden",
               groupHasActive
-                ? "border-leaf-200 bg-leaf-50/20"
-                : "border-line/70 bg-white hover:border-line"
+                ? "border-secondary/30 bg-surface-container-low/20"
+                : "border-border/70 bg-white hover:border-border"
             )}
           >
             {/* Parent Menu Header / Toggle */}
@@ -300,8 +300,8 @@ export function AccountNav({
               className={cx(
                 "w-full flex items-center justify-between px-3 py-2.5 text-left font-bold text-xs uppercase tracking-wider transition-colors",
                 groupHasActive
-                  ? "text-leaf-900 bg-leaf-50/60"
-                  : "text-neutral-700 hover:text-ink hover:bg-neutral-50/80"
+                  ? "text-primary bg-surface-container-low/60"
+                  : "text-neutral-700 hover:text-on-surface hover:bg-neutral-50/80"
               )}
             >
               <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ export function AccountNav({
               </div>
               <div className="flex items-center gap-1.5">
                 {group.badge && (
-                  <Badge className="bg-leaf-100 text-leaf-800 text-[10px] px-1.5 py-0.5">
+                  <Badge className="bg-secondary-container/40 text-primary text-[10px] px-1.5 py-0.5">
                     {group.badge}
                   </Badge>
                 )}
@@ -328,7 +328,7 @@ export function AccountNav({
 
             {/* Sub-Parent / Sub-Menu Items */}
             {isOpen && (
-              <ul className="py-1.5 px-2 space-y-0.5 border-t border-line/40 bg-surface/30">
+              <ul className="py-1.5 px-2 space-y-0.5 border-t border-border/40 bg-surface/30">
                 {group.items.map((item) => {
                   const isActive = isSubItemActive(item.href);
 
@@ -340,8 +340,8 @@ export function AccountNav({
                         className={cx(
                           "group flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold transition-all",
                           isActive
-                            ? "bg-leaf-700 text-white shadow-xs font-bold"
-                            : "text-neutral-700 hover:bg-leaf-50 hover:text-leaf-900"
+                            ? "bg-primary-container text-white shadow-xs font-bold"
+                            : "text-neutral-700 hover:bg-surface-container-low hover:text-primary"
                         )}
                       >
                         <div className="flex items-center gap-2 truncate">
@@ -361,10 +361,10 @@ export function AccountNav({
                             className={cx(
                               "flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold min-w-4",
                               isActive
-                                ? "bg-white text-leaf-800"
+                                ? "bg-white text-primary"
                                 : item.badgeTone === "danger"
-                                  ? "bg-danger text-white"
-                                  : "bg-leaf-100 text-leaf-800"
+                                  ? "bg-critical text-white"
+                                  : "bg-secondary-container/40 text-primary"
                             )}
                           >
                             {item.badge}
@@ -381,12 +381,12 @@ export function AccountNav({
       })}
 
       {/* Sign Out Action */}
-      <div className="mt-2 border-t border-line pt-2 px-1">
+      <div className="mt-2 border-t border-border pt-2 px-1">
         <form action={signOut}>
           <input type="hidden" name="lang" value={lang} />
           <button
             type="submit"
-            className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-neutral-600 hover:bg-red-50 hover:text-danger transition-colors flex items-center gap-2"
+            className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-neutral-600 hover:bg-red-50 hover:text-critical transition-colors flex items-center gap-2"
           >
             <span>🚪</span>
             <span>{signOutLabel}</span>
@@ -406,15 +406,15 @@ export function AccountNav({
         />
 
         {/* Mobile Disclosure Dropdown */}
-        <details className="group rounded-xl border border-line bg-white lg:hidden shadow-xs">
+        <details className="group rounded-xl border border-border bg-white lg:hidden shadow-xs">
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 font-semibold text-xs [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
-              <span className="text-muted uppercase font-bold text-[10px]">Menu:</span>
-              <span className="text-leaf-900 font-bold">{activeSubItem?.label ?? menuLabel}</span>
+              <span className="text-on-surface-variant uppercase font-bold text-[10px]">Menu:</span>
+              <span className="text-primary font-bold">{activeSubItem?.label ?? menuLabel}</span>
             </span>
-            <span aria-hidden="true" className="transition-transform group-open:rotate-180 text-muted">▾</span>
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180 text-on-surface-variant">▾</span>
           </summary>
-          <div className="border-t border-line p-3">{renderNavList()}</div>
+          <div className="border-t border-border p-3">{renderNavList()}</div>
         </details>
 
         {/* Desktop Hierarchical Sidebar */}
@@ -424,13 +424,13 @@ export function AccountNav({
       {/* Contextual Mobile Bottom Nav Bar */}
       <aside
         aria-label="Mobile Navigation"
-        className="fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-center justify-around border-t border-line bg-white px-2 py-1 shadow-lg lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-center justify-around border-t border-border bg-white px-2 py-1 shadow-lg lg:hidden"
       >
         <Link
           href={`${base}?${wsParam}`}
           className={cx(
             "flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg text-xs font-semibold",
-            pathname === base ? "text-leaf-800 font-bold" : "text-muted",
+            pathname === base ? "text-primary font-bold" : "text-on-surface-variant",
           )}
         >
           <span className="text-lg" aria-hidden="true">🏠</span>
@@ -442,8 +442,8 @@ export function AccountNav({
           className={cx(
             "flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg text-xs font-semibold",
             pathname?.includes("/bookings") && !pathname?.includes("/new")
-              ? "text-leaf-800 font-bold"
-              : "text-muted",
+              ? "text-primary font-bold"
+              : "text-on-surface-variant",
           )}
         >
           <span className="text-lg" aria-hidden="true">📋</span>
@@ -454,7 +454,7 @@ export function AccountNav({
         <Link
           href={contextualCta.href}
           aria-label={contextualCta.label}
-          className="flex min-h-12 min-w-12 -translate-y-2 flex-col items-center justify-center rounded-full bg-leaf-700 text-white shadow-md active:bg-leaf-800"
+          className="flex min-h-12 min-w-12 -translate-y-2 flex-col items-center justify-center rounded-full bg-primary-container text-white shadow-md active:bg-primary"
         >
           <span className="text-xl font-bold" aria-hidden="true">{contextualCta.icon}</span>
         </Link>
@@ -463,12 +463,12 @@ export function AccountNav({
           href={`${base}/inbox?${wsParam}`}
           className={cx(
             "relative flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg text-xs font-semibold",
-            pathname?.includes("/inbox") ? "text-leaf-800 font-bold" : "text-muted",
+            pathname?.includes("/inbox") ? "text-primary font-bold" : "text-on-surface-variant",
           )}
         >
           <span className="text-lg" aria-hidden="true">🔔</span>
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-2 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white">
+            <span className="absolute top-1 right-2 flex size-4 items-center justify-center rounded-full bg-critical text-[10px] font-bold text-white">
               {unreadCount}
             </span>
           )}
@@ -479,7 +479,7 @@ export function AccountNav({
           href={`${base}/profile?${wsParam}`}
           className={cx(
             "flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg text-xs font-semibold",
-            pathname?.includes("/profile") ? "text-leaf-800 font-bold" : "text-muted",
+            pathname?.includes("/profile") ? "text-primary font-bold" : "text-on-surface-variant",
           )}
         >
           <span className="text-lg" aria-hidden="true">👤</span>

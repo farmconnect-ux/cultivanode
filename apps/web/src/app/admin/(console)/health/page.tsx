@@ -1,41 +1,41 @@
 import type { Metadata } from "next";
-import { Badge, Button, Card } from "@/components/ui";
+import { Icon } from "@/components/ds/icon";
+import { MetricCard } from "@/components/live/metric-card";
+import { SystemHealth } from "@/components/screens/system-health";
+import { Badge } from "@/components/shadcn/badge";
 import { requireStaff } from "@/lib/admin/staff";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "System Health & Telemetry | CultivaNode Admin" };
+export const metadata: Metadata = { title: "Super admin & system health" };
 
 type HealthService = {
   name: string;
   category: "core" | "external" | "infrastructure";
   status: "healthy" | "operational" | "degraded" | "failing";
-  latencyMs: number;
-  uptimePct: string;
+  latencyMs: number | null;
   details: string;
 };
+
+const STATUS_TONE = { healthy: "positive", operational: "positive", degraded: "caution", failing: "critical" } as const;
 
 export default async function AdminHealthPage() {
   const staff = await requireStaff();
   if (!staff) return null;
-
   const supabase = await createClient();
 
-  // Test live database response time
+  // Live probes: database and auth round-trips from this server.
   const t0 = performance.now();
-  const { data: dbCheck, error: dbError } = await supabase.from("roles").select("role").limit(1);
+  const { error: dbError } = await supabase.from("roles").select("role").limit(1);
   const dbLatency = Math.round(performance.now() - t0);
-
-  // Test auth response time
   const tAuth0 = performance.now();
   const { error: authError } = await supabase.auth.getUser();
   const authLatency = Math.round(performance.now() - tAuth0);
 
-  // Fetch real integrations configuration
   const { data: integrationsData } = await supabase.rpc("admin_integration_overview");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const integrations = (integrationsData ?? {}) as Record<string, any>;
 
-  // Past 24 hours live database queries
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [
     { count: auditCount24h },
     { count: bookingEventsCount24h },
@@ -48,13 +48,13 @@ export default async function AdminHealthPage() {
     { count: totalPlots },
     { count: totalSoilRecords },
   ] = await Promise.all([
-    supabase.from("audit_log").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
-    supabase.from("booking_events").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
-    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
-    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).eq("status", "failed").gte("created_at", twentyFourHoursAgo),
-    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).gt("attempts", 1).gte("created_at", twentyFourHoursAgo),
-    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "disputed").gte("created_at", twentyFourHoursAgo),
-    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "cancelled").gte("created_at", twentyFourHoursAgo),
+    supabase.from("audit_log").select("id", { count: "exact", head: true }).gte("created_at", since),
+    supabase.from("booking_events").select("id", { count: "exact", head: true }).gte("created_at", since),
+    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).gte("created_at", since),
+    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).eq("status", "failed").gte("created_at", since),
+    supabase.from("sms_outbox").select("id", { count: "exact", head: true }).gt("attempts", 1).gte("created_at", since),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "disputed").gte("created_at", since),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "cancelled").gte("created_at", since),
     supabase.from("farms").select("id", { count: "exact", head: true }),
     supabase.from("plots").select("id", { count: "exact", head: true }),
     supabase.from("soil_records").select("id", { count: "exact", head: true }),
@@ -63,144 +63,68 @@ export default async function AdminHealthPage() {
   const totalEvents24h = (auditCount24h ?? 0) + (bookingEventsCount24h ?? 0) + (smsTotal24h ?? 0);
   const criticalErrors24h = (smsFailed24h ?? 0) + (disputes24h ?? 0);
   const warnings24h = (smsRetrying24h ?? 0) + (cancelled24h ?? 0);
-  const failedRetries24h = smsFailed24h ?? 0;
+  const smsDelivery = smsTotal24h ? Math.round((1 - (smsFailed24h ?? 0) / smsTotal24h) * 1000) / 10 : null;
 
   const services: HealthService[] = [
-    {
-      name: "PostgreSQL 17 & PostGIS Engine",
-      category: "core",
-      status: dbError ? "degraded" : "healthy",
-      latencyMs: dbLatency || 12,
-      uptimePct: "99.99%",
-      details: "Spatial indexes & RLS enforcement active across all tables",
-    },
-    {
-      name: "Supabase Auth & GoTrue Session Layer",
-      category: "core",
-      status: authError ? "degraded" : "healthy",
-      latencyMs: authLatency || 20,
-      uptimePct: "99.98%",
-      details: "Phone OTP auth & stateless JWT tokens verified",
-    },
-    {
-      name: "SMS Dispatch Gateway",
-      category: "external",
-      status: integrations?.sms?.active_provider ? "operational" : "degraded",
-      latencyMs: 142,
-      uptimePct: "99.85%",
-      details: `Active Provider: ${integrations?.sms?.active_provider ?? "termii"} • Sender ID: CultivaNode`,
-    },
-    {
-      name: "Identity Verification Gateway",
-      category: "external",
-      status: integrations?.identity?.active_provider ? "operational" : "degraded",
-      latencyMs: 310,
-      uptimePct: "99.70%",
-      details: `Active Provider: ${integrations?.identity?.active_provider ?? "prembly"} • NIN/BVN/CAC`,
-    },
-    {
-      name: "Agrometeorological Weather Service",
-      category: "external",
-      status: integrations?.weather?.active_provider ? "operational" : "degraded",
-      latencyMs: 185,
-      uptimePct: "99.92%",
-      details: `Active Provider: ${integrations?.weather?.active_provider ?? "openweather"} • 30-min cache`,
-    },
-    {
-      name: "Farm Operations & Spatial PostGIS Store",
-      category: "infrastructure",
-      status: "healthy",
-      latencyMs: dbLatency || 12,
-      uptimePct: "100.0%",
-      details: `${totalFarms ?? 0} farms, ${totalPlots ?? 0} plots, ${totalSoilRecords ?? 0} soil lab records`,
-    },
+    { name: "PostgreSQL & PostGIS", category: "core", status: dbError ? "degraded" : "healthy", latencyMs: dbLatency, details: "Spatial indexes and row-level security on every table" },
+    { name: "Supabase Auth (phone & email OTP)", category: "core", status: authError ? "degraded" : "healthy", latencyMs: authLatency, details: "Session layer and JWT verification" },
+    { name: "SMS dispatch gateway", category: "external", status: integrations?.sms?.active_provider ? "operational" : "degraded", latencyMs: null, details: `Provider: ${integrations?.sms?.active_provider ?? "not configured"}` },
+    { name: "Identity verification", category: "external", status: integrations?.identity?.active_provider ? "operational" : "degraded", latencyMs: null, details: `Provider: ${integrations?.identity?.active_provider ?? "not configured"} · NIN / BVN / CAC` },
+    { name: "Agro-meteorological weather", category: "external", status: integrations?.weather?.active_provider ? "operational" : "degraded", latencyMs: null, details: `Provider: ${integrations?.weather?.active_provider ?? "not configured"} · 30-min cache` },
+    { name: "Farm operations store", category: "infrastructure", status: "healthy", latencyMs: dbLatency, details: `${totalFarms ?? 0} farms · ${totalPlots ?? 0} plots · ${totalSoilRecords ?? 0} soil lab records` },
   ];
+  const degraded = services.filter((s) => s.status === "degraded" || s.status === "failing").length;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-leaf-900">System Health &amp; Infrastructure Telemetry</h1>
-          <p className="mt-1 text-muted">Real-time status of database nodes, identity providers, SMS gateways, and error logs.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-leaf-100 text-leaf-800">● All Systems Operational</Badge>
-          <Button variant="secondary" size="sm">Run Live Probes</Button>
-        </div>
-      </div>
-
-      {/* Services Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {services.map((svc) => (
-          <Card key={svc.name} className="flex flex-col justify-between gap-3 border border-line">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted">{svc.category}</span>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-leaf-800">
-                  <span className="h-2 w-2 rounded-full bg-leaf-500 animate-pulse" />
-                  {svc.status.toUpperCase()}
-                </span>
-              </div>
-              <h2 className="text-base font-bold text-ink">{svc.name}</h2>
-              <p className="text-xs text-muted">{svc.details}</p>
+    <SystemHealth
+      lang="en"
+      slots={{
+        kpis: (
+          <section className="flex flex-col gap-space-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-headline-sm text-headline-sm text-on-surface">
+                <Icon name="monitoring" className="text-secondary" /> Platform telemetry · last 24 hours
+              </h2>
+              <Badge tone={degraded ? "caution" : "positive"} dot pulse>
+                {degraded ? `${degraded} service${degraded > 1 ? "s" : ""} degraded` : "All systems operational"}
+              </Badge>
             </div>
-            <div className="flex items-center justify-between border-t border-line pt-2 text-xs">
-              <span className="text-muted">Latency: <strong className="text-ink">{svc.latencyMs}ms</strong></span>
-              <span className="text-muted">30d Uptime: <strong className="text-leaf-800">{svc.uptimePct}</strong></span>
+            <div className="grid grid-cols-1 gap-space-md sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard label="Total events" value={totalEvents24h.toLocaleString("en-NG")} icon="stream" foot="Audit log, booking events and SMS" />
+              <MetricCard label="Critical errors" value={criticalErrors24h} icon="error" iconTone="bg-error-container/60 text-error" foot="Failed SMS and new disputes" />
+              <MetricCard label="Warnings" value={warnings24h} icon="warning" iconTone="bg-tertiary-fixed/50 text-tertiary-container" foot="SMS retries and cancellations" />
+              <MetricCard label="SMS delivery" value={smsDelivery === null ? "—" : `${smsDelivery}%`} icon="sms" iconTone="bg-surface-container-high text-primary" foot={`${smsTotal24h ?? 0} messages queued`} />
             </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Errors & Incident Telemetry */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-leaf-900">Telemetry Log (Past 24 Hours)</h2>
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div className="rounded bg-line/30 p-3">
-              <p className="text-xs text-muted font-medium">Total Events</p>
-              <p className="mt-1 text-2xl font-black text-ink">{totalEvents24h.toLocaleString("en-NG")}</p>
+          </section>
+        ),
+        services: (
+          <section className="flex flex-col gap-space-sm">
+            <h2 className="flex items-center gap-2 font-headline-sm text-headline-sm text-on-surface">
+              <Icon name="hub" className="text-secondary" /> Service & integration health
+            </h2>
+            <div className="grid grid-cols-1 gap-space-md md:grid-cols-2 xl:grid-cols-3">
+              {services.map((s) => (
+                <div key={s.name} className="card-interactive flex flex-col justify-between gap-3 rounded-xl bg-surface-container-lowest p-space-md shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-label-sm text-label-sm uppercase text-on-surface-variant">{s.category}</span>
+                    <Badge tone={STATUS_TONE[s.status]} dot pulse={s.status !== "degraded"}>{s.status}</Badge>
+                  </div>
+                  <div>
+                    <p className="font-headline-sm text-[1rem] text-on-surface">{s.name}</p>
+                    <p className="text-body-sm text-on-surface-variant">{s.details}</p>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-surface-container pt-2 text-label-sm text-on-surface-variant">
+                    <span>Latency</span>
+                    <span className="font-semibold tnum text-on-surface">{s.latencyMs === null ? "via edge function" : `${s.latencyMs} ms`}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="rounded bg-red-50 p-3 border border-red-200">
-              <p className="text-xs text-danger font-medium">Critical Errors</p>
-              <p className="mt-1 text-2xl font-black text-danger">{criticalErrors24h}</p>
-            </div>
-            <div className="rounded bg-harvest-50 p-3 border border-harvest-200">
-              <p className="text-xs text-harvest-800 font-medium">Warnings</p>
-              <p className="mt-1 text-2xl font-black text-harvest-800">{warnings24h}</p>
-            </div>
-            <div className="rounded bg-earth-50 p-3">
-              <p className="text-xs text-muted font-medium">Failed Retries</p>
-              <p className="mt-1 text-2xl font-black text-ink">{failedRetries24h}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted">
-            Live counts derived from database audit_log, sms_outbox, and booking_events tables over the last 24-hour Lagos window.
-          </p>
-        </Card>
-
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-leaf-900">Security Invariants Check</h2>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between rounded bg-surface p-2.5 border border-line">
-              <span className="font-semibold text-ink">Postgres Row Level Security (RLS)</span>
-              <Badge className="bg-leaf-100 text-leaf-800">100% Enforced</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded bg-surface p-2.5 border border-line">
-              <span className="font-semibold text-ink">Private Storage Bucket Signed URLs</span>
-              <Badge className="bg-leaf-100 text-leaf-800">Active (5 min TTL)</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded bg-surface p-2.5 border border-line">
-              <span className="font-semibold text-ink">PostGIS Spatial Validation (Arrival &lt; 100m)</span>
-              <Badge className="bg-leaf-100 text-leaf-800">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded bg-surface p-2.5 border border-line">
-              <span className="font-semibold text-ink">Supabase Vault Key Encryption</span>
-              <Badge className="bg-leaf-100 text-leaf-800">Vault AES-256</Badge>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
+          </section>
+        ),
+        queue: null,
+        ledger: null,
+      }}
+    />
   );
 }

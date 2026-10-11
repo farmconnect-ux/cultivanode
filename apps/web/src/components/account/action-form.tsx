@@ -40,7 +40,7 @@ export function ActionForm({ action, messages, success, hidden, className, child
       {hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       {children(pending, state)}
       {text && (
-        <p key={state.at} role={state.ok ? "status" : "alert"} className={cx("font-medium", state.ok ? "text-leaf-700" : "text-danger")}>
+        <p key={state.at} role={state.ok ? "status" : "alert"} className={cx("font-medium", state.ok ? "text-primary-container" : "text-critical")}>
           {text}
         </p>
       )}

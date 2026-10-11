@@ -17,7 +17,7 @@ export function LanguageToggle({ current, label }: { current: Locale; label: str
       onClick={() => {
         document.cookie = `${localeCookie}=${other}; path=/; max-age=31536000; samesite=lax`;
       }}
-      className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-leaf-200 px-4 text-sm font-bold text-leaf-700 hover:border-leaf-600"
+      className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-secondary/30 px-4 text-sm font-bold text-primary-container hover:border-primary-container"
     >
       <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="12" cy="12" r="9" />

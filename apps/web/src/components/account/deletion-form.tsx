@@ -15,7 +15,7 @@ export function DeletionForm({ lang, t }: { lang: Locale; t: Pick<Dictionary, "a
           <Field id="reason" label={p.deleteReason}>
             <TextArea id="reason" name="reason" maxLength={1000} />
           </Field>
-          <Button type="submit" variant="secondary" disabled={pending} className="self-start border-danger text-danger hover:bg-red-50">
+          <Button type="submit" variant="secondary" disabled={pending} className="self-start border-critical text-critical hover:bg-red-50">
             {p.deleteButton}
           </Button>
         </>

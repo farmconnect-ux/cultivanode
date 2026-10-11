@@ -41,11 +41,11 @@ export function RequestRoleForm({
             </Select>
           </Field>
 
-          <div className="rounded-lg border border-line bg-surface/50 p-3 text-xs">
-            <span className="font-semibold text-ink">
+          <div className="rounded-lg border border-border bg-surface/50 p-3 text-xs">
+            <span className="font-semibold text-on-surface">
               {isInstant ? "⚡ Instant Role Activation:" : "🛡️ Verification Review Required:"}
             </span>{" "}
-            <span className="text-muted">
+            <span className="text-on-surface-variant">
               {isInstant
                 ? "This role will be approved immediately upon submission so you can access tools without waiting."
                 : "This role requires review or supporting verification documents before it is activated."}
@@ -79,7 +79,7 @@ export function UploadDocumentForm({ lang, requestId, t }: { lang: Locale; reque
   const id = `doc-${requestId}`;
   return (
     <ActionForm action={uploadDocument} hidden={{ lang, request_id: requestId }} messages={[r, t.acct]} success={r.uploaded}
-                className="rounded-md bg-cream p-4">
+                className="rounded-md bg-surface-container-low p-4">
       {(pending) => (
         <>
           <p className="font-semibold">{r.upload}</p>

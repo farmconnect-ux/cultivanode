@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
+import { Icon } from "@/components/ds/icon";
+import { ContactPage as ContactScreen } from "@/components/screens/contact-page";
 import { ContactForm } from "@/components/site/forms";
-import { Card, Container, LinkButton } from "@/components/ui";
-import { site } from "@/config/site";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { pageMetadata } from "@/i18n/metadata";
@@ -18,34 +18,26 @@ export default async function ContactPage({ params }: PageProps<"/[lang]/contact
   if (!hasLocale(lang)) notFound();
   const t = await getDictionary(lang);
   const c = t.contact;
-  const { whatsappUrl, phone, phoneHref, email } = site.contact;
   return (
-    <Container className="grid gap-10 py-14 sm:py-20 lg:grid-cols-[1fr_1.3fr]">
-      <div className="flex flex-col gap-5">
-        <h1 className="text-4xl font-extrabold text-leaf-800">{c.title}</h1>
-        <p className="text-lg text-muted">{c.intro}</p>
-        <div className="flex flex-col items-start gap-3">
-          {whatsappUrl && (
-            <LinkButton href={whatsappUrl} external variant="primary">
-              {c.whatsapp}
-            </LinkButton>
-          )}
-          {phone && phoneHref && (
-            <LinkButton href={phoneHref} variant="secondary">
-              {c.call}: {phone}
-            </LinkButton>
-          )}
-          {email && (
-            <a href={`mailto:${email}`} className="font-semibold text-leaf-700 underline underline-offset-4">
-              {c.email}: {email}
-            </a>
-          )}
-        </div>
-      </div>
-      <Card className="p-6 sm:p-8">
-        <h2 className="mb-6 text-2xl font-bold">{c.formTitle}</h2>
-        <ContactForm lang={lang} t={c} errors={t.forms} optional={t.common.optional} />
-      </Card>
-    </Container>
+    <ContactScreen
+      lang={lang}
+      slots={{
+        // The design's ticket form, wired to the real contact inbox (Admin → Website inbox).
+        form: (
+          <div className="rounded-lg bg-surface-container-lowest p-8 shadow-sm lg:col-span-7 lg:p-10" id="contact-inquiry-form">
+            <div className="mb-6 flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-container text-on-primary">
+                <Icon name="forward_to_inbox" className="text-xl" />
+              </span>
+              <div>
+                <h3 className="font-headline-md text-headline-md text-primary">{c.formTitle}</h3>
+                <p className="text-body-sm text-on-surface-variant">{c.intro}</p>
+              </div>
+            </div>
+            <ContactForm lang={lang} t={c} errors={t.forms} optional={t.common.optional} />
+          </div>
+        ),
+      }}
+    />
   );
 }

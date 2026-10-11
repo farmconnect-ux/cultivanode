@@ -60,7 +60,7 @@ export function MarketGrid({
   return (
     <div className="flex flex-col gap-6">
       {/* Search and Filters Header */}
-      <div className="flex flex-col gap-4 rounded-xl border border-line bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-white p-5 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
           <Input
             placeholder="Search produce, fertilizers, tractors, labour..."
@@ -83,7 +83,7 @@ export function MarketGrid({
         </div>
 
         {/* Category Pills */}
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-line/60">
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-border/60">
           {categories.map((c) => (
             <button
               key={c.slug}
@@ -91,8 +91,8 @@ export function MarketGrid({
               onClick={() => setActiveTab(c.slug)}
               className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                 activeTab === c.slug
-                  ? "bg-leaf-700 text-white shadow-sm"
-                  : "bg-earth-50 text-ink hover:bg-earth-100"
+                  ? "bg-primary-container text-white shadow-sm"
+                  : "bg-earth-50 text-on-surface hover:bg-earth-100"
               }`}
             >
               {c.label}
@@ -103,10 +103,10 @@ export function MarketGrid({
 
       {/* Grid of Listings */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-white p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white p-12 text-center">
           <span className="text-4xl mb-3">🌾</span>
-          <h3 className="text-lg font-bold text-ink">No marketplace listings match your query</h3>
-          <p className="mt-1 text-sm text-muted">
+          <h3 className="text-lg font-bold text-on-surface">No marketplace listings match your query</h3>
+          <p className="mt-1 text-sm text-on-surface-variant">
             Try adjusting your search terms, increasing radius, or switching categories.
           </p>
         </div>
@@ -116,7 +116,7 @@ export function MarketGrid({
             <Card key={item.id} className="flex flex-col justify-between hover:shadow-md transition">
               <div className="flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
-                  <Badge className="bg-leaf-100 text-leaf-800 uppercase tracking-wider text-[11px]">
+                  <Badge className="bg-secondary-container/40 text-primary uppercase tracking-wider text-[11px]">
                     {item.category_name}
                   </Badge>
                   {item.has_provenance && (
@@ -127,43 +127,43 @@ export function MarketGrid({
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-ink line-clamp-2">
-                    <Link href={`/${lang}/marketplace/${item.id}`} className="hover:text-leaf-700">
+                  <h3 className="text-lg font-bold text-on-surface line-clamp-2">
+                    <Link href={`/${lang}/marketplace/${item.id}`} className="hover:text-primary-container">
                       {item.title}
                     </Link>
                   </h3>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Seller: <span className="font-semibold text-ink">{item.seller_name}</span> · ★ {item.seller_rating.toFixed(1)}
+                  <p className="mt-0.5 text-xs text-on-surface-variant">
+                    Seller: <span className="font-semibold text-on-surface">{item.seller_name}</span> · ★ {item.seller_rating.toFixed(1)}
                   </p>
                 </div>
 
                 <div className="rounded-md bg-earth-50 p-2.5">
-                  <div className="text-xs text-muted">Available Stock</div>
-                  <div className="text-sm font-bold text-leaf-900">
+                  <div className="text-xs text-on-surface-variant">Available Stock</div>
+                  <div className="text-sm font-bold text-primary">
                     {item.available_quantity} {item.unit} available
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-muted">
+                <div className="flex items-center justify-between text-xs text-on-surface-variant">
                   <span>📍 {item.location_lga ? `${item.location_lga}, ${item.location_state}` : "South-West Nigeria"}</span>
                   {item.distance_km != null && (
-                    <span className="font-semibold text-leaf-800">{item.distance_km} km away</span>
+                    <span className="font-semibold text-primary">{item.distance_km} km away</span>
                   )}
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-line flex items-center justify-between gap-2">
+              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs text-muted">Price</div>
-                  <div className="text-lg font-extrabold text-leaf-800">
+                  <div className="text-xs text-on-surface-variant">Price</div>
+                  <div className="text-lg font-extrabold text-primary">
                     {formatNaira(item.base_price_kobo)}
-                    <span className="text-xs font-normal text-muted"> /{item.unit}</span>
+                    <span className="text-xs font-normal text-on-surface-variant"> /{item.unit}</span>
                   </div>
                 </div>
 
                 <Link
                   href={`/${lang}/marketplace/${item.id}`}
-                  className="rounded-lg bg-leaf-700 px-4 py-2 text-sm font-bold text-white hover:bg-leaf-800 transition"
+                  className="rounded-lg bg-primary-container px-4 py-2 text-sm font-bold text-white hover:bg-primary transition"
                 >
                   View Details
                 </Link>

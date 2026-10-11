@@ -32,7 +32,7 @@ export function HowItWorks({ audiences }: { audiences: Audience[] }) {
             tabIndex={i === active ? 0 : -1}
             onClick={() => setActive(i)}
             className={`min-h-12 rounded-full px-5 font-semibold transition-colors ${
-              i === active ? "bg-leaf-600 text-white" : "border-2 border-line bg-white text-ink hover:border-leaf-300"
+              i === active ? "bg-primary-container text-white" : "border-2 border-border bg-white text-on-surface hover:border-secondary/40"
             }`}
           >
             {a.label}
@@ -46,8 +46,8 @@ export function HowItWorks({ audiences }: { audiences: Audience[] }) {
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         {current.steps.map((step, i) => (
-          <li key={step} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-5">
-            <span className="flex size-10 items-center justify-center rounded-full bg-harvest-300 text-lg font-extrabold text-ink" aria-hidden="true">
+          <li key={step} className="flex flex-col gap-3 rounded-lg border border-border bg-white p-5">
+            <span className="flex size-10 items-center justify-center rounded-full bg-tertiary-fixed-dim text-lg font-extrabold text-on-surface" aria-hidden="true">
               {i + 1}
             </span>
             <p className="font-medium">{step}</p>

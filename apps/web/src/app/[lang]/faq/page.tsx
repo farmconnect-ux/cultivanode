@@ -24,23 +24,23 @@ export default async function FaqPage({ params }: PageProps<"/[lang]/faq">) {
   return (
     <Container className="max-w-3xl py-14 sm:py-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <h1 className="text-4xl font-extrabold text-leaf-800">{t.faq.title}</h1>
-      <p className="mt-4 text-lg text-muted">
+      <h1 className="text-4xl font-extrabold text-primary">{t.faq.title}</h1>
+      <p className="mt-4 text-lg text-on-surface-variant">
         {t.faq.intro}{" "}
-        <Link href={`/${lang}/contact`} className="font-semibold text-leaf-700 underline underline-offset-4">
+        <Link href={`/${lang}/contact`} className="font-semibold text-primary-container underline underline-offset-4">
           {t.nav.contact}
         </Link>
       </p>
       <div className="mt-10 flex flex-col gap-3">
         {t.faq.items.map((item) => (
-          <details key={item.q} className="group rounded-lg border border-line bg-white">
+          <details key={item.q} className="group rounded-lg border border-border bg-white">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-lg font-bold [&::-webkit-details-marker]:hidden">
               {item.q}
-              <span className="text-2xl leading-none text-leaf-600 transition-transform group-open:rotate-45" aria-hidden="true">
+              <span className="text-2xl leading-none text-secondary transition-transform group-open:rotate-45" aria-hidden="true">
                 +
               </span>
             </summary>
-            <p className="px-5 pb-5 text-muted">{item.a}</p>
+            <p className="px-5 pb-5 text-on-surface-variant">{item.a}</p>
           </details>
         ))}
       </div>

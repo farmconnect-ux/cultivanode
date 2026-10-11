@@ -73,18 +73,18 @@ export function AgentAssistedBooking({
 
   if (submitted) {
     return (
-      <Card className="flex flex-col items-center gap-4 p-8 text-center border-2 border-leaf-700 bg-leaf-50/50">
-        <span className="flex size-14 items-center justify-center rounded-full bg-leaf-100 text-2xl text-leaf-800">
+      <Card className="flex flex-col items-center gap-4 p-8 text-center border-2 border-primary-container bg-surface-container-low/50">
+        <span className="flex size-14 items-center justify-center rounded-full bg-secondary-container/40 text-2xl text-primary">
           ✓
         </span>
-        <h2 className="text-2xl font-extrabold text-leaf-900">Assisted Booking Confirmed</h2>
-        <p className="max-w-md text-sm text-muted">
+        <h2 className="text-2xl font-extrabold text-primary">Assisted Booking Confirmed</h2>
+        <p className="max-w-md text-sm text-on-surface-variant">
           Assisted booking recorded on behalf of <strong>{selectedFarmer?.full_name ?? "Farmer"}</strong> for{" "}
           <strong>{service}</strong> on {formatDay(jobDate, lang)}. Operator dispatch has been initiated.
         </p>
         <Link
           href={`/${lang}/account/agent?ws=agent`}
-          className="mt-2 rounded-md bg-leaf-700 px-5 py-2.5 font-bold text-white hover:bg-leaf-800"
+          className="mt-2 rounded-md bg-primary-container px-5 py-2.5 font-bold text-white hover:bg-primary"
         >
           Return to Field Console →
         </Link>
@@ -95,8 +95,8 @@ export function AgentAssistedBooking({
   return (
     <Card className="flex flex-col gap-5 p-6">
       <div>
-        <h2 className="text-2xl font-extrabold text-leaf-900">Place Assisted Booking</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-2xl font-extrabold text-primary">Place Assisted Booking</h2>
+        <p className="text-sm text-on-surface-variant">
           Order machinery on behalf of an onboarded farmer. Field agent attribution and audit metadata are attached.
         </p>
       </div>
@@ -138,11 +138,11 @@ export function AgentAssistedBooking({
               ))}
             </Select>
           ) : (
-            <div className="flex items-center justify-between rounded-md border border-line bg-cream p-3 text-sm">
-              <span className="text-muted">No plots recorded for this farmer.</span>
+            <div className="flex items-center justify-between rounded-md border border-border bg-surface-container-low p-3 text-sm">
+              <span className="text-on-surface-variant">No plots recorded for this farmer.</span>
               <Link
                 href={`/${lang}/account/agent?farmer=${farmerId}&action=add_farm&ws=agent`}
-                className="font-bold text-leaf-700 underline"
+                className="font-bold text-primary-container underline"
               >
                 + Add Farm Plot First
               </Link>
@@ -197,21 +197,21 @@ export function AgentAssistedBooking({
         </Field>
 
         {/* Pricing Summary */}
-        <div className="flex items-center justify-between rounded-lg bg-leaf-50 p-4 border border-leaf-200">
+        <div className="flex items-center justify-between rounded-lg bg-surface-container-low p-4 border border-secondary/30">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-muted">Estimated Total Cost</span>
-            <span className="block text-2xl font-extrabold text-leaf-800 tabular-nums">
+            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Estimated Total Cost</span>
+            <span className="block text-2xl font-extrabold text-primary tabular-nums">
               {formatNaira(estimatedTotal)}
             </span>
           </div>
-          <span className="text-xs text-muted max-w-[12rem] text-right">
+          <span className="text-xs text-on-surface-variant max-w-[12rem] text-right">
             Cash or transfer on confirmation. Verified escrow terms apply.
           </span>
         </div>
 
         <Button
           type="submit"
-          className="self-start bg-leaf-700 text-white font-bold"
+          className="self-start bg-primary-container text-white font-bold"
           disabled={!farmerId || !farmId}
         >
           Submit Assisted Booking 🚜

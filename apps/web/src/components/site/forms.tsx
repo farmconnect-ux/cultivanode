@@ -51,15 +51,15 @@ export function WaitlistForm({ lang, t, errors, optional }: WaitlistProps) {
           {(["buyer", "seller"] as const).map((side) => (
             <label
               key={side}
-              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border-2 border-line bg-white px-4 py-3 has-[:checked]:border-leaf-600 has-[:checked]:bg-leaf-50"
+              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border-2 border-border bg-white px-4 py-3 has-[:checked]:border-primary-container has-[:checked]:bg-surface-container-low"
             >
-              <input type="radio" name="side" value={side} defaultChecked={v.side === side} className="size-5 accent-leaf-600" required />
+              <input type="radio" name="side" value={side} defaultChecked={v.side === side} className="size-5 accent-secondary" required />
               <span>{side === "buyer" ? t.sideBuyer : t.sideSeller}</span>
             </label>
           ))}
         </div>
         {f.side && (
-          <p id="side-error" className="text-sm font-medium text-danger">
+          <p id="side-error" className="text-sm font-medium text-critical">
             {errors[f.side]}
           </p>
         )}
@@ -89,7 +89,7 @@ export function WaitlistForm({ lang, t, errors, optional }: WaitlistProps) {
       <Field id="wl-interest" label={t.interest} optional={optional}>
         <Input id="wl-interest" name="interest" placeholder={t.interestPlaceholder} defaultValue={v.interest} maxLength={500} />
       </Field>
-      <p className="text-sm text-muted">{t.contactHint}</p>
+      <p className="text-sm text-on-surface-variant">{t.contactHint}</p>
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? t.sending : t.submit}
       </Button>
@@ -130,7 +130,7 @@ export function ContactForm({ lang, t, errors, optional }: ContactProps) {
       <Field id="ct-message" label={t.message} error={err(f.message)}>
         <TextArea id="ct-message" name="message" required maxLength={2000} defaultValue={v.message} aria-invalid={Boolean(f.message)} aria-describedby={describedBy("ct-message", f.message)} />
       </Field>
-      <p className="text-sm text-muted">{t.contactHint}</p>
+      <p className="text-sm text-on-surface-variant">{t.contactHint}</p>
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? t.sending : t.submit}
       </Button>

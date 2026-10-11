@@ -160,26 +160,26 @@ export function AiFarmAssistant({
   return (
     <div className="flex flex-col gap-6">
       {/* Configuration Header Card */}
-      <Card className="flex flex-col gap-4 border-leaf-200 bg-leaf-50/20 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-leaf-100 pb-3">
+      <Card className="flex flex-col gap-4 border-secondary/30 bg-surface-container-low/20 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary/20 pb-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl">🤖</span>
-              <h2 className="text-lg font-black text-leaf-900">AI Farm Assistant</h2>
-              <Badge className="bg-leaf-100 text-leaf-800 text-[10px]">NAFDAC &amp; IITA Grounded</Badge>
+              <h2 className="text-lg font-black text-primary">AI Farm Assistant</h2>
+              <Badge className="bg-secondary-container/40 text-primary text-[10px]">NAFDAC &amp; IITA Grounded</Badge>
             </div>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-xs text-on-surface-variant mt-0.5">
               Agricultural intelligence for South-West Nigeria with chemical safety guardrails and multi-lingual support.
             </p>
           </div>
 
           {/* Language selector toggle */}
-          <div className="flex items-center gap-1 rounded border border-line bg-surface p-1">
+          <div className="flex items-center gap-1 rounded border border-border bg-surface p-1">
             <button
               type="button"
               onClick={() => setAssistantLang("en")}
               className={`rounded px-2.5 py-1 text-xs font-bold transition-colors ${
-                assistantLang === "en" ? "bg-leaf-600 text-white" : "text-muted hover:text-ink"
+                assistantLang === "en" ? "bg-primary-container text-white" : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               English
@@ -188,7 +188,7 @@ export function AiFarmAssistant({
               type="button"
               onClick={() => setAssistantLang("yo")}
               className={`rounded px-2.5 py-1 text-xs font-bold transition-colors ${
-                assistantLang === "yo" ? "bg-leaf-600 text-white" : "text-muted hover:text-ink"
+                assistantLang === "yo" ? "bg-primary-container text-white" : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               Yorùbá
@@ -197,7 +197,7 @@ export function AiFarmAssistant({
               type="button"
               onClick={() => setAssistantLang("pcm")}
               className={`rounded px-2.5 py-1 text-xs font-bold transition-colors ${
-                assistantLang === "pcm" ? "bg-leaf-600 text-white" : "text-muted hover:text-ink"
+                assistantLang === "pcm" ? "bg-primary-container text-white" : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               Pidgin
@@ -208,11 +208,11 @@ export function AiFarmAssistant({
         {/* Farm & Crop grounding context selector */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs">
           <div className="flex flex-col gap-1">
-            <label className="font-semibold text-leaf-900">Farm Location &amp; Zone</label>
+            <label className="font-semibold text-primary">Farm Location &amp; Zone</label>
             <select
               value={selectedFarmId}
               onChange={(e) => setSelectedFarmId(e.target.value)}
-              className="rounded border border-line bg-surface px-3 py-1.5 text-xs text-ink focus:border-leaf-600 focus:outline-none"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             >
               {farms.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -223,11 +223,11 @@ export function AiFarmAssistant({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="font-semibold text-leaf-900">Active Crop Focus</label>
+            <label className="font-semibold text-primary">Active Crop Focus</label>
             <select
               value={selectedCropId}
               onChange={(e) => setSelectedCropId(e.target.value)}
-              className="rounded border border-line bg-surface px-3 py-1.5 text-xs text-ink focus:border-leaf-600 focus:outline-none"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             >
               <optgroup label="Field Crops">
                 <option value="maize">Maize (Àgbàdo)</option>
@@ -250,7 +250,7 @@ export function AiFarmAssistant({
           </div>
 
           <div className="flex flex-col justify-end">
-            <p className="text-[11px] text-muted">
+            <p className="text-[11px] text-on-surface-variant">
               🔒 Banned substances (Paraquat, Carbofuran, DDT) are automatically blocked per NAFDAC gazette.
             </p>
           </div>
@@ -259,7 +259,7 @@ export function AiFarmAssistant({
 
       {/* Suggested Quick Prompts */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted">Quick queries:</span>
+        <span className="text-xs font-semibold text-on-surface-variant">Quick queries:</span>
         {quickPrompts.map((qp) => (
           <button
             key={qp.label}
@@ -268,7 +268,7 @@ export function AiFarmAssistant({
               if (qp.langTarget) setAssistantLang(qp.langTarget);
               handleSend(qp.text);
             }}
-            className="rounded-full border border-leaf-200 bg-surface px-3 py-1 text-xs text-leaf-800 transition hover:bg-leaf-50 hover:border-leaf-400"
+            className="rounded-full border border-secondary/30 bg-surface px-3 py-1 text-xs text-primary transition hover:bg-surface-container-low hover:border-secondary"
           >
             {qp.label}
           </button>
@@ -286,10 +286,10 @@ export function AiFarmAssistant({
               <div
                 className={`max-w-2xl rounded-xl p-4 text-xs leading-relaxed ${
                   m.role === "user"
-                    ? "bg-leaf-700 text-white rounded-br-none"
+                    ? "bg-primary-container text-white rounded-br-none"
                     : m.passedSafetyGuardrail === false
                       ? "bg-accent-50 border border-accent-300 text-accent-950 rounded-bl-none"
-                      : "bg-surface border border-line text-ink rounded-bl-none shadow-sm"
+                      : "bg-surface border border-border text-on-surface rounded-bl-none shadow-sm"
                 }`}
               >
                 {/* Role and Time header */}
@@ -305,8 +305,8 @@ export function AiFarmAssistant({
 
                 {/* Citations & Sources */}
                 {m.sources && m.sources.length > 0 && (
-                  <div className="mt-3 border-t border-line/60 pt-2 text-[11px] text-muted space-y-1">
-                    <p className="font-semibold text-leaf-800">Verified Knowledge Grounding:</p>
+                  <div className="mt-3 border-t border-border/60 pt-2 text-[11px] text-on-surface-variant space-y-1">
+                    <p className="font-semibold text-primary">Verified Knowledge Grounding:</p>
                     {m.sources.map((src, i) => (
                       <p key={i}>
                         • <strong>{src.sourceTitle}</strong> (v{src.sourceVersion}, {src.approvedBy})
@@ -320,8 +320,8 @@ export function AiFarmAssistant({
 
           {isPending && (
             <div className="flex items-start">
-              <div className="rounded-xl rounded-bl-none bg-surface border border-line p-3 text-xs text-muted shadow-sm flex items-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full bg-leaf-600 animate-ping" />
+              <div className="rounded-xl rounded-bl-none bg-surface border border-border p-3 text-xs text-on-surface-variant shadow-sm flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-primary-container animate-ping" />
                 Analyzing against GAP standards &amp; NAFDAC regulations...
               </div>
             </div>
@@ -329,7 +329,7 @@ export function AiFarmAssistant({
         </div>
 
         {/* Query Input Box */}
-        <div className="mt-4 border-t border-line pt-3">
+        <div className="mt-4 border-t border-border pt-3">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -349,7 +349,7 @@ export function AiFarmAssistant({
                     : "Ask about your farm, fertiliser dosage, pest management, or chemicals..."
               }
               disabled={isPending}
-              className="flex-1 rounded-lg border border-line bg-surface px-4 py-2.5 text-xs text-ink focus:border-leaf-600 focus:outline-none"
+              className="flex-1 rounded-lg border border-border bg-surface px-4 py-2.5 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             />
             <Button
               type="submit"

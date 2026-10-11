@@ -83,12 +83,12 @@ function Flow({ lang, t, g, o, defaultState, restart }: {
         <legend className="mb-1 font-semibold">{o.rolesTitle}</legend>
         {(["crop_farmer", "animal_farmer"] as const).map((r) => (
           <label key={r} className="flex items-center gap-3">
-            <input type="checkbox" name="roles" value={r} defaultChecked={r === "crop_farmer"} className="size-5 accent-leaf-600" />
+            <input type="checkbox" name="roles" value={r} defaultChecked={r === "crop_farmer"} className="size-5 accent-secondary" />
             {t.roleNames[r]}
           </label>
         ))}
       </fieldset>
-      <div className="flex flex-col gap-3 rounded-md bg-cream p-4">
+      <div className="flex flex-col gap-3 rounded-md bg-surface-container-low p-4">
         <p className="font-medium">{g.readTerms}</p>
         {[
           { name: "consent_terms", label: g.farmerAccepts },
@@ -96,7 +96,7 @@ function Flow({ lang, t, g, o, defaultState, restart }: {
           { name: "consent_marketing", label: g.farmerMarketing },
         ].map((c) => (
           <label key={c.name} className="flex items-start gap-3">
-            <input type="checkbox" name={c.name} className="mt-1 size-5 shrink-0 accent-leaf-600" />
+            <input type="checkbox" name={c.name} className="mt-1 size-5 shrink-0 accent-secondary" />
             <span>{c.label}</span>
           </label>
         ))}

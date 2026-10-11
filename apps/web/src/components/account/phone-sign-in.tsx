@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { requestCode, verifyCode, type AuthMethod, type AuthState } from "@/actions/auth";
+import { Icon } from "@/components/ds/icon";
 import { Alert, Button, Field, Input, cx } from "@/components/ui";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { Locale } from "@/i18n/config";
@@ -26,7 +27,7 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Method switcher tabs */}
-      <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 p-1 bg-stone-100 rounded-lg">
+      <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container-low p-1">
         <button
           type="button"
           role="tab"
@@ -35,12 +36,13 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
           aria-controls="auth-panel-phone"
           onClick={() => setMethod("phone")}
           className={cx(
-            "py-2 text-sm font-semibold rounded-md transition-all text-center",
+            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 font-label-lg text-label-lg transition-all duration-150",
             method === "phone"
-              ? "bg-white text-leaf-800 shadow-sm"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-surface-container-lowest text-primary shadow-card"
+              : "text-on-surface-variant hover:text-on-surface"
           )}
         >
+          <Icon name="smartphone" className="text-lg" />
           {t.usePhone}
         </button>
         <button
@@ -51,12 +53,13 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
           aria-controls="auth-panel-email"
           onClick={() => setMethod("email")}
           className={cx(
-            "py-2 text-sm font-semibold rounded-md transition-all text-center",
+            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 font-label-lg text-label-lg transition-all duration-150",
             method === "email"
-              ? "bg-white text-leaf-800 shadow-sm"
-              : "text-stone-600 hover:text-stone-900"
+              ? "bg-surface-container-lowest text-primary shadow-card"
+              : "text-on-surface-variant hover:text-on-surface"
           )}
         >
+          <Icon name="mail" className="text-lg" />
           {t.useEmail}
         </button>
       </div>
@@ -69,6 +72,10 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
         {method === "phone" ? (
           <div id="auth-panel-phone" role="tabpanel" aria-labelledby="auth-tab-phone">
             <Field id="phone" label={t.phone} hint={t.phoneHint}>
+              <div className="flex gap-2">
+                <span className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-input bg-surface-container-low px-3 font-label-lg text-label-lg text-on-surface" aria-hidden>
+                  <span className="text-base leading-none">🇳🇬</span> +234
+                </span>
               <Input
                 id="phone"
                 name="phone"
@@ -79,7 +86,10 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
                 required
                 aria-invalid={state.error === "errorPhone" || undefined}
                 aria-describedby="phone-hint"
+                placeholder="0803 000 0000"
+                className="h-11 tnum"
               />
+              </div>
             </Field>
           </div>
         ) : (
@@ -95,13 +105,17 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
                 required
                 aria-invalid={state.error === "errorEmail" || undefined}
                 aria-describedby="email-hint"
+                placeholder="you@farm.ng"
+                className="h-11"
               />
             </Field>
           </div>
         )}
 
-        <Button type="submit" size="lg" disabled={sending}>
+        <Button type="submit" size="lg" disabled={sending} className="w-full">
+          <Icon name={sending ? "progress_activity" : "lock"} className={cx("text-lg", sending && "animate-spin")} />
           {sending ? t.sending : t.sendCode}
+          {!sending && <Icon name="arrow_forward" className="text-lg" />}
         </Button>
       </form>
     </div>
@@ -126,7 +140,8 @@ function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthS
 
   return (
     <div className="flex flex-col gap-4">
-      <p role="status" className="font-medium">
+      <p role="status" className="flex items-start gap-2 rounded-xl bg-positive-soft px-3 py-2.5 text-body-sm font-medium text-[#065f46]">
+        <Icon name="mark_email_read" className="mt-px text-lg" />
         {isEmail
           ? fill(t.codeSentToEmail, { email: displayTarget })
           : fill(t.codeSentTo, { phone: displayTarget })}
@@ -144,11 +159,13 @@ function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthS
             pattern="[0-9]{6,10}"
             required
             autoFocus
-            className="text-center text-2xl tracking-[0.25em] font-mono"
+            placeholder="••••••"
+            className="h-14 text-center font-metric-num text-metric-num tracking-[0.5em] tnum"
             aria-invalid={state.error === "errorCode" || state.error === "errorWrongCode" || undefined}
           />
         </Field>
-        <Button type="submit" size="lg" disabled={checking}>
+        <Button type="submit" size="lg" disabled={checking} className="w-full">
+          <Icon name={checking ? "progress_activity" : "verified_user"} className={cx("text-lg", checking && "animate-spin")} />
           {checking ? t.checking : t.verify}
         </Button>
       </form>
@@ -161,7 +178,8 @@ function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthS
           <input type="hidden" name="phone" value={start.phone ?? start.target} />
         )}
         {wait > 0 ? (
-          <p className="text-sm text-muted" aria-live="off">
+          <p className="flex items-center gap-1.5 text-body-sm text-on-surface-variant" aria-live="off">
+            <Icon name="timer" className="text-base" />
             {fill(t.resendIn, { seconds: wait })}
           </p>
         ) : (

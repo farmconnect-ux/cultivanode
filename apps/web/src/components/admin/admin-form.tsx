@@ -28,7 +28,7 @@ export function AdminForm({ action, hidden, buttons, className, children }: Prop
         ))}
       </div>
       {state && (
-        <p key={state.at} role={state.ok ? "status" : "alert"} className={cx("text-sm font-semibold", state.ok ? "text-leaf-700" : "text-danger")}>
+        <p key={state.at} role={state.ok ? "status" : "alert"} className={cx("text-sm font-semibold", state.ok ? "text-primary-container" : "text-critical")}>
           {state.message}
         </p>
       )}

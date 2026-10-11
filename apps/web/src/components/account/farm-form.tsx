@@ -69,13 +69,13 @@ export function FarmForm({ lang, t, forProfile, defaultState }: { lang: Locale; 
               </Select>
             </Field>
           </div>
-          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-line p-4">
+          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-border p-4">
             <legend className="px-1 font-semibold">{f.location}</legend>
-            <p className="text-sm text-muted">{f.locationHint}</p>
+            <p className="text-sm text-on-surface-variant">{f.locationHint}</p>
             <Button variant="secondary" onClick={locate} disabled={locating} className="self-start">
               {locating ? f.locating : f.useMyLocation}
             </Button>
-            {geoError && <p role="alert" className="text-sm font-medium text-danger">{f.locationFailed}</p>}
+            {geoError && <p role="alert" className="text-sm font-medium text-critical">{f.locationFailed}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id={`${prefix}-lat`} label={f.latitude}>
                 <Input ref={lat} id={`${prefix}-lat`} name="latitude" inputMode="decimal" placeholder="7.3775" required />

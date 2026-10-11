@@ -84,7 +84,7 @@ export function Settings() {
           <p className="text-sm text-gray-600">Manage account credentials, alert channels, microclimate units and data backups</p>
         </div>
         <Button 
-          className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm"
+          className="bg-primary hover:bg-primary text-white text-xs shadow-sm"
           onClick={handleSavePreferences}
         >
           <Save className="h-4 w-4 mr-1" />
@@ -93,8 +93,8 @@ export function Settings() {
       </div>
 
       {feedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {feedback}
           </AlertDescription>
@@ -114,8 +114,8 @@ export function Settings() {
         <TabsContent value="profile" className="space-y-4">
           <Card className="p-6 border-gray-100 shadow-sm">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="h-16 w-16 bg-leaf-100 rounded-full flex items-center justify-center border-2 border-leaf-200">
-                <User className="h-8 w-8 text-leaf-800" />
+              <div className="h-16 w-16 bg-secondary-container/40 rounded-full flex items-center justify-center border-2 border-secondary/30">
+                <User className="h-8 w-8 text-primary" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 font-serif">Alhaji Bello Dan-Borno</h3>
@@ -165,7 +165,7 @@ export function Settings() {
         <TabsContent value="notifications" className="space-y-4">
           <Card className="p-6 border-gray-100 shadow-sm">
             <h3 className="text-base font-semibold mb-4 flex items-center text-gray-900">
-              <Bell className="h-5 w-5 mr-2 text-leaf-700" />
+              <Bell className="h-5 w-5 mr-2 text-primary-container" />
               Notification & Dispatch Channels
             </h3>
             
@@ -291,7 +291,7 @@ export function Settings() {
         <TabsContent value="security" className="space-y-4">
           <Card className="p-6 border-gray-100 shadow-sm">
             <h3 className="text-base font-semibold mb-4 flex items-center text-gray-900">
-              <Shield className="h-5 w-5 mr-2 text-leaf-700" />
+              <Shield className="h-5 w-5 mr-2 text-primary-container" />
               Security & Credential Management
             </h3>
             
@@ -310,7 +310,7 @@ export function Settings() {
               </div>
               <Button 
                 size="sm" 
-                className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                className="bg-primary hover:bg-primary text-white text-xs"
                 onClick={() => showFeedback('Master password updated successfully.')}
               >
                 Update Master Password
@@ -323,7 +323,7 @@ export function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-600">Protect ledger disbursements and bulk crop trades with OTP authorization</p>
-                <p className="text-xs font-semibold text-leaf-700 mt-1">Status: {twoFactorEnabled ? 'Active (OTP Protected)' : 'Disabled'}</p>
+                <p className="text-xs font-semibold text-primary-container mt-1">Status: {twoFactorEnabled ? 'Active (OTP Protected)' : 'Disabled'}</p>
               </div>
               <Button 
                 size="sm" 
@@ -344,7 +344,7 @@ export function Settings() {
         <TabsContent value="data" className="space-y-4">
           <Card className="p-6 border-gray-100 shadow-sm">
             <h3 className="text-base font-semibold mb-4 flex items-center text-gray-900">
-              <Database className="h-5 w-5 mr-2 text-leaf-700" />
+              <Database className="h-5 w-5 mr-2 text-primary-container" />
               Data Exports & Encrypted Backups
             </h3>
             
@@ -357,7 +357,7 @@ export function Settings() {
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="text-xs text-leaf-800 hover:bg-leaf-50"
+                  className="text-xs text-primary hover:bg-surface-container-low"
                   onClick={handleExportDatabase}
                 >
                   <Download className="h-3.5 w-3.5 mr-1" />
@@ -373,7 +373,7 @@ export function Settings() {
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="text-xs text-leaf-800 hover:bg-leaf-50"
+                  className="text-xs text-primary hover:bg-surface-container-low"
                   onClick={handleImportFiles}
                 >
                   <FileUp className="h-3.5 w-3.5 mr-1" />

@@ -360,7 +360,7 @@ export function Marketplace() {
           <p className="text-sm text-gray-600">Buy and sell agricultural commodities, view real-time market prices and buyer contracts</p>
         </div>
         <Button 
-          className="bg-leaf-800 hover:bg-leaf-900 text-white shadow-sm"
+          className="bg-primary hover:bg-primary text-white shadow-sm"
           onClick={() => setIsListProduceOpen(true)}
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -369,8 +369,8 @@ export function Marketplace() {
       </div>
 
       {feedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {feedback}
           </AlertDescription>
@@ -384,9 +384,9 @@ export function Marketplace() {
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Active Listings</p>
               <p className="text-2xl font-bold text-gray-900">{activeListings}</p>
-              <p className="text-xs text-leaf-700 font-medium">{formatCurrencyCompact(totalListingValue)} total value</p>
+              <p className="text-xs text-primary-container font-medium">{formatCurrencyCompact(totalListingValue)} total value</p>
             </div>
-            <Package className="h-8 w-8 text-leaf-700" />
+            <Package className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -408,12 +408,12 @@ export function Marketplace() {
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Best Performer</p>
               <p className="text-base font-bold text-gray-900">Tomatoes</p>
-              <p className="text-xs text-leaf-700 font-medium flex items-center">
+              <p className="text-xs text-primary-container font-medium flex items-center">
                 <ArrowUpRight className="h-3 w-3 mr-0.5" />
                 +10.5% this week
               </p>
             </div>
-            <TrendingUp className="h-8 w-8 text-leaf-700" />
+            <TrendingUp className="h-8 w-8 text-primary-container" />
           </div>
         </Card>
 
@@ -422,9 +422,9 @@ export function Marketplace() {
             <div>
               <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Price Alerts</p>
               <p className="text-2xl font-bold text-gray-900">3</p>
-              <p className="text-xs text-harvest-600 font-medium">prices above target</p>
+              <p className="text-xs text-[#b45309] font-medium">prices above target</p>
             </div>
-            <Tag className="h-8 w-8 text-harvest-600" />
+            <Tag className="h-8 w-8 text-[#b45309]" />
           </div>
         </Card>
       </div>
@@ -447,7 +447,7 @@ export function Marketplace() {
               onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 selectedCategory === cat
-                  ? 'bg-leaf-800 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -484,7 +484,7 @@ export function Marketplace() {
                       </div>
                       <Badge className={`text-xs ${
                         listing.quality === 'Premium' || listing.quality === 'Export Grade'
-                          ? 'bg-leaf-100 text-leaf-800'
+                          ? 'bg-secondary-container/40 text-primary'
                           : listing.quality === 'Grade A'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-700'
@@ -520,13 +520,13 @@ export function Marketplace() {
                     {/* Rating & Delivery */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1">
-                        <Star className="h-3 w-3 text-harvest-500 fill-harvest-500" />
+                        <Star className="h-3 w-3 text-[#b45309] fill-[#b45309]" />
                         <span className="text-xs font-medium">{listing.rating}</span>
                         <span className="text-xs text-gray-400">({listing.reviews} reviews)</span>
                       </div>
                       <div className="flex gap-1">
                         {listing.deliveryOptions.map(opt => (
-                          <Badge key={opt} className="text-xs bg-leaf-50 text-leaf-800 py-0">
+                          <Badge key={opt} className="text-xs bg-surface-container-low text-primary py-0">
                             {opt === 'Delivery' ? <Truck className="h-2.5 w-2.5" /> : opt[0]}
                           </Badge>
                         ))}
@@ -541,7 +541,7 @@ export function Marketplace() {
                       </div>
                       <Button 
                         size="sm" 
-                        className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white"
+                        className="h-7 text-xs bg-primary hover:bg-primary text-white"
                         onClick={() => setContactListing(listing)}
                       >
                         Contact Seller
@@ -583,7 +583,7 @@ export function Marketplace() {
                     </div>
                     <div>
                       <span className="text-gray-500">Total budget:</span>
-                      <span className="ml-1 font-medium text-leaf-700">{formatCurrencyCompact(req.totalBudget)}</span>
+                      <span className="ml-1 font-medium text-primary-container">{formatCurrencyCompact(req.totalBudget)}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">Quality:</span>
@@ -609,7 +609,7 @@ export function Marketplace() {
                     </div>
                     <Button 
                       size="sm" 
-                      className="h-7 text-xs bg-leaf-800 hover:bg-leaf-900 text-white"
+                      className="h-7 text-xs bg-primary hover:bg-primary text-white"
                       onClick={() => {
                         setRespondRequest(req);
                         setProposalForm({
@@ -651,7 +651,7 @@ export function Marketplace() {
                       <span className="text-right font-semibold text-gray-900">{formatCurrencyCompact(item.currentPrice)}</span>
                       <span className="text-right text-gray-500">{formatCurrencyCompact(item.lastWeek)}</span>
                       <div className="text-right">
-                        <span className={`inline-flex items-center font-medium ${item.trend === 'up' ? 'text-leaf-700' : 'text-red-500'}`}>
+                        <span className={`inline-flex items-center font-medium ${item.trend === 'up' ? 'text-primary-container' : 'text-red-500'}`}>
                           {item.trend === 'up'
                             ? <ArrowUpRight className="h-3 w-3" />
                             : <ArrowDownRight className="h-3 w-3" />}
@@ -668,14 +668,14 @@ export function Marketplace() {
             <div className="space-y-4">
               <Card className="p-4 border-gray-100">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4 text-leaf-700" />
+                  <TrendingUp className="h-4 w-4 text-primary-container" />
                   <span>Rising Crops</span>
                 </h3>
                 <div className="space-y-2">
                   {marketPrices.filter(p => p.trend === 'up').slice(0, 4).map(item => (
                     <div key={item.crop} className="flex items-center justify-between text-xs">
                       <span className="font-medium text-gray-800">{item.crop}</span>
-                      <span className="text-leaf-700 font-semibold flex items-center">
+                      <span className="text-primary-container font-semibold flex items-center">
                         <ArrowUpRight className="h-3 w-3" />
                         +{item.change}%
                       </span>
@@ -835,7 +835,7 @@ export function Marketplace() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsListProduceOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Publish Listing
               </Button>
             </DialogFooter>
@@ -875,7 +875,7 @@ export function Marketplace() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Quality Rating:</span>
-                  <span className="font-medium text-harvest-600">★ {contactListing.rating} ({contactListing.reviews} reviews)</span>
+                  <span className="font-medium text-[#b45309]">★ {contactListing.rating} ({contactListing.reviews} reviews)</span>
                 </div>
               </div>
 
@@ -886,7 +886,7 @@ export function Marketplace() {
                     href="tel:+2348031234567"
                     className="inline-flex items-center justify-center h-9 px-3 rounded-lg border border-gray-200 bg-white font-medium text-gray-800 hover:bg-gray-50 text-xs"
                   >
-                    <Phone className="h-3.5 w-3.5 mr-1.5 text-leaf-700" />
+                    <Phone className="h-3.5 w-3.5 mr-1.5 text-primary-container" />
                     Call Seller
                   </a>
                   <a
@@ -924,14 +924,14 @@ export function Marketplace() {
               </DialogHeader>
 
               <div className="space-y-3 py-3 text-xs">
-                <div className="bg-leaf-50 p-3 rounded-lg border border-leaf-200">
+                <div className="bg-surface-container-low p-3 rounded-lg border border-secondary/30">
                   <div className="flex justify-between text-xs">
-                    <span className="text-leaf-800">Buyer Target Price:</span>
-                    <span className="font-bold text-leaf-900">{formatCurrency(respondRequest.priceOffered)} / {respondRequest.unit}</span>
+                    <span className="text-primary">Buyer Target Price:</span>
+                    <span className="font-bold text-primary">{formatCurrency(respondRequest.priceOffered)} / {respondRequest.unit}</span>
                   </div>
                   <div className="flex justify-between text-xs mt-1">
-                    <span className="text-leaf-800">Total Contract Value:</span>
-                    <span className="font-bold text-leaf-900">{formatCurrencyCompact(respondRequest.totalBudget)}</span>
+                    <span className="text-primary">Total Contract Value:</span>
+                    <span className="font-bold text-primary">{formatCurrencyCompact(respondRequest.totalBudget)}</span>
                   </div>
                 </div>
 
@@ -969,7 +969,7 @@ export function Marketplace() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setRespondRequest(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+                <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                   Submit Proposal
                 </Button>
               </DialogFooter>

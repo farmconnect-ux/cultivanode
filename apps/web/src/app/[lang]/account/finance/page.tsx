@@ -1,39 +1,18 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { FarmerDashboard } from "@/components/account/farmer-dashboard";
-import { hasLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
-import { requireAccount } from "@/lib/account/session";
-import { createClient } from "@/lib/supabase/server";
+import { LiveStrip } from "@/components/ds/live-strip";
+import { FarmBooks } from "@/components/screens/farm-books";
+import { hasLocale } from "@/i18n/config";
 
-interface Props {
-  params: Promise<{ lang: string }>;
-}
+export const metadata: Metadata = { title: "Farm books & accounting" };
 
-export default async function FarmFinancePage({ params }: Props) {
+export default async function Page({ params }: PageProps<"/[lang]/account/finance">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang as Locale);
-  const t = await getDictionary(lang as Locale);
-  const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga, area_ha")
-    .or(scope.join(","))
-    .order("created_at");
-
   return (
-    <FarmerDashboard
-      lang={lang as Locale}
-      account={account}
-      t={t}
-      farms={farms ?? []}
-      bookings={[]}
-      initialTab="sales"
-    />
+    <>
+      <LiveStrip tone="preview">Ledger entries show sample data; booked services you have paid for appear under My Bookings.</LiveStrip>
+      <FarmBooks lang={lang} />
+    </>
   );
 }

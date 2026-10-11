@@ -64,9 +64,9 @@ export function RequestForm({
                      onChange={(e) => setQuantity(e.target.value)} aria-describedby="book-qty-hint" />
             </Field>
           </div>
-          <div role="status" aria-live="polite" className="rounded-md bg-leaf-50 p-4">
+          <div role="status" aria-live="polite" className="rounded-md bg-surface-container-low p-4">
             <p className="text-lg font-bold tabular-nums">{estimate !== null ? fill(b.estimate, { total: formatNaira(estimate) }) : " "}</p>
-            <p className="text-sm text-muted">{b.estimateHint}</p>
+            <p className="text-sm text-on-surface-variant">{b.estimateHint}</p>
           </div>
           <Field id="book-note" label={b.note} hint={b.noteHint}>
             <TextArea id="book-note" name="note" maxLength={500} placeholder={b.notePlaceholder} className="min-h-24"
@@ -159,7 +159,7 @@ function Note({ state, b, errors }: { state: ActionState | null; b: Bookings; er
   const text = state.ok ? (state.message ? messageFor(state.message, [b, errors]) : b.done)
                         : messageFor(state.error, [errors]);
   return (
-    <p key={state.at} role={state.ok ? "status" : "alert"} className={state.ok ? "font-medium text-leaf-700" : "font-medium text-danger"}>
+    <p key={state.at} role={state.ok ? "status" : "alert"} className={state.ok ? "font-medium text-primary-container" : "font-medium text-critical"}>
       {text}
     </p>
   );
@@ -187,7 +187,7 @@ export function CheckInButton({ lang, t, id }: { lang: Locale; t: Pick<Acct, "bo
       <Button type="button" onClick={checkIn} disabled={pending} className="self-start">
         {pending ? b.checkingIn : b.checkIn}
       </Button>
-      <p className="text-sm text-muted">{b.checkInHint}</p>
+      <p className="text-sm text-on-surface-variant">{b.checkInHint}</p>
       <Note state={state} b={b} errors={t.bookingErrors} />
     </div>
   );
@@ -252,8 +252,8 @@ export function ProofFlow({
 
   const row = (kind: "before" | "after", label: string, done: boolean) => (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-semibold">{label}{done && <span className="ml-2 text-leaf-700" aria-label={b.photoAdded}>✓</span>}</span>
-      <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md bg-leaf-700 px-4 font-semibold text-white">
+      <span className="font-semibold">{label}{done && <span className="ml-2 text-primary-container" aria-label={b.photoAdded}>✓</span>}</span>
+      <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md bg-primary-container px-4 font-semibold text-white">
         {busy === kind ? b.uploading : done ? b.replacePhoto : b.addPhoto}
         <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={busy !== null}
                onChange={addPhoto(kind)} aria-label={label} />
@@ -265,7 +265,7 @@ export function ProofFlow({
     <div className="flex flex-col gap-3">
       {row("before", b.photoBefore, counts.before)}
       {row("after", b.photoAfter, counts.after)}
-      <p className="text-sm text-muted">{b.proofHint}</p>
+      <p className="text-sm text-on-surface-variant">{b.proofHint}</p>
       <Note state={state} b={b} errors={t.bookingErrors} />
     </div>
   );
@@ -313,7 +313,7 @@ export function DisputeForm({ lang, t, id }: { lang: Locale; t: Pick<Acct, "book
             <legend className="mb-1 font-semibold">{b.disputeReason}</legend>
             {DISPUTE_CATEGORIES.map((c) => (
               <label key={c} className="inline-flex min-h-11 items-center gap-3">
-                <input type="radio" name="category" value={c} required className="size-5 accent-leaf-700" />
+                <input type="radio" name="category" value={c} required className="size-5 accent-primary-container" />
                 {b.disputeCategories[c]}
               </label>
             ))}
@@ -363,12 +363,12 @@ export function EvidenceUpload({ lang, t, id, userId }: {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="inline-flex min-h-11 cursor-pointer items-center self-start rounded-md bg-leaf-700 px-4 font-semibold text-white">
+      <label className="inline-flex min-h-11 cursor-pointer items-center self-start rounded-md bg-primary-container px-4 font-semibold text-white">
         {busy ? b.uploading : b.addEvidence}
         <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={busy} onChange={add}
                aria-label={b.addEvidence} />
       </label>
-      <p className="text-sm text-muted">{b.evidenceHint}</p>
+      <p className="text-sm text-on-surface-variant">{b.evidenceHint}</p>
       <Note state={state} b={b} errors={t.bookingErrors} />
     </div>
   );
@@ -414,9 +414,9 @@ export function RatingForm({ lang, t, id, name }: {
             <legend className="mb-2 font-semibold">{fill(b.rateTitle, { name })}</legend>
             <div className="flex gap-1" role="radiogroup" aria-label={b.starsLabel}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <label key={n} className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md border border-line text-2xl">
+                <label key={n} className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md border border-border text-2xl">
                   <input type="radio" name="stars" value={n} required className="sr-only" onChange={() => setStars(n)} />
-                  <span aria-hidden className={n <= stars ? "text-harvest-500" : "text-line"}>★</span>
+                  <span aria-hidden className={n <= stars ? "text-[#b45309]" : "text-outline-variant"}>★</span>
                   <span className="sr-only">{n}</span>
                 </label>
               ))}
@@ -426,7 +426,7 @@ export function RatingForm({ lang, t, id, name }: {
             <fieldset className="flex flex-wrap gap-2">
               <legend className="sr-only">{b.tagsLabel}</legend>
               {tags.map((tag) => (
-                <label key={tag} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-line px-3">
+                <label key={tag} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-3">
                   <input type="checkbox" name="tags" value={tag} />
                   {b.tagLabels[tag]}
                 </label>

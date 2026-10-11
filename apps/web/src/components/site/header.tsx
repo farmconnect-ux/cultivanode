@@ -17,7 +17,7 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
     { href: `/${lang}/contact`, label: t.contact },
   ];
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-surface-container-low/95 backdrop-blur">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:rounded-md focus:bg-white focus:px-4 focus:py-2">
         {t.skip}
       </a>
@@ -29,7 +29,7 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
           <ul className="flex items-center gap-1">
             {links.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="rounded-md px-3 py-2 font-semibold text-ink hover:bg-leaf-50 hover:text-leaf-700">
+                <Link href={l.href} className="rounded-md px-3 py-2 font-semibold text-on-surface hover:bg-surface-container-low hover:text-primary-container">
                   {l.label}
                 </Link>
               </li>
@@ -44,15 +44,15 @@ export function Header({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) {
           </div>
           {/* Small screens: a no-JavaScript disclosure menu */}
           <details className="group relative lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-md border-2 border-line bg-white px-3 font-semibold [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-md border-2 border-border bg-white px-3 font-semibold [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">{t.menu}</span>
               <span className="hidden group-open:inline">{t.close}</span>
             </summary>
-            <nav aria-label="Mobile" className="absolute right-0 mt-2 w-64 rounded-lg border border-line bg-white p-2 shadow-lg">
+            <nav aria-label="Mobile" className="absolute right-0 mt-2 w-64 rounded-lg border border-border bg-white p-2 shadow-lg">
               <ul className="flex flex-col">
                 {links.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="block rounded-md px-3 py-3 font-semibold hover:bg-leaf-50">
+                    <Link href={l.href} className="block rounded-md px-3 py-3 font-semibold hover:bg-surface-container-low">
                       {l.label}
                     </Link>
                   </li>

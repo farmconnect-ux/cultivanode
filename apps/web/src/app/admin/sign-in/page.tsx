@@ -18,8 +18,8 @@ export default async function AdminSignInPage() {
       <Logo />
       <Card className="flex flex-col gap-5 p-6 sm:p-8">
         <div>
-          <h1 className="text-2xl font-extrabold text-leaf-800">Staff sign in</h1>
-          <p className="mt-1 text-muted">We will text a 6-digit code to your phone.</p>
+          <h1 className="text-2xl font-extrabold text-primary">Staff sign in</h1>
+          <p className="mt-1 text-on-surface-variant">We will text a 6-digit code to your phone.</p>
         </div>
         <AdminSignInForm />
       </Card>

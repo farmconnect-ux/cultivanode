@@ -83,7 +83,7 @@ export function ListingForm({
               <div className="flex flex-wrap gap-4">
                 {(["equipment", "service"] as const).map((k) => (
                   <label key={k} className="inline-flex min-h-11 items-center gap-2">
-                    <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="size-5 accent-leaf-700" />
+                    <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="size-5 accent-primary-container" />
                     {k === "equipment" ? l.equipment : l.service}
                   </label>
                 ))}
@@ -117,14 +117,14 @@ export function ListingForm({
           </Field>
           {kind === "equipment" && (
             <label className="inline-flex min-h-11 items-center gap-3">
-              <input type="checkbox" name="operator_included" defaultChecked={listing?.operator_included ?? true} className="size-5 accent-leaf-700" />
+              <input type="checkbox" name="operator_included" defaultChecked={listing?.operator_included ?? true} className="size-5 accent-primary-container" />
               {l.operatorIncluded}
             </label>
           )}
 
-          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-line p-4">
+          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-border p-4">
             <legend className="px-1 font-semibold">{l.prices}</legend>
-            <p className="text-sm text-muted">{l.pricesHint}</p>
+            <p className="text-sm text-on-surface-variant">{l.pricesHint}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {UNITS.map((u) => (
                 <Field key={u} id={`${prefix}-rate-${u}`} label={`₦ ${t.units[u]}`}>
@@ -138,13 +138,13 @@ export function ListingForm({
             <Input id={`${prefix}-radius`} name="service_radius_km" inputMode="numeric" defaultValue={String(listing?.service_radius_km ?? 30)} required />
           </Field>
 
-          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-line p-4">
+          <fieldset className="flex flex-col gap-3 rounded-md border-2 border-border p-4">
             <legend className="px-1 font-semibold">{l.location}</legend>
-            <p className="text-sm text-muted">{t.acct.farms.locationHint}</p>
+            <p className="text-sm text-on-surface-variant">{t.acct.farms.locationHint}</p>
             <Button variant="secondary" onClick={locate} disabled={locating} className="self-start">
               {locating ? t.acct.farms.locating : t.acct.farms.useMyLocation}
             </Button>
-            {geoError && <p role="alert" className="text-sm font-medium text-danger">{t.acct.farms.locationFailed}</p>}
+            {geoError && <p role="alert" className="text-sm font-medium text-critical">{t.acct.farms.locationFailed}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id={`${prefix}-lat`} label={t.acct.farms.latitude}>
                 <Input ref={lat} id={`${prefix}-lat`} name="latitude" inputMode="decimal" defaultValue={listing ? listing.lat.toFixed(6) : ""} placeholder="7.3775" required />
@@ -157,7 +157,7 @@ export function ListingForm({
 
           {canPublish && (
             <label className="inline-flex min-h-11 items-center gap-3 font-semibold">
-              <input type="checkbox" name="publish" defaultChecked={listing ? listing.status === "active" : true} className="size-5 accent-leaf-700" />
+              <input type="checkbox" name="publish" defaultChecked={listing ? listing.status === "active" : true} className="size-5 accent-primary-container" />
               {l.publishNow}
             </label>
           )}

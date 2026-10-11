@@ -84,24 +84,24 @@ export function ServiceRequestWizard({
 
   if (submitted) {
     return (
-      <Card className="flex flex-col items-center gap-4 p-8 text-center border-2 border-leaf-700 bg-leaf-50/50">
-        <span className="flex size-16 items-center justify-center rounded-full bg-leaf-100 text-3xl text-leaf-800">
+      <Card className="flex flex-col items-center gap-4 p-8 text-center border-2 border-primary-container bg-surface-container-low/50">
+        <span className="flex size-16 items-center justify-center rounded-full bg-secondary-container/40 text-3xl text-primary">
           ✓
         </span>
-        <h2 className="text-2xl font-extrabold text-leaf-900">Request Broadcasted to Local Providers</h2>
-        <p className="max-w-md text-sm text-muted">
+        <h2 className="text-2xl font-extrabold text-primary">Request Broadcasted to Local Providers</h2>
+        <p className="max-w-md text-sm text-on-surface-variant">
           Your request for <strong>{activeService.label}</strong> on <strong>{activeFarm?.name ?? "your farm"}</strong> ({parsedSize} ha) for {formatDay(jobDate, lang)} at {jobTime} has been submitted. Verified operators within 30 km have been alerted.
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href={`/${lang}/account/bookings?ws=farmer`}
-            className="rounded-md bg-leaf-700 px-5 py-2.5 font-bold text-white shadow-xs hover:bg-leaf-800"
+            className="rounded-md bg-primary-container px-5 py-2.5 font-bold text-white shadow-xs hover:bg-primary"
           >
             Track in My Jobs →
           </Link>
           <Link
             href={`/${lang}/account/find?farm=${selectedFarmId}&ws=farmer`}
-            className="rounded-md border border-line bg-white px-5 py-2.5 font-bold text-ink hover:bg-leaf-50"
+            className="rounded-md border border-border bg-white px-5 py-2.5 font-bold text-on-surface hover:bg-surface-container-low"
           >
             Browse Direct Equipment
           </Link>
@@ -113,16 +113,16 @@ export function ServiceRequestWizard({
   return (
     <div className="flex flex-col gap-6">
       {/* Wizard Step Stepper */}
-      <nav aria-label="Request Progress" className="flex items-center justify-between border-b border-line pb-4">
+      <nav aria-label="Request Progress" className="flex items-center justify-between border-b border-border pb-4">
         {[1, 2, 3, 4, 5].map((s) => (
           <div key={s} className="flex items-center gap-2">
             <span
               className={`flex size-8 items-center justify-center rounded-full text-xs font-bold ${
                 step === s
-                  ? "bg-leaf-700 text-white"
+                  ? "bg-primary-container text-white"
                   : step > s
-                    ? "bg-leaf-200 text-leaf-900"
-                    : "bg-line/60 text-muted"
+                    ? "bg-secondary-container/60 text-primary"
+                    : "bg-surface-container/60 text-on-surface-variant"
               }`}
             >
               {step > s ? "✓" : s}
@@ -138,8 +138,8 @@ export function ServiceRequestWizard({
       {step === 1 && (
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-leaf-900">Step 1: What do you need?</h2>
-            <p className="text-sm text-muted">Select the machinery or field service required for your farm.</p>
+            <h2 className="text-2xl font-extrabold text-primary">Step 1: What do you need?</h2>
+            <p className="text-sm text-on-surface-variant">Select the machinery or field service required for your farm.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -150,13 +150,13 @@ export function ServiceRequestWizard({
                 onClick={() => setSelectedService(srv.id)}
                 className={`flex min-h-24 flex-col items-center justify-center rounded-xl border-2 p-4 text-center transition-all ${
                   selectedService === srv.id
-                    ? "border-leaf-700 bg-leaf-50/80 font-bold text-leaf-900 shadow-xs"
-                    : "border-line bg-white font-medium text-ink hover:border-leaf-300"
+                    ? "border-primary-container bg-surface-container-low/80 font-bold text-primary shadow-xs"
+                    : "border-border bg-white font-medium text-on-surface hover:border-secondary/40"
                 }`}
               >
                 <span className="text-2xl" aria-hidden="true">{srv.icon}</span>
                 <span className="mt-2 text-sm">{srv.label}</span>
-                <span className="mt-1 text-[11px] text-muted">from {formatNaira(srv.baseRate)}/{srv.unit}</span>
+                <span className="mt-1 text-[11px] text-on-surface-variant">from {formatNaira(srv.baseRate)}/{srv.unit}</span>
               </button>
             ))}
           </div>
@@ -171,17 +171,17 @@ export function ServiceRequestWizard({
       {step === 2 && (
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-leaf-900">Step 2: Where? Select your farm</h2>
-            <p className="text-sm text-muted">Providers calculate travel distance and dispatch based on farm coordinates.</p>
+            <h2 className="text-2xl font-extrabold text-primary">Step 2: Where? Select your farm</h2>
+            <p className="text-sm text-on-surface-variant">Providers calculate travel distance and dispatch based on farm coordinates.</p>
           </div>
 
           {farms.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 p-6 text-center">
               <p className="font-bold">No farms registered yet</p>
-              <p className="text-sm text-muted">Add a farm location to request machinery.</p>
+              <p className="text-sm text-on-surface-variant">Add a farm location to request machinery.</p>
               <Link
                 href={`/${lang}/account/farms?ws=farmer`}
-                className="font-bold text-leaf-700 underline"
+                className="font-bold text-primary-container underline"
               >
                 + Add Farm Now
               </Link>
@@ -198,18 +198,18 @@ export function ServiceRequestWizard({
                   }}
                   className={`flex flex-col rounded-xl border-2 p-5 text-left transition-all ${
                     selectedFarmId === f.id
-                      ? "border-leaf-700 bg-leaf-50/80 shadow-xs"
-                      : "border-line bg-white hover:border-leaf-300"
+                      ? "border-primary-container bg-surface-container-low/80 shadow-xs"
+                      : "border-border bg-white hover:border-secondary/40"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-leaf-900">{f.name}</span>
-                    {selectedFarmId === f.id && <span className="font-bold text-leaf-700">✓ Selected</span>}
+                    <span className="text-lg font-bold text-primary">{f.name}</span>
+                    {selectedFarmId === f.id && <span className="font-bold text-primary-container">✓ Selected</span>}
                   </div>
-                  <span className="text-sm text-muted">
+                  <span className="text-sm text-on-surface-variant">
                     {[f.lga, f.state].filter(Boolean).join(", ") || "Location set"}
                   </span>
-                  <span className="mt-2 text-xs font-semibold text-leaf-800">
+                  <span className="mt-2 text-xs font-semibold text-primary">
                     {f.area_ha ? `${f.area_ha} hectares` : "Size not specified"}
                   </span>
                 </button>
@@ -217,7 +217,7 @@ export function ServiceRequestWizard({
             </div>
           )}
 
-          <div className="flex justify-between pt-4 border-t border-line">
+          <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setStep(1)}>
               ← Back
             </Button>
@@ -232,8 +232,8 @@ export function ServiceRequestWizard({
       {step === 3 && (
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-leaf-900">Step 3: When? Schedule the work</h2>
-            <p className="text-sm text-muted">Pick your preferred execution date and start time.</p>
+            <h2 className="text-2xl font-extrabold text-primary">Step 3: When? Schedule the work</h2>
+            <p className="text-sm text-on-surface-variant">Pick your preferred execution date and start time.</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -258,24 +258,24 @@ export function ServiceRequestWizard({
             </Field>
           </div>
 
-          <div className="rounded-lg border border-line bg-cream p-4">
+          <div className="rounded-lg border border-border bg-surface-container-low p-4">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={flexible}
                 onChange={(e) => setFlexible(e.target.checked)}
-                className="size-5 accent-leaf-700"
+                className="size-5 accent-primary-container"
               />
               <div>
-                <span className="font-bold text-sm text-ink">Flexible within +/- 2 days?</span>
-                <span className="block text-xs text-muted">
+                <span className="font-bold text-sm text-on-surface">Flexible within +/- 2 days?</span>
+                <span className="block text-xs text-on-surface-variant">
                   Increases match speed if operator has nearby jobs in your cluster.
                 </span>
               </div>
             </label>
           </div>
 
-          <div className="flex justify-between pt-4 border-t border-line">
+          <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setStep(2)}>
               ← Back
             </Button>
@@ -290,8 +290,8 @@ export function ServiceRequestWizard({
       {step === 4 && (
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-leaf-900">Step 4: Job details & Field instructions</h2>
-            <p className="text-sm text-muted">Provide field size and notes for the tractor operator.</p>
+            <h2 className="text-2xl font-extrabold text-primary">Step 4: Job details & Field instructions</h2>
+            <p className="text-sm text-on-surface-variant">Provide field size and notes for the tractor operator.</p>
           </div>
 
           <Field
@@ -325,22 +325,22 @@ export function ServiceRequestWizard({
             />
           </Field>
 
-          <div className="rounded-lg border border-line bg-white p-4">
+          <div className="rounded-lg border border-border bg-white p-4">
             <label className="flex flex-col gap-2">
               <span className="font-bold text-sm">Upload Reference Field Photo (Optional)</span>
-              <span className="text-xs text-muted">
+              <span className="text-xs text-on-surface-variant">
                 Take a quick snapshot of the field condition so the operator brings the right implements.
               </span>
               <input
                 type="file"
                 accept="image/*"
                 capture="environment"
-                className="mt-1 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-leaf-700 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white"
+                className="mt-1 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary-container file:px-4 file:py-2 file:text-xs file:font-bold file:text-white"
               />
             </label>
           </div>
 
-          <div className="flex justify-between pt-4 border-t border-line">
+          <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setStep(3)}>
               ← Back
             </Button>
@@ -355,61 +355,61 @@ export function ServiceRequestWizard({
       {step === 5 && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-leaf-900">Step 5: Review & Broadcast Request</h2>
-            <p className="text-sm text-muted">Verify your details before broadcasting to verified operators.</p>
+            <h2 className="text-2xl font-extrabold text-primary">Step 5: Review & Broadcast Request</h2>
+            <p className="text-sm text-on-surface-variant">Verify your details before broadcasting to verified operators.</p>
           </div>
 
-          <Card className="flex flex-col gap-3 border-2 border-leaf-700 bg-leaf-50/40 p-5">
+          <Card className="flex flex-col gap-3 border-2 border-primary-container bg-surface-container-low/40 p-5">
             <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
-              <dt className="font-semibold text-muted">Service:</dt>
-              <dd className="font-bold text-leaf-900">{activeService.label}</dd>
+              <dt className="font-semibold text-on-surface-variant">Service:</dt>
+              <dd className="font-bold text-primary">{activeService.label}</dd>
 
-              <dt className="font-semibold text-muted">Target Farm:</dt>
-              <dd className="font-bold text-ink">{activeFarm?.name ?? "Selected Farm"}</dd>
+              <dt className="font-semibold text-on-surface-variant">Target Farm:</dt>
+              <dd className="font-bold text-on-surface">{activeFarm?.name ?? "Selected Farm"}</dd>
 
-              <dt className="font-semibold text-muted">Location:</dt>
-              <dd className="text-ink">{[activeFarm?.lga, activeFarm?.state].filter(Boolean).join(", ")}</dd>
+              <dt className="font-semibold text-on-surface-variant">Location:</dt>
+              <dd className="text-on-surface">{[activeFarm?.lga, activeFarm?.state].filter(Boolean).join(", ")}</dd>
 
-              <dt className="font-semibold text-muted">Area Size:</dt>
-              <dd className="font-bold text-ink">{parsedSize} hectares</dd>
+              <dt className="font-semibold text-on-surface-variant">Area Size:</dt>
+              <dd className="font-bold text-on-surface">{parsedSize} hectares</dd>
 
-              <dt className="font-semibold text-muted">Date & Time:</dt>
-              <dd className="font-bold text-ink">{formatDay(jobDate, lang)} at {jobTime}</dd>
+              <dt className="font-semibold text-on-surface-variant">Date & Time:</dt>
+              <dd className="font-bold text-on-surface">{formatDay(jobDate, lang)} at {jobTime}</dd>
 
-              <dt className="font-semibold text-muted">Flexibility:</dt>
-              <dd className="text-ink">{flexible ? "Flexible (+/- 2 days)" : "Strict date"}</dd>
+              <dt className="font-semibold text-on-surface-variant">Flexibility:</dt>
+              <dd className="text-on-surface">{flexible ? "Flexible (+/- 2 days)" : "Strict date"}</dd>
 
               {notes && (
                 <>
-                  <dt className="font-semibold text-muted">Notes:</dt>
-                  <dd className="text-ink italic">&quot;{notes}&quot;</dd>
+                  <dt className="font-semibold text-on-surface-variant">Notes:</dt>
+                  <dd className="text-on-surface italic">&quot;{notes}&quot;</dd>
                 </>
               )}
             </dl>
 
-            <div className="mt-2 border-t border-line pt-3">
-              <span className="block text-xs font-bold uppercase tracking-wider text-muted">Estimated Benchmark Cost</span>
-              <span className="text-2xl font-extrabold text-leaf-800 tabular-nums">
+            <div className="mt-2 border-t border-border pt-3">
+              <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Estimated Benchmark Cost</span>
+              <span className="text-2xl font-extrabold text-primary tabular-nums">
                 {formatNaira(estimatedTotal)}
               </span>
-              <span className="block text-xs text-muted">
+              <span className="block text-xs text-on-surface-variant">
                 Payment is held in escrow upon operator confirmation and only released after your verification.
               </span>
             </div>
           </Card>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setStep(4)}>
               ← Back
             </Button>
             <div className="flex flex-wrap gap-2">
               <Link
                 href={`/${lang}/account/find?farm=${selectedFarmId}&kind=${matchedFilter.kind}&type=${matchedFilter.type}`}
-                className="rounded-md border border-leaf-700 bg-leaf-50 px-5 py-2.5 font-bold text-leaf-800 hover:bg-leaf-100 transition-colors"
+                className="rounded-md border border-primary-container bg-surface-container-low px-5 py-2.5 font-bold text-primary hover:bg-secondary-container/40 transition-colors"
               >
                 Find &amp; Book Nearby Operators Directly →
               </Link>
-              <Button type="submit" className="bg-leaf-700 text-white font-bold text-base px-6 py-2.5">
+              <Button type="submit" className="bg-primary-container text-white font-bold text-base px-6 py-2.5">
                 Broadcast Request to All Operators 🚀
               </Button>
             </div>

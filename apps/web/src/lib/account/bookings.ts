@@ -76,16 +76,16 @@ export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
 };
 
 export const BOOKING_TONE: Record<BookingStatus, string> = {
-  requested: "bg-harvest-100 text-harvest-700",
-  accepted: "bg-leaf-100 text-leaf-800",
+  requested: "bg-tertiary-fixed/60 text-[#b45309]",
+  accepted: "bg-secondary-container/40 text-primary",
   in_progress: "bg-node-50 text-node-700",
-  awaiting_confirmation: "bg-harvest-100 text-harvest-700",
-  confirmed: "bg-leaf-100 text-leaf-800",
-  disputed: "bg-red-50 text-danger",
-  completed: "bg-leaf-100 text-leaf-800",
-  declined: "bg-line/60 text-ink",
-  cancelled: "bg-line/60 text-ink",
-  expired: "bg-line/60 text-ink",
+  awaiting_confirmation: "bg-tertiary-fixed/60 text-[#b45309]",
+  confirmed: "bg-secondary-container/40 text-primary",
+  disputed: "bg-red-50 text-critical",
+  completed: "bg-secondary-container/40 text-primary",
+  declined: "bg-surface-container/60 text-on-surface",
+  cancelled: "bg-surface-container/60 text-on-surface",
+  expired: "bg-surface-container/60 text-on-surface",
 };
 
 /** "2.5" for 2.50, "1" for 1.00. */

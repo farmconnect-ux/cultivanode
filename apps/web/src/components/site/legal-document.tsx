@@ -9,10 +9,10 @@ type Doc = Dictionary["legal"]["privacy"];
 export function LegalDocument({ doc, labels }: { doc: Doc; labels: Dictionary["legal"] }) {
   return (
     <Container className="max-w-3xl py-14 sm:py-20">
-      <h1 className="text-4xl font-extrabold text-leaf-800 sm:text-5xl">{doc.title}</h1>
-      <p className="mt-5 text-xl text-muted">{doc.intro}</p>
-      <p role="note" className="mt-6 rounded-md border-l-4 border-harvest-500 bg-harvest-50 p-4">{labels.draftNotice}</p>
-      <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+      <h1 className="text-4xl font-extrabold text-primary sm:text-5xl">{doc.title}</h1>
+      <p className="mt-5 text-xl text-on-surface-variant">{doc.intro}</p>
+      <p role="note" className="mt-6 rounded-md border-l-4 border-caution bg-caution-soft p-4">{labels.draftNotice}</p>
+      <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-on-surface-variant">
         <div className="flex gap-1"><dt>{labels.versionLabel}:</dt><dd>{LEGAL_VERSION}</dd></div>
         <div className="flex gap-1"><dt>{labels.updatedLabel}:</dt><dd><time dateTime={LEGAL_UPDATED}>{LEGAL_UPDATED}</time></dd></div>
       </dl>
@@ -28,7 +28,7 @@ export function LegalDocument({ doc, labels }: { doc: Doc; labels: Dictionary["l
           </section>
         ))}
       </div>
-      <p className="mt-12 text-muted">{labels.contactLine}</p>
+      <p className="mt-12 text-on-surface-variant">{labels.contactLine}</p>
     </Container>
   );
 }

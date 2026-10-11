@@ -1,117 +1,120 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { formatNaira } from "@cultivanode/shared";
-import { Badge, Card } from "@/components/ui";
-import { phoneLabel, when } from "@/lib/admin/labels";
-import { can, requireStaff } from "@/lib/admin/staff";
+import { EmptyState } from "@/components/ds/empty-state";
+import { Icon } from "@/components/ds/icon";
+import { MetricCard } from "@/components/live/metric-card";
+import { DisputeResolution } from "@/components/screens/dispute-resolution";
+import { Badge } from "@/components/shadcn/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import { when } from "@/lib/admin/labels";
+import { requireStaff } from "@/lib/admin/staff";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Disputes Console" };
+export const metadata: Metadata = { title: "Dispute resolution & PoW" };
+
+type Dispute = {
+  id: string;
+  listing_title: string;
+  farm_name: string;
+  job_state: string | null;
+  job_lga: string | null;
+  job_date: string;
+  total_kobo: number;
+  dispute_category: string | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
+  disputed_by: string | null;
+  farmer_id: string;
+  provider_id: string;
+  profiles: { full_name: string | null; phone: string | null } | null;
+};
 
 export default async function AdminDisputesListPage() {
   const staff = await requireStaff();
   if (!staff) return null;
-
   const supabase = await createClient();
-  const { data: disputes } = await supabase
+  const { data } = await supabase
     .from("bookings")
     .select(
       "id, listing_title, farm_name, job_state, job_lga, job_date, total_kobo, dispute_category, dispute_reason, disputed_at, disputed_by, farmer_id, provider_id, profiles!bookings_farmer_id_fkey(full_name, phone)",
     )
     .eq("status", "disputed")
     .order("disputed_at", { ascending: false });
-
-  const list = (disputes ?? []) as unknown as Array<{
-    id: string;
-    listing_title: string;
-    farm_name: string;
-    job_state: string | null;
-    job_lga: string | null;
-    job_date: string;
-    total_kobo: number;
-    dispute_category: string | null;
-    dispute_reason: string | null;
-    disputed_at: string | null;
-    disputed_by: string | null;
-    farmer_id: string;
-    provider_id: string;
-    profiles: { full_name: string | null; phone: string | null } | null;
-  }>;
+  const list = (data ?? []) as unknown as Dispute[];
+  const frozen = list.reduce((s, d) => s + d.total_kobo, 0);
+  const oldestH = list.length
+    ? Math.max(...list.map((d) => (d.disputed_at ? (Date.now() - new Date(d.disputed_at).getTime()) / 36e5 : 0)))
+    : 0;
+  const byFarmer = list.filter((d) => d.disputed_by === d.farmer_id).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-danger">Disputes Arbitration Console</h1>
-          <p className="mt-1 text-sm text-muted">
-            Evidence-before-opinion workstation for arbitrating contested field bookings.
-          </p>
-        </div>
-        <Badge className="bg-red-100 font-bold text-danger">
-          {list.length} Awaiting Arbitration
-        </Badge>
-      </div>
-
-      {list.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 p-12 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-leaf-100 text-2xl text-leaf-800">
-            ✓
-          </span>
-          <div>
-            <h2 className="text-xl font-bold text-leaf-900">No Open Disputes</h2>
-            <p className="text-sm text-muted">All active bookings are proceeding normally or confirmed.</p>
+    <DisputeResolution
+      lang="en"
+      slots={{
+        kpis: (
+          <div className="mb-space-xl grid grid-cols-1 gap-space-md md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Open disputes" value={list.length} icon="gavel" iconTone="bg-error-container/60 text-error" foot="Awaiting arbitration" />
+            <MetricCard label="Contested value" value={formatNaira(frozen).replace(/\.00$/, "")} icon="lock_clock" iconTone="bg-tertiary-fixed/50 text-tertiary-container" foot="Sum of disputed bookings" />
+            <MetricCard label="Oldest open" value={list.length ? Math.round(oldestH) : "—"} unit={list.length ? "hours" : undefined} icon="speed" foot="Since the dispute was filed" />
+            <MetricCard label="Raised by farmers" value={list.length ? `${byFarmer}/${list.length}` : "—"} icon="agriculture" iconTone="bg-surface-container-high text-primary" foot="The rest were raised by providers" />
           </div>
-        </Card>
-      ) : (
-        <ul className="flex flex-col gap-4">
-          {list.map((d) => (
-            <li key={d.id}>
-              <Card className="flex flex-col gap-4 border-2 border-red-200 bg-red-50/20 p-5 shadow-xs">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <span className="font-mono text-xs font-bold text-danger uppercase tracking-wider">
-                      DISPUTE #CN-{d.id.slice(0, 8).toUpperCase()}
-                    </span>
-                    <h2 className="text-xl font-extrabold text-leaf-900 mt-0.5">
-                      {d.listing_title} · {d.farm_name}
-                    </h2>
-                    <p className="text-sm text-muted">
-                      Location: {[d.job_lga, d.job_state].filter(Boolean).join(", ")} · Job Date: {d.job_date}
-                    </p>
-                  </div>
-                  <Badge className="bg-red-100 text-danger font-bold text-xs">
-                    Category: {d.dispute_category?.replaceAll("_", " ") ?? "General Problem"}
-                  </Badge>
-                </div>
-
-                <div className="rounded-lg bg-white p-4 border border-line">
-                  <span className="block text-xs font-bold uppercase tracking-wider text-muted">
-                    Claim Statement
-                  </span>
-                  <p className="mt-1 text-sm font-medium italic text-ink">
-                    &quot;{d.dispute_reason || "No written statement provided."}&quot;
-                  </p>
-                  <span className="mt-2 block text-xs text-muted">
-                    Filed {when(d.disputed_at ?? "")} by {d.disputed_by === d.farmer_id ? "Farmer" : "Provider"}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
-                  <span className="font-mono font-bold text-leaf-900">
-                    Contested Amount: {formatNaira(d.total_kobo)}
-                  </span>
-                  <Link
-                    href={`/admin/disputes/${d.id}`}
-                    className="inline-flex items-center rounded-md bg-leaf-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-leaf-800"
-                  >
-                    Open Evidence Workstation →
-                  </Link>
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        ),
+        queue: (
+          <div className="mb-space-xl overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-space-md bg-surface-container-low p-space-md">
+              <div>
+                <h2 className="font-headline-sm text-headline-sm text-on-surface">Arbitration queue</h2>
+                <p className="text-body-sm text-on-surface-variant">Evidence before opinion — open a case to review proof photos, GPS and both statements.</p>
+              </div>
+              <Badge tone={list.length ? "critical" : "positive"} dot>{list.length} awaiting arbitration</Badge>
+            </div>
+            {list.length === 0 ? (
+              <div className="p-space-md">
+                <EmptyState icon="task_alt" title="No open disputes" description="All active bookings are proceeding normally or have been confirmed." />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="pl-5">Case</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Parties</TableHead>
+                    <TableHead className="text-right">Contested</TableHead>
+                    <TableHead>Claim</TableHead>
+                    <TableHead className="pr-5 text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {list.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="pl-5">
+                        <p className="font-mono text-label-sm font-bold text-error">#CN-{d.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="font-semibold">{d.listing_title}</p>
+                        <p className="text-label-sm font-normal text-on-surface-variant">{d.farm_name} · {[d.job_lga, d.job_state].filter(Boolean).join(", ")}</p>
+                      </TableCell>
+                      <TableCell><Badge tone="critical">{d.dispute_category?.replaceAll("_", " ") ?? "general"}</Badge></TableCell>
+                      <TableCell>
+                        <p>{d.profiles?.full_name ?? "Farmer"}</p>
+                        <p className="text-label-sm font-normal text-on-surface-variant">Filed by {d.disputed_by === d.farmer_id ? "farmer" : "provider"} · {when(d.disputed_at)}</p>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{formatNaira(d.total_kobo)}</TableCell>
+                      <TableCell className="max-w-xs"><p className="line-clamp-2 italic text-on-surface-variant">“{d.dispute_reason || "No written statement"}”</p></TableCell>
+                      <TableCell className="pr-5 text-right">
+                        <Link href={`/admin/disputes/${d.id}`} className="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-1.5 font-label-sm text-label-sm text-white hover:bg-primary">
+                          Open evidence <Icon name="arrow_forward" className="text-sm" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        ),
+        dossier: null,
+        trail: null,
+      }}
+    />
   );
 }

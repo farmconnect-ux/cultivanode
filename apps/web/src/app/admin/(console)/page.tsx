@@ -115,30 +115,30 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
   return (
     <div className="flex flex-col gap-10">
       {/* Operations Control Centre Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-leaf-800">CultivaNode Operations Control</h1>
-          <p className="mt-1 text-sm text-muted">Real-time marketplace monitoring, arbitration, and governance.</p>
+          <h1 className="text-3xl font-extrabold text-primary">CultivaNode Operations Control</h1>
+          <p className="mt-1 text-sm text-on-surface-variant">Real-time marketplace monitoring, arbitration, and governance.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-leaf-200 bg-leaf-50 px-3.5 py-1 text-xs font-bold text-leaf-800">
-          <span className="size-2 rounded-full bg-leaf-600 animate-pulse" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-full border border-secondary/30 bg-surface-container-low px-3.5 py-1 text-xs font-bold text-primary">
+          <span className="size-2 rounded-full bg-primary-container animate-pulse" aria-hidden="true" />
           <span>Lagos Node · All Systems Operational</span>
         </div>
       </div>
 
       {/* ATTENTION REQUIRED Alert Bar */}
       {((disputedCount ?? 0) > 0 || (c.suspended_accounts ?? 0) > 0 || (c.flagged_accounts ?? 0) > 0) && (
-        <div className="rounded-xl border-2 border-harvest-400 bg-harvest-50/60 p-5 shadow-xs">
+        <div className="rounded-xl border-2 border-caution bg-caution-soft/60 p-5 shadow-xs">
           <div className="flex items-center gap-2">
             <span className="text-lg" aria-hidden="true">⚠️</span>
-            <h2 className="text-sm font-extrabold tracking-wider text-harvest-900 uppercase">
+            <h2 className="text-sm font-extrabold tracking-wider text-[#78350f] uppercase">
               Attention Required
             </h2>
           </div>
-          <ul className="mt-2.5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-harvest-900">
+          <ul className="mt-2.5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-[#78350f]">
             {(disputedCount ?? 0) > 0 && (
               <li>
-                <Link href="/admin/disputes" className="underline hover:text-danger">
+                <Link href="/admin/disputes" className="underline hover:text-critical">
                   ● {disputedCount} dispute(s) awaiting arbitration
                 </Link>
               </li>
@@ -170,33 +170,33 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
 
       {/* PENDING ACTIONS (Section 15) */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Pending Actions</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Pending Actions</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <Link
             href="/admin/approvals"
-            className="flex flex-col justify-between gap-1 rounded-xl border border-line bg-white p-5 hover:border-leaf-600 shadow-xs"
+            className="flex flex-col justify-between gap-1 rounded-xl border border-border bg-white p-5 hover:border-primary-container shadow-xs"
           >
-            <span className="text-xs font-bold uppercase tracking-wider text-muted">Verification Queue</span>
-            <span className="text-4xl font-extrabold text-leaf-800">{c.pending_documents ?? 0}</span>
-            <span className="text-xs text-muted">Identity & CAC documents</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Verification Queue</span>
+            <span className="text-4xl font-extrabold text-primary">{c.pending_documents ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Identity & CAC documents</span>
           </Link>
 
           <Link
             href="/admin/disputes"
-            className="flex flex-col justify-between gap-1 rounded-xl border-2 border-danger/30 bg-red-50/30 p-5 hover:border-danger shadow-xs"
+            className="flex flex-col justify-between gap-1 rounded-xl border-2 border-critical/30 bg-red-50/30 p-5 hover:border-critical shadow-xs"
           >
-            <span className="text-xs font-bold uppercase tracking-wider text-danger">Disputes Awaiting Decision</span>
-            <span className="text-4xl font-extrabold text-danger">{disputedCount ?? 0}</span>
-            <span className="text-xs text-muted">Evidence-based arbitration</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-critical">Disputes Awaiting Decision</span>
+            <span className="text-4xl font-extrabold text-critical">{disputedCount ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Evidence-based arbitration</span>
           </Link>
 
           <Link
             href="/admin/approvals"
-            className="flex flex-col justify-between gap-1 rounded-xl border border-line bg-white p-5 hover:border-leaf-600 shadow-xs"
+            className="flex flex-col justify-between gap-1 rounded-xl border border-border bg-white p-5 hover:border-primary-container shadow-xs"
           >
-            <span className="text-xs font-bold uppercase tracking-wider text-muted">Role Approvals</span>
-            <span className="text-4xl font-extrabold text-leaf-800">{c.pending_role_requests ?? 0}</span>
-            <span className="text-xs text-muted">Provider & Agent applications</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Role Approvals</span>
+            <span className="text-4xl font-extrabold text-primary">{c.pending_role_requests ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Provider & Agent applications</span>
           </Link>
         </div>
       </section>
@@ -204,60 +204,60 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
       {/* LIVE OPERATIONS (Section 15) */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Live Field Operations</h2>
-          <Link href="/admin/jobs" className="text-xs font-bold text-leaf-700 hover:underline">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Live Field Operations</h2>
+          <Link href="/admin/jobs" className="text-xs font-bold text-primary-container hover:underline">
             Open Jobs Console →
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Active In-Field</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Active In-Field</span>
             <span className="mt-1 block text-3xl font-extrabold text-node-800">{activeJobsCount ?? 0}</span>
-            <span className="text-xs text-muted">Jobs in progress</span>
+            <span className="text-xs text-on-surface-variant">Jobs in progress</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Jobs Today</span>
-            <span className="mt-1 block text-3xl font-extrabold text-leaf-800">{jobsTodayCount ?? 0}</span>
-            <span className="text-xs text-muted">Scheduled today</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Jobs Today</span>
+            <span className="mt-1 block text-3xl font-extrabold text-primary">{jobsTodayCount ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Scheduled today</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Completed Total</span>
-            <span className="mt-1 block text-3xl font-extrabold text-leaf-700">{completedJobsCount ?? 0}</span>
-            <span className="text-xs text-muted">Executed & confirmed</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Completed Total</span>
+            <span className="mt-1 block text-3xl font-extrabold text-primary-container">{completedJobsCount ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Executed & confirmed</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Disputed / Failed</span>
-            <span className="mt-1 block text-3xl font-extrabold text-danger">{disputedCount ?? 0}</span>
-            <span className="text-xs text-muted">Requiring staff review</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Disputed / Failed</span>
+            <span className="mt-1 block text-3xl font-extrabold text-critical">{disputedCount ?? 0}</span>
+            <span className="text-xs text-on-surface-variant">Requiring staff review</span>
           </div>
         </div>
       </section>
 
       {/* MARKETPLACE COUNTERS (Section 15) */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Marketplace Liquidity</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Marketplace Liquidity</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Registered Farmers</span>
-            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{farmersCount ?? 0}</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Registered Farmers</span>
+            <span className="mt-1 block text-2xl font-extrabold text-primary">{farmersCount ?? 0}</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Providers</span>
-            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{providersCount ?? 0}</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Providers</span>
+            <span className="mt-1 block text-2xl font-extrabold text-primary">{providersCount ?? 0}</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Active Equipment</span>
-            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{equipmentCount ?? 0}</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Active Equipment</span>
+            <span className="mt-1 block text-2xl font-extrabold text-primary">{equipmentCount ?? 0}</span>
           </div>
 
-          <div className="rounded-xl border border-line bg-white p-4">
-            <span className="block text-xs font-bold uppercase tracking-wider text-muted">Field Agents</span>
-            <span className="mt-1 block text-2xl font-extrabold text-leaf-900">{agentsCount ?? 0}</span>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <span className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Field Agents</span>
+            <span className="mt-1 block text-2xl font-extrabold text-primary">{agentsCount ?? 0}</span>
           </div>
         </div>
       </section>
@@ -267,15 +267,15 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 id="analytics-h" className="text-2xl font-bold">Analytics</h2>
-              <p className="text-sm text-muted">Staff accounts are not counted. Days are Lagos time.</p>
+              <p className="text-sm text-on-surface-variant">Staff accounts are not counted. Days are Lagos time.</p>
             </div>
-            <nav aria-label="Period" className="flex gap-1 rounded-lg border border-line bg-white p-1">
+            <nav aria-label="Period" className="flex gap-1 rounded-lg border border-border bg-white p-1">
               {PERIODS.map((p) => (
                 <Link
                   key={p}
                   href={`/admin?days=${p}`}
                   aria-current={p === days ? "page" : undefined}
-                  className={`rounded-md px-3 py-1.5 text-sm font-semibold ${p === days ? "bg-leaf-600 text-white" : "hover:bg-leaf-50"}`}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold ${p === days ? "bg-primary-container text-white" : "hover:bg-surface-container-low"}`}
                 >
                   {p} days
                 </Link>
@@ -318,7 +318,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
                   <BarList items={a.page_views.top_pages.map((p) => ({ label: p.path, value: p.views }))} extra="Most visited pages" />
                 </>
               )}
-              <p className="text-xs text-muted">Counted without cookies or personal data; visitors with Do Not Track are not counted.</p>
+              <p className="text-xs text-on-surface-variant">Counted without cookies or personal data; visitors with Do Not Track are not counted.</p>
             </Card>
           </div>
 
@@ -331,32 +331,32 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
                   .map((r) => ({ label: ROLE_NAMES[r.role] ?? r.role, value: r.active, note: r.pending ? `+${r.pending} waiting` : undefined }))}
                 extra="Users by role"
               />
-              {a.roles.every((r) => r.active === 0 && r.pending === 0) && <p className="text-muted">No roles yet.</p>}
+              {a.roles.every((r) => r.active === 0 && r.pending === 0) && <p className="text-on-surface-variant">No roles yet.</p>}
             </Card>
             <Card className="flex flex-col gap-3">
               <h3 className="text-lg font-bold">Users by state</h3>
               <BarList items={a.states.slice(0, 12).map((s) => ({ label: s.state, value: s.people }))} extra="Users by state" />
-              {a.states.length === 0 && <p className="text-muted">No finished sign-ups yet.</p>}
-              {a.states.length > 12 && <p className="text-xs text-muted">Top 12 of {a.states.length} states.</p>}
+              {a.states.length === 0 && <p className="text-on-surface-variant">No finished sign-ups yet.</p>}
+              {a.states.length > 12 && <p className="text-xs text-on-surface-variant">Top 12 of {a.states.length} states.</p>}
             </Card>
             <Card className="flex flex-col gap-3">
               <h3 className="text-lg font-bold">Verification and approvals</h3>
               <BarList items={TIER_NAMES.map((name, i) => ({ label: name, value: a.tiers[String(i)] ?? 0 }))} extra="People by verification level" />
               <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <dt className="text-muted">Role requests waiting</dt>
+                <dt className="text-on-surface-variant">Role requests waiting</dt>
                 <dd className="text-right font-semibold tabular-nums">{a.approvals.pending}</dd>
-                <dt className="text-muted">Documents waiting</dt>
+                <dt className="text-on-surface-variant">Documents waiting</dt>
                 <dd className="text-right font-semibold tabular-nums">{a.documents_pending}</dd>
-                <dt className="text-muted">Approved ({days} days)</dt>
+                <dt className="text-on-surface-variant">Approved ({days} days)</dt>
                 <dd className="text-right font-semibold tabular-nums">
                   {a.approvals.approved_in_period}
-                  <span className="font-normal text-muted"> ({a.approvals.auto_approved_in_period} automatic)</span>
+                  <span className="font-normal text-on-surface-variant"> ({a.approvals.auto_approved_in_period} automatic)</span>
                 </dd>
-                <dt className="text-muted">Rejected ({days} days)</dt>
+                <dt className="text-on-surface-variant">Rejected ({days} days)</dt>
                 <dd className="text-right font-semibold tabular-nums">{a.approvals.rejected_in_period}</dd>
-                <dt className="text-muted">Average time to decide</dt>
+                <dt className="text-on-surface-variant">Average time to decide</dt>
                 <dd className="text-right font-semibold tabular-nums">{hours(a.approvals.avg_hours_to_decision)}</dd>
-                <dt className="text-muted">Oldest waiting request</dt>
+                <dt className="text-on-surface-variant">Oldest waiting request</dt>
                 <dd className="text-right font-semibold tabular-nums">{hours(a.approvals.oldest_pending_hours)}</dd>
               </dl>
             </Card>
@@ -369,7 +369,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
         {weather.ok ? (
           <WeatherPanel forecasts={weather.forecasts} fetchedAt={weather.fetchedAt} provider={weather.provider} stale={weather.stale} />
         ) : (
-          <p className="text-muted">
+          <p className="text-on-surface-variant">
             {weather.error === "not_configured"
               ? "Weather is not set up yet. "
               : weather.error === "not_available"
@@ -378,7 +378,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
                   ? `The weather provider refused the request${weather.detail ? ` (${weather.detail})` : ""}. `
                   : "The weather service could not be reached. It will try again in a few minutes. "}
             {can(staff, "integrations.manage") && weather.error !== "unavailable" && (
-              <Link href="/admin/integrations" className="font-semibold text-leaf-700 hover:underline">
+              <Link href="/admin/integrations" className="font-semibold text-primary-container hover:underline">
                 Open Integrations › Weather to add or check the API key.
               </Link>
             )}
@@ -389,8 +389,8 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
       {can(staff, "site_content.manage") && (
         <Card className="flex flex-col gap-2">
           <h2 className="text-xl font-bold">Home-page pictures</h2>
-          <p className="text-muted">Upload, reorder and publish the pictures in the carousel at the top of the home page.</p>
-          <Link href="/admin/content" className="font-semibold text-leaf-700 hover:underline">
+          <p className="text-on-surface-variant">Upload, reorder and publish the pictures in the carousel at the top of the home page.</p>
+          <Link href="/admin/content" className="font-semibold text-primary-container hover:underline">
             Manage pictures
           </Link>
         </Card>
@@ -398,17 +398,17 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
       {can(staff, "integrations.manage") && (
         <Card className="flex flex-col gap-2">
           <h2 className="text-xl font-bold">Integrations</h2>
-          <p className="text-muted">Choose the SMS and identity-check providers, add their keys and switch between test and live.</p>
-          <Link href="/admin/integrations" className="font-semibold text-leaf-700 hover:underline">
+          <p className="text-on-surface-variant">Choose the SMS and identity-check providers, add their keys and switch between test and live.</p>
+          <Link href="/admin/integrations" className="font-semibold text-primary-container hover:underline">
             Open integrations
           </Link>
         </Card>
       )}
-      <details className="rounded-lg border border-line bg-white p-5">
+      <details className="rounded-lg border border-border bg-white p-5">
         <summary className="cursor-pointer text-lg font-bold">Your permissions</summary>
         <ul className="mt-3 flex flex-wrap gap-2">
           {staff.permissions.map((p) => (
-            <li key={p} className="rounded-full border border-line bg-cream px-3 py-1 text-sm font-semibold">
+            <li key={p} className="rounded-full border border-border bg-surface-container-low px-3 py-1 text-sm font-semibold">
               {p}
             </li>
           ))}
@@ -420,12 +420,12 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
 
 function Stat({ label, value, note }: { label: string; value: number | string; note: string }) {
   return (
-    <li className="rounded-lg border border-line bg-white p-5">
-      <span className="block text-sm font-semibold text-muted">{label}</span>
-      <span className="mt-1 block text-4xl font-extrabold tabular-nums text-leaf-800">
+    <li className="rounded-lg border border-border bg-white p-5">
+      <span className="block text-sm font-semibold text-on-surface-variant">{label}</span>
+      <span className="mt-1 block text-4xl font-extrabold tabular-nums text-primary">
         {typeof value === "number" ? value.toLocaleString("en-NG") : value}
       </span>
-      <span className="mt-1 block text-sm text-muted">{note}</span>
+      <span className="mt-1 block text-sm text-on-surface-variant">{note}</span>
     </li>
   );
 }

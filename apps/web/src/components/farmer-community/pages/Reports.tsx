@@ -129,10 +129,10 @@ export function Reports() {
   ]);
 
   const quickStats = [
-    { label: 'Total Revenue', value: '₦14,850,000', change: '+12%', color: 'text-leaf-700' },
+    { label: 'Total Revenue', value: '₦14,850,000', change: '+12%', color: 'text-primary-container' },
     { label: 'Operating Costs', value: '₦5,230,000', change: '-8%', color: 'text-red-600' },
     { label: 'Water Usage', value: '2,340,000L', change: '-5%', color: 'text-blue-600' },
-    { label: 'Solar Generation', value: '45,600 kWh', change: '+3%', color: 'text-harvest-600' }
+    { label: 'Solar Generation', value: '45,600 kWh', change: '+3%', color: 'text-[#b45309]' }
   ];
 
   const handleExportFullReport = () => {
@@ -201,7 +201,7 @@ export function Reports() {
           </Select>
           <Button 
             size="sm" 
-            className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm"
+            className="bg-primary hover:bg-primary text-white text-xs shadow-sm"
             onClick={handleExportFullReport}
           >
             <Download className="h-4 w-4 mr-1" />
@@ -211,8 +211,8 @@ export function Reports() {
       </div>
 
       {feedback && (
-        <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900">
-          <CheckCircle className="h-4 w-4 text-leaf-700" />
+        <Alert className="border-secondary/40 bg-surface-container-low text-primary">
+          <CheckCircle className="h-4 w-4 text-primary-container" />
           <AlertDescription className="text-xs font-medium">
             {feedback}
           </AlertDescription>
@@ -229,10 +229,10 @@ export function Reports() {
                 <p className="text-xl font-bold text-gray-900 mt-0.5">{stat.value}</p>
                 <p className={`text-xs font-semibold ${stat.color}`}>{stat.change} vs prior term</p>
               </div>
-              {index === 0 && <DollarSign className="h-8 w-8 text-leaf-700" />}
+              {index === 0 && <DollarSign className="h-8 w-8 text-primary-container" />}
               {index === 1 && <TrendingUp className="h-8 w-8 text-red-600" />}
               {index === 2 && <Droplets className="h-8 w-8 text-blue-600" />}
-              {index === 3 && <Zap className="h-8 w-8 text-harvest-600" />}
+              {index === 3 && <Zap className="h-8 w-8 text-[#b45309]" />}
             </div>
           </Card>
         ))}
@@ -254,7 +254,7 @@ export function Reports() {
                     <h3 className="text-sm font-semibold text-gray-900">{report.name}</h3>
                     <p className="text-xs text-gray-600 mt-0.5">{report.description}</p>
                   </div>
-                  <BarChart3 className="h-5 w-5 text-leaf-700" />
+                  <BarChart3 className="h-5 w-5 text-primary-container" />
                 </div>
                 <div className="space-y-2">
                   <Select defaultValue="all">
@@ -270,7 +270,7 @@ export function Reports() {
                   </Select>
                   <Button 
                     size="sm" 
-                    className="w-full bg-leaf-800 hover:bg-leaf-900 text-white h-8 text-xs shadow-sm disabled:opacity-50"
+                    className="w-full bg-primary hover:bg-primary text-white h-8 text-xs shadow-sm disabled:opacity-50"
                     onClick={() => handleGenerateReport(report)}
                     disabled={generatingReportId === report.id}
                   >
@@ -307,13 +307,13 @@ export function Reports() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge className="text-xs bg-leaf-100 text-leaf-800">
+                    <Badge className="text-xs bg-secondary-container/40 text-primary">
                       {report.status}
                     </Badge>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="h-7 text-xs text-leaf-800 hover:bg-leaf-50"
+                      className="h-7 text-xs text-primary hover:bg-surface-container-low"
                       onClick={() => handleDownloadHistoryItem(report)}
                     >
                       <Download className="h-3.5 w-3.5 mr-1" />
@@ -336,11 +336,11 @@ export function Reports() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Crop Yield Efficiency</span>
-                <span className="text-leaf-700 font-semibold">+8.5%</span>
+                <span className="text-primary-container font-semibold">+8.5%</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Livestock Productivity</span>
-                <span className="text-leaf-700 font-semibold">+12.3%</span>
+                <span className="text-primary-container font-semibold">+12.3%</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Land Utilization</span>
@@ -354,15 +354,15 @@ export function Reports() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Cost per Hectare</span>
-                <span className="text-leaf-700 font-semibold">-5.2%</span>
+                <span className="text-primary-container font-semibold">-5.2%</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Solar vs Diesel Savings</span>
-                <span className="text-leaf-700 font-semibold">+₦480,000</span>
+                <span className="text-primary-container font-semibold">+₦480,000</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Casual Labor Efficiency</span>
-                <span className="text-harvest-600 font-semibold">+6.4%</span>
+                <span className="text-[#b45309] font-semibold">+6.4%</span>
               </div>
             </div>
           </div>
@@ -372,15 +372,15 @@ export function Reports() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Groundwater Conservation</span>
-                <span className="text-leaf-700 font-semibold">-8.7%</span>
+                <span className="text-primary-container font-semibold">-8.7%</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Soil Carbon Sequestration</span>
-                <span className="text-leaf-700 font-semibold">+4.3%</span>
+                <span className="text-primary-container font-semibold">+4.3%</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-700">Harvest Waste Reduction</span>
-                <span className="text-leaf-700 font-semibold">-12.5%</span>
+                <span className="text-primary-container font-semibold">-12.5%</span>
               </div>
             </div>
           </div>

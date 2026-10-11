@@ -19,9 +19,9 @@ export function WorkspaceSwitcher({
   if (availableWorkspaces.length <= 1) {
     const info = WORKSPACE_DETAILS[currentWorkspace];
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-line bg-cream px-3 py-1.5 text-xs">
-        <span className="font-semibold text-muted">WORKSPACE:</span>
-        <Badge className="bg-leaf-100 font-bold text-leaf-800">{info.name}</Badge>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-container-low px-3 py-1.5 text-xs">
+        <span className="font-semibold text-on-surface-variant">WORKSPACE:</span>
+        <Badge className="bg-secondary-container/40 font-bold text-primary">{info.name}</Badge>
       </div>
     );
   }
@@ -33,8 +33,8 @@ export function WorkspaceSwitcher({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-cream p-2">
-      <span className="px-1 text-[11px] font-bold tracking-wider text-muted uppercase">
+    <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-container-low p-2">
+      <span className="px-1 text-[11px] font-bold tracking-wider text-on-surface-variant uppercase">
         Current Workspace
       </span>
       <div className="flex flex-wrap gap-1" role="tablist" aria-label="Select operational workspace">
@@ -50,12 +50,12 @@ export function WorkspaceSwitcher({
               className={cx(
                 "inline-flex min-h-9 items-center rounded-md px-3 text-xs font-bold transition-colors",
                 isActive
-                  ? "bg-leaf-700 text-white shadow-xs"
-                  : "bg-white text-ink hover:bg-leaf-50",
+                  ? "bg-primary-container text-white shadow-xs"
+                  : "bg-white text-on-surface hover:bg-surface-container-low",
               )}
             >
               {info.name}
-              {isActive && <span className="ml-1.5 text-[10px] text-leaf-200">●</span>}
+              {isActive && <span className="ml-1.5 text-[10px] text-on-primary/70">●</span>}
             </Link>
           );
         })}

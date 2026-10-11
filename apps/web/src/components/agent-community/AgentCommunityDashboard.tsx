@@ -228,12 +228,12 @@ export function AgentCommunityDashboard({
       {/* Mobile Bar */}
       <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <div className="flex items-center space-x-2">
-          <div className="p-1.5 bg-leaf-100 rounded-lg text-leaf-800">
+          <div className="p-1.5 bg-secondary-container/40 rounded-lg text-primary">
             <Compass className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-gray-900">Agent Field OS</h2>
-            <p className="text-xs text-leaf-700 font-medium">Territory: Oyo State Zone</p>
+            <p className="text-xs text-primary-container font-medium">Territory: Oyo State Zone</p>
           </div>
         </div>
         <Button size="sm" variant="outline" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -248,13 +248,13 @@ export function AgentCommunityDashboard({
       `}>
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 bg-leaf-800 rounded-xl flex items-center justify-center text-white shadow-sm">
+            <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-sm">
               <Compass className="h-5 w-5" />
             </div>
             <div>
               <h2 className="font-bold text-sm text-gray-900 leading-tight">Field Officer Console</h2>
-              <span className="inline-flex items-center text-xs text-leaf-700 font-semibold bg-leaf-50 px-2 py-0.5 rounded-full mt-0.5">
-                <CheckCircle className="h-3 w-3 mr-1 text-leaf-600" />
+              <span className="inline-flex items-center text-xs text-primary-container font-semibold bg-surface-container-low px-2 py-0.5 rounded-full mt-0.5">
+                <CheckCircle className="h-3 w-3 mr-1 text-secondary" />
                 Tier 2 Accredited
               </span>
             </div>
@@ -275,7 +275,7 @@ export function AgentCommunityDashboard({
                 className={`
                   w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors
                   ${isActive 
-                    ? 'bg-leaf-800 text-white shadow-xs' 
+                    ? 'bg-primary text-white shadow-xs' 
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                 `}
               >
@@ -284,7 +284,7 @@ export function AgentCommunityDashboard({
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
-                  <Badge className={`text-xs px-1.5 py-0 ${isActive ? 'bg-white/20 text-white' : 'bg-harvest-100 text-harvest-800'}`}>
+                  <Badge className={`text-xs px-1.5 py-0 ${isActive ? 'bg-white/20 text-white' : 'bg-tertiary-fixed/60 text-[#92400e]'}`}>
                     {item.badge}
                   </Badge>
                 )}
@@ -297,7 +297,7 @@ export function AgentCommunityDashboard({
         <div className="p-4 mx-3 my-4 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-500 font-medium">Earned Commission</span>
-            <span className="font-bold text-leaf-800">{formatCurrencyCompact(commissionBalance)}</span>
+            <span className="font-bold text-primary">{formatCurrencyCompact(commissionBalance)}</span>
           </div>
           <Progress value={78} className="h-1.5 bg-gray-200" />
           <div className="flex justify-between items-center text-gray-500 pt-1">
@@ -310,8 +310,8 @@ export function AgentCommunityDashboard({
       {/* Main View */}
       <main className="flex-1 p-4 lg:p-6 max-w-7xl mx-auto w-full space-y-5">
         {feedback && (
-          <Alert className="border-leaf-300 bg-leaf-50 text-leaf-900 animate-in fade-in">
-            <CheckCircle className="h-4 w-4 text-leaf-700" />
+          <Alert className="border-secondary/40 bg-surface-container-low text-primary animate-in fade-in">
+            <CheckCircle className="h-4 w-4 text-primary-container" />
             <AlertDescription className="text-xs font-medium">
               {feedback}
             </AlertDescription>
@@ -333,7 +333,7 @@ export function AgentCommunityDashboard({
               <div className="flex space-x-2">
                 <Button 
                   size="sm" 
-                  className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs shadow-sm"
+                  className="bg-primary hover:bg-primary text-white text-xs shadow-sm"
                   onClick={() => setIsOnboardModalOpen(true)}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
@@ -344,16 +344,16 @@ export function AgentCommunityDashboard({
 
             {/* Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card className="p-4 border-l-4 border-l-leaf-600 border-gray-100 shadow-xs">
+              <Card className="p-4 border-l-4 border-l-primary-container border-gray-100 shadow-xs">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Farmers Onboarded</span>
-                <p className="text-2xl font-bold text-leaf-800 mt-1">{farmerList.length}</p>
-                <p className="text-xs text-leaf-700 font-medium mt-0.5">Active in your zone</p>
+                <p className="text-2xl font-bold text-primary mt-1">{farmerList.length}</p>
+                <p className="text-xs text-primary-container font-medium mt-0.5">Active in your zone</p>
               </Card>
 
-              <Card className="p-4 border-l-4 border-l-harvest-500 border-gray-100 shadow-xs">
+              <Card className="p-4 border-l-4 border-l-caution border-gray-100 shadow-xs">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Verifications Due</span>
-                <p className="text-2xl font-bold text-harvest-700 mt-1">{verifications.filter(v => v.status === 'pending').length}</p>
-                <p className="text-xs text-harvest-700 font-medium mt-0.5">Field GPS checks</p>
+                <p className="text-2xl font-bold text-[#b45309] mt-1">{verifications.filter(v => v.status === 'pending').length}</p>
+                <p className="text-xs text-[#b45309] font-medium mt-0.5">Field GPS checks</p>
               </Card>
 
               <Card className="p-4 border-l-4 border-l-node-600 border-gray-100 shadow-xs">
@@ -365,7 +365,7 @@ export function AgentCommunityDashboard({
               <Card className="p-4 border-l-4 border-l-blue-500 border-gray-100 shadow-xs">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Commission Ledger</span>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrencyCompact(commissionBalance)}</p>
-                <p className="text-xs text-leaf-700 font-medium mt-0.5">Ready for withdrawal</p>
+                <p className="text-xs text-primary-container font-medium mt-0.5">Ready for withdrawal</p>
               </Card>
             </div>
 
@@ -373,7 +373,7 @@ export function AgentCommunityDashboard({
             <Card className="p-5 border-gray-100 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-gray-900 flex items-center">
-                  <Navigation className="h-4 w-4 mr-2 text-leaf-700" />
+                  <Navigation className="h-4 w-4 mr-2 text-primary-container" />
                   Today's Field Visits & Verification Itinerary
                 </h3>
                 <Badge variant="secondary" className="text-xs">GPS Route Active</Badge>
@@ -387,7 +387,7 @@ export function AgentCommunityDashboard({
                         <h4 className="text-xs font-bold text-gray-900">{v.farmerName}</h4>
                         <p className="text-xs text-gray-500 mt-0.5">{v.location} · {v.crop}</p>
                       </div>
-                      <Badge className={`text-xs ${v.status === 'verified' ? 'bg-leaf-100 text-leaf-800' : 'bg-harvest-100 text-harvest-800'}`}>
+                      <Badge className={`text-xs ${v.status === 'verified' ? 'bg-secondary-container/40 text-primary' : 'bg-tertiary-fixed/60 text-[#92400e]'}`}>
                         {v.status === 'verified' ? 'Verified' : 'Pending Walkthrough'}
                       </Badge>
                     </div>
@@ -400,7 +400,7 @@ export function AgentCommunityDashboard({
                     {v.status === 'pending' && (
                       <Button 
                         size="sm" 
-                        className="w-full bg-leaf-800 hover:bg-leaf-900 text-white text-xs h-8"
+                        className="w-full bg-primary hover:bg-primary text-white text-xs h-8"
                         onClick={() => {
                           setSelectedVerification(v);
                           setIsVerifyModalOpen(true);
@@ -427,7 +427,7 @@ export function AgentCommunityDashboard({
               </div>
               <Button 
                 size="sm" 
-                className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                className="bg-primary hover:bg-primary text-white text-xs"
                 onClick={() => setIsOnboardModalOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
@@ -452,7 +452,7 @@ export function AgentCommunityDashboard({
                 <Card key={f.id} className="p-4 border-gray-100 bg-white space-y-3">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 bg-leaf-100 rounded-full flex items-center justify-center text-leaf-800 font-bold text-sm">
+                      <div className="h-10 w-10 bg-secondary-container/40 rounded-full flex items-center justify-center text-primary font-bold text-sm">
                         {f.full_name?.charAt(0) || 'F'}
                       </div>
                       <div>
@@ -460,14 +460,14 @@ export function AgentCommunityDashboard({
                         <p className="text-xs text-gray-500">{f.lga}, {f.state} State</p>
                       </div>
                     </div>
-                    <Badge className="bg-leaf-100 text-leaf-800 text-xs">KYC Onboarded</Badge>
+                    <Badge className="bg-secondary-container/40 text-primary text-xs">KYC Onboarded</Badge>
                   </div>
 
                   <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-100">
                     <span className="text-gray-500 font-medium">Contact: {f.phone}</span>
                     <a
                       href={`tel:${f.phone}`}
-                      className="inline-flex items-center text-leaf-800 hover:underline font-semibold"
+                      className="inline-flex items-center text-primary hover:underline font-semibold"
                     >
                       <Phone className="h-3 w-3 mr-1" />
                       Call Farmer
@@ -493,7 +493,7 @@ export function AgentCommunityDashboard({
                   <div>
                     <div className="flex items-center space-x-2">
                       <h3 className="font-bold text-sm text-gray-900">{v.farmerName}</h3>
-                      <Badge className={`text-xs ${v.status === 'verified' ? 'bg-leaf-100 text-leaf-800' : 'bg-harvest-100 text-harvest-800'}`}>
+                      <Badge className={`text-xs ${v.status === 'verified' ? 'bg-secondary-container/40 text-primary' : 'bg-tertiary-fixed/60 text-[#92400e]'}`}>
                         {v.status === 'verified' ? 'GPS Certified' : 'Awaiting Check'}
                       </Badge>
                     </div>
@@ -503,7 +503,7 @@ export function AgentCommunityDashboard({
                   {v.status === 'pending' ? (
                     <Button 
                       size="sm" 
-                      className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                      className="bg-primary hover:bg-primary text-white text-xs"
                       onClick={() => {
                         setSelectedVerification(v);
                         setIsVerifyModalOpen(true);
@@ -512,8 +512,8 @@ export function AgentCommunityDashboard({
                       Certify Plot GPS
                     </Button>
                   ) : (
-                    <div className="flex items-center text-leaf-700 text-xs font-semibold">
-                      <Check className="h-4 w-4 mr-1 text-leaf-600" />
+                    <div className="flex items-center text-primary-container text-xs font-semibold">
+                      <Check className="h-4 w-4 mr-1 text-secondary" />
                       Audited & Certified
                     </div>
                   )}
@@ -535,11 +535,11 @@ export function AgentCommunityDashboard({
               <Card className="p-4 border-gray-100 bg-white space-y-2">
                 <div className="flex justify-between items-start">
                   <h3 className="font-bold text-sm text-gray-900">Akinyele Maize Cluster (Pool A)</h3>
-                  <Badge className="bg-leaf-100 text-leaf-800 text-xs">Ready for Dispatch</Badge>
+                  <Badge className="bg-secondary-container/40 text-primary text-xs">Ready for Dispatch</Badge>
                 </div>
                 <p className="text-xs text-gray-500">6 Farmers pooled · 28.5 contiguous hectares</p>
                 <div className="pt-2 flex justify-between items-center text-xs">
-                  <span className="font-bold text-leaf-800">₦32,000 / ha (Bulk Rate)</span>
+                  <span className="font-bold text-primary">₦32,000 / ha (Bulk Rate)</span>
                   <Button size="sm" variant="outline" className="text-xs" onClick={() => showFeedback('Booking dispatched to nearest depot.')}>
                     Dispatch Tractor
                   </Button>
@@ -573,25 +573,25 @@ export function AgentCommunityDashboard({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="p-4 border-gray-100 bg-white space-y-2">
-                <div className="flex items-center space-x-2 text-harvest-700 font-bold text-xs">
+                <div className="flex items-center space-x-2 text-[#b45309] font-bold text-xs">
                   <Bug className="h-4 w-4" />
                   <span>Fall Armyworm (Spodoptera frugiperda)</span>
                 </div>
                 <p className="text-xs text-gray-600">
                   Target window: Early whorl stage (V2-V6). Recommended application: Emamectin benzoate (50g/ha) or Chlorantraniliprole in morning hours.
                 </p>
-                <Badge className="bg-harvest-100 text-harvest-800 text-xs">Active Warning Zone</Badge>
+                <Badge className="bg-tertiary-fixed/60 text-[#92400e] text-xs">Active Warning Zone</Badge>
               </Card>
 
               <Card className="p-4 border-gray-100 bg-white space-y-2">
-                <div className="flex items-center space-x-2 text-leaf-700 font-bold text-xs">
+                <div className="flex items-center space-x-2 text-primary-container font-bold text-xs">
                   <Droplets className="h-4 w-4" />
                   <span>Maize Top-Dressing (Urea) Protocol</span>
                 </div>
                 <p className="text-xs text-gray-600">
                   Apply 50kg Urea per ha at 4-5 weeks after planting when soil is moist. Avoid broadcasting during hot midday sun.
                 </p>
-                <Badge className="bg-leaf-100 text-leaf-800 text-xs">Recommended Practice</Badge>
+                <Badge className="bg-secondary-container/40 text-primary text-xs">Recommended Practice</Badge>
               </Card>
             </div>
           </div>
@@ -607,7 +607,7 @@ export function AgentCommunityDashboard({
               </div>
               <Button 
                 size="sm" 
-                className="bg-leaf-800 hover:bg-leaf-900 text-white text-xs"
+                className="bg-primary hover:bg-primary text-white text-xs"
                 onClick={() => setIsPayoutModalOpen(true)}
               >
                 Withdraw Commission
@@ -616,7 +616,7 @@ export function AgentCommunityDashboard({
 
             <Card className="p-5 border-gray-100 bg-white space-y-3">
               <span className="text-xs text-gray-500 font-semibold uppercase">Accrued Commission</span>
-              <p className="text-3xl font-bold text-leaf-800">{formatCurrency(commissionBalance)}</p>
+              <p className="text-3xl font-bold text-primary">{formatCurrency(commissionBalance)}</p>
               <div className="space-y-2 pt-2 border-t border-gray-100 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Farmer Onboarding Bonuses ({farmerList.length} × ₦2,500):</span>
@@ -714,7 +714,7 @@ export function AgentCommunityDashboard({
               <Button type="button" variant="outline" size="sm" onClick={() => setIsOnboardModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Register & Claim Bonus
               </Button>
             </DialogFooter>
@@ -734,12 +734,12 @@ export function AgentCommunityDashboard({
             </DialogHeader>
 
             <div className="space-y-3 py-3 text-xs">
-              <div className="bg-leaf-50 p-3 rounded-lg border border-leaf-200">
-                <span className="text-leaf-800">GPS Boundary Walk Polygons:</span>
-                <p className="font-mono text-xs font-bold text-leaf-900 mt-1">
+              <div className="bg-surface-container-low p-3 rounded-lg border border-secondary/30">
+                <span className="text-primary">GPS Boundary Walk Polygons:</span>
+                <p className="font-mono text-xs font-bold text-primary mt-1">
                   7.4019° N, 3.9173° E (4 Vertices Captured)
                 </p>
-                <p className="text-xs text-leaf-700 mt-1">Calculated Area: {selectedVerification.hectares} ha · Accuracy: ±1.2m</p>
+                <p className="text-xs text-primary-container mt-1">Calculated Area: {selectedVerification.hectares} ha · Accuracy: ±1.2m</p>
               </div>
 
               <div>
@@ -757,7 +757,7 @@ export function AgentCommunityDashboard({
               <Button size="sm" variant="outline" onClick={() => setIsVerifyModalOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white" onClick={handleCompleteVerification}>
+              <Button size="sm" className="bg-primary hover:bg-primary text-white" onClick={handleCompleteVerification}>
                 Approve & Certify Verification
               </Button>
             </DialogFooter>
@@ -781,9 +781,9 @@ export function AgentCommunityDashboard({
             </DialogHeader>
 
             <div className="space-y-3 py-3 text-xs">
-              <div className="bg-leaf-50 p-3 rounded-lg border border-leaf-200">
-                <span className="text-leaf-800">Available Balance:</span>
-                <p className="text-lg font-bold text-leaf-900">{formatCurrency(commissionBalance)}</p>
+              <div className="bg-surface-container-low p-3 rounded-lg border border-secondary/30">
+                <span className="text-primary">Available Balance:</span>
+                <p className="text-lg font-bold text-primary">{formatCurrency(commissionBalance)}</p>
               </div>
 
               <div>
@@ -796,7 +796,7 @@ export function AgentCommunityDashboard({
               <Button type="button" variant="outline" size="sm" onClick={() => setIsPayoutModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-leaf-800 hover:bg-leaf-900 text-white">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary text-white">
                 Confirm Withdrawal
               </Button>
             </DialogFooter>

@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
-import { Footer } from "@/components/site/footer";
-import { Header } from "@/components/site/header";
+import { SiteChrome } from "@/components/ds/site-chrome";
+import { SiteFooter } from "@/components/ds/site-footer";
+import { SiteHeader } from "@/components/ds/site-header";
 import { PageViewTracker } from "@/components/site/page-view-tracker";
 import { site } from "@/config/site";
 import { hasLocale, htmlLang, locales } from "@/i18n/config";
@@ -15,7 +16,7 @@ export function generateStaticParams() {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#123D27",
+  themeColor: "#134E33",
   width: "device-width",
   initialScale: 1,
 };
@@ -38,12 +39,13 @@ export default async function LangLayout({ children, params }: LayoutProps<"/[la
   const t = await getDictionary(lang);
   return (
     <html lang={htmlLang[lang]} className="h-full antialiased">
-      <body className="flex min-h-full flex-col">
-        <Header lang={lang} t={t.nav} />
-        <main id="main" className="flex-1">
+      <body className="flex min-h-full flex-col bg-background">
+        <SiteChrome
+          header={<SiteHeader lang={lang} t={t.nav} />}
+          footer={<SiteFooter lang={lang} t={t.footer} nav={t.nav} />}
+        >
           {children}
-        </main>
-        <Footer lang={lang} t={t.footer} nav={t.nav} />
+        </SiteChrome>
         <PageViewTracker />
       </body>
     </html>

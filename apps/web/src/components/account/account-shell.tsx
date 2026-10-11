@@ -1,51 +1,40 @@
 "use client";
 
 import React from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { AccountNav } from "@/components/account/account-nav";
-import { Container } from "@/components/ui";
+import { useSearchParams } from "next/navigation";
+import { signOut } from "@/actions/auth";
+import { AppShell, type ShellContext, type ShellUser } from "@/components/ds/app-shell";
+import { accountNav } from "@/components/ds/nav-config";
 import type { Locale } from "@/i18n/config";
-import type { Workspace } from "@/lib/account/workspace";
+import { WORKSPACE_DETAILS, type Workspace } from "@/lib/account/workspace";
 
-/** Farmer OS pages that draw their own sidebar. Every other account route needs AccountNav. */
-const FARMER_SHELL_PATHS = new Set([
-  "",
-  "/farms",
-  "/crops",
-  "/livestock",
-  "/machinery",
-  "/inventory",
-  "/tasks",
-  "/iot",
-  "/irrigation",
-  "/weather",
-  "/reports",
-  "/finance",
-]);
-
-function farmerShellOwns(pathname: string): boolean {
-  const rest = pathname.replace(/^\/[a-z]{2}\/account/, "");
-  return FARMER_SHELL_PATHS.has(rest);
-}
-
+/**
+ * Account workspace frame: the suite's sidebar + top bar around every /[lang]/account page.
+ * The active workspace (farmer / provider / agent) comes from ?ws= and picks the sidebar menu.
+ */
 export function AccountShell({
   lang,
   signOutLabel,
-  menuLabel,
   availableWorkspaces,
   unreadCount = 0,
   suspendedAlert,
+  user,
+  context,
+  supportHref,
   children,
 }: {
   lang: Locale;
   signOutLabel: string;
-  menuLabel: string;
+  /** Kept for compatibility with older callers; the mobile menu label is fixed now. */
+  menuLabel?: string;
   availableWorkspaces: Workspace[];
   unreadCount?: number;
   suspendedAlert?: React.ReactNode;
+  user: ShellUser;
+  context?: ShellContext;
+  supportHref?: string;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const rawWs = searchParams.get("ws");
   const activeWorkspace: Workspace =
@@ -53,35 +42,32 @@ export function AccountShell({
       ? (rawWs as Workspace)
       : (availableWorkspaces[0] ?? "farmer");
 
-  // Full-width community dashboards with dedicated sidebars.
-  const rest = pathname.replace(/^\/[a-z]{2}\/account/, "");
-  const isAccountRoot = rest === "";
-  const drawsOwnSidebar = 
-    (activeWorkspace === "farmer" && farmerShellOwns(pathname)) ||
-    ((activeWorkspace === "provider" || activeWorkspace === "agent") && isAccountRoot);
-
-  if (drawsOwnSidebar) {
-    return (
-      <div className="w-full min-h-[calc(100vh-4rem)]">
-        {suspendedAlert}
-        {children}
-      </div>
-    );
-  }
+  const groups = React.useMemo(() => accountNav(activeWorkspace), [activeWorkspace]);
+  const base = `/${lang}`;
 
   return (
-    <Container className="grid gap-6 py-8 pb-24 sm:py-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10 lg:pb-12">
-      <AccountNav
-        lang={lang}
-        signOutLabel={signOutLabel}
-        menuLabel={menuLabel}
-        availableWorkspaces={availableWorkspaces}
-        unreadCount={unreadCount}
-      />
-      <div className="flex min-w-0 flex-col gap-6">
-        {suspendedAlert}
-        {children}
-      </div>
-    </Container>
+    <AppShell
+      basePath={base}
+      lang={lang}
+      groups={groups}
+      user={user}
+      context={activeWorkspace === "farmer" ? context : undefined}
+      workspaces={availableWorkspaces.map((w) => ({
+        id: w,
+        name: WORKSPACE_DETAILS[w].name,
+        description: WORKSPACE_DETAILS[w].roleDescription,
+      }))}
+      activeWorkspace={activeWorkspace}
+      unreadCount={unreadCount}
+      notificationsHref={`${base}/account/inbox`}
+      profileHref={`${base}/account/profile`}
+      settingsHref={`${base}/account/settings`}
+      supportHref={supportHref}
+      signOutAction={signOut}
+      signOutLabel={signOutLabel}
+    >
+      {suspendedAlert && <div className="mb-6">{suspendedAlert}</div>}
+      {children}
+    </AppShell>
   );
 }
