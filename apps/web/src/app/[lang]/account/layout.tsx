@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fill } from "@/lib/text";
 
 export const metadata: Metadata = { robots: { index: false } };
+export const dynamic = "force-dynamic";
 
 const ROLE_LABEL: Record<string, string> = {
   crop_farmer: "Crop farmer",

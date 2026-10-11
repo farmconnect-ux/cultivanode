@@ -8,6 +8,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { loadAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { robots: { index: false } };
 
 const STEPS = [

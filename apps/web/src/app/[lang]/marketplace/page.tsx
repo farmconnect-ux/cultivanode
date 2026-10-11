@@ -38,6 +38,8 @@ const TYPE_ICON: Record<string, "grass" | "inventory_2" | "agriculture" | "engin
   service: "engineering",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function MarketplacePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();

@@ -4,6 +4,7 @@ import { Container } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { ListingDetailView, type FullListingDetails } from "@/components/marketplace/listing-detail";
+export const dynamic = "force-dynamic";
 
 export default async function ListingDetailPage({
   params,

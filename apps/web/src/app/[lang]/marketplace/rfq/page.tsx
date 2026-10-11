@@ -4,6 +4,7 @@ import { Badge, Button, Card, Container } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { createBuyerRequestAction } from "@/actions/marketplace";
+export const dynamic = "force-dynamic";
 
 export default async function RfqProcurementPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

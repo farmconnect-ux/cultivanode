@@ -3,6 +3,7 @@ import "../globals.css";
 import { site } from "@/config/site";
 
 // The admin console is a separate root layout: English only, never indexed, always dynamic.
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { default: `Admin · ${site.name}`, template: `%s · ${site.name} admin` },
   robots: { index: false, follow: false },
