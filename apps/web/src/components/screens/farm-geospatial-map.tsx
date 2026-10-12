@@ -2,13 +2,50 @@
 
 // Ported from the "farm_geospatial_map_cadastre_command_8.2" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { GoogleMapView, type MapPolygon, type LatLng } from "@/components/maps/google-map-view";
 import type { ScreenProps } from "./types";
 
-export function FarmGeospatialMap({ lang }: ScreenProps) {
+export interface FarmData {
+  id: string;
+  name: string;
+  state: string | null;
+  lga: string | null;
+  area_ha: number | null;
+  boundary_geojson: any;
+  centroid_lat: number | null;
+  centroid_lng: number | null;
+}
+
+export interface PlotData {
+  id: string;
+  farm_id: string;
+  name: string;
+  area_ha: number | null;
+  boundary_geojson: any;
+  crop_name: string | null;
+  variety: string | null;
+  season: string | null;
+  planted_date: string | null;
+}
+
+export function FarmGeospatialMap({ lang, farms, plots }: ScreenProps & { farms?: FarmData[]; plots?: PlotData[] }) {
+  const farmList = farms ?? [];
+  const plotList = plots ?? [];
+
+  // Compute derived values from real data
+  const totalHectares = useMemo(() => farmList.reduce((sum, f) => sum + (Number(f.area_ha) || 0), 0), [farmList]);
+  const delineatedFields = plotList.length;
+  const primaryFarm = farmList[0];
+  const mapCenter = useMemo((): LatLng => {
+    if (primaryFarm?.centroid_lat && primaryFarm?.centroid_lng) {
+      return { lat: primaryFarm.centroid_lat, lng: primaryFarm.centroid_lng };
+    }
+    return { lat: 8.6672, lng: 3.3934 }; // fallback
+  }, [primaryFarm]);
+
   const [viewMode, setViewMode] = useState<"google_maps" | "vector">("google_maps");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWalkingBoundary, setIsWalkingBoundary] = useState(false);
@@ -35,43 +72,51 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
   }
 
   function handleExportGeoJson() {
+    // Export real farm boundaries if available
+    const features = farmList.map((farm) => ({
+      type: "Feature" as const,
+      properties: {
+        estate_id: farm.id.slice(0, 8).toUpperCase(),
+        name: farm.name,
+        total_hectares: farm.area_ha,
+        lga: farm.lga,
+        state: farm.state,
+        srid: 4326,
+      },
+      geometry: farm.boundary_geojson?.geometry || {
+        type: "Point",
+        coordinates: [farm.centroid_lng || 3.3934, farm.centroid_lat || 8.6672],
+      },
+    }));
+
     const geojson = {
-      type: "FeatureCollection",
+      type: "FeatureCollection" as const,
       crs: { type: "name", properties: { name: "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-      features: [
-        {
-          type: "Feature",
-          properties: {
-            estate_id: "NG-OYO-082",
-            name: "Oke-Ogun Pioneer Agrarian Estate",
-            total_hectares: 48.6,
-            lga: "Saki West",
-            state: "Oyo State",
-            srid: 4326,
-          },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [3.391, 8.6701],
-                [3.3915, 8.6734],
-                [3.3965, 8.6745],
-                [3.3995, 8.6725],
-                [3.399, 8.669],
-                [3.3955, 8.6698],
-                [3.391, 8.6701],
-              ],
-            ],
-          },
+      features: features.length > 0 ? features : [{
+        type: "Feature" as const,
+        properties: {
+          estate_id: "NG-OYO-082",
+          name: "Oke-Ogun Pioneer Agrarian Estate",
+          total_hectares: 48.6,
+          lga: "Saki West",
+          state: "Oyo State",
+          srid: 4326,
         },
-      ],
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [[
+            [3.391, 8.6701], [3.3915, 8.6734], [3.3965, 8.6745],
+            [3.3995, 8.6725], [3.399, 8.669], [3.3955, 8.6698], [3.391, 8.6701],
+          ]],
+        },
+      }],
     };
 
     const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/geo+json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "oke-ogun-pioneer-cadastre-epsg4326.geojson";
+    a.download = `${farmList[0]?.name?.toLowerCase().replace(/\s+/g, "-") || "farm"}-cadastre-epsg4326.geojson`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -80,7 +125,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
   }
 
   function handleSatelliteRescan() {
-    triggerToast("Multispectral Sentinel-2 satellite re-scan triggered. NDVI index refreshed to 0.81 (High Canopy).");
+    triggerToast("Multispectral Sentinel-2 satellite re-scan triggered. NDVI index refreshed.");
   }
 
   function handleWalkBoundary() {
@@ -109,16 +154,25 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             <div className="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
               <Link className="hover:text-primary transition-colors" href={`/${lang}/account/farms`}>Farms</Link>
               <Icon name="chevron_right" className="text-sm" />
-              <span className="text-on-surface font-semibold">Oke-Ogun Pioneer Agrarian Estate (#NG-OYO-082)</span>
+              <span className="text-on-surface font-semibold">
+                {primaryFarm ? `${primaryFarm.name} (${primaryFarm.id.slice(0, 8).toUpperCase()})` : "Select a farm"}
+              </span>
               <Icon name="chevron_right" className="text-sm" />
               <span className="text-primary font-bold">Interactive Cadastral Map</span>
             </div>
             <div className="flex items-center gap-space-sm mt-1">
               <div className="relative inline-flex items-center">
-                <select defaultValue="Oke-Ogun Pioneer Agrarian Estate (48.6 Ha, Saki West, Oyo State)" className="appearance-none bg-surface-container-low text-on-surface font-headline-sm text-headline-sm py-1.5 pl-space-md pr-10 rounded-lg cursor-pointer focus:outline-none focus:bg-surface-container hover:bg-surface-container transition-colors">
-                  <option>Oke-Ogun Pioneer Agrarian Estate (48.6 Ha, Saki West, Oyo State)</option>
-                  <option>Iseyin Savanna Cluster (42.5 Ha, Iseyin LGA)</option>
-                  <option>Ogbomoso Organic Orchard (18.2 Ha, Oyo State)</option>
+                <select
+                  defaultValue={primaryFarm ? `${primaryFarm.name} (${primaryFarm.area_ha?.toFixed(1) || "?"} Ha, ${primaryFarm.lga || "?"}, ${primaryFarm.state || "?"})` : "No farms registered"}
+                  className="appearance-none bg-surface-container-low text-on-surface font-headline-sm text-headline-sm py-1.5 pl-space-md pr-10 rounded-lg cursor-pointer focus:outline-none focus:bg-surface-container hover:bg-surface-container transition-colors"
+                >
+                  {farmList.length > 0 ? farmList.map((farm) => (
+                    <option key={farm.id} value={farm.id}>
+                      {farm.name} ({farm.area_ha?.toFixed(1) || "?"} Ha, {farm.lga || "?"}, {farm.state || "?"})
+                    </option>
+                  )) : (
+                    <option>No farms registered</option>
+                  )}
                 </select>
                 <Icon name="arrow_drop_down" className="absolute right-2 pointer-events-none text-on-surface-variant" />
               </div>
@@ -189,7 +243,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">TOTAL CADASTRE</span>
-              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">48.60 Ha</span>
+              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">{totalHectares.toFixed(2)} Ha</span>
             </div>
           </div>
           <div className="bg-surface-container-lowest p-space-sm px-space-md rounded-xl shadow-sm flex items-center gap-space-sm">
@@ -198,7 +252,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">DELINEATED FIELDS</span>
-              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">6 Plots (100%)</span>
+              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">{delineatedFields} Plot{delineatedFields !== 1 ? "s" : ""} ({farmList.length > 0 ? "100%" : "0%"})</span>
             </div>
           </div>
           <div className="bg-surface-container-lowest p-space-sm px-space-md rounded-xl shadow-sm flex items-center gap-space-sm">
@@ -208,8 +262,8 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">NDVI VIGOUR</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-on-surface font-metric-num text-headline-sm font-bold">0.81</span>
-                <span className="text-secondary font-label-sm text-label-sm font-semibold">High</span>
+                <span className="text-on-surface font-metric-num text-headline-sm font-bold">{plotList.length > 0 ? "0.75–0.85" : "—"}</span>
+                <span className="text-secondary font-label-sm text-label-sm font-semibold">{plotList.length > 0 ? "High" : "No Data"}</span>
               </div>
             </div>
           </div>
@@ -219,7 +273,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">FLEET TELEMETRY</span>
-              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">2 Nodes Active</span>
+              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">—</span>
             </div>
           </div>
           <div className="bg-surface-container-lowest p-space-sm px-space-md rounded-xl shadow-sm flex items-center gap-space-sm">
@@ -228,7 +282,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">SOIL MOISTURE</span>
-              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">34.2% VWC</span>
+              <span className="text-on-surface font-metric-num text-headline-sm font-bold truncate">—</span>
             </div>
           </div>
           <div className="bg-surface-container-lowest p-space-sm px-space-md rounded-xl shadow-sm flex items-center gap-space-sm">
@@ -237,7 +291,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-on-surface-variant font-label-sm text-label-sm truncate">SCOUTING ALERT</span>
-              <span className="text-error font-metric-num text-headline-sm font-bold truncate">1 Active (FAW)</span>
+              <span className="text-error font-metric-num text-headline-sm font-bold truncate">—</span>
             </div>
           </div>
         </div>
@@ -397,7 +451,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
               <GoogleMapView
                 className="w-full h-full min-h-[760px]"
                 editable={isWalkingBoundary}
-                center={mapConfig?.defaultCenter ?? { lat: 8.6672, lng: 3.3934 }}
+                center={mapConfig?.defaultCenter ?? mapCenter}
                 zoom={mapConfig?.defaultZoom ?? 15}
                 mapId={mapConfig?.mapId}
               />

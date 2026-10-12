@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatNaira } from "@cultivanode/shared";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
-import { OperatorDispatch } from "@/components/screens/operator-dispatch";
+import { OperatorDispatch, type BookingJobData } from "@/components/screens/operator-dispatch";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { BookingSummary } from "@/lib/account/bookings";
@@ -27,6 +27,32 @@ export function ProviderHome({
   const active = bookings.filter((b) => ACTIVE.includes(b.status)).sort((a, b) => a.job_date.localeCompare(b.job_date));
   const earned = bookings.filter((b) => ["confirmed", "completed"].includes(b.status)).reduce((s, b) => s + b.total_kobo, 0);
   const name = (account.profile.full_name ?? "").trim().split(/\s+/)[0] || "operator";
+
+  // Transform first active booking to BookingJobData for OperatorDispatch
+  const activeBooking = active[0];
+  const activeJob: BookingJobData | null = activeBooking
+    ? {
+        id: activeBooking.id,
+        booking_id: activeBooking.id,
+        listing_title: activeBooking.title,
+        listing_kind: activeBooking.kind,
+        equipment_type: activeBooking.equipment_type,
+        provider_type: activeBooking.provider_type,
+        job_date: activeBooking.job_date,
+        unit: activeBooking.unit,
+        quantity: activeBooking.quantity,
+        rate_kobo: activeBooking.rate_kobo,
+        total_kobo: activeBooking.total_kobo,
+        distance_km: activeBooking.distance_km,
+        farm_name: activeBooking.farm_name,
+        job_state: activeBooking.job_state,
+        job_lga: activeBooking.job_lga,
+        expires_at: activeBooking.expires_at,
+        status: activeBooking.status,
+        other_name: activeBooking.other_name,
+        created_at: activeBooking.created_at,
+      }
+    : null;
   return (
     <>
       <LiveStrip>
@@ -42,6 +68,7 @@ export function ProviderHome({
       </section>
       <OperatorDispatch
         lang={lang}
+        activeJob={activeJob}
         slots={{
           job: (
             <div className="mb-space-lg">

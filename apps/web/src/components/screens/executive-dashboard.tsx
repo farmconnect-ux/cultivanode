@@ -1,12 +1,13 @@
 "use client";
 
-// Ported from the "executive_farm_operations_dashboard" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
-import { useState } from "react";
+// Ported from the "executive_farm_operations_dashboard" design (New screen).
+// Now uses real data from the database via server actions.
+import { useState, useTransition } from "react";
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
+import { logOperationCompletion, overrideWeatherHold } from "@/actions/farm-operations";
 
 export type ExecutiveDashboardSlot =
   | "eyebrow"
@@ -17,150 +18,132 @@ export type ExecutiveDashboardSlot =
   | "operations"
   | "statusBar";
 
-interface OperationItem {
+export interface OperationItem {
   id: string;
+  farm_id: string;
+  plot_id: string | null;
+  crop_cycle_id: string | null;
   name: string;
-  subtext: string;
-  plot: string;
-  cropArea: string;
-  timeline: string;
-  timingNote: string;
-  resource: string;
-  resourceIcon: string;
-  location: string;
-  status: string;
-  statusTone: "ready" | "delay" | "active" | "scout" | "scheduled" | "completed";
-  actionLabel: string;
+  subtext: string | null;
+  crop_area: string | null;
+  timeline: string | null;
+  timing_note: string | null;
+  resource: string | null;
+  resource_icon: string | null;
+  location: string | null;
+  status: "planned" | "ready_to_execute" | "in_progress" | "weather_hold" | "completed" | "cancelled";
+  action_label: string | null;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-const INITIAL_OPERATIONS: OperationItem[] = [
-  {
-    id: "op-1",
-    name: "Split-N Top-Dressing",
-    subtext: "Side-placement 5cm from stalk",
-    plot: "Plot A2",
-    cropArea: "Maize (9.0 Ha)",
-    timeline: "Due in 2 days",
-    timingNote: "Optimal: Pre-rain window",
-    resource: "12 Bags Urea (In Stock)",
-    resourceIcon: "inventory_2",
-    location: "Store Room 01",
-    status: "Ready to Execute",
-    statusTone: "ready",
-    actionLabel: "Log Completion",
-  },
-  {
-    id: "op-2",
-    name: "Fungicide Shield (Mancozeb 80WP)",
-    subtext: "Alternaria Solani prevention",
-    plot: "Plot B1",
-    cropArea: "Tomato (6.5 Ha)",
-    timeline: "Delayed +48h",
-    timingNote: "NiMet Guardrail active",
-    resource: "14kg Mancozeb",
-    resourceIcon: "water_drop",
-    location: "Knapsack Crews ready",
-    status: "Weather Hold (Rain 42mm)",
-    statusTone: "delay",
-    actionLabel: "Override Rule",
-  },
-  {
-    id: "op-3",
-    name: "Tractor Rotary Weeding",
-    subtext: "Mechanical inter-row cultivator",
-    plot: "Plot A1",
-    cropArea: "Maize (9.0 Ha)",
-    timeline: "Tomorrow 08:00 WAT",
-    timingNote: "Operator Check-in Verified",
-    resource: "JD 5075E Tractor",
-    resourceIcon: "precision_manufacturing",
-    location: "Escrow #ES-49201",
-    status: "GPS Dispatched",
-    statusTone: "active",
-    actionLabel: "Live GPS Telemetry",
-  },
-  {
-    id: "op-4",
-    name: "Aphid & Thrips Scouting",
-    subtext: "10-point random quadrant check",
-    plot: "Plot B3",
-    cropArea: "Cowpea (4.0 Ha)",
-    timeline: "Today 16:30 WAT",
-    timingNote: "Field Scout Assigned",
-    resource: "Field Agent Babatunde",
-    resourceIcon: "person_search",
-    location: "Offline PowerSync App",
-    status: "In Field Scout",
-    statusTone: "scout",
-    actionLabel: "Scout Sheet",
-  },
-  {
-    id: "op-5",
-    name: "Livestock Vaccination / NDV Booster",
-    subtext: "Lasota strain ocular/drinking water administration",
-    plot: "Poultry House 1",
-    cropArea: "Broilers B4 (1,250 birds)",
-    timeline: "Tomorrow 07:00 WAT",
-    timingNote: "Early morning cool window",
-    resource: "Lasota Vials (Vet Cold-Chain)",
-    resourceIcon: "vaccines",
-    location: "Dr. Alabi Scheduled",
-    status: "Vet Scheduled",
-    statusTone: "scheduled",
-    actionLabel: "Review Protocol",
-  },
-];
+export interface ExecutiveDashboardProps {
+  slots: ScreenProps<ExecutiveDashboardSlot>["slots"];
+  operations: OperationItem[];
+}
 
-export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot>) {
-  // Operational state
-  const [operations, setOperations] = useState<OperationItem[]>(INITIAL_OPERATIONS);
+function mapDbStatusToTone(status: OperationItem["status"]): OperationItem["status"] {
+  return status;
+}
+
+function getStatusTone(status: OperationItem["status"]): "ready" | "delay" | "active" | "scout" | "scheduled" | "completed" {
+  switch (status) {
+    case "ready_to_execute":
+      return "ready";
+    case "weather_hold":
+      return "delay";
+    case "in_progress":
+      return "active";
+    case "completed":
+      return "completed";
+    case "planned":
+      return "scheduled";
+    default:
+      return "scheduled";
+  }
+}
+
+function getActionLabel(status: OperationItem["status"], dbActionLabel: string | null): string {
+  if (dbActionLabel) return dbActionLabel;
+  switch (status) {
+    case "ready_to_execute":
+      return "Log Completion";
+    case "weather_hold":
+      return "Override Rule";
+    case "in_progress":
+      return "Live GPS Telemetry";
+    case "completed":
+      return "Completed ✓";
+    default:
+      return "View Details";
+  }
+}
+
+function getStatusDisplay(status: OperationItem["status"]): string {
+  switch (status) {
+    case "ready_to_execute":
+      return "Ready to Execute";
+    case "weather_hold":
+      return "Weather Hold";
+    case "in_progress":
+      return "In Progress";
+    case "completed":
+      return "Completed & Verified";
+    case "planned":
+      return "Planned";
+    default:
+      return "Scheduled";
+  }
+}
+
+export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProps) {
   const [plotFilter, setPlotFilter] = useState<string>("all");
   const [powConfirmed, setPowConfirmed] = useState(false);
   const [aiLang, setAiLang] = useState<"EN" | "YORUBA">("EN");
   const [aiQuery, setAiQuery] = useState("");
   const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "bot"; text: string }>>([]);
+  const [, startTransition] = useTransition();
+
+  // Map database operations to display format
+  const displayOps = operations.map((op) => ({
+    id: op.id,
+    name: op.name,
+    subtext: op.subtext || "",
+    plot: op.plot_id ? `Plot ${op.plot_id.slice(0, 8)}` : "General",
+    cropArea: op.crop_area || "N/A",
+    timeline: op.timeline || (op.scheduled_at ? new Date(op.scheduled_at).toLocaleDateString() : "TBD"),
+    timingNote: op.timing_note || "",
+    resource: op.resource || "N/A",
+    resourceIcon: op.resource_icon || "inventory_2",
+    location: op.location || "N/A",
+    status: getStatusDisplay(op.status),
+    statusTone: getStatusTone(op.status),
+    actionLabel: getActionLabel(op.status, op.action_label),
+  }));
 
   // Filtered operations
-  const displayedOps = operations.filter((op) => {
+  const displayedOps = displayOps.filter((op) => {
     if (plotFilter === "all") return true;
     return op.plot.toLowerCase().includes(plotFilter.toLowerCase());
   });
 
   // Handler: Log Completion
   const handleLogCompletion = (opId: string) => {
-    setOperations((prev) =>
-      prev.map((op) => {
-        if (op.id === opId) {
-          const isDone = op.statusTone === "completed";
-          return {
-            ...op,
-            status: isDone ? "Ready to Execute" : "Completed & Verified",
-            statusTone: isDone ? "ready" : "completed",
-            actionLabel: isDone ? "Log Completion" : "Completed ✓",
-          };
-        }
-        return op;
-      })
-    );
+    startTransition(() => {
+      logOperationCompletion(new FormData([[ "id", opId ]]));
+    });
     showScreenToast("Operation status updated and recorded in offline SQLite ledger.");
   };
 
   // Handler: Override Weather Rule
   const handleOverrideRule = (opId: string) => {
-    setOperations((prev) =>
-      prev.map((op) => {
-        if (op.id === opId) {
-          return {
-            ...op,
-            status: "Override Approved (Operator Risk)",
-            statusTone: "active",
-            timeline: "Ready for Execution",
-            actionLabel: "Log Completion",
-          };
-        }
-        return op;
-      })
-    );
+    startTransition(() => {
+      overrideWeatherHold(new FormData([[ "id", opId ]]));
+    });
     showScreenToast("Agronomy rule overridden with agronomist supervisor waiver #WAIV-082.");
   };
 
@@ -1016,7 +999,7 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                 </div>
               </div>
             </div>
-            {slot(
+{slot(
               slots,
               "operations",
               <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -1032,11 +1015,9 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                       className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors cursor-pointer focus:outline-none"
                     >
                       <option value="all">All Plots & Units</option>
-                      <option value="Plot A1">Plot A1 (Maize)</option>
-                      <option value="Plot A2">Plot A2 (Maize)</option>
-                      <option value="Plot B1">Plot B1 (Tomato)</option>
-                      <option value="Plot B3">Plot B3 (Cowpea)</option>
-                      <option value="Poultry">Poultry House 1</option>
+                      {Array.from(new Set(displayOps.map((op) => op.plot))).map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
                     </select>
                     <button
                       onClick={handleExportRoster}
@@ -1053,92 +1034,100 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                     <thead>
                       <tr className="border-b border-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
                         <th className="py-space-sm px-space-sm">Operation / Task</th>
-                        <th className="py-space-sm px-space-sm">Plot &amp; Area</th>
+                        <th className="py-space-sm px-space-sm">Plot & Area</th>
                         <th className="py-space-sm px-space-sm">Timeline</th>
                         <th className="py-space-sm px-space-sm">Resource / Inputs</th>
-                        <th className="py-space-sm px-space-sm">Status &amp; Protocol</th>
+                        <th className="py-space-sm px-space-sm">Status & Protocol</th>
                         <th className="py-space-sm px-space-sm text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-container font-body-sm text-body-sm">
-                      {displayedOps.map((op) => (
-                        <tr key={op.id} className={`hover:bg-surface-container-low transition-colors ${op.statusTone === "completed" ? "opacity-60 bg-secondary-container/10" : ""}`}>
-                          <td className="py-space-md px-space-sm">
-                            <div className="font-label-md text-label-md text-on-surface font-semibold">{op.name}</div>
-                            <div className="font-body-sm text-body-sm text-on-surface-variant">{op.subtext}</div>
-                          </td>
-                          <td className="py-space-md px-space-sm">
-                            <span className="font-label-md text-label-md text-on-surface font-medium">{op.plot}</span>
-                            <div className="text-on-surface-variant">{op.cropArea}</div>
-                          </td>
-                          <td className="py-space-md px-space-sm">
-                            <span className={`font-label-md text-label-md ${op.statusTone === "delay" ? "text-error font-semibold" : "text-on-surface"}`}>{op.timeline}</span>
-                            <div className="text-on-surface-variant">{op.timingNote}</div>
-                          </td>
-                          <td className="py-space-md px-space-sm">
-                            <div className="flex items-center gap-1 font-medium text-on-surface">
-                              <Icon name={op.resourceIcon as any} className="text-sm text-secondary" />
-                              <span>{op.resource}</span>
-                            </div>
-                            <div className="text-on-surface-variant">{op.location}</div>
-                          </td>
-                          <td className="py-space-md px-space-sm">
-                            <span className={`inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm ${
-                              op.statusTone === "ready"
-                                ? "bg-secondary-container/50 text-on-secondary-container"
-                                : op.statusTone === "delay"
-                                ? "bg-tertiary-fixed text-on-tertiary-fixed"
-                                : op.statusTone === "active"
-                                ? "bg-secondary-container/50 text-on-secondary-container"
-                                : op.statusTone === "completed"
-                                ? "bg-secondary text-on-secondary font-bold"
-                                : "bg-surface-container text-on-surface-variant"
-                            }`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${op.statusTone === "delay" ? "bg-tertiary" : "bg-secondary"}`} />
-                              <span>{op.status}</span>
-                            </span>
-                          </td>
-                          <td className="py-space-md px-space-sm text-right">
-                            {op.actionLabel === "Override Rule" ? (
-                              <button
-                                onClick={() => handleOverrideRule(op.id)}
-                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-high transition-colors"
-                                type="button"
-                              >
-                                {op.actionLabel}
-                              </button>
-                            ) : op.actionLabel === "Live GPS Telemetry" ? (
-                              <button
-                                onClick={() => showScreenToast("JD 5075E Telemetry: Lat 7.9124, Lon 3.5931 · Speed 4.2 km/h · PTO 1,420 RPM active.")}
-                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
-                                type="button"
-                              >
-                                {op.actionLabel}
-                              </button>
-                            ) : op.actionLabel === "Scout Sheet" ? (
-                              <button
-                                onClick={() => showScreenToast("Scout Sheet for Plot B3: Aphids count low (1.2/stalk), zero thrips infestation detected.")}
-                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
-                                type="button"
-                              >
-                                {op.actionLabel}
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleLogCompletion(op.id)}
-                                className={`px-space-sm py-1 rounded-lg font-label-sm text-label-sm transition-colors ${
-                                  op.statusTone === "completed"
-                                    ? "bg-surface-container text-secondary font-bold"
-                                    : "bg-primary text-on-primary hover:bg-primary-container"
-                                }`}
-                                type="button"
-                              >
-                                {op.actionLabel}
-                              </button>
-                            )}
+                      {displayedOps.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-on-surface-variant">
+                            No operations found. Create your first operation from the dashboard actions.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        displayedOps.map((op) => (
+                          <tr key={op.id} className={`hover:bg-surface-container-low transition-colors ${op.statusTone === "completed" ? "opacity-60 bg-secondary-container/10" : ""}`}>
+                            <td className="py-space-md px-space-sm">
+                              <div className="font-label-md text-label-md text-on-surface font-semibold">{op.name}</div>
+                              <div className="font-body-sm text-body-sm text-on-surface-variant">{op.subtext}</div>
+                            </td>
+                            <td className="py-space-md px-space-sm">
+                              <span className="font-label-md text-label-md text-on-surface font-medium">{op.plot}</span>
+                              <div className="text-on-surface-variant">{op.cropArea}</div>
+                            </td>
+                            <td className="py-space-md px-space-sm">
+                              <span className={`font-label-md text-label-md ${op.statusTone === "delay" ? "text-error font-semibold" : "text-on-surface"}`}>{op.timeline}</span>
+                              <div className="text-on-surface-variant">{op.timingNote}</div>
+                            </td>
+                            <td className="py-space-md px-space-sm">
+                              <div className="flex items-center gap-1 font-medium text-on-surface">
+                                <Icon name={op.resourceIcon as any} className="text-sm text-secondary" />
+                                <span>{op.resource}</span>
+                              </div>
+                              <div className="text-on-surface-variant">{op.location}</div>
+                            </td>
+                            <td className="py-space-md px-space-sm">
+                              <span className={`inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm ${
+                                op.statusTone === "ready"
+                                  ? "bg-secondary-container/50 text-on-secondary-container"
+                                  : op.statusTone === "delay"
+                                  ? "bg-tertiary-fixed text-on-tertiary-fixed"
+                                  : op.statusTone === "active"
+                                  ? "bg-secondary-container/50 text-on-secondary-container"
+                                  : op.statusTone === "completed"
+                                  ? "bg-secondary text-on-secondary font-bold"
+                                  : "bg-surface-container text-on-surface-variant"
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${op.statusTone === "delay" ? "bg-tertiary" : "bg-secondary"}`} />
+                                <span>{op.status}</span>
+                              </span>
+                            </td>
+                            <td className="py-space-md px-space-sm text-right">
+                              {op.actionLabel === "Override Rule" ? (
+                                <button
+                                  onClick={() => handleOverrideRule(op.id)}
+                                  className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-high transition-colors"
+                                  type="button"
+                                >
+                                  {op.actionLabel}
+                                </button>
+                              ) : op.actionLabel === "Live GPS Telemetry" ? (
+                                <button
+                                  onClick={() => showScreenToast("JD 5075E Telemetry: Lat 7.9124, Lon 3.5931 · Speed 4.2 km/h · PTO 1,420 RPM active.")}
+                                  className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
+                                  type="button"
+                                >
+                                  {op.actionLabel}
+                                </button>
+                              ) : op.actionLabel === "Scout Sheet" ? (
+                                <button
+                                  onClick={() => showScreenToast("Scout Sheet for Plot B3: Aphids count low (1.2/stalk), zero thrips infestation detected.")}
+                                  className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
+                                  type="button"
+                                >
+                                  {op.actionLabel}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleLogCompletion(op.id)}
+                                  className={`px-space-sm py-1 rounded-lg font-label-sm text-label-sm transition-colors ${
+                                    op.statusTone === "completed"
+                                      ? "bg-surface-container text-secondary font-bold"
+                                      : "bg-primary text-on-primary hover:bg-primary-container"
+                                  }`}
+                                  type="button"
+                                >
+                                  {op.actionLabel}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

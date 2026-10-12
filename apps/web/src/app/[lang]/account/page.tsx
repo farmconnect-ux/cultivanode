@@ -16,6 +16,7 @@ import type { BookingSummary } from "@/lib/account/bookings";
 import { requireAccount } from "@/lib/account/session";
 import { resolveWorkspace } from "@/lib/account/workspace";
 import { createClient } from "@/lib/supabase/server";
+import { getFarmOperations } from "@/actions/farm-operations";
 
 /** Yorùbá greeting for the time of day in Lagos (the design greets the farmer in Yorùbá). */
 function greeting(now = new Date()) {
@@ -78,6 +79,8 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
     supabase.rpc("my_bookings", { p_limit: 50 }),
   ]);
   const farmList = farms ?? [];
+  const farmIds = farmList.map((f) => f.id);
+  const operations = await getFarmOperations(farmIds);
   const bookings = ((bookingsRes ?? []) as unknown as BookingSummary[]).filter((b) => b.my_side === "farmer");
   const active = bookings.filter((b) => ACTIVE.includes(b.status));
   const upcoming = [...active].sort((x, y) => x.job_date.localeCompare(y.job_date));
@@ -103,6 +106,7 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
       </LiveStrip>
       <ExecutiveDashboard
         lang={lang}
+        operations={operations}
         slots={{
           eyebrow: (
             <div className="mb-space-xs flex flex-wrap items-center gap-space-xs">
@@ -173,18 +177,6 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
                 foot={tier >= 2 ? "Eligible for credit-readiness records" : "Verify your ID to unlock credit & insurance"}
               />
             </section>
-          ),
-          operations: (
-            <BookingTable
-              lang={lang}
-              t={t}
-              bookings={upcoming.length ? upcoming : bookings}
-              emptyAction={
-                <Link href={`/${lang}/account/find`} className={`${btn} bg-primary-container text-white hover:bg-primary`}>
-                  <Icon name="search" className="text-base" /> Find machinery near your farm
-                </Link>
-              }
-            />
           ),
           statusBar: null,
         }}

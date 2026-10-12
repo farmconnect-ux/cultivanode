@@ -4,6 +4,8 @@
 // Augmented with real interactive state: PoW camera capture with EXIF sealing, supervisor PIN validation,
 // safety checklist toggles, incident escalation broadcast, and telemetry export.
 import { useState } from "react";
+import Link from "next/link";
+import { formatNaira } from "@cultivanode/shared";
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
@@ -11,7 +13,34 @@ import { slot, type ScreenProps } from "./types";
 
 export type OperatorDispatchSlot = "job";
 
-export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
+export interface BookingJobData {
+  id: string;
+  booking_id: string;
+  listing_title: string;
+  listing_kind: string;
+  equipment_type: string | null;
+  provider_type: string | null;
+  job_date: string;
+  unit: string;
+  quantity: number;
+  rate_kobo: number;
+  total_kobo: number;
+  distance_km: number;
+  farm_name: string;
+  job_state: string | null;
+  job_lga: string | null;
+  expires_at: string;
+  status: string;
+  other_name: string;
+  created_at: string;
+}
+
+export interface OperatorDispatchProps {
+  slots: ScreenProps<OperatorDispatchSlot>["slots"];
+  activeJob?: BookingJobData | null;
+}
+
+export function OperatorDispatch({ slots, activeJob }: OperatorDispatchProps) {
   const [photo3Captured, setPhoto3Captured] = useState(false);
   const [supervisorPin, setSupervisorPin] = useState(["8", "2", "9", "4"]);
   const [obstacleType, setObstacleType] = useState("Submerged Tree Stump / Root Ball Impact");
@@ -24,9 +53,38 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
     extinguisher: true,
   });
 
+  // Use real job data if available, otherwise fall back to design reference data
+  const job = activeJob ?? {
+    id: "sample-1",
+    booking_id: "BK-2026-0419",
+    listing_title: "Deep Tillage & Ridge Formation",
+    listing_kind: "tractor_service",
+    equipment_type: "tractor",
+    provider_type: "owner_operator",
+    job_date: new Date().toISOString().split("T")[0],
+    unit: "hectare",
+    quantity: 12.4,
+    rate_kobo: 1850000,
+    total_kobo: 22940000,
+    distance_km: 6.2,
+    farm_name: "Oke-Ogun Pioneer Agrarian Estate",
+    job_state: "Oyo",
+    job_lga: "Oke-Ogun",
+    expires_at: new Date(Date.now() + 86400000).toISOString(),
+    status: "accepted",
+    other_name: "Quadri Olapade",
+    created_at: new Date().toISOString(),
+  };
+
+  const tractorName = job.equipment_type === "tractor" ? "John Deere 5075E 4WD (75 HP)" : "Machinery Asset";
+  const implementName = "Baldan 3-Disc Heavy Plow";
+  const assetTag = "#JD-OYO-04";
+  const operatorName = "Segun Oladipo";
+  const operatorTier = "Tier 2 Certified Lead";
+
   const handleCapturePhoto = () => {
     setPhoto3Captured(true);
-    showScreenToast("Photo 3 captured: Post-Tillage Horizon (8.3255° N, 3.5840° E). Cryptographic SHA-256 seal generated.");
+    showScreenToast(`Photo 3 captured: Post-Tillage Horizon at ${job.farm_name}. Cryptographic SHA-256 seal generated.`);
   };
 
   const handleAuthorizePin = () => {
@@ -35,7 +93,7 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
       showScreenToast("Please enter a valid 4-digit supervisor PIN token.");
       return;
     }
-    showScreenToast(`Supervisor PIN #${pin} verified. Job completion certified! Escrow ₦229,400 queued for release.`);
+    showScreenToast(`Supervisor PIN #${pin} verified. Job completion certified! Escrow ${formatNaira(job.total_kobo)} queued for release.`);
   };
 
   const handleBroadcastIncident = () => {
@@ -220,16 +278,16 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
               <div className="flex flex-wrap items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant">
                 <div className="flex items-center gap-1.5">
                   <Icon name="agriculture" className="text-[18px] text-secondary" />
-                  <span className="font-semibold text-on-surface">John Deere 5075E 4WD (75 HP)</span>
+                  <span className="font-semibold text-on-surface">{tractorName}</span>
                   <span className="text-outline">·</span>
-                  <span>Baldan 3-Disc Heavy Plow</span>
-                  <span className="px-1.5 py-0.5 rounded bg-surface-container text-label-sm font-label-sm font-bold text-primary">#JD-OYO-04</span>
+                  <span>{implementName}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-surface-container text-label-sm font-label-sm font-bold text-primary">{assetTag}</span>
                 </div>
                 <span className="text-outline">|</span>
                 <div className="flex items-center gap-1.5">
                   <Icon name="badge" className="text-[18px] text-primary" />
-                  <span className="font-semibold text-on-surface">Segun Oladipo</span>
-                  <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-label-sm font-label-sm font-semibold">Tier 2 Certified Lead</span>
+                  <span className="font-semibold text-on-surface">{operatorName}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-label-sm font-label-sm font-semibold">{operatorTier}</span>
                 </div>
               </div>
             </div>
@@ -290,20 +348,20 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
                   <div className="flex items-center gap-space-xs">
                     <span className="text-label-sm font-label-sm uppercase tracking-wider font-semibold text-secondary">Verified Escrow Booking</span>
                     <span className="text-outline">·</span>
-                    <span className="font-label-sm font-mono text-outline font-semibold">#BK-2026-0419</span>
+                    <span className="font-label-sm font-mono text-outline font-semibold">{job.booking_id}</span>
                   </div>
-                  <h2 className="font-headline-md text-headline-md text-primary mt-0.5">Oke-Ogun Pioneer Agrarian Estate</h2>
+                  <h2 className="font-headline-md text-headline-md text-primary mt-0.5">{job.farm_name}</h2>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-space-md">
                 <div className="px-space-md py-2 bg-surface-container-low rounded-lg text-right">
                   <span className="text-label-sm font-label-sm text-outline uppercase">Total Job Escrow Locked</span>
-                  <div className="font-metric-num text-headline-md text-primary font-bold">₦229,400.00</div>
+                  <div className="font-metric-num text-headline-md text-primary font-bold">{formatNaira(job.total_kobo)}</div>
                   <span className="text-label-sm font-label-sm text-secondary font-medium">Providus Bank Escrow Custody</span>
                 </div>
                 <div className="px-space-md py-2 bg-surface-container-low rounded-lg text-right">
                   <span className="text-label-sm font-label-sm text-outline uppercase">Unit Benchmark Rate</span>
-                  <div className="font-metric-num text-headline-md text-on-surface font-semibold">₦18,500 <span className="text-body-sm font-normal text-outline">/ Ha</span></div>
+                  <div className="font-metric-num text-headline-md text-on-surface font-semibold">{formatNaira(job.rate_kobo)} <span className="text-body-sm font-normal text-outline">/ {job.unit}</span></div>
                   <span className="text-label-sm font-label-sm text-on-surface-variant">Standard Cross-Ridge Depth</span>
                 </div>
               </div>
@@ -315,8 +373,8 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
                   <Icon name="map" className="text-[16px]" />
                 </div>
                 <div className="mt-2">
-                  <div className="font-headline-sm text-headline-sm text-on-surface">Field 01 · North Ridge</div>
-                  <span className="text-body-sm font-body-sm text-on-surface-variant">12.40 Total Cadastral Hectares</span>
+                  <div className="font-headline-sm text-headline-sm text-on-surface">{job.listing_title}</div>
+                  <span className="text-body-sm font-body-sm text-on-surface-variant">{job.quantity} Total Cadastral {job.unit.charAt(0).toUpperCase() + job.unit.slice(1)}s</span>
                 </div>
               </div>
               <div className="p-space-md bg-surface-container-low rounded-lg flex flex-col justify-between">
@@ -325,7 +383,7 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
                   <Icon name="tune" className="text-[16px]" />
                 </div>
                 <div className="mt-2">
-                  <div className="font-headline-sm text-headline-sm text-on-surface">2nd Stage Disc Plowing</div>
+                  <div className="font-headline-sm text-headline-sm text-on-surface">{job.listing_kind.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}</div>
                   <span className="text-body-sm font-body-sm text-on-surface-variant">Min Target Depth: 25.0 cm</span>
                 </div>
               </div>
@@ -335,7 +393,7 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
                   <Icon name="schedule" className="text-[16px]" />
                 </div>
                 <div className="mt-2">
-                  <div className="font-headline-sm text-headline-sm text-on-surface">Today · 07:30 – 16:00 WAT</div>
+                  <div className="font-headline-sm text-headline-sm text-on-surface">{new Date(job.job_date).toLocaleDateString("en-NG", { weekday: "long", month: "short", day: "numeric" })} · 07:30 – 16:00 WAT</div>
                   <span className="text-body-sm font-body-sm text-secondary font-medium">On Schedule · 5h 20m Elapsed</span>
                 </div>
               </div>
@@ -345,7 +403,7 @@ export function OperatorDispatch({ slots }: ScreenProps<OperatorDispatchSlot>) {
                   <span className="text-label-sm font-label-sm font-bold text-secondary">{photo3Captured ? "100% DONE" : "71% DONE"}</span>
                 </div>
                 <div className="mt-2">
-                  <div className="font-headline-sm text-headline-sm text-secondary">{photo3Captured ? "12.4 / 12.4 Ha" : "8.8 / 12.4 Ha"}</div>
+                  <div className="font-headline-sm text-headline-sm text-secondary">{photo3Captured ? `${job.quantity} / ${job.quantity} ${job.unit.charAt(0).toUpperCase() + job.unit.slice(1)}s` : `8.8 / ${job.quantity} ${job.unit.charAt(0).toUpperCase() + job.unit.slice(1)}s`}</div>
                   <div className="w-full bg-surface-container h-2 rounded-full mt-1.5 overflow-hidden">
                     <div className="bg-secondary h-full rounded-full transition-all duration-500" style={{ width: photo3Captured ? "100%" : "71%" }} />
                   </div>
