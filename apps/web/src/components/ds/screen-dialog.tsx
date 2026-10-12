@@ -67,9 +67,9 @@ export function ScreenDialog({
   side?: "center" | "right";
   children?: React.ReactNode;
 }) {
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(true);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : (children ? uncontrolledOpen : true);
+  const isOpen = isControlled ? controlledOpen : uncontrolledOpen;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -141,9 +141,9 @@ export function ScreenDialogClose({
     ctx?.close();
   };
 
-  if (React.isValidElement(children)) {
+  if (React.isValidElement(children) && (children.type === "button" || (children.props as any)?.type === "button")) {
     return (
-      <Slot.Root onClick={handleClick}>
+      <Slot.Root onClick={handleClick} className={className}>
         {children}
       </Slot.Root>
     );
@@ -177,9 +177,9 @@ export function ScreenDialogAction({
     ctx?.confirm(label);
   };
 
-  if (React.isValidElement(children)) {
+  if (React.isValidElement(children) && (children.type === "button" || (children.props as any)?.type === "button")) {
     return (
-      <Slot.Root onClick={handleClick}>
+      <Slot.Root onClick={handleClick} className={className}>
         {children}
       </Slot.Root>
     );

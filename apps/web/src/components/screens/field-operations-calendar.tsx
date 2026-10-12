@@ -213,18 +213,19 @@ function buildOperationsFromLive(
     }
 
     if (t.crop_cycle_id) {
-      coveredCycleOpKeys.add(`${t.crop_cycle_id}::${t.title.toLowerCase()}`);
+      coveredCycleOpKeys.add(`${t.crop_cycle_id}::${String(t.title || "").toLowerCase()}`);
     }
 
+    const tId = String(t.id || "task");
     records.push({
-      id: t.id,
-      opCode: `#OP-${t.id.slice(0, 8).toUpperCase()}`,
-      activity: t.title,
-      method: t.description ? t.description.replace(/\[assigned_workers:[^\]]+\]/g, "").trim() : "Standard Field Execution",
+      id: t.id || `task-${Math.random()}`,
+      opCode: `#OP-${tId.slice(0, 8).toUpperCase()}`,
+      activity: t.title || "Field Operation",
+      method: t.description ? String(t.description).replace(/\[assigned_workers:[^\]]+\]/g, "").trim() : "Standard Field Execution",
       enterprise: cropLabel,
       plot: plot ? `${plot.name} (${plot.area_ha || 1} Ha)` : "Whole Farm Plot",
       dueWindow: t.due_date ? `Due: ${t.due_date}` : "Scheduled",
-      dueDetail: t.priority ? `Priority: ${t.priority.toUpperCase()}` : "Normal Window",
+      dueDetail: t.priority ? `Priority: ${String(t.priority).toUpperCase()}` : "Normal Window",
       resources: t.direct_cost_minor ? `₦${(t.direct_cost_minor / 100).toLocaleString()}` : "Staged Field Inputs",
       crew: crewDisplay,
       status: opStatus,
@@ -234,7 +235,7 @@ function buildOperationsFromLive(
   });
 
   (cycleOperations || []).forEach((cop: any) => {
-    const key = `${cop.crop_cycle_id}::${cop.name.toLowerCase()}`;
+    const key = `${cop.crop_cycle_id}::${String(cop.name || "").toLowerCase()}`;
     if (!coveredCycleOpKeys.has(key)) {
       const cycle = cycleMap.get(cop.crop_cycle_id);
       const plot = cycle?.plot_id ? plotMap.get(cycle.plot_id) : undefined;
@@ -261,10 +262,11 @@ function buildOperationsFromLive(
         ? (workerNames.length > 1 ? `${workerNames.join(", ")} (${workerNames.length} Crew)` : workerNames[0])
         : "Unassigned (Plant Cycle)";
 
+      const copId = String(cop.id || "cycle");
       records.push({
         id: `cycle-op-${cop.id}`,
-        opCode: `#CYCLE-${cop.id.slice(0, 6).toUpperCase()}`,
-        activity: cop.name,
+        opCode: `#CYCLE-${copId.slice(0, 6).toUpperCase()}`,
+        activity: cop.name || "Cycle Operation",
         method: `Stage: ${cop.stage || "Planned"}. ${Array.isArray(cop.required_inputs) ? JSON.stringify(cop.required_inputs) : ""}`,
         enterprise: cropLabel,
         plot: plot ? `${plot.name} (${plot.area_ha || 1} Ha)` : "Planting Plot",

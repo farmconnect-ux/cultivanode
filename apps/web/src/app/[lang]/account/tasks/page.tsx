@@ -60,7 +60,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
   const { data: rawCycles } = farmIds.length
     ? await supabase
         .from("crop_cycles")
-        .select("id, farm_id, plot_id, crop_name, crop_id, variety, variety_id, season, status, current_stage, planting_date, expected_harvest_date, notes")
+        .select("*")
         .in("farm_id", farmIds)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -84,7 +84,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
   const { data: tasks } = farmIds.length
     ? await supabase
         .from("farm_operational_tasks")
-        .select("id, farm_id, plot_id, crop_cycle_id, assigned_worker_id, title, description, priority, status, due_date, direct_cost_minor, created_at")
+        .select("*")
         .in("farm_id", farmIds)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -112,9 +112,9 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
   });
 
   // Calculate un-synced cycle operations for ledger display
-  const existingTaskKeySet = new Set(taskList.map((t) => `${t.crop_cycle_id}::${t.title.toLowerCase()}`));
+  const existingTaskKeySet = new Set(taskList.map((t) => `${t.crop_cycle_id}::${String(t.title || "").toLowerCase()}`));
   const pendingCycleOps = cycleOpsList.filter(
-    (cop) => !existingTaskKeySet.has(`${cop.crop_cycle_id}::${cop.name.toLowerCase()}`)
+    (cop) => !existingTaskKeySet.has(`${cop.crop_cycle_id}::${String(cop.name || "").toLowerCase()}`)
   );
 
   const totalOperationsCount = taskList.length + pendingCycleOps.length;
