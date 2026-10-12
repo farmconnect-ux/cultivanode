@@ -8,3 +8,4 @@ export * from './api-gateway';
 export * from './marketplace';
 export * from './farm-management';
 export * from './iot';
+export * from './offline-sync';

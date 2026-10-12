@@ -24,18 +24,22 @@ export function LogisticsHub(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">Real-time fleet tracking, agricultural freight manifests, cold chain &amp; ambient cargo telemetry, weighbridge sync, and tamper-evident Proof of Delivery (PoD) across Nigeria&apos;s agricultural transit corridors.</p>
             </div>
             <div className="flex items-center gap-space-sm flex-wrap">
-              <button className="px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all flex items-center gap-space-xs" type="button">
-                <Icon name="file_download" className="text-[18px]" />
-                <span>Export Manifests (CSV)</span>
-              </button>
-              <button className="px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all flex items-center gap-space-xs" type="button">
-                <Icon name="radar" className="text-[18px]" />
-                <span>Live Fleet Radar</span>
-              </button>
-              <button className="px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all shadow-sm flex items-center gap-space-xs" type="button">
-                <Icon name="local_shipping" className="text-[18px]" />
-                <span>Schedule Freight Dispatch</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all flex items-center gap-space-xs" type="button">
+                    <Icon name="file_download" className="text-[18px]" />
+                    <span>Export Manifests (CSV)</span>
+                  </button>
+                  <button className="px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all flex items-center gap-space-xs" type="button">
+                    <Icon name="radar" className="text-[18px]" />
+                    <span>Live Fleet Radar</span>
+                  </button>
+                  <button className="px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all shadow-sm flex items-center gap-space-xs" type="button">
+                    <Icon name="local_shipping" className="text-[18px]" />
+                    <span>Schedule Freight Dispatch</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-space-md pt-space-sm mt-space-xs bg-surface-container-low px-space-md py-space-sm rounded-lg">
@@ -691,6 +695,8 @@ export function LogisticsHub(_props: ScreenProps) {
                 </tr>
               </thead>
               <tbody className="text-body-sm font-body-sm text-on-surface divide-y-0">
+                {_props.slots?.waybills ?? (
+                  <>
                 <tr className="hover:bg-surface-container-low transition-colors">
                   <td className="py-space-md px-space-md">
                     <div className="flex items-center gap-space-sm">
@@ -823,6 +829,8 @@ export function LogisticsHub(_props: ScreenProps) {
                     <button className="px-space-sm py-1 rounded bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors" type="button">Inspect Dossier</button>
                   </td>
                 </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>

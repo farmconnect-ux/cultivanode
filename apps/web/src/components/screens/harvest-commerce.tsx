@@ -70,21 +70,25 @@ export function HarvestCommerce(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant mt-1">B2B harvest off-take agreements, certified grading, cold-chain logistics, and farmgate forward contracts for Oyo State agro-clusters.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm shrink-0">
-              <ScreenDialog title="List New Harvest Lot" side="center" panel={panelNewLotModal}>
-                <button className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-semibold hover:bg-primary-container transition-all shadow-md hover:shadow-lg" id="open-lot-modal" type="button">
-                  <Icon name="add_circle" className="text-lg" />
-                  <span>List New Harvest Lot</span>
-                </button>
-              </ScreenDialog>
-              <button className="relative inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg font-semibold shadow-sm hover:bg-surface-container-low transition-all" type="button">
-                <Icon name="assignment_turned_in" className="text-lg text-secondary" />
-                <span>Review Off-taker Contracts</span>
-                <span className="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">3</span>
-              </button>
-              <button className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg font-semibold shadow-sm hover:bg-surface-container-low transition-all" type="button">
-                <Icon name="download" className="text-lg text-on-surface-variant" />
-                <span>Export Waybill (CSV)</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <ScreenDialog title="List New Harvest Lot" side="center" panel={panelNewLotModal}>
+                    <button className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-semibold hover:bg-primary-container transition-all shadow-md hover:shadow-lg" id="open-lot-modal" type="button">
+                      <Icon name="add_circle" className="text-lg" />
+                      <span>List New Harvest Lot</span>
+                    </button>
+                  </ScreenDialog>
+                  <button className="relative inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg font-semibold shadow-sm hover:bg-surface-container-low transition-all" type="button">
+                    <Icon name="assignment_turned_in" className="text-lg text-secondary" />
+                    <span>Review Off-taker Contracts</span>
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">3</span>
+                  </button>
+                  <button className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg font-semibold shadow-sm hover:bg-surface-container-low transition-all" type="button">
+                    <Icon name="download" className="text-lg text-on-surface-variant" />
+                    <span>Export Waybill (CSV)</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md mt-2">
@@ -185,6 +189,8 @@ export function HarvestCommerce(_props: ScreenProps) {
                 </div>
               </div>
               <div className="p-space-md flex flex-col gap-space-md bg-surface">
+                {_props.slots?.lots ?? (
+                  <>
                 <div className="lot-card p-space-md rounded-lg bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-space-md" data-category="grains">
                   <div className="w-full md:w-44 h-36 rounded-lg overflow-hidden shrink-0 relative bg-surface-container-high">
                     <img className="w-full h-full object-cover" data-alt="Golden ripe maize corn cobs harvested in sacks under sunlight at Iseyin farm in Oyo State with laboratory quality tag attached" src="/images/screens/4a8b9fc9b3d2.webp" alt="" loading="lazy" decoding="async" />
@@ -381,6 +387,8 @@ export function HarvestCommerce(_props: ScreenProps) {
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden flex flex-col">

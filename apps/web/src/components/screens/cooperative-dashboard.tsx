@@ -43,14 +43,18 @@ export function CooperativeDashboard(_props: ScreenProps) {
                 <span className="font-body-sm text-body-sm text-outline">Iseyin · Saki · Ago-Are · Otu · Okaka</span>
               </div>
               <div className="flex items-center gap-space-xs">
-                <button className="h-10 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
-                  <Icon name="download" className="text-[18px]" />
-                  <span>Audit Extract</span>
-                </button>
-                <button className="h-10 px-space-md rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
-                  <Icon name="add_circle" className="text-[18px]" />
-                  <span>New Member Enrolment</span>
-                </button>
+                {_props.slots?.actions ?? (
+                  <>
+                    <button className="h-10 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
+                      <Icon name="download" className="text-[18px]" />
+                      <span>Audit Extract</span>
+                    </button>
+                    <button className="h-10 px-space-md rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
+                      <Icon name="add_circle" className="text-[18px]" />
+                      <span>New Member Enrolment</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -419,6 +423,8 @@ export function CooperativeDashboard(_props: ScreenProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y-0">
+                    {_props.slots?.orders ?? (
+                      <>
                     <tr className="hover:bg-surface-container-low/50 transition-colors">
                       <td className="py-3 px-space-md font-semibold text-on-surface">Iseyin Central Agrochemical Vault</td>
                       <td className="py-3 px-space-md text-on-surface-variant">600 NPK / 300 Urea</td>
@@ -446,6 +452,8 @@ export function CooperativeDashboard(_props: ScreenProps) {
                         <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm font-semibold"><Icon name="check_circle" className="text-[14px]" /> Disbursed</span>
                       </td>
                     </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>

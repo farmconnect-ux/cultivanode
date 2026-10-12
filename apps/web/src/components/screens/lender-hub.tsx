@@ -54,9 +54,13 @@ export function LenderHub(_props: ScreenProps) {
               <span className="font-label-sm text-label-sm text-on-surface-variant">Framework: Master Spec §9.2 / §9.1 / §9.6</span>
             </div>
             <div className="flex items-center gap-space-sm">
-              <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-surface-container-high transition-colors" id="docketBtn" type="button"><Icon name="folder_special" className="text-[18px]" /> Credit Committee Docket <span className="bg-primary text-on-primary px-1.5 py-0.2 rounded-full text-label-sm">3 Pending</span></button>
-              <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 hover:bg-surface-container-high transition-colors" type="button"><Icon name="download" className="text-[18px]" /> Audit Export (.csv)</button>
-              <button className="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-primary-container transition-all shadow-sm" type="button"><Icon name="add_circle" className="text-[18px]" /> + New Facility Appraisal</button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-surface-container-high transition-colors" id="docketBtn" type="button"><Icon name="folder_special" className="text-[18px]" /> Credit Committee Docket <span className="bg-primary text-on-primary px-1.5 py-0.2 rounded-full text-label-sm">3 Pending</span></button>
+                  <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 hover:bg-surface-container-high transition-colors" type="button"><Icon name="download" className="text-[18px]" /> Audit Export (.csv)</button>
+                  <button className="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-primary-container transition-all shadow-sm" type="button"><Icon name="add_circle" className="text-[18px]" /> + New Facility Appraisal</button>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-space-sm p-space-sm bg-surface-container-low rounded-lg">

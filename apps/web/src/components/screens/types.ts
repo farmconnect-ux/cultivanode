@@ -6,7 +6,7 @@ import type { Locale } from "@/i18n/config";
  * A slot replaces one region of the design (e.g. its sample table) with live content;
  * leave it out to show the design's reference content, pass null to hide the region.
  */
-export type ScreenProps<S extends string = never> = {
+export type ScreenProps<S extends string = string> = {
   lang: Locale;
   slots?: Partial<Record<S, ReactNode>>;
 };

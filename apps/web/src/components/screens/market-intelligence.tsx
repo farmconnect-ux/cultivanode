@@ -43,8 +43,12 @@ export function MarketIntelligence(_props: ScreenProps) {
               <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface">Dawanau Rail Link</span>
             </div>
             <div className="flex items-center gap-space-xs">
-              <button className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1.5 shadow-sm hover:bg-surface-container-high transition-colors" type="button"><Icon name="picture_as_pdf" className="text-[16px]" /> Export Bulletin (.PDF)</button>
-              <button className="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md flex items-center gap-1.5 shadow-sm hover:bg-primary transition-colors" type="button"><Icon name="add_shopping_cart" className="text-[16px]" /> Post Sourcing RFQ</button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1.5 shadow-sm hover:bg-surface-container-high transition-colors" type="button"><Icon name="picture_as_pdf" className="text-[16px]" /> Export Bulletin (.PDF)</button>
+                  <button className="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md flex items-center gap-1.5 shadow-sm hover:bg-primary transition-colors" type="button"><Icon name="add_shopping_cart" className="text-[16px]" /> Post Sourcing RFQ</button>
+                </>
+              )}
             </div>
           </div>
         </div>

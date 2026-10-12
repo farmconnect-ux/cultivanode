@@ -24,18 +24,22 @@ export function OfftakeContracts(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant mt-1">Legally binding structured supply contracts, outgrower production covenants, delivery milestones, automated quality grading underwriting, and milestone-linked escrow disbursements across Oyo, Osun, Ogun, and Ondo agricultural hubs.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm">
-              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
-                <Icon name="gavel" className="text-[18px]" />
-                <span>Legal Templates</span>
-              </button>
-              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
-                <Icon name="download" className="text-[18px]" />
-                <span>Export Registry</span>
-              </button>
-              <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md" type="button">
-                <Icon name="add_circle" className="text-[18px]" />
-                <span>Draft Master Contract</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
+                    <Icon name="gavel" className="text-[18px]" />
+                    <span>Legal Templates</span>
+                  </button>
+                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
+                    <Icon name="download" className="text-[18px]" />
+                    <span>Export Registry</span>
+                  </button>
+                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md" type="button">
+                    <Icon name="add_circle" className="text-[18px]" />
+                    <span>Draft Master Contract</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-space-sm pt-space-md mt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg">
@@ -495,6 +499,8 @@ export function OfftakeContracts(_props: ScreenProps) {
                 </tr>
               </thead>
               <tbody className="font-body-sm text-body-sm divide-y-0">
+                {_props.slots?.contracts ?? (
+                  <>
                 <tr className="hover:bg-surface-container-low transition-colors">
                   <td className="py-space-md px-space-md font-semibold text-primary">
                     <div>#AGR-CTR-2026-081</div>
@@ -685,6 +691,8 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <button className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors" type="button">Inspect Dossier</button>
                   </td>
                 </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>

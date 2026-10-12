@@ -21,18 +21,22 @@ export function BuyerHub(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">Enterprise commodity sourcing, smallholder lot consolidation, weighbridge quality verification, and automated escrow contracts across Oyo, Ogun, Osun, and Ondo state networks.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm">
-              <button className="bg-primary text-on-primary px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-primary-container transition-colors shadow-sm" type="button">
-                <Icon name="add_circle" className="text-[20px]" />
-                <span>Create Purchase Requirement</span>
-              </button>
-              <button className="bg-surface-container text-on-surface px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-surface-container-high transition-colors" type="button">
-                <Icon name="scale" className="text-[20px]" />
-                <span>Schedule Weighbridge Slot</span>
-              </button>
-              <button className="bg-surface-container-low text-on-surface-variant px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-surface-container transition-colors" type="button">
-                <Icon name="ios_share" className="text-[20px]" />
-                <span>Export Sourcing Dossier</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="bg-primary text-on-primary px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-primary-container transition-colors shadow-sm" type="button">
+                    <Icon name="add_circle" className="text-[20px]" />
+                    <span>Create Purchase Requirement</span>
+                  </button>
+                  <button className="bg-surface-container text-on-surface px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-surface-container-high transition-colors" type="button">
+                    <Icon name="scale" className="text-[20px]" />
+                    <span>Schedule Weighbridge Slot</span>
+                  </button>
+                  <button className="bg-surface-container-low text-on-surface-variant px-space-md py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-space-xs hover:bg-surface-container transition-colors" type="button">
+                    <Icon name="ios_share" className="text-[20px]" />
+                    <span>Export Sourcing Dossier</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-space-sm pt-space-xs text-on-surface-variant">

@@ -21,18 +21,22 @@ export function IotSmartFarm(_props: ScreenProps) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm">
-              <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-all font-label-lg text-label-lg shadow-sm" type="button">
-                <Icon name="add_circle" className="text-[18px]" />
-                <span>Register New Sensor (+)</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-variant transition-all font-label-lg text-label-lg" type="button">
-                <Icon name="tune" className="text-[18px] text-primary" />
-                <span>Calibrate Transducers</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-all font-label-lg text-label-lg" type="button">
-                <Icon name="download" className="text-[18px] text-on-surface-variant" />
-                <span>Export (.CSV)</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-all font-label-lg text-label-lg shadow-sm" type="button">
+                    <Icon name="add_circle" className="text-[18px]" />
+                    <span>Register New Sensor (+)</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-variant transition-all font-label-lg text-label-lg" type="button">
+                    <Icon name="tune" className="text-[18px] text-primary" />
+                    <span>Calibrate Transducers</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-all font-label-lg text-label-lg" type="button">
+                    <Icon name="download" className="text-[18px] text-on-surface-variant" />
+                    <span>Export (.CSV)</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">

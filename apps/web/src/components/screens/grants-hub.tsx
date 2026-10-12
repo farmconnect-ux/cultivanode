@@ -40,18 +40,22 @@ export function GrantsHub(_props: ScreenProps) {
             <button className="flex items-center gap-space-xs px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-all" id="tab-farmer" type="button"><Icon name="groups_2" className="text-[18px] text-outline" /> Farmer &amp; Co-operative Beneficiary View</button>
           </div>
           <div className="flex items-center gap-space-sm">
-            <div className="flex items-center bg-surface-container-lowest px-space-sm py-1.5 rounded-lg shadow-sm">
-              <Icon name="filter_list" className="text-[18px] text-outline mr-space-xs" />
-              <select className="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
-                <option>All Active Programmes (6 Windows)</option>
-                <option>National NAGS-AP (Dry &amp; Wet)</option>
-                <option>AfDB SAPZ Infrastructure</option>
-                <option>OYSADEP Clean Seed Multiplier</option>
-                <option>Global Climate Resilience Fund</option>
-              </select>
-            </div>
-            <button className="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded-lg shadow-sm hover:bg-surface-container transition-all" type="button"><Icon name="cloud_download" className="text-[18px] text-secondary" /> Export Ledger (.CSV)</button>
-            <button className="flex items-center gap-space-xs px-space-md py-1.5 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-primary transition-all font-semibold" type="button"><Icon name="assignment_add" className="text-[18px] text-secondary-fixed" /> New Grant Call / Allocation</button>
+            {_props.slots?.actions ?? (
+              <>
+                <div className="flex items-center bg-surface-container-lowest px-space-sm py-1.5 rounded-lg shadow-sm">
+                  <Icon name="filter_list" className="text-[18px] text-outline mr-space-xs" />
+                  <select className="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
+                    <option>All Active Programmes (6 Windows)</option>
+                    <option>National NAGS-AP (Dry &amp; Wet)</option>
+                    <option>AfDB SAPZ Infrastructure</option>
+                    <option>OYSADEP Clean Seed Multiplier</option>
+                    <option>Global Climate Resilience Fund</option>
+                  </select>
+                </div>
+                <button className="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded-lg shadow-sm hover:bg-surface-container transition-all" type="button"><Icon name="cloud_download" className="text-[18px] text-secondary" /> Export Ledger (.CSV)</button>
+                <button className="flex items-center gap-space-xs px-space-md py-1.5 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-primary transition-all font-semibold" type="button"><Icon name="assignment_add" className="text-[18px] text-secondary-fixed" /> New Grant Call / Allocation</button>
+              </>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-space-md mb-space-xl">

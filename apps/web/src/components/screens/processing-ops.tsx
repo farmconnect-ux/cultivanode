@@ -21,18 +21,22 @@ export function ProcessingOps(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-xs">End-to-end transformation telemetry: raw commodity intake, industrial milling &amp; solvent extraction runs, extraction yield recovery ratios, by-product circular valorization, and NAFDAC / ISO 22000 quality certification.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm">
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container transition-all" type="button">
-                <Icon name="download" className="text-[18px] text-on-surface-variant" />
-                <span>Export Yield Analytics</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container transition-all" type="button">
-                <Icon name="input" className="text-[18px] text-secondary" />
-                <span>Log Raw Material Intake</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary transition-all" type="button">
-                <Icon name="play_circle" className="text-[18px] text-primary-fixed" />
-                <span>Schedule Processing Run</span>
-              </button>
+              {_props.slots?.actions ?? (
+                <>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container transition-all" type="button">
+                    <Icon name="download" className="text-[18px] text-on-surface-variant" />
+                    <span>Export Yield Analytics</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container transition-all" type="button">
+                    <Icon name="input" className="text-[18px] text-secondary" />
+                    <span>Log Raw Material Intake</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary transition-all" type="button">
+                    <Icon name="play_circle" className="text-[18px] text-primary-fixed" />
+                    <span>Schedule Processing Run</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-sm mt-space-sm p-space-sm bg-surface-container-low rounded-xl shadow-sm">
@@ -378,6 +382,8 @@ export function ProcessingOps(_props: ScreenProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y-0">
+                    {_props.slots?.batches ?? (
+                      <>
                     <tr className="hover:bg-surface-container-low transition-colors">
                       <td className="py-3 px-space-sm font-semibold text-on-surface">Cassava Roots (TME-419) <span className="block font-label-sm text-label-sm font-normal text-on-surface-variant">Industrial Native Starch</span></td>
                       <td className="py-3 px-space-sm text-on-surface font-medium">450.0 MT</td>
@@ -430,6 +436,8 @@ export function ProcessingOps(_props: ScreenProps) {
                         <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold font-label-sm text-label-sm">44.0%</span>
                       </td>
                     </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>

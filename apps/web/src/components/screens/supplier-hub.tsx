@@ -18,18 +18,22 @@ export function SupplierHub(_props: ScreenProps) {
             <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">Certified seed, fertilizer, and crop-protection catalog, warehouse batch traceability, and automated crop-plan shortage fulfillment across South-West Nigeria agro-clusters.</p>
           </div>
           <div className="flex flex-wrap items-center gap-space-sm self-start md:self-auto">
-            <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
-              <Icon name="file_download" className="text-[18px] text-on-surface-variant" />
-              <span>Export Waybills (CSV)</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
-              <Icon name="verified" className="text-[18px] text-secondary" />
-              <span>Import Manifest</span>
-            </button>
-            <button className="flex items-center gap-space-xs px-space-md py-2 bg-primary-container text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-primary transition-colors" type="button">
-              <Icon name="add_circle" className="text-[18px]" />
-              <span>+ Add Stock Line</span>
-            </button>
+            {_props.slots?.actions ?? (
+              <>
+                <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
+                  <Icon name="file_download" className="text-[18px] text-on-surface-variant" />
+                  <span>Export Waybills (CSV)</span>
+                </button>
+                <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
+                  <Icon name="verified" className="text-[18px] text-secondary" />
+                  <span>Import Manifest</span>
+                </button>
+                <button className="flex items-center gap-space-xs px-space-md py-2 bg-primary-container text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-primary transition-colors" type="button">
+                  <Icon name="add_circle" className="text-[18px]" />
+                  <span>+ Add Stock Line</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-sm">

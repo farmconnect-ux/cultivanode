@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function SmartIrrigation({ lang }: ScreenProps) {
+export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full gap-space-lg">
@@ -25,8 +25,12 @@ export function SmartIrrigation({ lang }: ScreenProps) {
               <button className="px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1.5" id="mode-manual" type="button"><Icon name="build_circle" className="text-[16px]" /> Emergency Manual</button>
             </div>
             <div className="flex items-center gap-space-sm">
-              <button className="px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg flex items-center gap-1.5 transition-colors" type="button"><Icon name="water_drop" className="text-[18px] text-secondary" /> Instant Flush Cycle</button>
-              <button className="px-space-md py-2 rounded-lg bg-error hover:bg-on-error-container text-on-error font-label-lg text-label-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button"><Icon name="power_settings_new" className="text-[18px]" /> Global Emergency Stop</button>
+              {slots?.actions ?? (
+                <>
+                  <button className="px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg flex items-center gap-1.5 transition-colors" type="button"><Icon name="water_drop" className="text-[18px] text-secondary" /> Instant Flush Cycle</button>
+                  <button className="px-space-md py-2 rounded-lg bg-error hover:bg-on-error-container text-on-error font-label-lg text-label-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button"><Icon name="power_settings_new" className="text-[18px]" /> Global Emergency Stop</button>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-space-sm pt-space-xs">

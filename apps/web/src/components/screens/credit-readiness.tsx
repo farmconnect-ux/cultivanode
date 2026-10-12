@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function CreditReadiness({ lang }: ScreenProps) {
+export function CreditReadiness({ lang, slots }: ScreenProps<"actions">) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -19,18 +19,22 @@ export function CreditReadiness({ lang }: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant">Consent-governed cryptographic farm ledger, counterparty-corroborated harvest histories, and multi-tier creditworthiness underwriting dossier. Formalized for institutional agricultural lending without opaque algorithmic scoring.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm self-start lg:self-center">
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container-high transition-colors font-label-lg text-label-lg shadow-sm" type="button">
-                <Icon name="verified_user" className="text-[18px] text-primary" />
-                <span>Request Audit</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container-high transition-colors font-label-lg text-label-lg shadow-sm" type="button">
-                <Icon name="vpn_key" className="text-[18px] text-tertiary" />
-                <span>Manage Consent</span>
-              </button>
-              <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-all font-label-lg text-label-lg shadow-sm" type="button">
-                <Icon name="picture_as_pdf" className="text-[18px] text-primary-fixed" />
-                <span>Download Underwriting Dossier</span>
-              </button>
+              {slots?.actions ?? (
+                <>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container-high transition-colors font-label-lg text-label-lg shadow-sm" type="button">
+                    <Icon name="verified_user" className="text-[18px] text-primary" />
+                    <span>Request Audit</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container-high transition-colors font-label-lg text-label-lg shadow-sm" type="button">
+                    <Icon name="vpn_key" className="text-[18px] text-tertiary" />
+                    <span>Manage Consent</span>
+                  </button>
+                  <button className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-all font-label-lg text-label-lg shadow-sm" type="button">
+                    <Icon name="picture_as_pdf" className="text-[18px] text-primary-fixed" />
+                    <span>Download Underwriting Dossier</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">

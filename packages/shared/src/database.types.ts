@@ -3733,6 +3733,738 @@ export type Database = {
           }
         ]
       }
+      farm_harvest_batches: {
+        Row: {
+          id: string
+          farm_id: string
+          crop_cycle_id: string | null
+          plot_id: string | null
+          crop_name: string
+          parcel_name: string | null
+          quantity_metric_tons: number
+          certified_moisture_brix: string | null
+          quality_grade: string
+          asking_price_per_mt_minor: number
+          pickup_window_date: string | null
+          storage_location: string | null
+          status: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          crop_cycle_id?: string | null
+          plot_id?: string | null
+          crop_name: string
+          parcel_name?: string | null
+          quantity_metric_tons: number
+          certified_moisture_brix?: string | null
+          quality_grade?: string
+          asking_price_per_mt_minor?: number
+          pickup_window_date?: string | null
+          storage_location?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          crop_cycle_id?: string | null
+          plot_id?: string | null
+          crop_name?: string
+          parcel_name?: string | null
+          quantity_metric_tons?: number
+          certified_moisture_brix?: string | null
+          quality_grade?: string
+          asking_price_per_mt_minor?: number
+          pickup_window_date?: string | null
+          storage_location?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      farm_offtake_contracts: {
+        Row: {
+          id: string
+          farm_id: string
+          buyer_id: string | null
+          buyer_name: string
+          buyer_company: string | null
+          commodity: string
+          contracted_quantity_mt: number
+          contract_value_minor: number
+          price_per_mt_minor: number
+          target_delivery_date: string
+          delivery_location: string
+          escrow_custody_bank: string
+          quality_specifications: string | null
+          contract_status: string
+          farmer_signed_at: string | null
+          buyer_signed_at: string | null
+          contract_pdf_url: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          buyer_id?: string | null
+          buyer_name: string
+          buyer_company?: string | null
+          commodity: string
+          contracted_quantity_mt: number
+          contract_value_minor: number
+          price_per_mt_minor: number
+          target_delivery_date: string
+          delivery_location: string
+          escrow_custody_bank?: string
+          quality_specifications?: string | null
+          contract_status?: string
+          farmer_signed_at?: string | null
+          buyer_signed_at?: string | null
+          contract_pdf_url?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          buyer_id?: string | null
+          buyer_name?: string
+          buyer_company?: string | null
+          commodity?: string
+          contracted_quantity_mt?: number
+          contract_value_minor?: number
+          price_per_mt_minor?: number
+          target_delivery_date?: string
+          delivery_location?: string
+          escrow_custody_bank?: string
+          quality_specifications?: string | null
+          contract_status?: string
+          farmer_signed_at?: string | null
+          buyer_signed_at?: string | null
+          contract_pdf_url?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      farm_cooperative_members: {
+        Row: {
+          id: string
+          farm_id: string | null
+          cooperative_name: string
+          cluster_zone: string
+          member_name: string
+          phone: string
+          nin: string | null
+          farm_size_hectares: number | null
+          shares_count: number | null
+          dues_status: string
+          voting_eligibility: boolean
+          joined_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id?: string | null
+          cooperative_name: string
+          cluster_zone?: string
+          member_name: string
+          phone: string
+          nin?: string | null
+          farm_size_hectares?: number | null
+          shares_count?: number | null
+          dues_status?: string
+          voting_eligibility?: boolean
+          joined_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string | null
+          cooperative_name?: string
+          cluster_zone?: string
+          member_name?: string
+          phone?: string
+          nin?: string | null
+          farm_size_hectares?: number | null
+          shares_count?: number | null
+          dues_status?: string
+          voting_eligibility?: boolean
+          joined_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_cooperative_orders: {
+        Row: {
+          id: string
+          cooperative_name: string
+          order_type: string
+          title: string
+          target_quantity: string
+          participating_members_count: number | null
+          target_closing_date: string
+          estimated_discount_percentage: number | null
+          status: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cooperative_name: string
+          order_type: string
+          title: string
+          target_quantity: string
+          participating_members_count?: number | null
+          target_closing_date: string
+          estimated_discount_percentage?: number | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cooperative_name?: string
+          order_type?: string
+          title?: string
+          target_quantity?: string
+          participating_members_count?: number | null
+          target_closing_date?: string
+          estimated_discount_percentage?: number | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_logistics_waybills: {
+        Row: {
+          id: string
+          farm_id: string | null
+          waybill_number: string
+          origin: string
+          destination: string
+          commodity: string
+          quantity_mt: number
+          carrier_company: string
+          driver_name: string
+          driver_phone: string
+          truck_plate_number: string
+          status: string
+          temperature_celsius: number | null
+          dispatch_at: string | null
+          delivered_at: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id?: string | null
+          waybill_number?: string
+          origin: string
+          destination: string
+          commodity: string
+          quantity_mt: number
+          carrier_company: string
+          driver_name: string
+          driver_phone: string
+          truck_plate_number: string
+          status?: string
+          temperature_celsius?: number | null
+          dispatch_at?: string | null
+          delivered_at?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string | null
+          waybill_number?: string
+          origin?: string
+          destination?: string
+          commodity?: string
+          quantity_mt?: number
+          carrier_company?: string
+          driver_name?: string
+          driver_phone?: string
+          truck_plate_number?: string
+          status?: string
+          temperature_celsius?: number | null
+          dispatch_at?: string | null
+          delivered_at?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_credit_assessments: {
+        Row: {
+          id: string
+          farm_id: string
+          risk_score: number
+          credit_readiness_tier: string
+          verified_cadastral_hectares: number
+          historical_cycles_count: number
+          historical_revenue_minor: number
+          repayment_probability_percent: number
+          loan_requested_minor: number | null
+          loan_purpose: string | null
+          lender_institution: string | null
+          lender_review_status: string
+          last_evaluated_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          risk_score?: number
+          credit_readiness_tier?: string
+          verified_cadastral_hectares?: number
+          historical_cycles_count?: number
+          historical_revenue_minor?: number
+          repayment_probability_percent?: number
+          loan_requested_minor?: number | null
+          loan_purpose?: string | null
+          lender_institution?: string | null
+          lender_review_status?: string
+          last_evaluated_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          risk_score?: number
+          credit_readiness_tier?: string
+          verified_cadastral_hectares?: number
+          historical_cycles_count?: number
+          historical_revenue_minor?: number
+          repayment_probability_percent?: number
+          loan_requested_minor?: number | null
+          loan_purpose?: string | null
+          lender_institution?: string | null
+          lender_review_status?: string
+          last_evaluated_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_processing_batches: {
+        Row: {
+          id: string
+          farm_id: string
+          batch_number: string
+          commodity_intake: string
+          intake_weight_kg: number
+          processing_facility: string
+          processed_output_product: string
+          output_quantity_kg: number
+          extraction_efficiency_rate: number | null
+          quality_lab_test_status: string
+          status: string
+          notes: string | null
+          started_at: string | null
+          completed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          batch_number?: string
+          commodity_intake: string
+          intake_weight_kg: number
+          processing_facility: string
+          processed_output_product: string
+          output_quantity_kg?: number
+          extraction_efficiency_rate?: number | null
+          quality_lab_test_status?: string
+          status?: string
+          notes?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          batch_number?: string
+          commodity_intake?: string
+          intake_weight_kg?: number
+          processing_facility?: string
+          processed_output_product?: string
+          output_quantity_kg?: number
+          extraction_efficiency_rate?: number | null
+          quality_lab_test_status?: string
+          status?: string
+          notes?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_insurance_policies: {
+        Row: {
+          id: string
+          farm_id: string
+          policy_number: string
+          insurance_underwriter: string
+          coverage_type: string
+          insured_area_ha: number
+          sum_insured_minor: number
+          premium_paid_minor: number
+          status: string
+          start_date: string
+          end_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          policy_number?: string
+          insurance_underwriter?: string
+          coverage_type: string
+          insured_area_ha?: number
+          sum_insured_minor: number
+          premium_paid_minor?: number
+          status?: string
+          start_date?: string
+          end_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          policy_number?: string
+          insurance_underwriter?: string
+          coverage_type?: string
+          insured_area_ha?: number
+          sum_insured_minor?: number
+          premium_paid_minor?: number
+          status?: string
+          start_date?: string
+          end_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_insurance_claims: {
+        Row: {
+          id: string
+          policy_id: string
+          farm_id: string
+          trigger_reason: string
+          claim_amount_minor: number
+          satellite_ndvi_verification: string | null
+          status: string
+          payout_date: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          policy_id: string
+          farm_id: string
+          trigger_reason: string
+          claim_amount_minor: number
+          satellite_ndvi_verification?: string | null
+          status?: string
+          payout_date?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          policy_id?: string
+          farm_id?: string
+          trigger_reason?: string
+          claim_amount_minor?: number
+          satellite_ndvi_verification?: string | null
+          status?: string
+          payout_date?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_grant_applications: {
+        Row: {
+          id: string
+          farm_id: string
+          programme_name: string
+          sponsor_agency: string
+          grant_type: string
+          requested_value_minor: number
+          disbursed_value_minor: number | null
+          status: string
+          voucher_code: string | null
+          impact_verified: boolean
+          applied_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          programme_name: string
+          sponsor_agency: string
+          grant_type: string
+          requested_value_minor: number
+          disbursed_value_minor?: number | null
+          status?: string
+          voucher_code?: string | null
+          impact_verified?: boolean
+          applied_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          programme_name?: string
+          sponsor_agency?: string
+          grant_type?: string
+          requested_value_minor?: number
+          disbursed_value_minor?: number | null
+          status?: string
+          voucher_code?: string | null
+          impact_verified?: boolean
+          applied_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_water_infrastructure: {
+        Row: {
+          id: string
+          farm_id: string
+          asset_name: string
+          asset_type: string
+          storage_capacity_litres: number | null
+          current_water_level_percentage: number | null
+          flow_rate_litres_per_hour: number | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          asset_name: string
+          asset_type: string
+          storage_capacity_litres?: number | null
+          current_water_level_percentage?: number | null
+          flow_rate_litres_per_hour?: number | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          asset_name?: string
+          asset_type?: string
+          storage_capacity_litres?: number | null
+          current_water_level_percentage?: number | null
+          flow_rate_litres_per_hour?: number | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_irrigation_events: {
+        Row: {
+          id: string
+          farm_id: string
+          plot_id: string | null
+          irrigation_zone: string
+          duration_minutes: number
+          water_volume_litres: number
+          soil_moisture_before_percent: number | null
+          soil_moisture_after_percent: number | null
+          trigger_reason: string
+          status: string
+          executed_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          plot_id?: string | null
+          irrigation_zone: string
+          duration_minutes: number
+          water_volume_litres: number
+          soil_moisture_before_percent?: number | null
+          soil_moisture_after_percent?: number | null
+          trigger_reason?: string
+          status?: string
+          executed_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          plot_id?: string | null
+          irrigation_zone?: string
+          duration_minutes?: number
+          water_volume_litres?: number
+          soil_moisture_before_percent?: number | null
+          soil_moisture_after_percent?: number | null
+          trigger_reason?: string
+          status?: string
+          executed_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      farm_market_commodity_prices: {
+        Row: {
+          id: string
+          trading_hub: string
+          state: string
+          commodity: string
+          variety: string | null
+          wholesale_price_per_mt_minor: number
+          daily_change_percentage: number | null
+          supply_volume_level: string
+          effective_date: string
+        }
+        Insert: {
+          id?: string
+          trading_hub: string
+          state: string
+          commodity: string
+          variety?: string | null
+          wholesale_price_per_mt_minor: number
+          daily_change_percentage?: number | null
+          supply_volume_level?: string
+          effective_date?: string
+        }
+        Update: {
+          id?: string
+          trading_hub?: string
+          state?: string
+          commodity?: string
+          variety?: string | null
+          wholesale_price_per_mt_minor?: number
+          daily_change_percentage?: number | null
+          supply_volume_level?: string
+          effective_date?: string
+        }
+        Relationships: []
+      }
+      farm_iot_telemetry: {
+        Row: {
+          id: string
+          farm_id: string
+          plot_id: string | null
+          device_id: string
+          device_type: string
+          telemetry_data: Json
+          recorded_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          farm_id: string
+          plot_id?: string | null
+          device_id: string
+          device_type: string
+          telemetry_data: Json
+          recorded_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          farm_id?: string
+          plot_id?: string | null
+          device_id?: string
+          device_type?: string
+          telemetry_data?: Json
+          recorded_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      marketplace_listings: {
+        Row: {
+          id: string
+          seller_id: string
+          category_id: string
+          product_id: string | null
+          variant_id: string | null
+          listing_type: string
+          title: string
+          description: string | null
+          images: string[]
+          unit: string
+          price_model: string
+          base_price_kobo: number
+          min_order_quantity: number
+          max_order_quantity: number | null
+          available_quantity: number
+          location: unknown
+          location_address: string | null
+          location_state: string | null
+          location_lga: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          seller_id: string
+          category_id: string
+          product_id?: string | null
+          variant_id?: string | null
+          listing_type: string
+          title: string
+          description?: string | null
+          images?: string[]
+          unit: string
+          price_model?: string
+          base_price_kobo: number
+          min_order_quantity?: number
+          max_order_quantity?: number | null
+          available_quantity?: number
+          location?: unknown
+          location_address?: string | null
+          location_state?: string | null
+          location_lga?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          seller_id?: string
+          category_id?: string
+          product_id?: string | null
+          variant_id?: string | null
+          listing_type?: string
+          title?: string
+          description?: string | null
+          images?: string[]
+          unit?: string
+          price_model?: string
+          base_price_kobo?: number
+          min_order_quantity?: number
+          max_order_quantity?: number | null
+          available_quantity?: number
+          location?: unknown
+          location_address?: string | null
+          location_state?: string | null
+          location_lga?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       current_consents: {

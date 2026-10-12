@@ -27,18 +27,22 @@ export function InsuranceHub(_props: ScreenProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-space-sm">
-            <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-lg" type="button">
-              <Icon name="table_view" className="text-[18px]" />
-              <span>Export Actuarial Registry (.csv)</span>
-            </button>
-            <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-lg" type="button">
-              <Icon name="troubleshoot" className="text-[18px] text-tertiary-container" />
-              <span>Loss Assessment Batch</span>
-            </button>
-            <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-lg shadow-sm" type="button">
-              <Icon name="add_moderator" className="text-[18px]" />
-              <span>+ Underwrite New Policy</span>
-            </button>
+            {_props.slots?.actions ?? (
+              <>
+                <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-lg" type="button">
+                  <Icon name="table_view" className="text-[18px]" />
+                  <span>Export Actuarial Registry (.csv)</span>
+                </button>
+                <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-lg" type="button">
+                  <Icon name="troubleshoot" className="text-[18px] text-tertiary-container" />
+                  <span>Loss Assessment Batch</span>
+                </button>
+                <button className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-lg shadow-sm" type="button">
+                  <Icon name="add_moderator" className="text-[18px]" />
+                  <span>+ Underwrite New Policy</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-space-md mb-space-lg">

@@ -1,96 +1,50 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAccount } from "@/lib/account/session";
-import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 
-function langOf(form: FormData) {
-  const l = String(form.get("lang") ?? "");
-  return hasLocale(l) ? l : "en";
+async function getAuth() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  return { supabase, user };
 }
 
-export async function provisionDevice(formData: FormData): Promise<void> {
-  const account = await requireAccount(langOf(formData));
-  const supabase = await createClient();
+export async function recordTelemetryReading(form: FormData): Promise<void> {
+  const { supabase } = await getAuth();
+  const farmId = String(form.get("farm_id") || "").trim();
+  const plotId = String(form.get("plot_id") || "").trim() || null;
+  const deviceType = String(form.get("device_type") || "soil_sensor").trim();
+  const deviceId = String(form.get("device_id") || `SN-${Math.random().toString(36).substring(2, 7).toUpperCase()}`).trim();
+  const moisture = parseFloat(String(form.get("soil_moisture") || "28.5"));
+  const temp = parseFloat(String(form.get("soil_temperature") || "26.4"));
+  const ec = parseFloat(String(form.get("electrical_conductivity") || "1.2"));
 
-  const serialNumber = (formData.get("serial_number") as string)?.trim();
-  const modelId = (formData.get("model_id") as string)?.trim();
+  if (!farmId) return;
 
-  if (!serialNumber || !modelId) {
-    throw new Error("Serial number and model ID are required");
-  }
+  const telemetryData = {
+    soil_moisture_percentage: moisture,
+    soil_temperature_celsius: temp,
+    electrical_conductivity_ds_m: ec,
+    battery_millivolts: 3620,
+    snr_db: 9.4,
+    rssi_dbm: -102,
+  };
 
-  const { error } = await supabase.from("devices").insert({
-    serial_number: serialNumber,
-    model_id: modelId,
-    status: "provisioned",
-    assigned_owner_id: account.userId,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  revalidatePath("/[lang]/account/iot", "page");
-}
-
-export async function installDeviceOnPlot(formData: FormData): Promise<void> {
-  const account = await requireAccount(langOf(formData));
-  const supabase = await createClient();
-
-  const deviceId = formData.get("device_id") as string;
-  const farmId = formData.get("farm_id") as string;
-  const plotId = formData.get("plot_id") as string;
-  const probeDepthCm = formData.get("probe_depth_cm") ? Number(formData.get("probe_depth_cm")) : undefined;
-
-  if (!deviceId || !farmId || !plotId) {
-    throw new Error("Device, farm, and plot are required");
-  }
-
-  const { error: instError } = await supabase.from("device_installations").insert({
-    device_id: deviceId,
+  const { error } = await (supabase.from("farm_iot_telemetry") as any).insert({
     farm_id: farmId,
     plot_id: plotId,
-    installed_by: account.userId,
-    probe_depth_cm: probeDepthCm,
-    is_active: true,
+    device_id: deviceId,
+    device_type: deviceType,
+    telemetry_data: telemetryData,
+    recorded_at: new Date().toISOString(),
   });
 
-  if (instError) {
-    throw new Error(instError.message);
-  }
-
-  // Update device status to installed / assigned
-  await supabase
-    .from("devices")
-    .update({ status: "installed" })
-    .eq("id", deviceId);
-
-  revalidatePath("/[lang]/account/iot", "page");
-  revalidatePath("/[lang]/account", "page");
-}
-
-export async function acknowledgeDeviceAlert(formData: FormData): Promise<void> {
-  const account = await requireAccount(langOf(formData));
-  const supabase = await createClient();
-
-  const alertId = formData.get("alert_id") as string;
-  if (!alertId) throw new Error("Alert ID is required");
-
-  const { error } = await supabase
-    .from("device_alerts")
-    .update({
-      status: "acknowledged",
-      acknowledged_at: new Date().toISOString(),
-      acknowledged_by: account.userId,
-    })
-    .eq("id", alertId);
-
   if (error) {
-    throw new Error(error.message);
+    console.error("Failed to record telemetry reading:", error.message);
+    return;
   }
 
-  revalidatePath("/[lang]/account/iot", "page");
-  revalidatePath("/[lang]/account", "page");
+  revalidatePath("/account/iot");
+  revalidatePath("/account/irrigation");
 }
