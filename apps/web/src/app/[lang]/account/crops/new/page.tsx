@@ -233,6 +233,27 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
                 Preloads NIHORT / IITA validated split-fertilizer timings, phenology GDD stages, and compliance pre-harvest intervals.
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-on-surface mb-1">
+                Input Planning Preference
+              </label>
+              <select
+                name="input_strategy"
+                defaultValue="adopt_advisory"
+                className="w-full h-11 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="adopt_advisory">
+                  🌱 Adopt Advisory Benchmark (Recommended Advice — You can edit or adjust anytime)
+                </option>
+                <option value="custom_plan">
+                  ✏️ Self-Managed Inputs (Show Advisory as guidance only; I will enter my own planned inputs)
+                </option>
+              </select>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                CultivaNode provides agronomic recommendations based on validated research. You always have full autonomy to decide your actual inputs.
+              </p>
+            </div>
           </div>
 
           <div className="rounded-xl bg-surface-container-lowest p-6 shadow-sm border border-outline-variant space-y-6">

@@ -251,6 +251,8 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
     return { error: cycleErr.message };
   }
 
+  const inputStrategy = String(form.get("input_strategy") || "adopt_advisory").trim();
+
   if (cycle && standardObj) {
     try {
       const plan = StandardPlanActualEngine.generatePlanFromStandard(standardObj, {
@@ -273,7 +275,8 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
         stage: op.stage || "Establishment",
         scheduled_date: op.scheduledDate,
         status: "pending",
-        planned_inputs: (op.recommendedInputs as any) || [],
+        required_inputs: op.recommendedInputs || [], // Advisory benchmark guidance
+        planned_inputs: inputStrategy === "custom_plan" ? [] : ((op.recommendedInputs as any) || []), // Farmer's chosen plan
         notes: `Advisory Stage: ${op.stage}`,
       }));
 
@@ -289,33 +292,92 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
   return { id: cycle?.id };
 }
 
+export async function adoptAdvisoryInputs(form: FormData): Promise<void> {
+  const { supabase } = await getAuth();
+  const cycleId = String(form.get("crop_cycle_id") || "").trim();
+  const opId = String(form.get("operation_id") || "").trim();
+  if (!opId) return;
+
+  const { data: op } = await supabase
+    .from("crop_cycle_operations")
+    .select("required_inputs")
+    .eq("id", opId)
+    .maybeSingle();
+
+  if (op) {
+    await supabase
+      .from("crop_cycle_operations")
+      .update({ planned_inputs: (op as any).required_inputs || [] } as any)
+      .eq("id", opId);
+  }
+  if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
+}
+
+export async function updateOperationPlannedInputs(form: FormData): Promise<void> {
+  const { supabase } = await getAuth();
+  const cycleId = String(form.get("crop_cycle_id") || "").trim();
+  const opId = String(form.get("operation_id") || "").trim();
+  const itemName = String(form.get("item_name") || "").trim();
+  const quantity = parseFloat(String(form.get("quantity") || "0")) || 0;
+  const unit = String(form.get("unit") || "kg").trim();
+
+  if (!opId) return;
+
+  const inputs = itemName ? [{ itemName, quantity, unit }] : [];
+  await supabase
+    .from("crop_cycle_operations")
+    .update({ planned_inputs: inputs } as any)
+    .eq("id", opId);
+
+  if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
+}
+
 export async function logCropOperation(form: FormData): Promise<void> {
   const { supabase } = await getAuth();
   const cycleId = String(form.get("crop_cycle_id") || "").trim();
+  const opId = String(form.get("operation_id") || "").trim();
   const name = String(form.get("name") || form.get("operation_type") || "").trim();
   const operationType = String(form.get("operation_type") || name).trim().toLowerCase().replace(/\s+/g, "_");
   const stage = String(form.get("stage") || "Vegetative").trim();
   const scheduledDate = String(form.get("scheduled_date") || new Date().toISOString().split("T")[0]).trim();
   const completedDate = String(form.get("completed_date") || "").trim() || null;
   const actualCostKobo = parseInt(String(form.get("actual_cost_kobo") || form.get("direct_cost_minor") || "0"), 10);
+  const inputItem = String(form.get("input_item") || "").trim();
+  const inputQty = parseFloat(String(form.get("input_quantity") || "0")) || 0;
+  const inputUnit = String(form.get("input_unit") || "kg").trim();
   const notes = String(form.get("notes") || "").trim();
 
-  if (!cycleId || !name) return;
+  const customInputs = inputItem ? [{ itemName: inputItem, quantity: inputQty, unit: inputUnit }] : undefined;
 
-  await supabase.from("crop_cycle_operations").insert({
-    crop_cycle_id: cycleId,
-    name,
-    operation_type: operationType,
-    stage,
-    scheduled_date: scheduledDate,
-    completed_date: completedDate,
-    status: completedDate ? "completed" : "pending",
-    actual_cost_kobo: actualCostKobo,
-    direct_cost_minor: actualCostKobo,
-    notes: notes || null,
-  });
+  if (opId) {
+    const updatePayload: Record<string, any> = {
+      completed_date: completedDate,
+      status: completedDate ? "completed" : "pending",
+      actual_cost_kobo: actualCostKobo,
+      direct_cost_minor: actualCostKobo,
+    };
+    if (customInputs) updatePayload.actual_inputs = customInputs;
+    if (notes) updatePayload.notes = notes;
+    await supabase.from("crop_cycle_operations").update(updatePayload as any).eq("id", opId);
+  } else if (cycleId && name) {
+    await supabase.from("crop_cycle_operations").insert({
+      crop_cycle_id: cycleId,
+      cycle_id: cycleId,
+      name,
+      operation_type: operationType,
+      stage,
+      scheduled_date: scheduledDate,
+      completed_date: completedDate,
+      status: completedDate ? "completed" : "pending",
+      actual_cost_kobo: actualCostKobo,
+      direct_cost_minor: actualCostKobo,
+      planned_inputs: customInputs || [],
+      actual_inputs: completedDate && customInputs ? customInputs : [],
+      notes: notes || null,
+    } as any);
+  }
 
-  revalidatePath(`/account/crops/${cycleId}`);
+  if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
 }
 
 export async function logCropObservation(form: FormData): Promise<void> {

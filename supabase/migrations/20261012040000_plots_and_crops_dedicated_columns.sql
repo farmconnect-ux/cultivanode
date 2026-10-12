@@ -25,8 +25,10 @@ alter table public.crop_cycles
 
 -- 3. Dedicated & compatibility columns for public.crop_cycle_operations
 alter table public.crop_cycle_operations
-  add column if not exists planned_inputs jsonb,
-  add column if not exists direct_cost_minor bigint;
+  add column if not exists planned_inputs jsonb default '[]'::jsonb,
+  add column if not exists required_inputs jsonb default '[]'::jsonb,
+  add column if not exists actual_inputs jsonb default '[]'::jsonb,
+  add column if not exists direct_cost_minor bigint default 0;
 
 -- 4. Open table-level grants on farm management tables to authenticated users
 grant select, insert, update, delete on public.plots to authenticated;

@@ -277,6 +277,7 @@ flowchart TD
   - Wire the scouting modal in `crop-management.tsx` to `crop_scouting_logs` via `logCropObservation` server action.
   - Implement crop cycle creation wizard (`/account/crops/new`) generating growth stage schedules from agronomy templates.
   - Dedicated database attributes for `plots` and `crop_cycles` (`20261012040000_plots_and_crops_dedicated_columns.sql`) with resilient schema fallbacks (`plot_code`, `soil_texture`, `slope`, `irrigation_type`, `accessibility`, `planted_area_hectares`, `start_date`, `target_harvest_date`).
+  - **Advisory Guidance vs. Farmer Planned Inputs:** Agronomic recommendations (`required_inputs`) are strictly presented as advisory guidance without coercion; farmers have complete autonomy to decide their own custom planned inputs (`planned_inputs`) or adopt the advisory standard, with inline plan customization and adoption tools.
 - [x] **Field Plots & Demarcation (`/account/farms/[id]`):**
   - Dedicated first-class database columns for plot code, soil texture, slope, and irrigation type.
   - Dedicated visual pills and badges on plot cards instead of burying metadata in unstructured notes.

@@ -4,7 +4,12 @@ import { Button, Card, Badge } from "@/components/ui";
 import { hasLocale, type Locale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
-import { logCropOperation, logCropObservation } from "@/actions/crop-plans";
+import {
+  logCropOperation,
+  logCropObservation,
+  adoptAdvisoryInputs,
+  updateOperationPlannedInputs,
+} from "@/actions/crop-plans";
 
 interface Props {
   params: Promise<{ lang: string; id: string }>;
@@ -125,37 +130,194 @@ export default async function CropDetailPage({ params }: Props) {
               </Card>
             ) : (
               <div className="space-y-2">
-                {operations.map((op) => (
-                  <Card key={op.id} className="p-3.5 border border-line flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-ink">{op.operation_type}</span>
-                        <Badge tone={op.status === "completed" ? "leaf" : "warning"}>{op.status}</Badge>
-                      </div>
-                      <p className="text-xs text-muted">Scheduled: {op.scheduled_date}</p>
-                      {op.notes && <p className="text-xs text-neutral-500 italic">{op.notes}</p>}
-                    </div>
+                {operations.map((op) => {
+                  const required = (op as any).required_inputs as Array<{ itemName: string; recommendedQuantity?: number; quantity?: number; unit: string }> | undefined;
+                  const planned = (op as any).planned_inputs as Array<{ itemName: string; recommendedQuantity?: number; quantity?: number; unit: string }> | undefined;
+                  const hasRequired = Array.isArray(required) && required.length > 0;
+                  const hasPlanned = Array.isArray(planned) && planned.length > 0;
 
-                    {op.status !== "completed" && (
-                      <form action={logCropOperation}>
-                        <input type="hidden" name="crop_cycle_id" value={cycle.id} />
-                        <input type="hidden" name="operation_type" value={op.operation_type} />
-                        <input type="hidden" name="scheduled_date" value={op.scheduled_date} />
-                        <input
-                          type="hidden"
-                          name="completed_date"
-                          value={new Date().toISOString().split("T")[0]}
-                        />
-                        <button
-                          type="submit"
-                          className="rounded bg-leaf-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-leaf-700"
-                        >
-                          ✓ Mark Done
-                        </button>
-                      </form>
-                    )}
-                  </Card>
-                ))}
+                  return (
+                    <Card key={op.id} className="p-4 border border-line space-y-3 shadow-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-ink">{op.name || op.operation_type}</span>
+                            <Badge tone={op.status === "completed" ? "leaf" : "warning"}>{op.status}</Badge>
+                            {op.stage && (
+                              <span className="text-[11px] font-semibold text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded">
+                                {op.stage}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted">Scheduled: {op.scheduled_date}</p>
+                        </div>
+
+                        {op.status !== "completed" && (
+                          <form action={logCropOperation}>
+                            <input type="hidden" name="crop_cycle_id" value={cycle.id} />
+                            <input type="hidden" name="operation_id" value={op.id} />
+                            <input type="hidden" name="operation_type" value={op.operation_type} />
+                            <input type="hidden" name="scheduled_date" value={op.scheduled_date} />
+                            <input
+                              type="hidden"
+                              name="completed_date"
+                              value={new Date().toISOString().split("T")[0]}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded bg-leaf-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-leaf-700 transition-colors shadow-xs"
+                            >
+                              ✓ Mark Done
+                            </button>
+                          </form>
+                        )}
+                      </div>
+
+                      {/* Side-by-side Advisory vs Farmer Plan */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-line">
+                        {/* 1. Advisory Benchmark (Guidance / Advice) */}
+                        <div className="rounded-lg bg-amber-50/80 border border-amber-200/90 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-amber-900 flex items-center gap-1">
+                              💡 Advisory Benchmark
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wide bg-amber-100 px-1.5 py-0.5 rounded">
+                              Advice Only
+                            </span>
+                          </div>
+                          {hasRequired ? (
+                            <ul className="text-xs text-amber-950 space-y-1 pt-1">
+                              {required!.map((inp, idx) => (
+                                <li key={idx} className="flex items-center justify-between font-medium">
+                                  <span>{inp.itemName}</span>
+                                  <span className="font-bold text-amber-900">
+                                    {inp.recommendedQuantity ?? inp.quantity} {inp.unit}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-[11px] text-amber-800 italic pt-1">
+                              Standard schedule has no specific chemical or fertilizer benchmark for this step.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* 2. Farmer's Planned Input (Self-Determined Decision) */}
+                        <div className="rounded-lg bg-emerald-50/80 border border-emerald-200/90 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-emerald-900 flex items-center gap-1">
+                              📋 Farmer's Planned Input
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide bg-emerald-100 px-1.5 py-0.5 rounded">
+                              Your Plan
+                            </span>
+                          </div>
+
+                          {hasPlanned ? (
+                            <div className="space-y-1 pt-1">
+                              <ul className="text-xs text-emerald-950 space-y-1">
+                                {planned!.map((inp, idx) => (
+                                  <li key={idx} className="flex items-center justify-between font-medium">
+                                    <span>{inp.itemName}</span>
+                                    <span className="font-bold text-emerald-900">
+                                      {inp.quantity ?? inp.recommendedQuantity} {inp.unit}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="flex items-center justify-end pt-1">
+                                <form action={updateOperationPlannedInputs}>
+                                  <input type="hidden" name="crop_cycle_id" value={cycle.id} />
+                                  <input type="hidden" name="operation_id" value={op.id} />
+                                  <button
+                                    type="submit"
+                                    className="text-[11px] text-neutral-500 hover:text-danger-700 underline"
+                                  >
+                                    Reset Plan
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 pt-1">
+                              <p className="text-[11px] text-emerald-800 italic">
+                                No custom inputs entered yet. You can follow the advisory benchmark or enter your own inputs.
+                              </p>
+                              {hasRequired && (
+                                <form action={adoptAdvisoryInputs}>
+                                  <input type="hidden" name="crop_cycle_id" value={cycle.id} />
+                                  <input type="hidden" name="operation_id" value={op.id} />
+                                  <button
+                                    type="submit"
+                                    className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
+                                  >
+                                    + Follow Advisory Benchmark
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Inline Custom Input Entry Form */}
+                          <details className="text-[11px] text-neutral-600 pt-1">
+                            <summary className="cursor-pointer font-semibold text-emerald-800 hover:underline">
+                              ✏️ Customize Farmer's Planned Input
+                            </summary>
+                            <form action={updateOperationPlannedInputs} className="mt-2 space-y-2 bg-surface p-2 rounded border border-line">
+                              <input type="hidden" name="crop_cycle_id" value={cycle.id} />
+                              <input type="hidden" name="operation_id" value={op.id} />
+                              <div>
+                                <label className="block text-[10px] font-bold text-neutral-700 mb-0.5">Input Item Name</label>
+                                <input
+                                  type="text"
+                                  name="item_name"
+                                  required
+                                  placeholder="e.g. NPK 20:10:10 or Organic Poultry Manure"
+                                  className="w-full rounded border border-line px-2 py-1 text-xs"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-neutral-700 mb-0.5">Quantity</label>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    name="quantity"
+                                    required
+                                    placeholder="e.g. 150"
+                                    className="w-full rounded border border-line px-2 py-1 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold text-neutral-700 mb-0.5">Unit</label>
+                                  <input
+                                    type="text"
+                                    name="unit"
+                                    defaultValue="kg"
+                                    className="w-full rounded border border-line px-2 py-1 text-xs"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                type="submit"
+                                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-1 rounded"
+                              >
+                                Save Custom Plan
+                              </button>
+                            </form>
+                          </details>
+                        </div>
+                      </div>
+
+                      {op.notes && (
+                        <p className="text-[11px] text-neutral-500 italic pt-1 border-t border-line/40">
+                          {op.notes}
+                        </p>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -232,22 +394,55 @@ export default async function CropDetailPage({ params }: Props) {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Direct Cost (NGN Minor)</label>
-                <input
-                  type="number"
-                  name="direct_cost_minor"
-                  placeholder="e.g. 5000000 (50k NGN)"
-                  className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
-                />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Input Item (Optional)</label>
+                  <input
+                    type="text"
+                    name="input_item"
+                    placeholder="e.g. NPK 15:15:15 or Compost"
+                    className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Qty</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="input_quantity"
+                    placeholder="e.g. 100"
+                    className="w-full rounded-md border border-line px-2 py-2 text-xs focus:outline-leaf-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Unit</label>
+                  <input
+                    type="text"
+                    name="input_unit"
+                    defaultValue="kg"
+                    className="w-full rounded-md border border-line px-2 py-2 text-xs focus:outline-leaf-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Direct Cost (NGN Minor)</label>
+                  <input
+                    type="number"
+                    name="direct_cost_minor"
+                    placeholder="e.g. 5000000 (50k NGN)"
+                    className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Notes / Inputs Used</label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Notes / Observations</label>
                 <textarea
                   name="notes"
                   rows={2}
-                  placeholder="e.g. 4 bags of NPK 15:15:15 applied"
+                  placeholder="e.g. 2 bags applied along ridges after morning rain"
                   className="w-full rounded-md border border-line px-3 py-1.5 text-xs focus:outline-leaf-600"
                 />
               </div>
