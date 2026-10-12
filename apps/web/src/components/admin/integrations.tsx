@@ -12,7 +12,7 @@ import {
 } from "@/actions/admin-integrations";
 import { Badge, Button, Card, cx, Field, Input, Select } from "@/components/ui";
 
-type Kind = "sms" | "identity" | "weather";
+type Kind = "sms" | "identity" | "weather" | "payment" | "maps";
 type Mode = "test" | "live";
 
 type ConfigField = { key: string; label: string; required?: boolean; default?: string; options?: string[]; help?: string };
@@ -42,8 +42,96 @@ export type Overview = {
 const KIND_TITLES: Record<Kind, { title: string; intro: string }> = {
   sms: { title: "SMS (sign-in codes)", intro: "Sends the one-time codes people use to sign in, and SMS alerts later." },
   identity: { title: "Identity checks", intro: "Checks NIN, BVN and payout bank accounts during verification." },
-  weather: { title: "Weather", intro: "Forecasts and farm alerts for the pilot states on the admin dashboard (farm-level weather later)." },
+  weather: { title: "Weather", intro: "Forecasts and farm alerts for the pilot states on the admin dashboard and farm-level monitoring." },
+  payment: { title: "Payment Gateways & Escrow Settlements", intro: "Paystack (Nigerian cards & bank transfer), Flutterwave (Pan-African mobile money & USSD), and Stripe (international cards)." },
+  maps: { title: "Geospatial & Mapping (Google Maps Platform)", intro: "Centrally configured Google Maps Platform for sub-meter cadastral boundary delineation, satellite imagery, and geocoding." },
 };
+
+const FALLBACK_PROVIDERS: Provider[] = [
+  {
+    code: "paystack",
+    kind: "payment",
+    name: "Paystack",
+    description: "Nigerian-licensed collections and payouts: card, bank transfer and USSD. Automated escrow clearing and outgrower settlements.",
+    docs_url: "https://paystack.com/docs",
+    implemented: true,
+    test_only: false,
+    config_fields: [
+      { key: "public_key", label: "Public Key", required: true, help: "Starts with pk_test_ or pk_live_." },
+      { key: "base_url", label: "API Base URL", required: true, default: "https://api.paystack.co" },
+    ],
+    secret_fields: [
+      { key: "secret_key", label: "Secret Key", required: true, help: "Starts with sk_test_ or sk_live_." },
+      { key: "webhook_secret", label: "Webhook Secret", required: false, help: "Verifies x-paystack-signature header." },
+    ],
+    mode: "test",
+    config: { test: {}, live: {} },
+    secrets: [],
+    last_event: null,
+  },
+  {
+    code: "flutterwave",
+    kind: "payment",
+    name: "Flutterwave",
+    description: "Pan-African payment processing across Nigeria and ECOWAS (Card, Bank Account, Mobile Money, USSD). Registered for automated milestone escrow.",
+    docs_url: "https://developer.flutterwave.com",
+    implemented: true,
+    test_only: false,
+    config_fields: [
+      { key: "public_key", label: "Public Key", required: true, help: "Starts with FLWPUBK_TEST- or FLWPUBK-." },
+      { key: "base_url", label: "API Base URL", required: true, default: "https://api.flutterwave.com/v3" },
+    ],
+    secret_fields: [
+      { key: "secret_key", label: "Secret Key", required: true, help: "Starts with FLWSECK_TEST- or FLWSECK-." },
+      { key: "encryption_key", label: "Encryption Key", required: false, help: "For card tokenization." },
+      { key: "webhook_secret", label: "Webhook Secret", required: false, help: "Verifies verf-hash header." },
+    ],
+    mode: "test",
+    config: { test: {}, live: {} },
+    secrets: [],
+    last_event: null,
+  },
+  {
+    code: "stripe",
+    kind: "payment",
+    name: "Stripe",
+    description: "International multi-currency card collections (Visa, Mastercard, Amex, Apple Pay) for diaspora agricultural investments and export offtake contracts.",
+    docs_url: "https://stripe.com/docs",
+    implemented: true,
+    test_only: false,
+    config_fields: [
+      { key: "publishable_key", label: "Publishable Key", required: true, help: "Starts with pk_test_ or pk_live_." },
+    ],
+    secret_fields: [
+      { key: "secret_key", label: "Secret Key", required: true, help: "Starts with sk_test_ or sk_live_." },
+      { key: "webhook_secret", label: "Webhook Signing Secret", required: false, help: "Starts with whsec_." },
+    ],
+    mode: "test",
+    config: { test: {}, live: {} },
+    secrets: [],
+    last_event: null,
+  },
+  {
+    code: "google_maps",
+    kind: "maps",
+    name: "Google Maps Platform",
+    description: "Centrally configured Google Maps Platform for sub-meter cadastral boundary delineation, satellite imagery, Geocoding, and transit routing.",
+    docs_url: "https://developers.google.com/maps",
+    implemented: true,
+    test_only: false,
+    config_fields: [
+      { key: "map_id", label: "Map ID (Optional)", required: false, help: "Cloud-based map styling ID from Google Cloud Console." },
+      { key: "default_zoom", label: "Default Zoom", required: true, default: "14", help: "Default zoom level for parcel inspection." },
+    ],
+    secret_fields: [
+      { key: "api_key", label: "Google Maps API Key", required: true, help: "API key with Maps JavaScript API, Places API, and Geocoding API enabled." },
+    ],
+    mode: "test",
+    config: { test: {}, live: {} },
+    secrets: [],
+    last_event: null,
+  },
+];
 
 const dateFmt = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" });
 
@@ -93,11 +181,29 @@ function ActionForm({
 }
 
 export function IntegrationsBoard({ overview }: { overview: Overview }) {
+  // Merge fallback providers so payment (Paystack, Flutterwave, Stripe) and maps (Google Maps)
+  // render immediately regardless of database sync status.
+  const existingCodes = new Set((overview.providers ?? []).map((p) => p.code));
+  const mergedProviders = [
+    ...(overview.providers ?? []),
+    ...FALLBACK_PROVIDERS.filter((p) => !existingCodes.has(p.code)),
+  ];
+
+  const mergedSettings = [
+    ...(overview.settings ?? []),
+    ...(!overview.settings?.some((s) => s.kind === "payment")
+      ? [{ kind: "payment" as const, active_provider: "paystack", updated_at: new Date().toISOString() }]
+      : []),
+    ...(!overview.settings?.some((s) => s.kind === "maps")
+      ? [{ kind: "maps" as const, active_provider: "google_maps", updated_at: new Date().toISOString() }]
+      : []),
+  ];
+
   return (
     <div className="flex flex-col gap-10">
-      {(["sms", "identity", "weather"] as const).map((kind) => {
-        const active = overview.settings.find((s) => s.kind === kind)?.active_provider;
-        const providers = overview.providers.filter((p) => p.kind === kind);
+      {(["sms", "identity", "weather", "payment", "maps"] as const).map((kind) => {
+        const active = mergedSettings.find((s) => s.kind === kind)?.active_provider;
+        const providers = mergedProviders.filter((p) => p.kind === kind);
         const current = providers.find((p) => p.code === active);
         return (
           <section key={kind} aria-labelledby={`kind-${kind}`} className="flex flex-col gap-4">
@@ -281,7 +387,17 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
                   </div>
                 )}
                 <Button type="submit" variant="secondary" disabled={pending}>
-                  {pending ? "Testing..." : p.kind === "sms" ? "Send test SMS" : p.kind === "weather" || p.mode === "live" ? "Check connection" : "Run sandbox check"}
+                  {pending
+                    ? "Testing..."
+                    : p.kind === "sms"
+                      ? "Send test SMS"
+                      : p.kind === "payment"
+                        ? "Ping gateway"
+                        : p.kind === "maps"
+                          ? "Validate Maps key"
+                          : p.kind === "weather" || p.mode === "live"
+                            ? "Check connection"
+                            : "Run sandbox check"}
                 </Button>
               </div>
             )}

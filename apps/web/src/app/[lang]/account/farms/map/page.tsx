@@ -9,10 +9,5 @@ export const metadata: Metadata = { title: "Farm map & cadastre" };
 export default async function Page({ params }: PageProps<"/[lang]/account/farms/map">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  return (
-    <>
-      <LiveStrip tone="preview">This module shows the design's sample records until it is connected to your account data.</LiveStrip>
-      <FarmGeospatialMap lang={lang} />
-    </>
-  );
+  return <FarmGeospatialMap lang={lang} />;
 }

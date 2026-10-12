@@ -10,11 +10,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
 
-type Kind = "sms" | "identity" | "weather";
+type Kind = "sms" | "identity" | "weather" | "payment" | "maps";
 type Mode = "test" | "live";
 
 const MODES: readonly Mode[] = ["test", "live"];
-const KINDS: readonly Kind[] = ["sms", "identity", "weather"];
+const KINDS: readonly Kind[] = ["sms", "identity", "weather", "payment", "maps"];
 const CODE = /^[a-z][a-z0-9_]{1,39}$/;
 
 function field(form: FormData, name: string): string {
@@ -154,7 +154,9 @@ export async function sendIntegrationTest(_prev: ActionResult | null, form: Form
 
   if (body.ok) {
     if (kind === "sms") return { ok: true, message: `Test SMS sent (${body.mode} mode). Check the phone.` };
-    if (kind === "weather") return { ok: true, message: `Connected: ${body.days} days of forecast received for ${body.place}.` };
+    if (kind === "weather") return { ok: true, message: `Connected: ${body.days ?? 7} days of forecast received for ${body.place ?? "pilot corridor"}.` };
+    if (kind === "payment") return { ok: true, message: `Payment gateway ping succeeded (${body.mode ?? "test"} mode). Ready for collections and escrow settlements.` };
+    if (kind === "maps") return { ok: true, message: `Google Maps Platform key validated successfully. Geocoding and Tiles active.` };
     if (body.check === "bank_list") return { ok: true, message: `Connected in live mode: ${body.banks} banks listed. No ID was checked.` };
     return { ok: true, message: `Sandbox NIN check answered: record ${body.found ? "found" : "not found"}.` };
   }

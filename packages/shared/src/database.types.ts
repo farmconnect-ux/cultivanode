@@ -5181,7 +5181,7 @@ export type Database = {
         | "transport_equipment"
         | "other"
       farm_zone: "rainforest" | "derived_savanna" | "other"
-      integration_kind: "sms" | "identity" | "weather" | "payment"
+      integration_kind: "sms" | "identity" | "weather" | "payment" | "maps"
       integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -5444,7 +5444,7 @@ export const Constants = {
         "other",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
-      integration_kind: ["sms", "identity", "weather", "payment"],
+      integration_kind: ["sms", "identity", "weather", "payment", "maps"],
       integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],

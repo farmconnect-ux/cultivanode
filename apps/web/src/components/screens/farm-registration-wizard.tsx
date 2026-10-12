@@ -1,6 +1,9 @@
+"use client";
+
 // Ported from the "farm_registration_cadastral_setup_wizard_8.1" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
+import { GoogleMapView } from "@/components/maps/google-map-view";
 import { slot, type ScreenProps } from "./types";
 
 export type FarmRegistrationWizardSlot = "form";
@@ -372,41 +375,12 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                       </div>
                     </div>
                     <div className="relative w-full h-[400px] rounded-xl overflow-hidden shadow-sm bg-surface-container-high">
-                      <div className="w-full h-full bg-cover bg-center" data-location="Saki, Oyo State, Nigeria" />
-                      <div className="absolute inset-0 pointer-events-none p-6 flex items-center justify-center">
-                        <svg className="w-full h-full drop-shadow-md" fill="none" viewBox="0 0 800 500">
-                          <polygon className="text-secondary/15" fill="currentColor" points="180,90 320,60 560,95 690,190 710,340 580,430 350,420 190,360 140,220" stroke="currentColor" strokeDasharray="4 4" strokeWidth="2" />
-                          <polygon className="text-secondary" fill="currentColor" points="190,100 310,70 540,105 670,195 690,330 570,415 360,405 200,350 150,225" stroke="currentColor" strokeWidth="3" />
-                          <line className="text-white/70" stroke="currentColor" strokeDasharray="3 3" strokeWidth="1.5" x1="310" x2="360" y1="70" y2="405" />
-                          <line className="text-white/70" stroke="currentColor" strokeDasharray="3 3" strokeWidth="1.5" x1="540" x2="200" y1="105" y2="350" />
-                          <circle cx="190" cy="100" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="310" cy="70" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="540" cy="105" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="670" cy="195" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="690" cy="330" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="570" cy="415" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="360" cy="405" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="200" cy="350" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <circle cx="150" cy="225" fill="#FFFFFF" r="5" stroke="#006C49" strokeWidth="2" />
-                          <g transform="translate(380, 220)">
-                            <rect fill="#003620" fillOpacity="0.9" height="42" rx="8" width="170" x="0" y="0" />
-                            <text fill="#FFFFFF" fontFamily="Plus Jakarta Sans" fontSize="11" fontWeight="700" x="12" y="18">OKE-OGUN CADASTRE</text>
-                            <text fill="#6CF8BB" fontFamily="Inter" fontSize="10" x="12" y="32">48.60 Ha • ST_Centroid</text>
-                          </g>
-                        </svg>
-                      </div>
-                      <div className="absolute top-4 right-4 flex flex-col gap-1.5 shadow-sm">
-                        <button aria-label="Zoom In" className="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container flex items-center justify-center font-bold text-lg shadow-sm" type="button">+</button>
-                        <button aria-label="Zoom Out" className="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container flex items-center justify-center font-bold text-lg shadow-sm" type="button">-</button>
-                        <button aria-label="Fullscreen Map" className="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container flex items-center justify-center shadow-sm" type="button">
-                          <Icon name="fullscreen" className="text-base" />
-                        </button>
-                      </div>
-                      <div className="absolute bottom-4 left-4 flex items-center gap-3 bg-surface-container-lowest/90 px-space-sm py-1 rounded-lg backdrop-blur text-xs font-semibold text-on-surface shadow-sm">
-                        <span className="flex items-center gap-1 text-secondary"><Icon name="explore" className="text-sm" /> 08°40&apos;12.4&quot;N 003°24&apos;45.1&quot;E</span>
-                        <span>Scale 1:5,000</span>
-                        <span className="text-on-surface-variant">SURCON Ref #NG/OYO/2026/884</span>
-                      </div>
+                      <GoogleMapView
+                        className="w-full h-full min-h-[400px]"
+                        center={{ lat: 8.6701, lng: 3.4125 }}
+                        zoom={15}
+                        editable={true}
+                      />
                     </div>
                   </div>
                   <div className="lg:col-span-4 flex flex-col gap-2">

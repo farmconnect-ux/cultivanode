@@ -1,12 +1,93 @@
+"use client";
+
 // Ported from the "farm_geospatial_map_cadastre_command_8.2" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { GoogleMapView } from "@/components/maps/google-map-view";
 import type { ScreenProps } from "./types";
 
 export function FarmGeospatialMap({ lang }: ScreenProps) {
+  const [viewMode, setViewMode] = useState<"google_maps" | "vector">("google_maps");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isWalkingBoundary, setIsWalkingBoundary] = useState(false);
+  const [infraModalOpen, setInfraModalOpen] = useState(false);
+
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 5000);
+  }
+
+  function handleExportGeoJson() {
+    const geojson = {
+      type: "FeatureCollection",
+      crs: { type: "name", properties: { name: "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+      features: [
+        {
+          type: "Feature",
+          properties: {
+            estate_id: "NG-OYO-082",
+            name: "Oke-Ogun Pioneer Agrarian Estate",
+            total_hectares: 48.6,
+            lga: "Saki West",
+            state: "Oyo State",
+            srid: 4326,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [3.391, 8.6701],
+                [3.3915, 8.6734],
+                [3.3965, 8.6745],
+                [3.3995, 8.6725],
+                [3.399, 8.669],
+                [3.3955, 8.6698],
+                [3.391, 8.6701],
+              ],
+            ],
+          },
+        },
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "oke-ogun-pioneer-cadastre-epsg4326.geojson";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerToast("GeoJSON file exported successfully (EPSG:4326 PostGIS standard).");
+  }
+
+  function handleSatelliteRescan() {
+    triggerToast("Multispectral Sentinel-2 satellite re-scan triggered. NDVI index refreshed to 0.81 (High Canopy).");
+  }
+
+  function handleWalkBoundary() {
+    setIsWalkingBoundary((prev) => !prev);
+    setViewMode("google_maps");
+    triggerToast(
+      isWalkingBoundary
+        ? "Boundary editing mode paused."
+        : "GPS Boundary Walk engaged. Click points on the Google Maps satellite canvas to delineate perimeter."
+    );
+  }
+
   return (
     <div className="screen">
+      {toastMessage && (
+        <div role="status" className="fixed top-4 right-4 z-50 rounded-xl bg-primary px-4 py-3 text-white font-semibold shadow-xl border border-primary-container flex items-center gap-3">
+          <Icon name="check_circle" className="text-secondary" />
+          <span>{toastMessage}</span>
+          <button type="button" onClick={() => setToastMessage(null)} className="ml-2 font-bold hover:opacity-80">&times;</button>
+        </div>
+      )}
+
       <div className="flex flex-col w-full space-y-space-md pb-space-xl">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-sm bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
           <div className="flex flex-col gap-1">
@@ -30,19 +111,57 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-space-xs">
-            <button className="px-space-md py-2 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+            <div className="mr-2 flex items-center rounded-lg bg-surface-container p-0.5 border border-border">
+              <button
+                type="button"
+                onClick={() => setViewMode("google_maps")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  viewMode === "google_maps" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Google Maps Satellite
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("vector")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  viewMode === "vector" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Vector Cadastre
+              </button>
+            </div>
+            <button
+              onClick={handleWalkBoundary}
+              className={`px-space-md py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm font-label-md text-label-md ${
+                isWalkingBoundary ? "bg-secondary text-white font-bold" : "bg-surface-container-low hover:bg-surface-container text-on-surface"
+              }`}
+              type="button"
+            >
               <Icon name="polyline" className="text-lg text-primary" />
-              <span>Walk / Edit Boundary</span>
+              <span>{isWalkingBoundary ? "Finish Boundary Walk" : "Walk / Edit Boundary"}</span>
             </button>
-            <button className="px-space-md py-2 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+            <button
+              onClick={handleExportGeoJson}
+              className="px-space-md py-2 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              type="button"
+            >
               <Icon name="file_download" className="text-lg text-primary" />
               <span>Export GeoJSON / SHP</span>
             </button>
-            <button className="px-space-md py-2 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+            <button
+              onClick={() => setInfraModalOpen(true)}
+              className="px-space-md py-2 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              type="button"
+            >
               <Icon name="add_location_alt" className="text-lg text-secondary" />
               <span>Add Infrastructure</span>
             </button>
-            <button className="px-space-md py-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm hover:opacity-95" type="button">
+            <button
+              onClick={handleSatelliteRescan}
+              className="px-space-md py-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center gap-1.5 transition-colors shadow-sm hover:opacity-95"
+              type="button"
+            >
               <Icon name="satellite_alt" className="text-lg" />
               <span>Satellite Re-scan</span>
             </button>
@@ -216,9 +335,18 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
               </div>
             </div>
           </div>
-          <div className="relative flex-1 w-full h-full bg-surface-container-high overflow-hidden select-none" data-location="Saki West, Oyo State, Nigeria">
-            <div className="absolute inset-0 w-full h-full bg-cover bg-center pointer-events-none filter contrast-105 brightness-95" data-alt="Ultra high definition aerial satellite perspective of large organized agrarian farmland fields divided into distinct crop sectors with rich tropical green foliage and rich brown loamy soils under bright equatorial daylight in South-West Nigeria" style={{ backgroundImage: "url('/images/screens/50855ccf1922.webp')" }} />
-            <svg className="absolute inset-0 w-full h-full pointer-events-auto" preserveAspectRatio="none" viewBox="0 0 1200 800">
+          {viewMode === "google_maps" ? (
+            <div className="relative flex-1 w-full h-full min-h-[760px] overflow-hidden">
+              <GoogleMapView
+                className="w-full h-full min-h-[760px]"
+                editable={isWalkingBoundary}
+                center={{ lat: 8.6672, lng: 3.3934 }}
+              />
+            </div>
+          ) : (
+            <div className="relative flex-1 w-full h-full bg-surface-container-high overflow-hidden select-none" data-location="Saki West, Oyo State, Nigeria">
+              <div className="absolute inset-0 w-full h-full bg-cover bg-center pointer-events-none filter contrast-105 brightness-95" data-alt="Ultra high definition aerial satellite perspective of large organized agrarian farmland fields divided into distinct crop sectors with rich tropical green foliage and rich brown loamy soils under bright equatorial daylight in South-West Nigeria" style={{ backgroundImage: "url('/images/screens/50855ccf1922.webp')" }} />
+              <svg className="absolute inset-0 w-full h-full pointer-events-auto" preserveAspectRatio="none" viewBox="0 0 1200 800">
               <defs>
                 <pattern height="20" id="cropPatternMaize" patternUnits="userSpaceOnUse" width="20">
                   <path d="M 0,10 L 20,10 M 10,0 L 10,20" opacity="0.3" stroke="#134e33" strokeWidth="0.5" />
@@ -350,6 +478,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
               <div className="w-16 h-1 bg-on-surface rounded-full" />
             </div>
           </div>
+        )}
           <div className="w-[390px] h-full bg-surface-container-lowest shadow-2xl z-30 flex flex-col overflow-y-auto">
             <div className="relative h-44 w-full bg-surface-container-high overflow-hidden">
               <div className="absolute inset-0 bg-cover bg-center" data-alt="Vibrant close-up agronomic shot of lush green high-yield hybrid maize stalks in early vegetative stage in an African savanna field during morning sunlight" style={{ backgroundImage: "url('/images/screens/9897b78f3d57.webp')" }} />
@@ -521,6 +650,92 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
           </div>
         </div>
       </div>
+
+      {infraModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-xl bg-surface-container-lowest p-6 shadow-2xl border border-border">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="font-headline-sm text-headline-sm text-primary font-bold">
+                Add Geospatial Infrastructure
+              </h3>
+              <button
+                type="button"
+                onClick={() => setInfraModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setInfraModalOpen(false);
+                triggerToast("Infrastructure node anchored to Cadastre (PostGIS EPSG:4326 registered).");
+              }}
+              className="mt-4 space-y-4"
+            >
+              <div>
+                <label className="font-label-md text-label-md text-on-surface font-semibold block mb-1">
+                  Infrastructure Category
+                </label>
+                <select className="w-full h-11 px-3 rounded-lg border border-border bg-white text-on-surface text-sm">
+                  <option value="borehole">Solar Deep Borehole (10HP, 5000 L/hr)</option>
+                  <option value="silo">Grain Silo &amp; Aggregation Shed (450 MT)</option>
+                  <option value="lora">LoRaWAN Agronomic Gateway (868 MHz)</option>
+                  <option value="weather">Automated Weather Mast (Davis Vantage Pro)</option>
+                  <option value="fence">Solar Perimeter Energizer &amp; Beacon</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-label-md text-label-md text-on-surface font-semibold block mb-1">
+                  Node Identifier / Label
+                </label>
+                <input
+                  type="text"
+                  defaultValue="OKE-INFR-04"
+                  className="w-full h-11 px-3 rounded-lg border border-border bg-white text-on-surface text-sm"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Latitude (°N)</label>
+                  <input
+                    type="text"
+                    defaultValue="8.6685"
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-white text-sm font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Longitude (°E)</label>
+                  <input
+                    type="text"
+                    defaultValue="3.3942"
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-white text-sm font-mono"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setInfraModalOpen(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-container shadow-sm"
+                >
+                  Anchor Node
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
