@@ -46,7 +46,7 @@ export function FarmGeospatialMap({ lang, farms, plots }: ScreenProps & { farms?
     return { lat: 8.6672, lng: 3.3934 }; // fallback
   }, [primaryFarm]);
 
-  const [viewMode, setViewMode] = useState<"google_maps" | "vector">("google_maps");
+  const [viewMode, setViewMode] = useState<"google_maps" | "vector">("vector");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWalkingBoundary, setIsWalkingBoundary] = useState(false);
   const [infraModalOpen, setInfraModalOpen] = useState(false);
@@ -129,6 +129,10 @@ export function FarmGeospatialMap({ lang, farms, plots }: ScreenProps & { farms?
   }
 
   function handleWalkBoundary() {
+    if (!mapConfig?.providerConfigured) {
+      triggerToast("Google Maps not configured. Add API key in Admin > Integrations.");
+      return;
+    }
     setIsWalkingBoundary((prev) => !prev);
     setViewMode("google_maps");
     triggerToast(
@@ -183,7 +187,13 @@ export function FarmGeospatialMap({ lang, farms, plots }: ScreenProps & { farms?
             <div className="mr-2 flex items-center rounded-lg bg-surface-container p-0.5 border border-border">
               <button
                 type="button"
-                onClick={() => setViewMode("google_maps")}
+                onClick={() => {
+                  if (!mapConfig?.providerConfigured) {
+                    triggerToast("Google Maps not configured. Add API key in Admin > Integrations.");
+                    return;
+                  }
+                  setViewMode("google_maps");
+                }}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                   viewMode === "google_maps" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                 }`}
