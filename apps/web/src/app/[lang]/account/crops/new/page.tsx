@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Button } from "@/components/ui";
 import { Icon } from "@/components/ds/icon";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -327,13 +328,13 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
             >
               Cancel
             </Link>
-            <button
+            <Button
               type="submit"
               className="px-6 py-2.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-all font-semibold flex items-center gap-2 shadow-sm"
             >
               <Icon name="check_circle" className="text-lg" />
               <span>Launch Crop Cycle</span>
-            </button>
+            </Button>
           </div>
         </form>
       )}

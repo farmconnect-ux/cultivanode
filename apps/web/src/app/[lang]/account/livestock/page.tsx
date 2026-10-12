@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { LivestockManagement } from "@/components/screens/livestock-management";
@@ -67,10 +68,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
             Register Livestock Batch / Animal
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -176,21 +175,16 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             className="px-5 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
             type="submit"
             disabled={farmList.length === 0}
           >
             Register Batch
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -205,10 +199,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
             Log Feeding &amp; Nutrition
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -271,21 +263,16 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             className="px-5 py-2 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
             type="submit"
             disabled={farmList.length === 0}
           >
             Record Feeding
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -300,10 +287,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
             Record Veterinary Health &amp; Vaccination
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -375,20 +360,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             className="px-5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container font-semibold shadow-sm"
             type="submit"
           >
             Record Treatment
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -407,31 +387,31 @@ export default async function Page({ params }: PageProps<"/[lang]/account/livest
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="Register New Batch" side="center" panel={registerModal}>
-                <button
+                <Button
                   className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
                   type="button"
                 >
                   <Icon name="add_circle" className="text-base text-primary" />
                   <span>Register New Batch</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <ScreenDialog title="Log Feed & Water" side="center" panel={feedingModal}>
-                <button
+                <Button
                   className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
                   type="button"
                 >
                   <Icon name="water_drop" className="text-base text-secondary" />
                   <span>Log Feed &amp; Water</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <ScreenDialog title="Veterinary Health" side="center" panel={vetModal}>
-                <button
+                <Button
                   className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
                   type="button"
                 >
                   <Icon name="vaccines" className="text-base" />
                   <span>Schedule Vet Visit</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),

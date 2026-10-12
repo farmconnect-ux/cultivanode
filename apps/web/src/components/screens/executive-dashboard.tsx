@@ -1,11 +1,471 @@
+"use client";
+
 // Ported from the "executive_farm_operations_dashboard" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
+import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
 
-export type ExecutiveDashboardSlot = "eyebrow" | "greeting" | "heroMeta" | "heroActions" | "kpis" | "operations" | "statusBar";
+export type ExecutiveDashboardSlot =
+  | "eyebrow"
+  | "greeting"
+  | "heroMeta"
+  | "heroActions"
+  | "kpis"
+  | "operations"
+  | "statusBar";
+
+interface OperationItem {
+  id: string;
+  name: string;
+  subtext: string;
+  plot: string;
+  cropArea: string;
+  timeline: string;
+  timingNote: string;
+  resource: string;
+  resourceIcon: string;
+  location: string;
+  status: string;
+  statusTone: "ready" | "delay" | "active" | "scout" | "scheduled" | "completed";
+  actionLabel: string;
+}
+
+const INITIAL_OPERATIONS: OperationItem[] = [
+  {
+    id: "op-1",
+    name: "Split-N Top-Dressing",
+    subtext: "Side-placement 5cm from stalk",
+    plot: "Plot A2",
+    cropArea: "Maize (9.0 Ha)",
+    timeline: "Due in 2 days",
+    timingNote: "Optimal: Pre-rain window",
+    resource: "12 Bags Urea (In Stock)",
+    resourceIcon: "inventory_2",
+    location: "Store Room 01",
+    status: "Ready to Execute",
+    statusTone: "ready",
+    actionLabel: "Log Completion",
+  },
+  {
+    id: "op-2",
+    name: "Fungicide Shield (Mancozeb 80WP)",
+    subtext: "Alternaria Solani prevention",
+    plot: "Plot B1",
+    cropArea: "Tomato (6.5 Ha)",
+    timeline: "Delayed +48h",
+    timingNote: "NiMet Guardrail active",
+    resource: "14kg Mancozeb",
+    resourceIcon: "water_drop",
+    location: "Knapsack Crews ready",
+    status: "Weather Hold (Rain 42mm)",
+    statusTone: "delay",
+    actionLabel: "Override Rule",
+  },
+  {
+    id: "op-3",
+    name: "Tractor Rotary Weeding",
+    subtext: "Mechanical inter-row cultivator",
+    plot: "Plot A1",
+    cropArea: "Maize (9.0 Ha)",
+    timeline: "Tomorrow 08:00 WAT",
+    timingNote: "Operator Check-in Verified",
+    resource: "JD 5075E Tractor",
+    resourceIcon: "precision_manufacturing",
+    location: "Escrow #ES-49201",
+    status: "GPS Dispatched",
+    statusTone: "active",
+    actionLabel: "Live GPS Telemetry",
+  },
+  {
+    id: "op-4",
+    name: "Aphid & Thrips Scouting",
+    subtext: "10-point random quadrant check",
+    plot: "Plot B3",
+    cropArea: "Cowpea (4.0 Ha)",
+    timeline: "Today 16:30 WAT",
+    timingNote: "Field Scout Assigned",
+    resource: "Field Agent Babatunde",
+    resourceIcon: "person_search",
+    location: "Offline PowerSync App",
+    status: "In Field Scout",
+    statusTone: "scout",
+    actionLabel: "Scout Sheet",
+  },
+  {
+    id: "op-5",
+    name: "Livestock Vaccination / NDV Booster",
+    subtext: "Lasota strain ocular/drinking water administration",
+    plot: "Poultry House 1",
+    cropArea: "Broilers B4 (1,250 birds)",
+    timeline: "Tomorrow 07:00 WAT",
+    timingNote: "Early morning cool window",
+    resource: "Lasota Vials (Vet Cold-Chain)",
+    resourceIcon: "vaccines",
+    location: "Dr. Alabi Scheduled",
+    status: "Vet Scheduled",
+    statusTone: "scheduled",
+    actionLabel: "Review Protocol",
+  },
+];
 
 export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot>) {
+  // Operational state
+  const [operations, setOperations] = useState<OperationItem[]>(INITIAL_OPERATIONS);
+  const [plotFilter, setPlotFilter] = useState<string>("all");
+  const [powConfirmed, setPowConfirmed] = useState(false);
+  const [aiLang, setAiLang] = useState<"EN" | "YORUBA">("EN");
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "bot"; text: string }>>([]);
+
+  // Filtered operations
+  const displayedOps = operations.filter((op) => {
+    if (plotFilter === "all") return true;
+    return op.plot.toLowerCase().includes(plotFilter.toLowerCase());
+  });
+
+  // Handler: Log Completion
+  const handleLogCompletion = (opId: string) => {
+    setOperations((prev) =>
+      prev.map((op) => {
+        if (op.id === opId) {
+          const isDone = op.statusTone === "completed";
+          return {
+            ...op,
+            status: isDone ? "Ready to Execute" : "Completed & Verified",
+            statusTone: isDone ? "ready" : "completed",
+            actionLabel: isDone ? "Log Completion" : "Completed ✓",
+          };
+        }
+        return op;
+      })
+    );
+    showScreenToast("Operation status updated and recorded in offline SQLite ledger.");
+  };
+
+  // Handler: Override Weather Rule
+  const handleOverrideRule = (opId: string) => {
+    setOperations((prev) =>
+      prev.map((op) => {
+        if (op.id === opId) {
+          return {
+            ...op,
+            status: "Override Approved (Operator Risk)",
+            statusTone: "active",
+            timeline: "Ready for Execution",
+            actionLabel: "Log Completion",
+          };
+        }
+        return op;
+      })
+    );
+    showScreenToast("Agronomy rule overridden with agronomist supervisor waiver #WAIV-082.");
+  };
+
+  // Handler: Export Operations Roster
+  const handleExportRoster = () => {
+    const csvHeader = "Operation,Subtext,Plot,Crop & Area,Timeline,Resource,Location,Status\n";
+    const csvRows = operations
+      .map(
+        (o) =>
+          `"${o.name}","${o.subtext}","${o.plot}","${o.cropArea}","${o.timeline}","${o.resource}","${o.location}","${o.status}"`
+      )
+      .join("\n");
+    downloadFile(csvHeader + csvRows, `CultivaNode-Operations-Roster-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
+    showScreenToast("Field operations roster exported successfully.");
+  };
+
+  // Handler: Confirm Proof of Work
+  const handleConfirmPoW = () => {
+    setPowConfirmed(true);
+    showScreenToast("Proof of Work verified! Escrow payment ₦95,000 scheduled for Alhaji Kazeem Syndicate.");
+  };
+
+  // Handler: AI Query Submit
+  const handleAiSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!aiQuery.trim()) return;
+    const q = aiQuery.trim();
+    setAiQuery("");
+    setAiMessages((prev) => [
+      ...prev,
+      { role: "user", text: q },
+      {
+        role: "bot",
+        text:
+          aiLang === "YORUBA"
+            ? `Àyẹ̀wò Agronomist: Fún àrùn lórí ${q}, pèsè oògùn Copper Hydroxide (2.5g/L) lẹ́yìn tí òjò bá dá. Ma fi oògùn kankan sí koríko ní àkókò òjò ńlá.`
+            : `AI Agronomist Diagnosis: For "${q}", ensure soil drainage furrows are unblocked. Recommended intervention is 2.5g/L Copper Hydroxide 48h following the heavy rain event.`,
+      },
+    ]);
+  };
+
+  // Modals content definition
+  const modalNewPlanting = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="add_circle" className="text-secondary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">New Planting Cycle</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Register crop stand, plot allocation & target harvest timeline</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          showScreenToast("New planting cycle initiated and synced with crop phenology tracker!");
+        }}
+        className="p-space-lg space-y-space-md text-left"
+      >
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Crop & Variety</label>
+          <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+            <option>Maize DMR-LSR-Y (Yellow, Downy Mildew Resistant)</option>
+            <option>Cassava TME 419 (High Starch, Pro-Vitamin A)</option>
+            <option>Tomato Roma VF (Early Blight Tolerant)</option>
+            <option>Soybeans TGx 1448-2E (Savanna Standard)</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-space-md">
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Assigned Plot</label>
+            <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+              <option>Plot A1 (9.0 Ha - Mechanized)</option>
+              <option>Plot A2 (9.0 Ha - Top-Dressing)</option>
+              <option>Plot B1 (6.5 Ha - Drip Irrigated)</option>
+              <option>Plot B2 (14.0 Ha - Cassava Stand)</option>
+            </select>
+          </div>
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Planting Date</label>
+            <input defaultValue={new Date().toISOString().slice(0, 10)} className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="date" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-space-md">
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Seed Rate (kg/Ha)</label>
+            <input defaultValue="20" className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="number" />
+          </div>
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Projected Yield (MT/Ha)</label>
+            <input defaultValue="4.8" step="0.1" className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="number" />
+          </div>
+        </div>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+              Cancel
+            </button>
+          </ScreenDialogClose>
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+              Confirm Planting Cycle
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </form>
+    </div>
+  );
+
+  const modalBookMachinery = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="precision_manufacturing" className="text-primary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Book Machinery (Direct Syndicate)</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">0% Commission Pilot · Direct escrow lock & telemetry verification</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          showScreenToast("Machinery booking locked! Escrow created and provider notified.");
+        }}
+        className="p-space-lg space-y-space-md text-left"
+      >
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Equipment / Service</label>
+          <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+            <option>John Deere 5075E (75 HP) Rotary Weeder - ₦25,000/Ha</option>
+            <option>Massey Ferguson 375 + Disc Harrow - ₦28,000/Ha</option>
+            <option>Tractor Boom Sprayer (600L Tank) - ₦15,000/Ha</option>
+            <option>Claas Dominator 130 Combine Harvester - ₦65,000/Ha</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-space-md">
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Target Area (Hectares)</label>
+            <input defaultValue="9.0" step="0.5" className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="number" />
+          </div>
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Target Operation Date</label>
+            <input defaultValue={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="date" />
+          </div>
+        </div>
+        <div className="p-space-md rounded-lg bg-surface-container-low border border-surface-container space-y-1">
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Estimated Escrow Lock:</span>
+            <span className="font-bold text-primary">₦225,000 (9 Ha @ ₦25k)</span>
+          </div>
+          <div className="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+            <span>Platform Commission:</span>
+            <span className="text-secondary font-semibold">₦0 (0% Pilot Rate)</span>
+          </div>
+        </div>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+              Cancel
+            </button>
+          </ScreenDialogClose>
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+              Lock Escrow & Dispatch
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </form>
+    </div>
+  );
+
+  const modalLogOperation = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="edit_calendar" className="text-primary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Log Field Operation</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Record activity, input consumption, and agronomic observations</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          showScreenToast("Field operation recorded into Farm Books & agronomy ledger!");
+        }}
+        className="p-space-lg space-y-space-md text-left"
+      >
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Operation Type</label>
+          <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+            <option>Top-Dressing Fertilizer Application</option>
+            <option>Preventative Crop Protection Spray</option>
+            <option>Manual / Mechanical Weed Suppression</option>
+            <option>Soil Sampling / Moisture Calibration</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-space-md">
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Target Plot</label>
+            <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+              <option>Plot A1 (Maize)</option>
+              <option>Plot A2 (Maize)</option>
+              <option>Plot B1 (Tomato)</option>
+              <option>Plot B3 (Cowpea)</option>
+            </select>
+          </div>
+          <div className="space-y-space-xs">
+            <label className="font-label-md text-label-md text-on-surface font-semibold">Labor Crew Size</label>
+            <input defaultValue="4" className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="number" />
+          </div>
+        </div>
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Field Supervisor Observations</label>
+          <textarea rows={3} placeholder="Note stand uniformity, pest pressure, or soil condition..." className="w-full p-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none resize-none" />
+        </div>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+              Cancel
+            </button>
+          </ScreenDialogClose>
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+              Submit Field Log
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </form>
+    </div>
+  );
+
+  const modalWeatherDetails = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="thunderstorm" className="text-tertiary-container text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">NiMet Agro-Met Weather Guardrail</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Iseyin Weather Station #04 · Synchronized 06:00 WAT</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <div className="p-space-lg space-y-space-md text-left">
+        <div className="p-space-md rounded-lg bg-error-container/20 border border-error-container">
+          <div className="flex items-center gap-2">
+            <Icon name="warning" className="text-error" />
+            <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">42mm Frontal Downpour Expected</h4>
+          </div>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            Intense rain event Thursday 14:00 – Friday 22:00 WAT. High risk of agrochemical wash-off, nutrient leaching, and topsoil runoff.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-space-md">
+          <div className="p-space-sm bg-surface-container-low rounded-lg">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">Soil Moisture (15cm)</span>
+            <p className="font-headline-sm text-headline-sm text-on-surface mt-1">68% (Optimal)</p>
+          </div>
+          <div className="p-space-sm bg-surface-container-low rounded-lg">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">ET₀ Evapotranspiration</span>
+            <p className="font-headline-sm text-headline-sm text-on-surface mt-1">3.8 mm/day</p>
+          </div>
+          <div className="p-space-sm bg-surface-container-low rounded-lg">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">Barometric Pressure</span>
+            <p className="font-headline-sm text-headline-sm text-on-surface mt-1">1012 hPa (Falling)</p>
+          </div>
+          <div className="p-space-sm bg-surface-container-low rounded-lg">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">Safe Spray Window</span>
+            <p className="font-headline-sm text-headline-sm text-secondary mt-1">Opens Sat 08:00 WAT</p>
+          </div>
+        </div>
+        <div className="pt-space-md flex items-center justify-end border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => showScreenToast("Weather guardrail acknowledged.")} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="button">
+              Acknowledge Guardrail
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -15,36 +475,58 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
             <div className="absolute right-96 -bottom-20 h-48 w-48 rounded-full bg-secondary/5 blur-2xl pointer-events-none" />
             <div className="relative z-10 flex flex-col gap-space-lg lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
-                {slot(slots, "eyebrow", (
+                {slot(
+                  slots,
+                  "eyebrow",
                   <div className="flex flex-wrap items-center gap-space-xs mb-space-xs">
-                    <span className="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm"><span className="h-2 w-2 rounded-full bg-secondary animate-pulse" /> Pilot Agro-Cluster Phase 1</span>
+                    <span className="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm">
+                      <span className="h-2 w-2 rounded-full bg-secondary animate-pulse" /> Pilot Agro-Cluster Phase 1
+                    </span>
                     <span className="text-outline-variant">•</span>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><Icon name="verified" className="text-sm text-secondary" /> NiMet Agro-Met Synced (06:00 WAT)</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+                      <Icon name="verified" className="text-sm text-secondary" /> NiMet Agro-Met Synced (06:00 WAT)
+                    </span>
                   </div>
-                ))}
-                {slot(slots, "greeting", (
-                  <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">E káàrọ̀, Quadri Olapade</h1>
-                ))}
-                {slot(slots, "heroMeta", (
-                  <p className="font-body-md text-body-md text-on-surface-variant mt-1">Iseyin Farm Hub • Plots A1-B3 (42.5 Ha) • Derived Savanna Ecological Zone, Oyo State</p>
-                ))}
+                )}
+                {slot(
+                  slots,
+                  "greeting",
+                  <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">
+                    E káàrọ̀, Quadri Olapade
+                  </h1>
+                )}
+                {slot(
+                  slots,
+                  "heroMeta",
+                  <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+                    Iseyin Farm Hub • Plots A1-B3 (42.5 Ha) • Derived Savanna Ecological Zone, Oyo State
+                  </p>
+                )}
               </div>
-              {slot(slots, "heroActions", (
+              {slot(
+                slots,
+                "heroActions",
                 <div className="flex flex-wrap items-center gap-space-sm">
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" type="button">
-                    <Icon name="add_circle" className="text-base text-secondary" />
-                    <span>New Planting</span>
-                  </button>
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-tertiary-container text-on-tertiary font-label-md text-label-md hover:opacity-95 transition-all shadow-sm" type="button">
-                    <Icon name="precision_manufacturing" className="text-base" />
-                    <span>Book Machinery (Direct)</span>
-                  </button>
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm" type="button">
-                    <Icon name="edit_calendar" className="text-base" />
-                    <span>Log Field Operation</span>
-                  </button>
+                  <ScreenDialog title="New Planting" side="center" panel={modalNewPlanting}>
+                    <button onClick={() => {}} className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" type="button">
+                      <Icon name="add_circle" className="text-base text-secondary" />
+                      <span>New Planting</span>
+                    </button>
+                  </ScreenDialog>
+                  <ScreenDialog title="Book Machinery" side="center" panel={modalBookMachinery}>
+                    <button onClick={() => {}} className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-tertiary-container text-on-tertiary font-label-md text-label-md hover:opacity-95 transition-all shadow-sm" type="button">
+                      <Icon name="precision_manufacturing" className="text-base" />
+                      <span>Book Machinery (Direct)</span>
+                    </button>
+                  </ScreenDialog>
+                  <ScreenDialog title="Log Field Operation" side="center" panel={modalLogOperation}>
+                    <button onClick={() => {}} className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm" type="button">
+                      <Icon name="edit_calendar" className="text-base" />
+                      <span>Log Field Operation</span>
+                    </button>
+                  </ScreenDialog>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-space-lg pt-space-md border-t border-surface-container flex flex-col xl:flex-row xl:items-center justify-between gap-space-md bg-surface-container-low/60 -mx-space-lg -mb-space-lg px-space-lg py-space-md">
               <div className="flex flex-wrap items-center gap-space-lg">
@@ -85,9 +567,11 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant truncate">Heavy frontal rain Thursday–Friday. All chemical spray orders held 48h pre-downpour.</p>
                 </div>
-                <button className="shrink-0 p-1 text-on-surface-variant hover:text-primary" title="Details" type="button">
-                  <Icon name="chevron_right" className="text-lg" />
-                </button>
+                <ScreenDialog title="Weather Guardrail" side="center" panel={modalWeatherDetails}>
+                  <button onClick={() => {}} className="shrink-0 p-1 text-on-surface-variant hover:text-primary" title="Details" type="button">
+                    <Icon name="chevron_right" className="text-lg" />
+                  </button>
+                </ScreenDialog>
               </div>
             </div>
           </div>
@@ -111,7 +595,11 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Mancozeb chemical sprays held 48h to prevent wash-off &amp; waterway run-off.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-secondary font-medium">NiMet Sync 06:00 WAT</span>
-                <button className="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold transition-colors" type="button">View Protocol</button>
+                <ScreenDialog title="Mancozeb Protocol" side="center" panel={modalWeatherDetails}>
+                  <button onClick={() => {}} className="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold transition-colors" type="button">
+                    View Protocol
+                  </button>
+                </ScreenDialog>
               </div>
             </div>
             <div className="p-space-sm rounded-lg bg-tertiary-fixed/20 border border-tertiary-fixed flex flex-col justify-between">
@@ -123,7 +611,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Side-placement 5cm from stalk required in 48-hour pre-rain window.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-secondary font-medium">IITA Savanna Standard</span>
-                <button className="px-2 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors" type="button">Dispatch Crew</button>
+                <button
+                  onClick={() => showScreenToast("Crew of 4 field hands dispatched to Plot A2 for Urea side-placement.")}
+                  className="px-2 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors"
+                  type="button"
+                >
+                  Dispatch Crew
+                </button>
               </div>
             </div>
             <div className="p-space-sm rounded-lg bg-surface-container-low border border-surface-container flex flex-col justify-between">
@@ -135,7 +629,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Only 6 bags in stock; 14 additional bags needed to complete Plots A1 &amp; A2.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">Iseyin Agro-Dealer</span>
-                <button className="px-2 py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold hover:bg-primary transition-colors" type="button">Instant Reorder</button>
+                <button
+                  onClick={() => showScreenToast("Dispatched instant replenishment PO for 14 bags Indorama Urea to Iseyin Dealer.")}
+                  className="px-2 py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold hover:bg-primary transition-colors"
+                  type="button"
+                >
+                  Instant Reorder
+                </button>
               </div>
             </div>
             <div className="p-space-sm rounded-lg bg-secondary-container/20 border border-secondary-container flex flex-col justify-between">
@@ -147,12 +647,20 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">142 kg/day intake; current buffer 4 days. NDV booster timing synchronized.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-secondary font-medium">Livestock Bio-Track</span>
-                <button className="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold transition-colors" type="button">Feed Roster</button>
+                <button
+                  onClick={() => showScreenToast("Broiler feed roster loaded: 142 kg Grower/Finisher allocated for tomorrow's morning cycle.")}
+                  className="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold transition-colors"
+                  type="button"
+                >
+                  Feed Roster
+                </button>
               </div>
             </div>
           </div>
         </section>
-        {slot(slots, "kpis", (
+        {slot(
+          slots,
+          "kpis",
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md mb-space-xl">
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
@@ -268,7 +776,7 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               </div>
             </div>
           </section>
-        ))}
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
           <div className="lg:col-span-8 flex flex-col gap-space-lg">
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -318,7 +826,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                       <Icon name="science" className="text-base text-secondary" />
                       <span>Split-Nitrogen Top-Dressing (Urea 46%) triggers in 48 hours for Plot A2.</span>
                     </div>
-                    <button className="text-secondary hover:text-primary font-label-sm text-label-sm font-semibold" type="button">View Protocol</button>
+                    <button
+                      onClick={() => showScreenToast("Displaying IITA Nitrogen Protocol: Apply 60 kg N/ha side-dressed 5cm away from root crown.")}
+                      className="text-secondary hover:text-primary font-label-sm text-label-sm font-semibold"
+                      type="button"
+                    >
+                      View Protocol
+                    </button>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
@@ -453,7 +967,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                       <Icon name="medical_services" className="text-base text-secondary" />
                       <span>NDV Lasota Booster vaccination due in 48h. Cold-chain confirmed at Hub Store.</span>
                     </div>
-                    <button className="text-secondary hover:text-primary font-label-sm text-label-sm font-semibold" type="button">Vet Protocol</button>
+                    <button
+                      onClick={() => showScreenToast("Veterinary protocol: Administer Lasota strain in clean non-chlorinated drinking water with skimmed milk buffer.")}
+                      className="text-secondary hover:text-primary font-label-sm text-label-sm font-semibold"
+                      type="button"
+                    >
+                      Vet Protocol
+                    </button>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
@@ -495,7 +1015,9 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                 </div>
               </div>
             </div>
-            {slot(slots, "operations", (
+            {slot(
+              slots,
+              "operations",
               <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm pb-space-md border-b border-surface-container">
                   <div>
@@ -503,8 +1025,26 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                     <p className="font-body-sm text-body-sm text-on-surface-variant">Governed by: <span className="font-medium text-on-surface">Savanna Maize Standard v2.1 (Oyo-Derived Protocol)</span></p>
                   </div>
                   <div className="flex items-center gap-space-xs">
-                    <button className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Filter by Plot</button>
-                    <button className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Export Roster</button>
+                    <select
+                      value={plotFilter}
+                      onChange={(e) => setPlotFilter(e.target.value)}
+                      className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors cursor-pointer focus:outline-none"
+                    >
+                      <option value="all">All Plots & Units</option>
+                      <option value="Plot A1">Plot A1 (Maize)</option>
+                      <option value="Plot A2">Plot A2 (Maize)</option>
+                      <option value="Plot B1">Plot B1 (Tomato)</option>
+                      <option value="Plot B3">Plot B3 (Cowpea)</option>
+                      <option value="Poultry">Poultry House 1</option>
+                    </select>
+                    <button
+                      onClick={handleExportRoster}
+                      className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors flex items-center gap-1"
+                      type="button"
+                    >
+                      <Icon name="download" className="text-sm" />
+                      <span>Export Roster</span>
+                    </button>
                   </div>
                 </div>
                 <div className="mt-space-md overflow-x-auto">
@@ -520,131 +1060,89 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-container font-body-sm text-body-sm">
-                      <tr className="hover:bg-surface-container-low transition-colors">
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-label-md text-label-md text-on-surface">Split-N Top-Dressing</div>
-                          <div className="font-body-sm text-body-sm text-on-surface-variant">Side-placement 5cm from stalk</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Plot A2</span>
-                          <div className="text-on-surface-variant">Maize (9.0 Ha)</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Due in 2 days</span>
-                          <div className="text-on-surface-variant">Optimal: Pre-rain window</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <div className="flex items-center gap-1 font-medium text-on-surface"><Icon name="inventory_2" className="text-sm text-secondary" /> 12 Bags Urea (In Stock)</div>
-                          <div className="text-on-surface-variant">Store Room 01</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-sm text-label-sm"><span className="h-1.5 w-1.5 rounded-full bg-secondary" /> Ready to Execute</span>
-                        </td>
-                        <td className="py-space-md px-space-sm text-right">
-                          <button className="px-space-sm py-1 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-colors" type="button">Log Completion</button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-surface-container-low transition-colors bg-tertiary-fixed/10">
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-label-md text-label-md text-on-surface">Fungicide Shield (Mancozeb 80WP)</div>
-                          <div className="font-body-sm text-body-sm text-on-surface-variant">Alternaria Solani prevention</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Plot B1</span>
-                          <div className="text-on-surface-variant">Tomato (6.5 Ha)</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-error">Delayed +48h</span>
-                          <div className="text-on-surface-variant">NiMet Guardrail active</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <div className="flex items-center gap-1 font-medium text-on-surface"><Icon name="water_drop" className="text-sm" /> 14kg Mancozeb</div>
-                          <div className="text-on-surface-variant">Knapsack Crews ready</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Weather Hold (Rain 42mm)</span>
-                        </td>
-                        <td className="py-space-md px-space-sm text-right">
-                          <button className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-high transition-colors" type="button">Override Rule</button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-surface-container-low transition-colors">
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-label-md text-label-md text-on-surface">Tractor Rotary Weeding</div>
-                          <div className="font-body-sm text-body-sm text-on-surface-variant">Mechanical inter-row cultivator</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Plot A1</span>
-                          <div className="text-on-surface-variant">Maize (9.0 Ha)</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Tomorrow 08:00 WAT</span>
-                          <div className="text-on-surface-variant">Operator Check-in Verified</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <div className="flex items-center gap-1 font-medium text-on-surface"><Icon name="precision_manufacturing" className="text-sm text-secondary" /> JD 5075E Tractor</div>
-                          <div className="text-on-surface-variant">Escrow #ES-49201</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-sm text-label-sm"><span className="h-1.5 w-1.5 rounded-full bg-secondary" /> GPS Dispatched</span>
-                        </td>
-                        <td className="py-space-md px-space-sm text-right">
-                          <button className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors" type="button">Live GPS Telemetry</button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-surface-container-low transition-colors">
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-label-md text-label-md text-on-surface">Aphid &amp; Thrips Scouting</div>
-                          <div className="font-body-sm text-body-sm text-on-surface-variant">10-point random quadrant check</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Plot B3</span>
-                          <div className="text-on-surface-variant">Cowpea (4.0 Ha)</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Today 16:30 WAT</span>
-                          <div className="text-on-surface-variant">Field Scout Assigned</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-medium text-on-surface">Field Agent Babatunde</div>
-                          <div className="text-on-surface-variant">Offline PowerSync App</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm"><span className="h-1.5 w-1.5 rounded-full bg-outline" /> In Field Scout</span>
-                        </td>
-                        <td className="py-space-md px-space-sm text-right">
-                          <button className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors" type="button">Scout Sheet</button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-surface-container-low transition-colors bg-secondary-container/10">
-                        <td className="py-space-md px-space-sm">
-                          <div className="font-label-md text-label-md text-on-surface">Livestock Vaccination / NDV Booster</div>
-                          <div className="font-body-sm text-body-sm text-on-surface-variant">Lasota strain ocular/drinking water administration</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Poultry House 1</span>
-                          <div className="text-on-surface-variant">Broilers B4 (1,250 birds)</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="font-label-md text-label-md text-on-surface">Tomorrow 07:00 WAT</span>
-                          <div className="text-secondary font-medium">Early morning cool window</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <div className="flex items-center gap-1 font-medium text-on-surface"><Icon name="vaccines" className="text-sm text-secondary" /> Lasota Vials (Vet Cold-Chain)</div>
-                          <div className="text-on-surface-variant">Dr. Alabi Scheduled</div>
-                        </td>
-                        <td className="py-space-md px-space-sm">
-                          <span className="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-secondary" /> Vet Scheduled</span>
-                        </td>
-                        <td className="py-space-md px-space-sm text-right">
-                          <button className="px-space-sm py-1 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-colors" type="button">Review Protocol</button>
-                        </td>
-                      </tr>
+                      {displayedOps.map((op) => (
+                        <tr key={op.id} className={`hover:bg-surface-container-low transition-colors ${op.statusTone === "completed" ? "opacity-60 bg-secondary-container/10" : ""}`}>
+                          <td className="py-space-md px-space-sm">
+                            <div className="font-label-md text-label-md text-on-surface font-semibold">{op.name}</div>
+                            <div className="font-body-sm text-body-sm text-on-surface-variant">{op.subtext}</div>
+                          </td>
+                          <td className="py-space-md px-space-sm">
+                            <span className="font-label-md text-label-md text-on-surface font-medium">{op.plot}</span>
+                            <div className="text-on-surface-variant">{op.cropArea}</div>
+                          </td>
+                          <td className="py-space-md px-space-sm">
+                            <span className={`font-label-md text-label-md ${op.statusTone === "delay" ? "text-error font-semibold" : "text-on-surface"}`}>{op.timeline}</span>
+                            <div className="text-on-surface-variant">{op.timingNote}</div>
+                          </td>
+                          <td className="py-space-md px-space-sm">
+                            <div className="flex items-center gap-1 font-medium text-on-surface">
+                              <Icon name={op.resourceIcon as any} className="text-sm text-secondary" />
+                              <span>{op.resource}</span>
+                            </div>
+                            <div className="text-on-surface-variant">{op.location}</div>
+                          </td>
+                          <td className="py-space-md px-space-sm">
+                            <span className={`inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm ${
+                              op.statusTone === "ready"
+                                ? "bg-secondary-container/50 text-on-secondary-container"
+                                : op.statusTone === "delay"
+                                ? "bg-tertiary-fixed text-on-tertiary-fixed"
+                                : op.statusTone === "active"
+                                ? "bg-secondary-container/50 text-on-secondary-container"
+                                : op.statusTone === "completed"
+                                ? "bg-secondary text-on-secondary font-bold"
+                                : "bg-surface-container text-on-surface-variant"
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${op.statusTone === "delay" ? "bg-tertiary" : "bg-secondary"}`} />
+                              <span>{op.status}</span>
+                            </span>
+                          </td>
+                          <td className="py-space-md px-space-sm text-right">
+                            {op.actionLabel === "Override Rule" ? (
+                              <button
+                                onClick={() => handleOverrideRule(op.id)}
+                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container-high transition-colors"
+                                type="button"
+                              >
+                                {op.actionLabel}
+                              </button>
+                            ) : op.actionLabel === "Live GPS Telemetry" ? (
+                              <button
+                                onClick={() => showScreenToast("JD 5075E Telemetry: Lat 7.9124, Lon 3.5931 · Speed 4.2 km/h · PTO 1,420 RPM active.")}
+                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
+                                type="button"
+                              >
+                                {op.actionLabel}
+                              </button>
+                            ) : op.actionLabel === "Scout Sheet" ? (
+                              <button
+                                onClick={() => showScreenToast("Scout Sheet for Plot B3: Aphids count low (1.2/stalk), zero thrips infestation detected.")}
+                                className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
+                                type="button"
+                              >
+                                {op.actionLabel}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleLogCompletion(op.id)}
+                                className={`px-space-sm py-1 rounded-lg font-label-sm text-label-sm transition-colors ${
+                                  op.statusTone === "completed"
+                                    ? "bg-surface-container text-secondary font-bold"
+                                    : "bg-primary text-on-primary hover:bg-primary-container"
+                                }`}
+                                type="button"
+                              >
+                                {op.actionLabel}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-            ))}
+            )}
           </div>
           <div className="lg:col-span-4 flex flex-col gap-space-lg">
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -658,15 +1156,17 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <div className="mt-space-md p-space-md rounded-xl bg-surface-container-low space-y-space-sm">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-headline-sm text-headline-sm text-on-surface">John Deere 5075E (75 HP)</div>
+                    <div className="font-headline-sm text-headline-sm text-on-surface font-semibold">John Deere 5075E (75 HP)</div>
                     <p className="font-body-sm text-body-sm text-on-surface-variant">Alhaji Kazeem Syndicate • Oyo North</p>
                   </div>
-                  <span className="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">In Field</span>
+                  <span className="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+                    {powConfirmed ? "Verified Done" : "In Field"}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-space-sm pt-space-xs">
                   <div className="p-space-sm bg-surface-container-lowest rounded-lg">
                     <span className="font-label-sm text-label-sm text-on-surface-variant">Agreed Direct Fee</span>
-                    <p className="font-headline-sm text-headline-sm text-primary">₦95,000</p>
+                    <p className="font-headline-sm text-headline-sm text-primary font-bold">₦95,000</p>
                   </div>
                   <div className="p-space-sm bg-surface-container-lowest rounded-lg">
                     <span className="font-label-sm text-label-sm text-on-surface-variant">Telemetry Status</span>
@@ -676,16 +1176,33 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                 <div className="pt-space-xs">
                   <div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
                     <span>Plot A1 Rotary Weeding (9 Ha)</span>
-                    <span className="font-bold text-on-surface">6.2 Ha Done (68%)</span>
+                    <span className="font-bold text-on-surface">{powConfirmed ? "9.0 Ha Done (100%)" : "6.2 Ha Done (68%)"}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-container-lowest mt-1.5 overflow-hidden">
-                    <div className="h-full bg-secondary rounded-full" style={{ width: "68%" }} />
+                    <div className="h-full bg-secondary rounded-full" style={{ width: powConfirmed ? "100%" : "68%" }} />
                   </div>
                 </div>
                 <p className="font-label-sm text-label-sm text-on-surface-variant italic">Direct settlement between farmer &amp; provider. Proof of Work (GPS boundary &amp; photos) verified before milestone signoff.</p>
                 <div className="flex items-center gap-space-xs pt-space-xs">
-                  <button className="flex-1 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md text-center transition-colors" type="button">Inspect GPS Route</button>
-                  <button className="flex-1 py-2 rounded-lg bg-secondary text-on-secondary hover:bg-primary font-label-md text-label-md text-center transition-colors" type="button">Confirm Proof of Work</button>
+                  <button
+                    onClick={() => showScreenToast("GPS Route telemetry: 14 swaths completed at 1.8m spacing. Geofence bounds respected 100%.")}
+                    className="flex-1 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md text-center transition-colors"
+                    type="button"
+                  >
+                    Inspect GPS Route
+                  </button>
+                  <button
+                    onClick={handleConfirmPoW}
+                    disabled={powConfirmed}
+                    className={`flex-1 py-2 rounded-lg font-label-md text-label-md text-center transition-colors ${
+                      powConfirmed
+                        ? "bg-surface-container text-secondary font-bold cursor-default"
+                        : "bg-secondary text-on-secondary hover:bg-primary"
+                    }`}
+                    type="button"
+                  >
+                    {powConfirmed ? "PoW Signed ✓" : "Confirm Proof of Work"}
+                  </button>
                 </div>
               </div>
               <div className="mt-space-md pt-space-md border-t border-surface-container">
@@ -709,7 +1226,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                     <span className="font-label-sm text-label-sm text-on-surface-variant">11km away • ₦15k/Ha</span>
                   </div>
                 </div>
-                <button className="w-full mt-space-sm py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md text-center transition-colors" type="button">Browse Syndicate Pool (Oyo/Ogun)</button>
+                <button
+                  onClick={() => showScreenToast("Browsing Oyo/Ogun syndicate pool: 11 active tractors and implements within 30km.")}
+                  className="w-full mt-space-sm py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md text-center transition-colors font-semibold"
+                  type="button"
+                >
+                  Browse Syndicate Pool (Oyo/Ogun)
+                </button>
               </div>
             </div>
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -719,8 +1242,24 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                   <h2 className="font-headline-md text-headline-md text-on-surface">AI Field Agronomist Triage</h2>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface font-label-sm text-[0.625rem]">EN</span>
-                  <span className="px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[0.625rem] font-bold">YORÙBÁ</span>
+                  <button
+                    onClick={() => setAiLang("EN")}
+                    className={`px-1.5 py-0.5 rounded font-label-sm text-[0.625rem] font-bold ${
+                      aiLang === "EN" ? "bg-secondary text-on-secondary" : "bg-surface-container text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    EN
+                  </button>
+                  <button
+                    onClick={() => setAiLang("YORUBA")}
+                    className={`px-1.5 py-0.5 rounded font-label-sm text-[0.625rem] font-bold ${
+                      aiLang === "YORUBA" ? "bg-secondary text-on-secondary" : "bg-surface-container text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    YORÙBÁ
+                  </button>
                 </div>
               </div>
               <div className="mt-space-md space-y-space-md">
@@ -728,37 +1267,85 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-space-xs">
                       <Icon name="coronavirus" className="text-error" />
-                      <span className="font-label-md text-label-md text-on-surface">Plot B1: Tomato Leaf Triage</span>
+                      <span className="font-label-md text-label-md text-on-surface font-semibold">Plot B1: Tomato Leaf Triage</span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold">94% Match</span>
                   </div>
-                  <div className="mt-2 text-body-sm font-body-sm text-on-surface-variant"><strong className="text-on-surface">Early Blight (Alternaria solani)</strong> detected via leaf lesion scan at Node 03.</div>
+                  <div className="mt-2 text-body-sm font-body-sm text-on-surface-variant">
+                    <strong className="text-on-surface">Early Blight (Alternaria solani)</strong> detected via leaf lesion scan at Node 03.
+                  </div>
                   <div className="mt-space-sm p-space-sm rounded bg-surface-container-lowest">
                     <div className="flex items-center justify-between">
                       <span className="font-label-sm text-label-sm text-secondary font-bold">Verified Prescription:</span>
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Dr. Funke A. (IITA Alum)</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface mt-1">Apply Copper Hydroxide 50WP (2.5g/L water) 48h after the forecast rain stops. Do not apply prior to Friday downpour.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface mt-1">
+                      Apply Copper Hydroxide 50WP (2.5g/L water) 48h after the forecast rain stops. Do not apply prior to Friday downpour.
+                    </p>
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between">
-                    <button className="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">
+                    <button
+                      onClick={() => showScreenToast("Ẹ̀rọ ń gbọ́ ohùn: 'Àkíyèsí pàtàkì: Ma fi oògùn sí i títí òjò yóò fi dá...' (0:45 playback started).")}
+                      className="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors font-medium"
+                      type="button"
+                    >
                       <Icon name="volume_up" className="text-sm text-secondary" />
                       <span>Gbọ́ ní Yorùbá (Voice Note)</span>
                     </button>
                     <span className="font-label-sm text-label-sm text-on-surface-variant">0:45 audio</span>
                   </div>
                 </div>
-                <div className="relative">
-                  <input className="w-full h-11 pl-3 pr-20 bg-surface-container-low rounded-lg text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary shadow-inner" placeholder="Ask symptom in English, Pidgin, or Yorùbá..." type="text" />
+
+                {aiMessages.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {aiMessages.map((m, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-lg text-body-sm font-body-sm ${
+                          m.role === "user"
+                            ? "bg-primary text-on-primary ml-4"
+                            : "bg-surface-container-low text-on-surface mr-4 border border-surface-container"
+                        }`}
+                      >
+                        {m.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <form onSubmit={handleAiSubmit} className="relative">
+                  <input
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    className="w-full h-11 pl-3 pr-20 bg-surface-container-low rounded-lg text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary shadow-inner"
+                    placeholder={
+                      aiLang === "YORUBA"
+                        ? "Béèrè àrùn tàbí oògùn ní Yorùbá..."
+                        : "Ask symptom in English, Pidgin, or Yorùbá..."
+                    }
+                    type="text"
+                  />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button className="p-1 text-on-surface-variant hover:text-secondary" title="Voice Input" type="button">
+                    <button
+                      onClick={() => {
+                        setAiQuery("Yellow spots on maize leaves after rain");
+                        showScreenToast("Voice note transcribed: 'Yellow spots on maize leaves after rain'");
+                      }}
+                      className="p-1 text-on-surface-variant hover:text-secondary"
+                      title="Voice Input"
+                      type="button"
+                    >
                       <Icon name="mic" className="text-lg" />
                     </button>
-                    <button className="h-7 w-7 rounded bg-secondary text-on-secondary flex items-center justify-center hover:bg-primary transition-colors" type="button">
+                    <button
+                      onClick={() => {}}
+                      type="submit"
+                      className="h-7 w-7 rounded bg-secondary text-on-secondary flex items-center justify-center hover:bg-primary transition-colors"
+                    >
                       <Icon name="arrow_forward" className="text-sm" />
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -772,7 +1359,7 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <div className="mt-space-md space-y-space-md">
                 <div>
                   <div className="flex items-center justify-between font-label-md text-label-md mb-1">
-                    <span className="text-on-surface">NPK 15-15-15 (Golden Fertilizer)</span>
+                    <span className="text-on-surface font-medium">NPK 15-15-15 (Golden Fertilizer)</span>
                     <span className="text-secondary font-bold">28 Bags (Optimal)</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden">
@@ -781,7 +1368,7 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                 </div>
                 <div>
                   <div className="flex items-center justify-between font-label-md text-label-md mb-1">
-                    <span className="text-on-surface">Granular Urea 46% (Indorama)</span>
+                    <span className="text-on-surface font-medium">Granular Urea 46% (Indorama)</span>
                     <span className="text-on-tertiary-container font-bold">6 Bags (Low Stock)</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden">
@@ -791,14 +1378,18 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
                 </div>
                 <div>
                   <div className="flex items-center justify-between font-label-md text-label-md mb-1">
-                    <span className="text-on-surface">Neem Bio-Extract (3000 PPM)</span>
+                    <span className="text-on-surface font-medium">Neem Bio-Extract (3000 PPM)</span>
                     <span className="text-on-surface-variant font-bold">15 Litres</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden">
                     <div className="h-full bg-secondary rounded-full" style={{ width: "55%" }} />
                   </div>
                 </div>
-                <button className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md text-center transition-all flex items-center justify-center gap-2" type="button">
+                <button
+                  onClick={() => showScreenToast("Redirecting to Iseyin Verified Dealer: Batch order created for 14 bags Indorama Urea.")}
+                  className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md text-center transition-all flex items-center justify-center gap-2 font-semibold"
+                  type="button"
+                >
                   <Icon name="local_shipping" className="text-base" />
                   <span>Order from Verified Iseyin Agro-Dealer</span>
                 </button>
@@ -806,11 +1397,13 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
             </div>
           </div>
         </div>
-        {slot(slots, "statusBar", (
+        {slot(
+          slots,
+          "statusBar",
           <div className="mt-space-xl p-space-md rounded-xl bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm text-body-sm font-body-sm text-on-surface-variant">
             <div className="flex items-center gap-space-sm">
               <span className="h-2.5 w-2.5 rounded-full bg-secondary animate-ping" />
-              <span className="font-label-md text-label-md text-on-surface">Local SQLite Engine Active:</span>
+              <span className="font-label-md text-label-md text-on-surface font-semibold">Local SQLite Engine Active:</span>
               <span>1,842 plot records synced with cloud master • Zero packet loss</span>
             </div>
             <div className="flex items-center gap-space-md text-label-sm font-label-sm">
@@ -819,7 +1412,7 @@ export function ExecutiveDashboard({ slots }: ScreenProps<ExecutiveDashboardSlot
               <span className="text-secondary font-bold">CultivaNode OS v2.4.1 (Derived Savanna Build)</span>
             </div>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

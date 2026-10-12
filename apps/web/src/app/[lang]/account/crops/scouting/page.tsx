@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { FieldScouting } from "@/components/screens/field-scouting";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -107,10 +108,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
             Log New Scouting Observation
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -209,21 +208,16 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             className="px-5 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
             type="submit"
             disabled={cycleList.length === 0}
           >
             Save Scouting Record
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -249,13 +243,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
                 <span>Crop Portfolio Engine</span>
               </Link>
               <ScreenDialog title="Log Field Scout" side="center" panel={logModal}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-md hover:bg-primary-container transition-all font-semibold"
-                  type="button"
                 >
                   <Icon name="add_a_photo" className="text-lg" />
                   <span>+ Log New Scouting Observation</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),

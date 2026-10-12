@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ds/page-header";
 import { MetricCard } from "@/components/live/metric-card";
 import { ServiceMarketplace } from "@/components/screens/service-marketplace";
 import { Badge } from "@/components/shadcn/badge";
+import { Button } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
@@ -144,9 +145,9 @@ export default async function FindPage({ params, searchParams }: PageProps<"/[la
                 {RADII.map((r) => <option key={r} value={r}>{r} km</option>)}
               </select>
             </label>
-            <button type="submit" className="flex h-11 items-center justify-center gap-2 rounded-lg bg-secondary-container font-label-lg text-label-lg text-on-primary-fixed transition-colors hover:bg-secondary-fixed-dim md:col-span-2">
+            <Button type="submit" className="flex h-11 items-center justify-center gap-2 rounded-lg bg-secondary-container font-label-lg text-label-lg text-on-primary-fixed transition-colors hover:bg-secondary-fixed-dim md:col-span-2">
               <Icon name="search" className="text-lg" /> {f.search}
-            </button>
+            </Button>
           </form>
         ),
         kpis: (

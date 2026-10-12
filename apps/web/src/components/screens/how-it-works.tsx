@@ -1,10 +1,15 @@
+"use client";
+
 // Ported from the "how_it_works_trust_framework_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export function HowItWorks({ lang }: ScreenProps) {
+  const [activeTab, setActiveTab] = useState<"farmer" | "fleet" | "buyer" | "agent">("farmer");
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -70,13 +75,77 @@ export function HowItWorks({ lang }: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs">Explore how the CultivaNode mesh orchestrates accountability, physical evidence checks, and financial escrow for each distinct role in the agricultural value chain.</p>
             </div>
             <div className="inline-flex p-1 bg-surface-container rounded-lg self-start md:self-auto shadow-sm" role="tablist">
-              <button aria-selected="true" className="px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all bg-primary-container text-on-primary font-bold shadow-sm" id="tab-farmer" role="tab" type="button">The Farmer</button>
-              <button aria-selected="false" className="px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-fleet" role="tab" type="button">Tractor Fleet Owner</button>
-              <button aria-selected="false" className="px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-buyer" role="tab" type="button">Produce Offtaker</button>
-              <button aria-selected="false" className="px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-agent" role="tab" type="button">Field Extension Agent</button>
+              <button
+                aria-selected={activeTab === "farmer"}
+                className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
+                  activeTab === "farmer"
+                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-farmer"
+                role="tab"
+                type="button"
+                onClick={() => {
+                  setActiveTab("farmer");
+                  showScreenToast("Viewing Smallholder Farmer & Farm Owner lifecycle.");
+                }}
+              >
+                The Farmer
+              </button>
+              <button
+                aria-selected={activeTab === "fleet"}
+                className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
+                  activeTab === "fleet"
+                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-fleet"
+                role="tab"
+                type="button"
+                onClick={() => {
+                  setActiveTab("fleet");
+                  showScreenToast("Viewing Machinery Fleet Syndicates lifecycle.");
+                }}
+              >
+                Tractor Fleet Owner
+              </button>
+              <button
+                aria-selected={activeTab === "buyer"}
+                className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
+                  activeTab === "buyer"
+                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-buyer"
+                role="tab"
+                type="button"
+                onClick={() => {
+                  setActiveTab("buyer");
+                  showScreenToast("Viewing Produce Offtakers & Millers lifecycle.");
+                }}
+              >
+                Produce Offtaker
+              </button>
+              <button
+                aria-selected={activeTab === "agent"}
+                className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
+                  activeTab === "agent"
+                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-agent"
+                role="tab"
+                type="button"
+                onClick={() => {
+                  setActiveTab("agent");
+                  showScreenToast("Viewing Accredited Extension Agents lifecycle.");
+                }}
+              >
+                Field Extension Agent
+              </button>
             </div>
           </div>
-          <div className="flex flex-col gap-space-lg" id="journey-farmer">
+          <div className={`${activeTab === "farmer" ? "flex" : "hidden"} flex-col gap-space-lg`} id="journey-farmer">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
               <div className="lg:col-span-4 rounded-xl bg-surface-container-lowest p-space-lg shadow-md flex flex-col justify-between">
                 <div className="flex flex-col gap-space-sm">
@@ -146,7 +215,7 @@ export function HowItWorks({ lang }: ScreenProps) {
               </div>
             </div>
           </div>
-          <div className="hidden flex flex-col gap-space-lg" id="journey-fleet">
+          <div className={`${activeTab === "fleet" ? "flex" : "hidden"} flex-col gap-space-lg`} id="journey-fleet">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
               <div className="lg:col-span-4 rounded-xl bg-surface-container-lowest p-space-lg shadow-md flex flex-col justify-between">
                 <div className="flex flex-col gap-space-sm">
@@ -216,7 +285,7 @@ export function HowItWorks({ lang }: ScreenProps) {
               </div>
             </div>
           </div>
-          <div className="hidden flex flex-col gap-space-lg" id="journey-buyer">
+          <div className={`${activeTab === "buyer" ? "flex" : "hidden"} flex-col gap-space-lg`} id="journey-buyer">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
               <div className="lg:col-span-4 rounded-xl bg-surface-container-lowest p-space-lg shadow-md flex flex-col justify-between">
                 <div className="flex flex-col gap-space-sm">
@@ -276,7 +345,7 @@ export function HowItWorks({ lang }: ScreenProps) {
               </div>
             </div>
           </div>
-          <div className="hidden flex flex-col gap-space-lg" id="journey-agent">
+          <div className={`${activeTab === "agent" ? "flex" : "hidden"} flex-col gap-space-lg`} id="journey-agent">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
               <div className="lg:col-span-4 rounded-xl bg-surface-container-lowest p-space-lg shadow-md flex flex-col justify-between">
                 <div className="flex flex-col gap-space-sm">

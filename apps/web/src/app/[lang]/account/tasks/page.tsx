@@ -2,19 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { ScreenDialog } from "@/components/ds/screen-dialog";
 import { FieldOperationsCalendar } from "@/components/screens/field-operations-calendar";
+import {
+  ScheduleTaskModal,
+  WorkerRegisterModal,
+  AssignStaffModal,
+  type CycleOpOption,
+} from "@/components/screens/task-dialogs";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/text";
-import {
-  createFarmTask,
-  updateTaskStatus,
-  createFarmWorker,
-  recordWorkerAttendance,
-} from "@/actions/farm-tasks";
+import { getLivePilotWeather } from "@/lib/weather";
+import { updateTaskStatus, syncCropCycleOperationsToTasks } from "@/actions/farm-tasks";
 
 export const metadata: Metadata = { title: "Field operations & calendar" };
 
@@ -23,6 +26,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
   const supabase = await createClient();
+  const weatherData = await getLivePilotWeather();
 
   const scope = [
     `owner_id.eq.${account.userId}`,
@@ -52,6 +56,31 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
   const workerList = workers ?? [];
   const workerMap = new Map(workerList.map((w) => [w.id, w]));
 
+  // Active crop cycles
+  const { data: rawCycles } = farmIds.length
+    ? await supabase
+        .from("crop_cycles")
+        .select("id, farm_id, plot_id, crop_name, crop_id, variety, variety_id, season, status, current_stage, planting_date, expected_harvest_date, notes")
+        .in("farm_id", farmIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
+  const cycleList = (rawCycles ?? []) as any[];
+  const cycleIds = cycleList.map((c) => c.id);
+  const cycleMap = new Map(cycleList.map((c) => [c.id, c]));
+
+  // Operations defined on user's active crop cycles
+  const { data: rawCycleOps } = cycleIds.length
+    ? await supabase
+        .from("crop_cycle_operations")
+        .select("*")
+        .in("crop_cycle_id", cycleIds)
+        .order("scheduled_date", { ascending: true })
+    : { data: [] };
+
+  const cycleOpsList = (rawCycleOps ?? []) as any[];
+
+  // Operational tasks in farm_operational_tasks
   const { data: tasks } = farmIds.length
     ? await supabase
         .from("farm_operational_tasks")
@@ -61,326 +90,107 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
     : { data: [] };
 
   const taskList = tasks ?? [];
-  const hasLiveTasks = taskList.length > 0;
 
+  // Prepare CycleOpOptions for auto-populating modal
+  const cycleOpOptions: CycleOpOption[] = cycleOpsList.map((op: any) => {
+    const cycle = cycleMap.get(op.crop_cycle_id);
+    const plot = cycle?.plot_id ? plotMap.get(cycle.plot_id) : undefined;
+    return {
+      id: op.id,
+      crop_cycle_id: op.crop_cycle_id,
+      name: op.name,
+      operation_type: op.operation_type,
+      stage: op.stage,
+      scheduled_date: op.scheduled_date,
+      required_inputs: op.required_inputs,
+      crop_name: cycle?.crop_name || cycle?.crop_id || "Crop",
+      variety: cycle?.variety || cycle?.variety_id || "",
+      farm_id: cycle?.farm_id,
+      plot_id: cycle?.plot_id,
+      plot_name: plot?.name || "General Plot",
+    };
+  });
+
+  // Calculate un-synced cycle operations for ledger display
+  const existingTaskKeySet = new Set(taskList.map((t) => `${t.crop_cycle_id}::${t.title.toLowerCase()}`));
+  const pendingCycleOps = cycleOpsList.filter(
+    (cop) => !existingTaskKeySet.has(`${cop.crop_cycle_id}::${cop.name.toLowerCase()}`)
+  );
+
+  const totalOperationsCount = taskList.length + pendingCycleOps.length;
+  const hasLiveOperations = totalOperationsCount > 0;
   const urgentCount = taskList.filter((t) => t.priority === "urgent" || t.priority === "high").length;
   const completedCount = taskList.filter((t) => t.status === "completed").length;
 
-  const taskModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="add_task" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Schedule Field Operation / Task
-          </h3>
-        </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
-        </ScreenDialogClose>
-      </div>
-
-      <form action={createFarmTask} className="space-y-4 text-left">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Target Farm <span className="text-error">*</span>
-            </label>
-            <select
-              name="farm_id"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              {farmList.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Plot Location</label>
-            <select
-              name="plot_id"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="">Whole Farm (No specific plot)</option>
-              {plotList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Operation Title <span className="text-error">*</span>
-          </label>
-          <input
-            name="title"
-            type="text"
-            placeholder="e.g. Split-N Urea top-dressing, Ridge weed clearance, Irrigation check"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Assigned Worker</label>
-            <select
-              name="assigned_worker_id"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="">Unassigned (Open Roster)</option>
-              {workerList.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.full_name} ({w.role})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Priority</label>
-            <select
-              name="priority"
-              defaultValue="medium"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="low">Low (Routine)</option>
-              <option value="medium">Medium (Standard)</option>
-              <option value="high">High (Time-Sensitive)</option>
-              <option value="urgent">Urgent (Immediate Hold)</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Target Execution Date</label>
-            <input
-              name="due_date"
-              type="date"
-              defaultValue={new Date().toISOString().split("T")[0]}
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Direct Budget / Cost (Minor)</label>
-            <input
-              name="direct_cost_minor"
-              type="number"
-              placeholder="e.g. 500000 (₦5,000)"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">Instructions / Description</label>
-          <textarea
-            name="description"
-            rows={2}
-            placeholder="Equipment needed, safety guardrails, PPE required..."
-            className="w-full p-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
-          </ScreenDialogClose>
-          <button
-            className="px-5 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
-            type="submit"
-            disabled={farmList.length === 0}
-          >
-            Create Task
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-
-  const workerModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="person_add" className="text-secondary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Add Farm Worker / Labourer
-          </h3>
-        </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
-        </ScreenDialogClose>
-      </div>
-
-      <form action={createFarmWorker} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Farm Enterprise <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Worker Full Name <span className="text-error">*</span>
-          </label>
-          <input
-            name="full_name"
-            type="text"
-            placeholder="e.g. Babatunde Gbadamosi"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Role / Job Title</label>
-            <select
-              name="role"
-              defaultValue="labourer"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="labourer">Field Labourer</option>
-              <option value="operator">Tractor / Machinery Operator</option>
-              <option value="agronomist">Field Agronomist</option>
-              <option value="storekeeper">Inventory Storekeeper</option>
-              <option value="farm_manager">Farm Supervisor</option>
-              <option value="other">Other Worker</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Employment Type</label>
-            <select
-              name="employment_type"
-              defaultValue="permanent"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="permanent">Permanent / Full-Time</option>
-              <option value="seasonal">Seasonal</option>
-              <option value="casual">Casual Daily Worker</option>
-              <option value="contractor">Contractor</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Phone Number</label>
-            <input
-              name="phone"
-              type="tel"
-              placeholder="e.g. +234 803 123 4567"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Daily Wage / Rate (Minor)</label>
-            <input
-              name="daily_rate_minor"
-              type="number"
-              placeholder="e.g. 350000 (₦3,500/day)"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose>
-            <button
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md"
-              type="button"
-            >
-              Cancel
-            </button>
-          </ScreenDialogClose>
-          <button
-            className="px-5 py-2 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
-            type="submit"
-            disabled={farmList.length === 0}
-          >
-            Add Worker
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-
   return (
     <>
-      <LiveStrip tone={hasLiveTasks ? "live" : "preview"}>
-        {hasLiveTasks
-          ? `Showing ${taskList.length} operational task${taskList.length === 1 ? "" : "s"} across ${workerList.length} registered farm worker${workerList.length === 1 ? "" : "s"}.`
+      <LiveStrip tone={hasLiveOperations ? "live" : "preview"}>
+        {hasLiveOperations
+          ? `Showing ${totalOperationsCount} field operation${totalOperationsCount === 1 ? "" : "s"} (${taskList.length} scheduled tasks + ${pendingCycleOps.length} planting cycle operations) across ${workerList.length} registered farm worker${workerList.length === 1 ? "" : "s"}.`
           : "The calendar shows sample operations; your booked machinery jobs are listed under My Bookings."}
       </LiveStrip>
+
       <FieldOperationsCalendar
         lang={lang}
+        weatherData={weatherData}
+        liveTasks={taskList}
+        livePlots={plotList}
+        liveWorkers={workerList}
+        liveFarms={farmList}
+        cropCycles={cycleList}
+        cycleOperations={cycleOpsList}
         slots={{
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
-              <ScreenDialog title="Add Farm Worker" side="center" panel={workerModal}>
-                <button
+              <ScreenDialog
+                title="Register Farm Worker"
+                side="center"
+                panel={<WorkerRegisterModal farms={farmList} />}
+              >
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors font-medium"
                   type="button"
                 >
                   <Icon name="person_add" className="text-base text-secondary" />
                   <span>Register Worker</span>
-                </button>
+                </Button>
               </ScreenDialog>
-              <ScreenDialog title="Schedule Operation" side="center" panel={taskModal}>
-                <button
+
+              <ScreenDialog
+                title="Schedule Field Operation"
+                side="center"
+                panel={
+                  <ScheduleTaskModal
+                    farms={farmList}
+                    plots={plotList}
+                    workers={workerList}
+                    cycleOperations={cycleOpOptions}
+                  />
+                }
+              >
+                <Button
                   className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors font-semibold"
                   type="button"
                 >
                   <Icon name="add_circle" className="text-base" />
                   <span>Schedule New Operation</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),
-          kpis: hasLiveTasks ? (
+          kpis: hasLiveOperations ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
               <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
                 <div className="flex items-start justify-between">
                   <div className="space-y-space-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      Total Tasks
+                      Total Operations
                     </span>
                     <div className="flex items-baseline gap-2">
                       <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">
-                        {taskList.length}
+                        {totalOperationsCount}
                       </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Operations</span>
+                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Ops</span>
                     </div>
                   </div>
                   <span className="p-2 rounded-lg bg-surface-container-low text-primary">
@@ -392,6 +202,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                   <span className="text-secondary font-semibold">Live Ledger</span>
                 </div>
               </div>
+
               <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
                 <div className="flex items-start justify-between">
                   <div className="space-y-space-xs">
@@ -411,9 +222,10 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                 </div>
                 <div className="flex items-center justify-between font-label-sm text-label-sm">
                   <span className="text-on-surface-variant">Active workforce</span>
-                  <span className="text-secondary font-semibold">Roster Synced</span>
+                  <span className="text-secondary font-semibold">Multi-Crew Enabled</span>
                 </div>
               </div>
+
               <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
                 <div className="flex items-start justify-between">
                   <div className="space-y-space-xs">
@@ -436,48 +248,63 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                   <span className="text-error font-semibold">{urgentCount > 0 ? "Attention" : "On schedule"}</span>
                 </div>
               </div>
+
               <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
                 <div className="flex items-start justify-between">
                   <div className="space-y-space-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      Active Plots
+                      Planting Cycles
                     </span>
                     <div className="flex items-baseline gap-2">
                       <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface font-bold">
-                        {plotList.length}
+                        {cycleList.length}
                       </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Plots</span>
+                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Cycles</span>
                     </div>
                   </div>
                   <span className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="terrain" />
+                    <Icon name="psychology" />
                   </span>
                 </div>
                 <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">{farmList.length} Farms</span>
-                  <span className="text-secondary font-semibold">Cadastral Grid</span>
+                  <span className="text-on-surface-variant">{plotList.length} Active Plots</span>
+                  <span className="text-secondary font-semibold">Auto-Synced</span>
                 </div>
               </div>
             </div>
           ) : undefined,
-          operations: hasLiveTasks ? (
+
+          operations: hasLiveOperations ? (
             <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
-              <div className="px-space-lg py-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-lowest">
+              <div className="px-space-lg py-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-lowest border-b border-outline-variant/30">
                 <div className="space-y-0.5">
                   <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                    Scheduled Operations Ledger ({taskList.length})
+                    Scheduled Operations Ledger ({totalOperationsCount})
                   </h2>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Live farm operational tasks dispatched across your workers and plots
+                    Live farm operational tasks dispatched across your workers, plots, and active crop cycles
                   </p>
                 </div>
+
+                {pendingCycleOps.length > 0 && (
+                  <form action={syncCropCycleOperationsToTasks} className="inline">
+                    <Button
+                      type="submit"
+                      className="px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Icon name="sync" className="text-sm" />
+                      <span>Sync All Planting Operations ({pendingCycleOps.length})</span>
+                    </Button>
+                  </form>
+                )}
               </div>
+
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left font-body-sm text-body-sm">
                   <thead className="bg-surface-container-high text-on-surface-variant uppercase tracking-wider font-label-sm text-label-sm">
                     <tr>
                       <th className="py-space-sm px-space-md">Task &amp; Plot</th>
-                      <th className="py-space-sm px-space-md">Assigned Worker</th>
+                      <th className="py-space-sm px-space-md">Assigned Staff</th>
                       <th className="py-space-sm px-space-md">Priority</th>
                       <th className="py-space-sm px-space-md">Due Date</th>
                       <th className="py-space-sm px-space-md">Status</th>
@@ -485,10 +312,32 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/30">
+                    {/* 1. Farm Operational Tasks */}
                     {taskList.map((task) => {
                       const plot = task.plot_id ? plotMap.get(task.plot_id) : undefined;
-                      const worker = task.assigned_worker_id ? workerMap.get(task.assigned_worker_id) : undefined;
+                      const cycle = task.crop_cycle_id ? cycleMap.get(task.crop_cycle_id) : undefined;
                       const isComplete = task.status === "completed";
+
+                      // Extract multiple assigned worker IDs if present
+                      const workerNames: string[] = [];
+                      const workerIds: string[] = [];
+                      if (task.description && typeof task.description === "string" && task.description.includes("[assigned_workers:")) {
+                        const match = task.description.match(/\[assigned_workers:\s*([^\]]+)\]/);
+                        if (match && match[1]) {
+                          const ids = match[1].split(",").map((s: string) => s.trim());
+                          for (const wid of ids) {
+                            workerIds.push(wid);
+                            const w = workerMap.get(wid);
+                            if (w) workerNames.push(w.full_name);
+                          }
+                        }
+                      }
+                      if (workerNames.length === 0 && task.assigned_worker_id) {
+                        workerIds.push(task.assigned_worker_id);
+                        const w = workerMap.get(task.assigned_worker_id);
+                        if (w) workerNames.push(w.full_name);
+                      }
+
                       return (
                         <tr key={task.id} className="hover:bg-surface-container-low transition-colors">
                           <td className="py-space-md px-space-md">
@@ -496,17 +345,30 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                               <span className="font-headline-sm text-body-lg font-bold text-on-surface">
                                 {task.title}
                               </span>
-                              <span className="text-xs text-on-surface-variant">
-                                {plot ? plot.name : "Whole Farm"}
+                              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                                <span>{plot ? plot.name : "Whole Farm"}</span>
+                                {cycle && (
+                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-[10px]">
+                                    {cycle.crop_name || cycle.crop_id} ({cycle.variety || cycle.season || "Active"})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-space-md px-space-md">
+                            <div className="flex items-center gap-1.5 text-on-surface font-medium">
+                              <Icon name="group" className="text-sm text-secondary" />
+                              <span className="truncate max-w-[200px]">
+                                {workerNames.length > 0
+                                  ? workerNames.length > 1
+                                    ? `${workerNames.join(", ")} (${workerNames.length} Crew)`
+                                    : workerNames[0]
+                                  : "Unassigned"}
                               </span>
                             </div>
                           </td>
-                          <td className="py-space-md px-space-md">
-                            <div className="flex items-center gap-1.5 text-on-surface font-medium">
-                              <Icon name="person" className="text-sm text-secondary" />
-                              <span>{worker ? worker.full_name : "Unassigned"}</span>
-                            </div>
-                          </td>
+
                           <td className="py-space-md px-space-md">
                             <span
                               className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold uppercase ${
@@ -518,11 +380,13 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                               {task.priority}
                             </span>
                           </td>
+
                           <td className="py-space-md px-space-md">
                             <span className="text-on-surface">
                               {task.due_date ? formatDate(task.due_date, lang) : "—"}
                             </span>
                           </td>
+
                           <td className="py-space-md px-space-md">
                             <span
                               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-sm text-label-sm font-semibold capitalize ${
@@ -534,19 +398,115 @@ export default async function Page({ params }: PageProps<"/[lang]/account/tasks"
                               {task.status}
                             </span>
                           </td>
+
                           <td className="py-space-md px-space-md text-right">
-                            {!isComplete && (
-                              <form action={updateTaskStatus} className="inline">
-                                <input type="hidden" name="task_id" value={task.id} />
-                                <input type="hidden" name="status" value="completed" />
-                                <button
-                                  type="submit"
-                                  className="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary transition-all shadow-sm"
+                            <div className="flex items-center justify-end gap-2">
+                              <ScreenDialog
+                                title="Assign Staff"
+                                side="center"
+                                panel={
+                                  <AssignStaffModal
+                                    taskId={task.id}
+                                    taskTitle={task.title}
+                                    currentWorkerIds={workerIds}
+                                    workers={workerList}
+                                  />
+                                }
+                              >
+                                <Button
+                                  type="button"
+                                  className="px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-all"
                                 >
-                                  Complete
-                                </button>
-                              </form>
-                            )}
+                                  <Icon name="person_add" className="text-xs text-secondary" />
+                                  <span>Assign Staff</span>
+                                </Button>
+                              </ScreenDialog>
+
+                              {!isComplete && (
+                                <form action={updateTaskStatus} className="inline">
+                                  <input type="hidden" name="task_id" value={task.id} />
+                                  <input type="hidden" name="status" value="completed" />
+                                  <Button
+                                    type="submit"
+                                    className="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary transition-all shadow-sm"
+                                  >
+                                    Complete
+                                  </Button>
+                                </form>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* 2. Un-synced Planting Cycle Operations */}
+                    {pendingCycleOps.map((op) => {
+                      const cycle = cycleMap.get(op.crop_cycle_id);
+                      const plot = cycle?.plot_id ? plotMap.get(cycle.plot_id) : undefined;
+                      const cropName = cycle?.crop_name || cycle?.crop_id || "Crop";
+
+                      return (
+                        <tr key={`cycle-op-${op.id}`} className="hover:bg-primary/5 transition-colors bg-primary/[0.02]">
+                          <td className="py-space-md px-space-md">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-headline-sm text-body-lg font-bold text-on-surface">
+                                  {op.name}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-wider">
+                                  Plant Cycle Operation
+                                </span>
+                              </div>
+                              <span className="text-xs text-on-surface-variant mt-0.5">
+                                {plot ? plot.name : "Planting Plot"} • {cropName} ({cycle?.variety || op.stage || "Active"})
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-space-md px-space-md">
+                            <span className="text-xs text-on-surface-variant italic">Unassigned (Plant Cycle)</span>
+                          </td>
+
+                          <td className="py-space-md px-space-md">
+                            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm font-semibold bg-surface-container text-on-surface">
+                              Standard
+                            </span>
+                          </td>
+
+                          <td className="py-space-md px-space-md">
+                            <span className="text-on-surface">
+                              {op.scheduled_date ? formatDate(op.scheduled_date, lang) : "Planned"}
+                            </span>
+                          </td>
+
+                          <td className="py-space-md px-space-md">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-sm text-label-sm font-semibold bg-primary-container/60 text-on-primary-container capitalize">
+                              Cycle Plan
+                            </span>
+                          </td>
+
+                          <td className="py-space-md px-space-md text-right">
+                            <ScreenDialog
+                              title="Schedule & Assign Operation"
+                              side="center"
+                              panel={
+                                <ScheduleTaskModal
+                                  farms={farmList}
+                                  plots={plotList}
+                                  workers={workerList}
+                                  cycleOperations={cycleOpOptions}
+                                />
+                              }
+                            >
+                              <Button
+                                type="button"
+                                className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-all shadow-sm"
+                              >
+                                <Icon name="person_add" className="text-xs" />
+                                <span>Assign Staff</span>
+                              </Button>
+                            </ScreenDialog>
                           </td>
                         </tr>
                       );

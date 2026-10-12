@@ -1,13 +1,129 @@
+"use client";
+
 // Ported from the "smart_irrigation_automation_8.5_18" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
+interface ValveZone {
+  id: string;
+  name: string;
+  sensorNode: string;
+  method: string;
+  area: string;
+  moisture: string;
+  moistureLimit: string;
+  moisturePercent: number;
+  flow: string;
+  flowSubtext: string;
+  valveCode: string;
+  valveState: "OPEN" | "CLOSED" | "REGULATED";
+  valvePercentage?: number;
+}
+
+const INITIAL_VALVES: ValveZone[] = [
+  {
+    id: "zone-1",
+    name: "Oke-Ogun Maize Block A",
+    sensorNode: "Zone 1 • Sensor Node #GW-104",
+    method: "Precision Drip",
+    area: "4.2 Hectares",
+    moisture: "26.2%",
+    moistureLimit: "Limit: <28%",
+    moisturePercent: 26.2,
+    flow: "18.5 m³/h",
+    flowSubtext: "42 mins remaining",
+    valveCode: "#SV-01",
+    valveState: "OPEN",
+  },
+  {
+    id: "zone-2",
+    name: "Iseyin Soya Seedling Nursery",
+    sensorNode: "Zone 2 • Sensor Node #GW-109",
+    method: "Micro-Sprinklers",
+    area: "1.8 Hectares",
+    moisture: "34.1%",
+    moistureLimit: "Saturated / Safe",
+    moisturePercent: 78,
+    flow: "0.0 m³/h",
+    flowSubtext: "Next: 18:00 WAT",
+    valveCode: "#SV-02",
+    valveState: "CLOSED",
+  },
+  {
+    id: "zone-3",
+    name: "Egba Cassava Starch Multiplier",
+    sensorNode: "Zone 3 • Fertigation Rig Alpha",
+    method: "Sub-surface Drip",
+    area: "6.0 Hectares",
+    moisture: "29.5%",
+    moistureLimit: "Optimal band",
+    moisturePercent: 55,
+    flow: "NPK 15-15-15 Pulsed",
+    flowSubtext: "Injection 4.2 L/h",
+    valveCode: "#SV-03",
+    valveState: "OPEN",
+  },
+  {
+    id: "zone-4",
+    name: "Sagamu Lowland Faro-44 Rice Paddies",
+    sensorNode: "Zone 4 • Sluice Cluster S-2",
+    method: "Sluice + Solar Lift",
+    area: "12.0 Hectares",
+    moisture: "8.5 cm",
+    moistureLimit: "Water Depth (Flooded)",
+    moisturePercent: 85,
+    flow: "Regulated Flow",
+    flowSubtext: "Gravitational Inflow",
+    valveCode: "#ACT-04",
+    valveState: "REGULATED",
+    valvePercentage: 65,
+  },
+];
+
 export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
+  const [controlMode, setControlMode] = useState<"auto" | "supervised" | "manual">("auto");
+  const [valveFilter, setValveFilter] = useState<"all" | "active" | "idle">("all");
+  const [valves, setValves] = useState<ValveZone[]>(INITIAL_VALVES);
+
+  // Dialog states
+  const [flushCycleOpen, setFlushCycleOpen] = useState(false);
+  const [emergencyStopOpen, setEmergencyStopOpen] = useState(false);
+  const [weatherModelOpen, setWeatherModelOpen] = useState(false);
+  const [adjustGateZone, setAdjustGateZone] = useState<ValveZone | null>(null);
+  const [gatePercent, setGatePercent] = useState<number>(65);
+
+  const filteredValves = valves.filter((v) => {
+    if (valveFilter === "active") return v.valveState === "OPEN" || v.valveState === "REGULATED";
+    if (valveFilter === "idle") return v.valveState === "CLOSED";
+    return true;
+  });
+
+  const toggleValve = (zoneId: string) => {
+    setValves((prev) =>
+      prev.map((v) => {
+        if (v.id === zoneId) {
+          if (v.valveState === "OPEN") {
+            showScreenToast("Valve Closed", `${v.name} (${v.valveCode}) closed. Flow halted.`);
+            return { ...v, valveState: "CLOSED", flow: "0.0 m³/h", flowSubtext: "Manual Hold" };
+          } else {
+            showScreenToast("Valve Opened", `${v.name} (${v.valveCode}) opened. Flow initialized.`);
+            return { ...v, valveState: "OPEN", flow: "16.8 m³/h", flowSubtext: "Active cycle" };
+          }
+        }
+        return v;
+      })
+    );
+  };
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full gap-space-lg">
+        {/* Header section with operational mode selector */}
         <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
           <div className="flex flex-wrap items-center justify-between gap-space-md">
             <div className="flex flex-col">
@@ -20,15 +136,69 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
               <h1 className="font-headline-lg text-headline-lg text-primary mt-1">Smart Irrigation Automation &amp; Water Resource Command</h1>
             </div>
             <div className="flex items-center bg-surface-container p-1 rounded-lg gap-1">
-              <button className="px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all shadow-sm bg-primary-container text-on-primary font-semibold flex items-center gap-1.5" id="mode-auto" type="button"><Icon name="psychology" className="text-[16px]" /> Autonomous Closed-Loop (Active)</button>
-              <button className="px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1.5" id="mode-supervised" type="button"><Icon name="verified_user" className="text-[16px]" /> Supervised Operator</button>
-              <button className="px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1.5" id="mode-manual" type="button"><Icon name="build_circle" className="text-[16px]" /> Emergency Manual</button>
+              <button
+                className={`px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all flex items-center gap-1.5 ${
+                  controlMode === "auto"
+                    ? "bg-primary-container text-on-primary font-semibold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="mode-auto"
+                type="button"
+                onClick={() => {
+                  setControlMode("auto");
+                  showScreenToast("Mode Activated", "Autonomous Closed-Loop Mode active. Rules §8.5 & §18 enforcing auto-lockouts.");
+                }}
+              >
+                <Icon name="psychology" className="text-[16px]" /> Autonomous Closed-Loop (Active)
+              </button>
+              <button
+                className={`px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all flex items-center gap-1.5 ${
+                  controlMode === "supervised"
+                    ? "bg-primary-container text-on-primary font-semibold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="mode-supervised"
+                type="button"
+                onClick={() => {
+                  setControlMode("supervised");
+                  showScreenToast("Mode Activated", "Supervised Operator Mode active. Automated valve commands require confirmation.");
+                }}
+              >
+                <Icon name="verified_user" className="text-[16px]" /> Supervised Operator
+              </button>
+              <button
+                className={`px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all flex items-center gap-1.5 ${
+                  controlMode === "manual"
+                    ? "bg-primary-container text-on-primary font-semibold shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="mode-manual"
+                type="button"
+                onClick={() => {
+                  setControlMode("manual");
+                  showScreenToast("Emergency Manual Engaged", "Manual mode enabled. Solenoids unlocked for direct field actuation.");
+                }}
+              >
+                <Icon name="build_circle" className="text-[16px]" /> Emergency Manual
+              </button>
             </div>
             <div className="flex items-center gap-space-sm">
               {slots?.actions ?? (
                 <>
-                  <button className="px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg flex items-center gap-1.5 transition-colors" type="button"><Icon name="water_drop" className="text-[18px] text-secondary" /> Instant Flush Cycle</button>
-                  <button className="px-space-md py-2 rounded-lg bg-error hover:bg-on-error-container text-on-error font-label-lg text-label-lg flex items-center gap-1.5 transition-colors shadow-sm" type="button"><Icon name="power_settings_new" className="text-[18px]" /> Global Emergency Stop</button>
+                  <button
+                    className="px-space-md py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg flex items-center gap-1.5 transition-colors"
+                    type="button"
+                    onClick={() => setFlushCycleOpen(true)}
+                  >
+                    <Icon name="water_drop" className="text-[18px] text-secondary" /> Instant Flush Cycle
+                  </button>
+                  <button
+                    className="px-space-md py-2 rounded-lg bg-error hover:bg-on-error-container text-on-error font-label-lg text-label-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                    type="button"
+                    onClick={() => setEmergencyStopOpen(true)}
+                  >
+                    <Icon name="power_settings_new" className="text-[18px]" /> Global Emergency Stop
+                  </button>
                 </>
               )}
             </div>
@@ -64,6 +234,8 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
             </div>
           </div>
         </section>
+
+        {/* 6 Key Water Resource Metrics */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-space-md">
           <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-on-surface-variant">
@@ -137,6 +309,8 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
             <span className="bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm px-2 py-0.5 rounded-full w-fit">₦418,000 Diesel Saved</span>
           </div>
         </section>
+
+        {/* NiMet South-West 48H convective radar auto-hold banner */}
         <section className="bg-primary-container text-on-primary rounded-xl p-space-md shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-md">
           <div className="flex items-start gap-space-md">
             <div className="w-12 h-12 rounded-lg bg-surface-container-lowest/10 flex items-center justify-center shrink-0">
@@ -155,9 +329,17 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
               <span className="font-label-sm text-label-sm text-primary-fixed">Conserved in Reservoir</span>
               <span className="font-headline-sm text-headline-sm font-semibold text-secondary-fixed">+140,000 Litres</span>
             </div>
-            <button className="px-space-md py-2 bg-secondary text-on-secondary rounded-lg font-label-lg text-label-lg hover:bg-secondary/90 transition-colors" type="button">Inspect Weather Model</button>
+            <button
+              className="px-space-md py-2 bg-secondary text-on-secondary rounded-lg font-label-lg text-label-lg hover:bg-secondary/90 transition-colors"
+              type="button"
+              onClick={() => setWeatherModelOpen(true)}
+            >
+              Inspect Weather Model
+            </button>
           </div>
         </section>
+
+        {/* Zone Valve Matrix & Wells */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
           <section className="lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col justify-between">
             <div className="flex flex-wrap items-center justify-between gap-space-md mb-space-md">
@@ -166,9 +348,33 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
                 <span className="font-body-sm text-body-sm text-on-surface-variant">Live LoRaWAN telemetry and solenoid state across active cultivation fields</span>
               </div>
               <div className="flex items-center gap-space-xs">
-                <button className="px-space-sm py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-container" type="button">All (16)</button>
-                <button className="px-space-sm py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm" type="button">Active Flowing (12)</button>
-                <button className="px-space-sm py-1 bg-surface-container-low rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-container" type="button">Idle / Held (4)</button>
+                <button
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-colors ${
+                    valveFilter === "all" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                  }`}
+                  type="button"
+                  onClick={() => setValveFilter("all")}
+                >
+                  All (16)
+                </button>
+                <button
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-colors ${
+                    valveFilter === "active" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                  }`}
+                  type="button"
+                  onClick={() => setValveFilter("active")}
+                >
+                  Active Flowing (12)
+                </button>
+                <button
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-colors ${
+                    valveFilter === "idle" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                  }`}
+                  type="button"
+                  onClick={() => setValveFilter("idle")}
+                >
+                  Idle / Held (4)
+                </button>
               </div>
             </div>
             <div className="w-full overflow-x-auto">
@@ -184,154 +390,98 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
                   </tr>
                 </thead>
                 <tbody className="font-body-sm text-body-sm divide-y divide-transparent">
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-space-md px-space-md">
-                      <div className="flex flex-col">
-                        <span className="font-label-lg text-label-lg text-primary font-semibold">Oke-Ogun Maize Block A</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Zone 1 • Sensor Node #GW-104</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Precision Drip</span>
-                        <span className="text-on-surface-variant font-label-sm text-label-sm">4.2 Hectares</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex items-center gap-2">
+                  {filteredValves.map((zone, idx) => (
+                    <tr
+                      key={zone.id}
+                      className={`${idx % 2 === 1 ? "bg-surface-container-low/30" : ""} hover:bg-surface-container-low/50 transition-colors`}
+                    >
+                      <td className="py-space-md px-space-md">
                         <div className="flex flex-col">
-                          <span className="font-label-lg text-label-lg font-semibold text-error">26.2%</span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Limit: &lt;28%</span>
+                          <span className="font-label-lg text-label-lg text-primary font-semibold">{zone.name}</span>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">{zone.sensorNode}</span>
                         </div>
-                        <div className="w-12 bg-surface-container-high h-2 rounded-full overflow-hidden">
-                          <div className="bg-error h-full rounded-full" style={{ width: "26.2%" }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-primary font-semibold">18.5 m³/h</span>
-                        <span className="font-label-sm text-label-sm text-secondary">42 mins remaining</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <span className="bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit"><span className="w-2 h-2 rounded-full bg-secondary" /> #SV-01: OPEN</span>
-                    </td>
-                    <td className="py-space-md px-space-md text-right">
-                      <button className="px-space-sm py-1 bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface rounded font-label-sm text-label-sm transition-colors" type="button">Force Close</button>
-                    </td>
-                  </tr>
-                  <tr className="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors">
-                    <td className="py-space-md px-space-md">
-                      <div className="flex flex-col">
-                        <span className="font-label-lg text-label-lg text-primary font-semibold">Iseyin Soya Seedling Nursery</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Zone 2 • Sensor Node #GW-109</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Micro-Sprinklers</span>
-                        <span className="text-on-surface-variant font-label-sm text-label-sm">1.8 Hectares</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex items-center gap-2">
+                      </td>
+                      <td className="py-space-md px-space-sm">
                         <div className="flex flex-col">
-                          <span className="font-label-lg text-label-lg font-semibold text-secondary">34.1%</span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Saturated / Safe</span>
+                          <span className="font-label-md text-label-md text-on-surface">{zone.method}</span>
+                          <span className="text-on-surface-variant font-label-sm text-label-sm">{zone.area}</span>
                         </div>
-                        <div className="w-12 bg-surface-container-high h-2 rounded-full overflow-hidden">
-                          <div className="bg-secondary h-full rounded-full" style={{ width: "78%" }} />
+                      </td>
+                      <td className="py-space-md px-space-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col">
+                            <span
+                              className={`font-label-lg text-label-lg font-semibold ${
+                                zone.id === "zone-1" ? "text-error" : zone.id === "zone-4" ? "text-primary" : "text-secondary"
+                              }`}
+                            >
+                              {zone.moisture}
+                            </span>
+                            <span className="font-label-sm text-label-sm text-on-surface-variant">{zone.moistureLimit}</span>
+                          </div>
+                          <div className="w-12 bg-surface-container-high h-2 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                zone.id === "zone-1" ? "bg-error" : zone.id === "zone-4" ? "bg-primary-container" : "bg-secondary"
+                              }`}
+                              style={{ width: `${Math.min(zone.moisturePercent, 100)}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface-variant">0.0 m³/h</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Next: 18:00 WAT</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <span className="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit"><span className="w-2 h-2 rounded-full bg-outline" /> #SV-02: CLOSED</span>
-                    </td>
-                    <td className="py-space-md px-space-md text-right">
-                      <button className="px-space-sm py-1 bg-surface-container hover:bg-secondary hover:text-on-secondary text-on-surface rounded font-label-sm text-label-sm transition-colors" type="button">Manual Start</button>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-space-md px-space-md">
-                      <div className="flex flex-col">
-                        <span className="font-label-lg text-label-lg text-primary font-semibold">Egba Cassava Starch Multiplier</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Zone 3 • Fertigation Rig Alpha</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Sub-surface Drip</span>
-                        <span className="text-on-surface-variant font-label-sm text-label-sm">6.0 Hectares</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex items-center gap-2">
+                      </td>
+                      <td className="py-space-md px-space-sm">
                         <div className="flex flex-col">
-                          <span className="font-label-lg text-label-lg font-semibold text-secondary">29.5%</span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Optimal band</span>
+                          <span className="font-label-md text-label-md text-primary font-semibold">{zone.flow}</span>
+                          <span className="font-label-sm text-label-sm text-secondary">{zone.flowSubtext}</span>
                         </div>
-                        <div className="w-12 bg-surface-container-high h-2 rounded-full overflow-hidden">
-                          <div className="bg-secondary h-full rounded-full" style={{ width: "55%" }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-tertiary-container font-semibold">NPK 15-15-15 Pulsed</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Injection 4.2 L/h</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <span className="bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit"><span className="w-2 h-2 rounded-full bg-secondary" /> #SV-03: OPEN</span>
-                    </td>
-                    <td className="py-space-md px-space-md text-right">
-                      <button className="px-space-sm py-1 bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface rounded font-label-sm text-label-sm transition-colors" type="button">Pause Fertigate</button>
-                    </td>
-                  </tr>
-                  <tr className="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors">
-                    <td className="py-space-md px-space-md">
-                      <div className="flex flex-col">
-                        <span className="font-label-lg text-label-lg text-primary font-semibold">Sagamu Lowland Faro-44 Rice Paddies</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Zone 4 • Sluice Cluster S-2</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Sluice + Solar Lift</span>
-                        <span className="text-on-surface-variant font-label-sm text-label-sm">12.0 Hectares</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col">
-                          <span className="font-label-lg text-label-lg font-semibold text-primary">8.5 cm</span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Water Depth (Flooded)</span>
-                        </div>
-                        <div className="w-12 bg-surface-container-high h-2 rounded-full overflow-hidden">
-                          <div className="bg-primary-container h-full rounded-full" style={{ width: "85%" }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-primary font-semibold">Regulated Flow</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">Gravitational Inflow</span>
-                      </div>
-                    </td>
-                    <td className="py-space-md px-space-sm">
-                      <span className="bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit"><span className="w-2 h-2 rounded-full bg-tertiary-container" /> #ACT-04: 65% OPEN</span>
-                    </td>
-                    <td className="py-space-md px-space-md text-right">
-                      <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface rounded font-label-sm text-label-sm transition-colors" type="button">Adjust Gate</button>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="py-space-md px-space-sm">
+                        {zone.valveState === "OPEN" ? (
+                          <span className="bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+                            <span className="w-2 h-2 rounded-full bg-secondary" /> {zone.valveCode}: OPEN
+                          </span>
+                        ) : zone.valveState === "CLOSED" ? (
+                          <span className="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+                            <span className="w-2 h-2 rounded-full bg-outline" /> {zone.valveCode}: CLOSED
+                          </span>
+                        ) : (
+                          <span className="bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+                            <span className="w-2 h-2 rounded-full bg-tertiary-container" /> {zone.valveCode}: {zone.valvePercentage}% OPEN
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-space-md px-space-md text-right">
+                        {zone.id === "zone-4" ? (
+                          <button
+                            className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface rounded font-label-sm text-label-sm transition-colors"
+                            type="button"
+                            onClick={() => {
+                              setAdjustGateZone(zone);
+                              setGatePercent(zone.valvePercentage || 65);
+                            }}
+                          >
+                            Adjust Gate
+                          </button>
+                        ) : zone.valveState === "OPEN" ? (
+                          <button
+                            className="px-space-sm py-1 bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface rounded font-label-sm text-label-sm transition-colors"
+                            type="button"
+                            onClick={() => toggleValve(zone.id)}
+                          >
+                            {zone.id === "zone-3" ? "Pause Fertigate" : "Force Close"}
+                          </button>
+                        ) : (
+                          <button
+                            className="px-space-sm py-1 bg-surface-container hover:bg-secondary hover:text-on-secondary text-on-surface rounded font-label-sm text-label-sm transition-colors"
+                            type="button"
+                            onClick={() => toggleValve(zone.id)}
+                          >
+                            Manual Start
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -343,6 +493,8 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
               <Link className="font-label-sm text-label-sm text-secondary hover:underline font-semibold flex items-center gap-1" href={`/${lang}/account/irrigation`}>Open Actuator Rule Builder <Icon name="arrow_forward" className="text-[16px]" /></Link>
             </div>
           </section>
+
+          {/* Hydraulic Wells & Pumping Terminal */}
           <section className="lg:col-span-4 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -419,6 +571,8 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
             </div>
           </section>
         </div>
+
+        {/* Reservoirs Status */}
         <section className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
           <div className="flex flex-wrap items-center justify-between gap-space-md">
             <div className="flex flex-col">
@@ -495,6 +649,163 @@ export function SmartIrrigation({ lang, slots }: ScreenProps<"actions">) {
             </div>
           </div>
         </section>
+
+        {/* Modal: Instant Flush Cycle */}
+        {flushCycleOpen && (
+          <ScreenDialog
+            title="Initiate Instant Manifold Flush Cycle"
+            subtitle="Purge secondary silt and biofilm sediment across main header (4,200L clean cycle)"
+            onClose={() => setFlushCycleOpen(false)}
+            panel={
+              <div className="flex flex-col gap-space-md">
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Flushes the primary 4-inch manifold at 4.2 bar backwash pressure for 180 seconds. Drainage is diverted to the vegetative retention pond.
+                </p>
+                <div className="flex justify-end gap-space-sm">
+                  <ScreenDialogClose onClick={() => setFlushCycleOpen(false)}>Cancel</ScreenDialogClose>
+                  <button
+                    type="button"
+                    className="px-space-md py-2 bg-secondary text-on-secondary font-label-md text-label-md rounded-lg font-bold hover:bg-secondary/90 transition-colors"
+                    onClick={() => {
+                      setFlushCycleOpen(false);
+                      showScreenToast("Flush Cycle Triggered", "4,200L automatic backwash cycle started across primary sand filters.");
+                    }}
+                  >
+                    Execute Flush Cycle
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        )}
+
+        {/* Modal: Global Emergency Stop */}
+        {emergencyStopOpen && (
+          <ScreenDialog
+            title="GLOBAL EMERGENCY HYDRAULIC STOP"
+            subtitle="Immediate power de-energization across all Grundfos solar pumps &amp; solenoid manifolds"
+            onClose={() => setEmergencyStopOpen(false)}
+            panel={
+              <div className="flex flex-col gap-space-md">
+                <div className="p-space-md bg-error-container/30 rounded-lg">
+                  <span className="font-label-md text-label-md font-bold text-error uppercase">Safety Shutdown Interlock</span>
+                  <p className="font-body-sm text-body-sm text-on-surface mt-1">
+                    Pressing emergency stop cuts 3-phase AC power to dual 15 HP Grundfos borehole pumps and drops header pressure to 0 bar.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-space-sm">
+                  <ScreenDialogClose onClick={() => setEmergencyStopOpen(false)}>Abort</ScreenDialogClose>
+                  <button
+                    type="button"
+                    className="px-space-md py-2 bg-error text-on-error font-label-md text-label-md rounded-lg font-bold hover:bg-error/90 transition-colors shadow-sm"
+                    onClick={() => {
+                      setValves((prev) =>
+                        prev.map((v) => ({ ...v, valveState: "CLOSED", flow: "0.0 m³/h", flowSubtext: "Emergency Shutdown" }))
+                      );
+                      setEmergencyStopOpen(false);
+                      showScreenToast("GLOBAL EMERGENCY STOP ACTIVATED", "All borehole pumps de-energized. System in locked safe state.");
+                    }}
+                  >
+                    Confirm Emergency Cut-off
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        )}
+
+        {/* Modal: Inspect Weather Model */}
+        {weatherModelOpen && (
+          <ScreenDialog
+            title="NiMet &amp; Open-Meteo High-Resolution Precipitation Model"
+            subtitle="Oke-Ogun Catchment Convective Storm Outlook (48-Hour Radar)"
+            onClose={() => setWeatherModelOpen(false)}
+            panel={
+              <div className="flex flex-col gap-space-md">
+                <div className="p-space-md bg-surface-container-low rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-label-md text-label-md text-primary font-bold">Radar Timestamp: 14:00 WAT</span>
+                    <span className="bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold px-2 py-0.5 rounded">
+                      High Confidence (94%)
+                    </span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-on-surface">
+                    Convective cell moving North-East from Dahomey Gap towards Iseyin &amp; Saki. Anticipated accumulation: <strong>14.0mm to 18.5mm</strong> between 23:30 WAT and 03:00 WAT.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-space-sm text-center font-label-sm text-label-sm">
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <span className="text-on-surface-variant block">Tonight (23:30)</span>
+                    <span className="font-bold text-primary">14.0 mm (Thunderstorm)</span>
+                  </div>
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <span className="text-on-surface-variant block">Tomorrow AM</span>
+                    <span className="font-bold text-secondary">2.5 mm (Light Drizzle)</span>
+                  </div>
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <span className="text-on-surface-variant block">Tomorrow PM</span>
+                    <span className="font-bold text-on-surface">0.0 mm (Partly Cloudy)</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-space-sm pt-space-xs">
+                  <ScreenDialogClose onClick={() => setWeatherModelOpen(false)}>Close</ScreenDialogClose>
+                </div>
+              </div>
+            }
+          />
+        )}
+
+        {/* Modal: Adjust Sluice Gate */}
+        {adjustGateZone && (
+          <ScreenDialog
+            title={`Adjust Sluice Inflow: ${adjustGateZone.name}`}
+            subtitle={`${adjustGateZone.sensorNode} · Lowland Faro-44 Rice Paddies`}
+            onClose={() => setAdjustGateZone(null)}
+            panel={
+              <div className="flex flex-col gap-space-md">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">Gate Opening Aperture</span>
+                    <span className="font-headline-sm text-headline-sm font-bold text-primary">{gatePercent}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={gatePercent}
+                    onChange={(e) => setGatePercent(Number(e.target.value))}
+                    className="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-outline font-label-sm text-label-sm mt-1">
+                    <span>0% (Closed)</span>
+                    <span>50%</span>
+                    <span>100% (Full Flood)</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-space-sm pt-space-xs">
+                  <ScreenDialogClose onClick={() => setAdjustGateZone(null)}>Cancel</ScreenDialogClose>
+                  <button
+                    type="button"
+                    className="px-space-md py-1.5 bg-primary text-on-primary font-label-md text-label-md rounded-lg font-semibold hover:bg-primary-container transition-colors"
+                    onClick={() => {
+                      setValves((prev) =>
+                        prev.map((v) =>
+                          v.id === adjustGateZone.id
+                            ? { ...v, valvePercentage: gatePercent, valveState: gatePercent === 0 ? "CLOSED" : "REGULATED" }
+                            : v
+                        )
+                      );
+                      showScreenToast("Sluice Aperture Adjusted", `Gate set to ${gatePercent}%. Flow rate recalculated.`);
+                      setAdjustGateZone(null);
+                    }}
+                  >
+                    Set Gate Aperture
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        )}
       </div>
     </div>
   );

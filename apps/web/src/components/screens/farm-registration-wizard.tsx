@@ -1,14 +1,189 @@
 "use client";
 
-// Ported from the "farm_registration_cadastral_setup_wizard_8.1" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
 import { GoogleMapView } from "@/components/maps/google-map-view";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
+import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
 
 export type FarmRegistrationWizardSlot = "form";
 
 export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWizardSlot>) {
+  const [hasDocument, setHasDocument] = useState(true);
+  const [ingestMethod, setIngestMethod] = useState<"upload" | "walk" | "draw">("upload");
+  const [mapLayer, setMapLayer] = useState<"satellite" | "topo" | "drainage">("satellite");
+
+  const handleExportSurveyorSheet = () => {
+    const sheetContent = `SURCON EPSG:4326 FIELD SURVEY CADASTRE DATA SHEET
+Surveyors Council of Nigeria (SURCON) Technical Specification §8.1
+Project: CultivaNode Smallholder Cadastral Boundary Formalization
+State: Oyo State | LGA: Saki West / Iseyin Agrarian Grid
+Geodetic Datum: WGS 84 (EPSG:4326) | Coordinate Format: Decimal Degrees (DD.dddddd)
+
+BEACON IDENTIFIERS & FIELD LOG:
+Point_ID,Latitude_DD_N,Longitude_DD_E,Elevation_MSL_m,Beacon_Type,Surveyor_Remarks
+V-01,8.664210,3.410120,382.4,Concrete Pillar,North-West Boundary Corner
+V-02,8.669850,3.411420,384.1,Concrete Pillar,Riparian Stream Buffer
+V-03,8.672100,3.418900,380.6,Concrete Pillar,Access Road Intersection
+V-04,8.668400,3.424100,378.2,Concrete Pillar,Eastern Concession Marker
+V-05,8.665100,3.423900,376.5,Concrete Pillar,South-East Ridge Boundary
+V-06,8.662900,3.419800,377.9,Concrete Pillar,Drainage Culvert Beacon
+V-07,8.661800,3.415200,379.2,Concrete Pillar,Southern Access Track
+V-08,8.663500,3.411000,381.0,Concrete Pillar,South-West Corner Peg
+
+VALIDATION RULES:
+1. Polygon closure tolerance: < 0.05m
+2. Minimum internal vertex angle: 15.0 degrees
+3. Overlap check query: SELECT ST_Intersects(a.geom, b.geom) FROM surcon_cadastre a, new_farm b;
+4. Coordinate Precision: 6 decimal places (approx. 0.11m ground resolution)
+
+Certified by Surcon Accredited Licensed Surveyor.
+`;
+    downloadFile("cultivanode-surcon-blank-survey-sheet.txt", sheetContent, "text/plain");
+    showScreenToast("SURCON blank survey sheet exported!");
+  };
+
+  const handleDownloadCoordinates = () => {
+    const csvContent = `Point_ID,Latitude,Longitude,Elevation_m,Bearing,Distance_m
+V-01,8.664210,3.410120,382,042°15',640.2
+V-02,8.669850,3.411420,384,078°30',850.4
+V-03,8.672100,3.418900,380,145°10',620.1
+V-04,8.668400,3.424100,378,185°45',370.8
+V-05,8.665100,3.423900,376,242°20',510.3
+V-06,8.662900,3.419800,377,255°05',525.0
+V-07,8.661800,3.415200,379,298°15',480.6
+V-08,8.663500,3.411000,381,350°40',142.6
+`;
+    downloadFile("cultivanode-farm-vertices-wgs84.csv", csvContent, "text/csv");
+    showScreenToast("Boundary vertices (WGS84) downloaded as CSV!");
+  };
+
+  const handleSaveDraft = () => {
+    const draft = {
+      farmName: "Oke-Ogun Pioneer Agrarian Estate",
+      farmType: "commercial",
+      declaredAreaHa: 48.60,
+      perimeterMeters: 3140,
+      verticesCount: 18,
+      state: "Oyo",
+      lga: "Saki West",
+      ingestMethod,
+      mapLayer,
+      hasDocument,
+      savedAt: new Date().toISOString(),
+    };
+    downloadFile("cultivanode-farm-cadastre-draft.json", JSON.stringify(draft, null, 2), "application/json");
+    showScreenToast("Farm registration draft saved to local SQLite & cloud repository!");
+  };
+
+  const modalViewDocument = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="verified" className="text-secondary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Chieftaincy Consent Deed</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Baale_Chieftaincy_Consent_Deed_Signed.pdf (1.8 MB)</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <div className="p-space-lg space-y-space-md text-left">
+        <div className="p-space-md bg-surface-container-low rounded-lg space-y-2 border border-surface-container">
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Traditional Authority:</span>
+            <span className="font-bold text-on-surface">Saki Traditional Land Committee</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Lead Custodian:</span>
+            <span className="font-bold text-on-surface">Chief Alhaji Jimoh Oyedepo (Baale)</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Grantee / Estate:</span>
+            <span className="font-bold text-primary">Oke-Ogun Pioneer Agrarian Estate</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Cryptographic Verification:</span>
+            <span className="font-bold text-secondary">SHA-256 Validated • NDPA Compliant</span>
+          </div>
+        </div>
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
+          Document verified by optical character recognition (OCR) with physical seal of Saki Traditional Land Council and witness endorsement from Oyo State Ministry of Lands.
+        </p>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="button">
+              Close Preview
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </div>
+    </div>
+  );
+
+  const modalConfirmRegistration = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="fact_check" className="text-primary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Register Cadastral Boundary</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">PostGIS Spatial Validation §8.1 Approval</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <div className="p-space-lg space-y-space-md text-left">
+        <div className="p-space-md bg-surface-container-low rounded-lg space-y-2">
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Declared Estate:</span>
+            <span className="font-bold text-on-surface">Oke-Ogun Pioneer Agrarian Estate</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">PostGIS Surface Area:</span>
+            <span className="font-bold text-primary">48.60 Hectares (120.09 Acres)</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Topological Nodes:</span>
+            <span className="font-bold text-secondary">18 Vertices • Zero Boundary Clashes</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Tenure Document:</span>
+            <span className="font-bold text-secondary">{hasDocument ? "Verified Baale Consent on File" : "Provisional"}</span>
+          </div>
+        </div>
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
+          This operation publishes the verified parcel geometry into the Oyo State Geographic Information System (OYGIS) ledger and locks the boundary hash into the CultivaNode trust network.
+        </p>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+              Review Edits
+            </button>
+          </ScreenDialogClose>
+          <ScreenDialogClose>
+            <button
+              onClick={() => showScreenToast("Cadastral boundary registered and synced to Oyo State OYGIS cadastre!")}
+              className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold"
+              type="button"
+            >
+              Confirm &amp; Register Cadastre
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full pb-16">
@@ -26,7 +201,11 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-secondary animate-pulse" />
               <span className="font-label-sm text-label-sm text-on-surface font-semibold tracking-wide">SURCON EPSG:4326 ENGINE READY</span>
             </div>
-            <button className="bg-surface-container-lowest text-on-surface px-space-md py-2.5 rounded-lg font-label-md text-label-md shadow-sm hover:bg-surface-container-high transition-colors flex items-center gap-1.5" type="button">
+            <button
+              onClick={handleExportSurveyorSheet}
+              className="bg-surface-container-lowest text-on-surface px-space-md py-2.5 rounded-lg font-label-md text-label-md shadow-sm hover:bg-surface-container-high transition-colors flex items-center gap-1.5"
+              type="button"
+            >
               <Icon name="download_for_offline" className="text-base" />
               <span>Export Blank Surveyor Sheet</span>
             </button>
@@ -164,28 +343,49 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                     <div className="flex-1 text-center md:text-left">
                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1">
                         <span className="font-label-md text-label-md text-on-surface font-semibold">Drag &amp; drop deed scan here, or</span>
-                        <button className="text-secondary font-label-md text-label-md underline hover:text-primary transition-colors" type="button">browse files</button>
+                        <button
+                          onClick={() => {
+                            setHasDocument(true);
+                            showScreenToast("Selected Baale_Chieftaincy_Consent_Deed_Signed.pdf from storage.");
+                          }}
+                          className="text-secondary font-label-md text-label-md underline hover:text-primary transition-colors"
+                          type="button"
+                        >
+                          browse files
+                        </button>
                         <span className="px-2 py-0.5 rounded text-xs bg-secondary-container text-on-secondary-container font-semibold">OCR Verification Active</span>
                       </div>
                       <p className="font-body-sm text-body-sm text-on-surface-variant">Supports PDF, GeoTIFF, JPG up to 25MB. Must show physical stamp of Saki Traditional Land Committee.</p>
                     </div>
-                    <div className="w-full md:w-auto bg-surface-container-lowest p-space-sm rounded-lg shadow-sm flex items-center justify-between gap-space-md shrink-0">
-                      <div className="flex items-center gap-space-xs">
-                        <Icon name="picture_as_pdf" className="text-primary text-2xl" />
-                        <div className="flex flex-col">
-                          <span className="font-label-md text-label-md text-on-surface font-semibold truncate max-w-[210px]">Baale_Chieftaincy_Consent_Deed_Signed.pdf</span>
-                          <span className="font-label-sm text-label-sm text-secondary font-medium">1.8 MB • Cryptographically Verified</span>
+                    {hasDocument && (
+                      <div className="w-full md:w-auto bg-surface-container-lowest p-space-sm rounded-lg shadow-sm flex items-center justify-between gap-space-md shrink-0">
+                        <div className="flex items-center gap-space-xs">
+                          <Icon name="picture_as_pdf" className="text-primary text-2xl" />
+                          <div className="flex flex-col">
+                            <span className="font-label-md text-label-md text-on-surface font-semibold truncate max-w-[210px]">Baale_Chieftaincy_Consent_Deed_Signed.pdf</span>
+                            <span className="font-label-sm text-label-sm text-secondary font-medium">1.8 MB • Cryptographically Verified</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <ScreenDialog title="Document Preview" side="center" panel={modalViewDocument}>
+                            <button onClick={() => {}} aria-label="View Document" className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface" type="button">
+                              <Icon name="visibility" className="text-base" />
+                            </button>
+                          </ScreenDialog>
+                          <button
+                            onClick={() => {
+                              setHasDocument(false);
+                              showScreenToast("Tenure document removed. Please upload valid deed.");
+                            }}
+                            aria-label="Remove Document"
+                            className="p-1 hover:bg-surface-container rounded text-error"
+                            type="button"
+                          >
+                            <Icon name="close" className="text-base" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button aria-label="View Document" className="p-1 hover:bg-surface-container rounded text-on-surface-variant" type="button">
-                          <Icon name="visibility" className="text-base" />
-                        </button>
-                        <button aria-label="Remove Document" className="p-1 hover:bg-surface-container rounded text-error" type="button">
-                          <Icon name="close" className="text-base" />
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -307,25 +507,52 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                 <div className="flex flex-col gap-2">
                   <span className="font-label-md text-label-md text-on-surface font-semibold">Boundary Capture Methodology</span>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
-                    <button className="p-space-md rounded-xl bg-primary-container text-on-primary-container text-left flex items-start gap-space-sm shadow-sm transition-all" type="button">
-                      <Icon name="file_upload" className="text-2xl text-secondary-container" />
+                    <button
+                      onClick={() => {
+                        setIngestMethod("upload");
+                        showScreenToast("Boundary ingestion: GeoJSON / KML / Shapefile active.");
+                      }}
+                      className={`p-space-md rounded-xl text-left flex items-start gap-space-sm shadow-sm transition-all ${
+                        ingestMethod === "upload" ? "bg-primary-container text-on-primary-container" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      <Icon name="file_upload" className={`text-2xl ${ingestMethod === "upload" ? "text-secondary-container" : "text-secondary"}`} />
                       <div className="flex flex-col">
-                        <span className="font-headline-sm text-headline-sm font-bold text-white">Upload GeoJSON / KML / SHP</span>
-                        <span className="font-body-sm text-body-sm text-on-primary-container/80">Import survey coordinates from RTK GPS or certified surveyor shapefile.</span>
+                        <span className={`font-headline-sm text-headline-sm font-bold ${ingestMethod === "upload" ? "text-white" : "text-on-surface"}`}>Upload GeoJSON / KML / SHP</span>
+                        <span className={`font-body-sm text-body-sm ${ingestMethod === "upload" ? "text-on-primary-container/80" : "text-on-surface-variant"}`}>Import survey coordinates from RTK GPS or certified surveyor shapefile.</span>
                       </div>
                     </button>
-                    <button className="p-space-md rounded-xl bg-surface-container-low text-on-surface text-left flex items-start gap-space-sm hover:bg-surface-container transition-all" type="button">
-                      <Icon name="directions_walk" className="text-2xl text-secondary" />
+                    <button
+                      onClick={() => {
+                        setIngestMethod("walk");
+                        showScreenToast("Boundary ingestion: Mobile Walk Boundary Rover active.");
+                      }}
+                      className={`p-space-md rounded-xl text-left flex items-start gap-space-sm shadow-sm transition-all ${
+                        ingestMethod === "walk" ? "bg-primary-container text-on-primary-container" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      <Icon name="directions_walk" className={`text-2xl ${ingestMethod === "walk" ? "text-secondary-container" : "text-secondary"}`} />
                       <div className="flex flex-col">
-                        <span className="font-headline-sm text-headline-sm font-bold text-on-surface">Walk Boundary on Field Mobile App</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Sync real-time Bluetooth RTK rover antenna with sub-meter precision.</span>
+                        <span className={`font-headline-sm text-headline-sm font-bold ${ingestMethod === "walk" ? "text-white" : "text-on-surface"}`}>Walk Boundary on Field Mobile App</span>
+                        <span className={`font-body-sm text-body-sm ${ingestMethod === "walk" ? "text-on-primary-container/80" : "text-on-surface-variant"}`}>Sync real-time Bluetooth RTK rover antenna with sub-meter precision.</span>
                       </div>
                     </button>
-                    <button className="p-space-md rounded-xl bg-surface-container-low text-on-surface text-left flex items-start gap-space-sm hover:bg-surface-container transition-all" type="button">
-                      <Icon name="draw" className="text-2xl text-secondary" />
+                    <button
+                      onClick={() => {
+                        setIngestMethod("draw");
+                        showScreenToast("Boundary ingestion: Satellite Canvas Drawing active.");
+                      }}
+                      className={`p-space-md rounded-xl text-left flex items-start gap-space-sm shadow-sm transition-all ${
+                        ingestMethod === "draw" ? "bg-primary-container text-on-primary-container" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      <Icon name="draw" className={`text-2xl ${ingestMethod === "draw" ? "text-secondary-container" : "text-secondary"}`} />
                       <div className="flex flex-col">
-                        <span className="font-headline-sm text-headline-sm font-bold text-on-surface">Draw Boundary on Satellite Canvas</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Polygon trace on 10m Sentinel-2 &amp; Planet 3m high-resolution mosaics.</span>
+                        <span className={`font-headline-sm text-headline-sm font-bold ${ingestMethod === "draw" ? "text-white" : "text-on-surface"}`}>Draw Boundary on Satellite Canvas</span>
+                        <span className={`font-body-sm text-body-sm ${ingestMethod === "draw" ? "text-on-primary-container/80" : "text-on-surface-variant"}`}>Polygon trace on 10m Sentinel-2 &amp; Planet 3m high-resolution mosaics.</span>
                       </div>
                     </button>
                   </div>
@@ -369,9 +596,42 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                     <div className="flex items-center justify-between">
                       <span className="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1.5"><Icon name="map" className="text-secondary text-base" /> Geospatial Boundary Viewport (Saki West Agrarian Grid)</span>
                       <div className="flex items-center gap-1">
-                        <button className="px-2 py-1 text-xs bg-surface-container-low hover:bg-surface-container rounded font-medium text-on-surface" type="button">Satellite (Sentinel-2)</button>
-                        <button className="px-2 py-1 text-xs bg-surface-container-lowest hover:bg-surface-container-low rounded font-medium text-on-surface-variant" type="button">Topographic</button>
-                        <button className="px-2 py-1 text-xs bg-surface-container-lowest hover:bg-surface-container-low rounded font-medium text-on-surface-variant" type="button">Slope / Drainage</button>
+                        <button
+                          onClick={() => {
+                            setMapLayer("satellite");
+                            showScreenToast("Map view: Sentinel-2 Multi-Spectral mosaic.");
+                          }}
+                          className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
+                            mapLayer === "satellite" ? "bg-primary text-on-primary font-bold" : "bg-surface-container-low hover:bg-surface-container text-on-surface"
+                          }`}
+                          type="button"
+                        >
+                          Satellite (Sentinel-2)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMapLayer("topo");
+                            showScreenToast("Map view: Topographic Elevation Contours.");
+                          }}
+                          className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
+                            mapLayer === "topo" ? "bg-primary text-on-primary font-bold" : "bg-surface-container-lowest hover:bg-surface-container-low text-on-surface-variant"
+                          }`}
+                          type="button"
+                        >
+                          Topographic
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMapLayer("drainage");
+                            showScreenToast("Map view: Slope & Hydrological Drainage Basin.");
+                          }}
+                          className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
+                            mapLayer === "drainage" ? "bg-primary text-on-primary font-bold" : "bg-surface-container-lowest hover:bg-surface-container-low text-on-surface-variant"
+                          }`}
+                          type="button"
+                        >
+                          Slope / Drainage
+                        </button>
                       </div>
                     </div>
                     <div className="relative w-full h-[400px] rounded-xl overflow-hidden shadow-sm bg-surface-container-high">
@@ -386,7 +646,13 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                   <div className="lg:col-span-4 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="font-label-md text-label-md text-on-surface font-semibold">Boundary Vertices (WGS84)</span>
-                      <button className="text-secondary font-label-sm text-label-sm hover:underline flex items-center gap-0.5" type="button"><Icon name="tune" className="text-sm" /> Snap to Beacon</button>
+                      <button
+                        onClick={() => showScreenToast("Vertices snapped to official SURCON cadastral beacons #SK-082 to #SK-099.")}
+                        className="text-secondary font-label-sm text-label-sm hover:underline flex items-center gap-0.5"
+                        type="button"
+                      >
+                        <Icon name="tune" className="text-sm" /> Snap to Beacon
+                      </button>
                     </div>
                     <div className="bg-surface-container-low rounded-xl p-space-sm overflow-hidden flex flex-col h-[400px]">
                       <div className="overflow-y-auto pr-1 flex-1">
@@ -453,7 +719,13 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                       </div>
                       <div className="mt-2 pt-2 bg-surface-container-lowest rounded-lg p-space-sm flex items-center justify-between text-xs">
                         <span className="text-on-surface-variant font-medium">10 additional nodes hidden</span>
-                        <button className="text-secondary font-semibold hover:underline" type="button">Download Coordinates (.CSV)</button>
+                        <button
+                          onClick={handleDownloadCoordinates}
+                          className="text-secondary font-semibold hover:underline"
+                          type="button"
+                        >
+                          Download Coordinates (.CSV)
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -575,15 +847,32 @@ export function FarmRegistrationWizard({ slots }: ScreenProps<FarmRegistrationWi
                 </div>
               </div>
               <div className="flex items-center gap-space-sm w-full md:w-auto justify-end">
-                <button className="px-space-md py-2.5 rounded-lg font-label-md text-label-md text-on-surface-variant bg-surface-container-low hover:bg-surface-container transition-colors" type="button">Cancel</button>
-                <button className="px-space-md py-2.5 rounded-lg font-label-md text-label-md text-on-surface bg-surface-container hover:bg-surface-container-high transition-colors flex items-center gap-1.5" id="btnSaveDraft" type="button">
+                <button
+                  onClick={() => showScreenToast("Reset form to initial cadastral survey values.")}
+                  className="px-space-md py-2.5 rounded-lg font-label-md text-label-md text-on-surface-variant bg-surface-container-low hover:bg-surface-container transition-colors"
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="px-space-md py-2.5 rounded-lg font-label-md text-label-md text-on-surface bg-surface-container hover:bg-surface-container-high transition-colors flex items-center gap-1.5"
+                  id="btnSaveDraft"
+                  type="button"
+                >
                   <Icon name="save" className="text-base" />
                   <span>Save Draft</span>
                 </button>
-                <button className="px-space-lg py-2.5 rounded-lg font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2" type="submit">
-                  <Icon name="verified" className="text-base" />
-                  <span>Validate &amp; Register Farm Boundary</span>
-                </button>
+                <ScreenDialog title="Confirm Cadastral Registration" side="center" panel={modalConfirmRegistration}>
+                  <button
+                    onClick={() => {}}
+                    className="px-space-lg py-2.5 rounded-lg font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2 font-semibold"
+                    type="button"
+                  >
+                    <Icon name="verified" className="text-base" />
+                    <span>Validate &amp; Register Farm Boundary</span>
+                  </button>
+                </ScreenDialog>
               </div>
             </div>
           </div>

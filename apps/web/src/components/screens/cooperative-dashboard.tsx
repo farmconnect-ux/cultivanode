@@ -1,9 +1,72 @@
-// Ported from the "cooperative_management_dashboard_10.2" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+"use client";
+
+// Ported from the "cooperative_management_dashboard_10.2" design. Interactive client workspace
+// with live cluster tabs, CSV audit extracts, member enrollment modal, tractor booking, and committee signing.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { downloadFile } from "@/lib/download";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function CooperativeDashboard(_props: ScreenProps) {
+  const [activeTab, setActiveTab] = useState<"clusters" | "members" | "machinery" | "inputs" | "payouts">("clusters");
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showTractorModal, setShowTractorModal] = useState(false);
+  const [enrolledMembersCount, setEnrolledMembersCount] = useState(1840);
+  const [committeeSigned, setCommitteeSigned] = useState<Record<string, boolean>>({});
+
+  // Form states
+  const [memberName, setMemberName] = useState("");
+  const [memberNin, setMemberNin] = useState("");
+  const [memberCluster, setMemberCluster] = useState("Iseyin Zone");
+  const [memberLand, setMemberLand] = useState("2.5");
+  const [memberCrop, setMemberCrop] = useState("Grain Maize");
+
+  const [selectedMachine, setSelectedMachine] = useState("Massey Ferguson 375 #TR-04");
+  const [tractorDate, setTractorDate] = useState("2026-04-18");
+  const [tractorPlot, setTractorPlot] = useState("Saki West Plot 14");
+  const [tractorAcreage, setTractorAcreage] = useState("10");
+
+  const handleAuditExtract = () => {
+    const csv = [
+      "Society_Cluster,Members,Land_Ha,Primary_Crop,Disbursed_NGN,Status",
+      "Iseyin Savanna Growers Wing,420,890,SAMMAZ-52 Maize & Soybeans,37800000,Active",
+      "Saki West Outgrower Co-op,510,1120,Foundation Seed Multiplier,34800000,Active",
+      "Ago-Are Cassava Syndicate,380,640,Industrial Wet Cassava,12600000,Active",
+      "Okaka & Otu Grain Alliance,530,800,Feed-grade Maize,147000000,Active",
+      "",
+      "Total_Members,Total_Ha,Collective_Escrow_Vault_NGN,Bank_Reconciliation",
+      `${enrolledMembersCount},3450,86400000.00,Zenith Bank PLC 100% BALANCED`,
+    ].join("\n");
+
+    downloadFile(`cooperative-audit-extract-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    showScreenToast("Cooperative Audit Extract (.csv) downloaded successfully");
+  };
+
+  const handleEnrollSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!memberName.trim() || !memberNin.trim()) {
+      showScreenToast("Please provide member name and NIN");
+      return;
+    }
+    setEnrolledMembersCount((prev) => prev + 1);
+    setShowEnrollModal(false);
+    setMemberName("");
+    setMemberNin("");
+    showScreenToast(`Enrolled: ${memberName} (${memberCluster}) · NIN Verified`);
+  };
+
+  const handleReserveTractor = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowTractorModal(false);
+    showScreenToast(`Reserved ${selectedMachine} for ${tractorPlot} on ${tractorDate}`);
+  };
+
+  const handleSignCommittee = (id: string, label: string) => {
+    setCommitteeSigned((prev) => ({ ...prev, [id]: true }));
+    showScreenToast(`Executive Signature Broadcast: ${label}`);
+  };
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -45,11 +108,19 @@ export function CooperativeDashboard(_props: ScreenProps) {
               <div className="flex items-center gap-space-xs">
                 {_props.slots?.actions ?? (
                   <>
-                    <button className="h-10 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
+                    <button
+                      onClick={handleAuditExtract}
+                      className="h-10 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                      type="button"
+                    >
                       <Icon name="download" className="text-[18px]" />
                       <span>Audit Extract</span>
                     </button>
-                    <button className="h-10 px-space-md rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" type="button">
+                    <button
+                      onClick={() => setShowEnrollModal(true)}
+                      className="h-10 px-space-md rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                      type="button"
+                    >
                       <Icon name="add_circle" className="text-[18px]" />
                       <span>New Member Enrolment</span>
                     </button>
@@ -68,14 +139,14 @@ export function CooperativeDashboard(_props: ScreenProps) {
               </span>
             </div>
             <div className="mt-space-sm">
-              <div className="font-metric-num text-metric-num text-on-surface tracking-tight">1,840</div>
+              <div className="font-metric-num text-metric-num text-on-surface tracking-tight">{enrolledMembersCount.toLocaleString()}</div>
               <div className="font-label-sm text-label-sm text-secondary font-semibold flex items-center gap-1 mt-0.5">
                 <Icon name="check_circle" className="text-[14px]" />
                 <span>100% NIN &amp; Biometric Verified</span>
               </div>
             </div>
             <div className="mt-space-sm pt-space-xs text-body-sm font-body-sm text-on-surface-variant flex justify-between bg-surface-container-low px-2 py-1 rounded">
-              <span>Men: 1,420</span>
+              <span>Men: {(enrolledMembersCount - 420).toLocaleString()}</span>
               <span className="font-semibold text-primary">Women: 420 (23%)</span>
             </div>
           </div>
@@ -159,23 +230,63 @@ export function CooperativeDashboard(_props: ScreenProps) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-space-xs p-1.5 bg-surface-container-lowest rounded-xl shadow-sm mb-space-lg">
-          <button className="px-space-md py-2 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm flex items-center gap-2" type="button">
+          <button
+            onClick={() => setActiveTab("clusters")}
+            className={`px-space-md py-2 rounded-lg font-label-lg text-label-lg shadow-sm flex items-center gap-2 transition-all ${
+              activeTab === "clusters"
+                ? "bg-primary-container text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            }`}
+            type="button"
+          >
             <Icon name="hub" className="text-[18px]" />
             <span>Village Clusters &amp; Production (4)</span>
           </button>
-          <button className="px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-label-lg text-label-lg flex items-center gap-2" type="button">
+          <button
+            onClick={() => setActiveTab("members")}
+            className={`px-space-md py-2 rounded-lg font-label-lg text-label-lg shadow-sm flex items-center gap-2 transition-all ${
+              activeTab === "members"
+                ? "bg-primary-container text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            }`}
+            type="button"
+          >
             <Icon name="badge" className="text-[18px]" />
-            <span>Member Directory &amp; Landholdings (1,840)</span>
+            <span>Member Directory &amp; Landholdings ({enrolledMembersCount.toLocaleString()})</span>
           </button>
-          <button className="px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-label-lg text-label-lg flex items-center gap-2" type="button">
+          <button
+            onClick={() => setActiveTab("machinery")}
+            className={`px-space-md py-2 rounded-lg font-label-lg text-label-lg shadow-sm flex items-center gap-2 transition-all ${
+              activeTab === "machinery"
+                ? "bg-primary-container text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            }`}
+            type="button"
+          >
             <Icon name="agriculture" className="text-[18px]" />
             <span>Shared Machinery &amp; Calendar</span>
           </button>
-          <button className="px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-label-lg text-label-lg flex items-center gap-2" type="button">
+          <button
+            onClick={() => setActiveTab("inputs")}
+            className={`px-space-md py-2 rounded-lg font-label-lg text-label-lg shadow-sm flex items-center gap-2 transition-all ${
+              activeTab === "inputs"
+                ? "bg-primary-container text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            }`}
+            type="button"
+          >
             <Icon name="local_shipping" className="text-[18px]" />
             <span>Bulk Input Procurement</span>
           </button>
-          <button className="px-space-md py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-label-lg text-label-lg flex items-center gap-2" type="button">
+          <button
+            onClick={() => setActiveTab("payouts")}
+            className={`px-space-md py-2 rounded-lg font-label-lg text-label-lg shadow-sm flex items-center gap-2 transition-all ${
+              activeTab === "payouts"
+                ? "bg-primary-container text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            }`}
+            type="button"
+          >
             <Icon name="payments" className="text-[18px]" />
             <span>Member Off-take Payouts &amp; Dividends</span>
           </button>
@@ -311,7 +422,11 @@ export function CooperativeDashboard(_props: ScreenProps) {
                     <p className="font-body-sm text-body-sm text-on-surface-variant">14 Cooperative-Owned Heavy Implements · Subsidized Member Booking Rates</p>
                   </div>
                 </div>
-                <button className="h-9 px-space-md rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 self-start" type="button">
+                <button
+                  onClick={() => setShowTractorModal(true)}
+                  className="h-9 px-space-md rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-lg text-label-lg transition-colors flex items-center gap-1.5 self-start"
+                  type="button"
+                >
                   <Icon name="calendar_month" className="text-[16px]" />
                   <span>Reserve Tractor Slot</span>
                 </button>
@@ -600,14 +715,28 @@ export function CooperativeDashboard(_props: ScreenProps) {
                     <span className="font-label-md text-label-md font-semibold text-on-surface">Tractor Fleet Overhaul (3 Units)</span>
                     <span className="font-body-sm text-body-sm text-on-surface-variant">₦1,800,000 · Machinery Sub-committee</span>
                   </div>
-                  <button className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-colors shadow-sm" type="button">Sign</button>
+                  <button
+                    onClick={() => handleSignCommittee("fleet", "Tractor Fleet Overhaul (3 Units)")}
+                    disabled={committeeSigned["fleet"]}
+                    className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-colors shadow-sm disabled:opacity-50"
+                    type="button"
+                  >
+                    {committeeSigned["fleet"] ? "Signed" : "Sign"}
+                  </button>
                 </div>
                 <div className="p-space-sm rounded-lg bg-surface-container-low flex items-center justify-between gap-space-sm">
                   <div className="flex flex-col">
                     <span className="font-label-md text-label-md font-semibold text-on-surface">Member Welfare Credit Guarantees</span>
                     <span className="font-body-sm text-body-sm text-on-surface-variant">2 Applications · Zenith Bank Window</span>
                   </div>
-                  <button className="px-space-sm py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm" type="button">Review</button>
+                  <button
+                    onClick={() => handleSignCommittee("welfare", "Member Welfare Credit Guarantees")}
+                    disabled={committeeSigned["welfare"]}
+                    className="px-space-sm py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm disabled:opacity-50"
+                    type="button"
+                  >
+                    {committeeSigned["welfare"] ? "Reviewed" : "Review"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -633,6 +762,206 @@ export function CooperativeDashboard(_props: ScreenProps) {
             <span className="text-outline">CultivaNode Core Cooperative Subsystem §10.2</span>
           </div>
         </div>
+
+        {/* Member Enrollment Modal */}
+        {showEnrollModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="person_add" className="text-[22px]" />
+                  <span>New Member Enrolment (§10.2 Registry)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEnrollModal(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEnrollSubmit} className="flex flex-col gap-space-md">
+                <div className="flex flex-col gap-1">
+                  <label className="text-label-sm font-semibold text-on-surface">Member Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={memberName}
+                    onChange={(e) => setMemberName(e.target.value)}
+                    placeholder="e.g. Alaba Olatunji"
+                    className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-space-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">National ID (NIN)</label>
+                    <input
+                      type="text"
+                      required
+                      value={memberNin}
+                      onChange={(e) => setMemberNin(e.target.value)}
+                      placeholder="11 digits"
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Village Cluster</label>
+                    <select
+                      value={memberCluster}
+                      onChange={(e) => setMemberCluster(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    >
+                      <option value="Iseyin Zone">Cluster A · Iseyin Zone</option>
+                      <option value="Saki Highland">Cluster B · Saki Highland</option>
+                      <option value="Ago-Are Corridor">Cluster C · Ago-Are Corridor</option>
+                      <option value="Okaka & Otu Valley">Cluster D · Okaka &amp; Otu Valley</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-space-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Landholding (Hectares)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      value={memberLand}
+                      onChange={(e) => setMemberLand(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Primary Crop</label>
+                    <select
+                      value={memberCrop}
+                      onChange={(e) => setMemberCrop(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    >
+                      <option value="Grain Maize">Grain Maize (SAMMAZ-52)</option>
+                      <option value="Industrial Cassava">Industrial Cassava (TME-419)</option>
+                      <option value="Industrial Soya">Industrial Soybeans</option>
+                      <option value="Lowland Paddy Rice">Lowland Paddy Rice</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                  <button
+                    type="button"
+                    onClick={() => setShowEnrollModal(false)}
+                    className="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    onClick={() => {}}
+                    className="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Confirm &amp; Link Biometrics
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Tractor Reservation Modal */}
+        {showTractorModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="agriculture" className="text-[22px]" />
+                  <span>Reserve Heavy Machinery Slot</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTractorModal(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <form onSubmit={handleReserveTractor} className="flex flex-col gap-space-md">
+                <div className="flex flex-col gap-1">
+                  <label className="text-label-sm font-semibold text-on-surface">Machinery Unit</label>
+                  <select
+                    value={selectedMachine}
+                    onChange={(e) => setSelectedMachine(e.target.value)}
+                    className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  >
+                    <option value="Massey Ferguson 375 #TR-04">Massey Ferguson 375 #TR-04 (Harrowing / Tillage)</option>
+                    <option value="Multi-crop Thresher #TH-02">Multi-crop Thresher #TH-02 (Post-Harvest)</option>
+                    <option value="Boom Sprayer #SP-01">Boom Sprayer #SP-01 (Agrochemical Application)</option>
+                    <option value="Combine Harvester #CH-01">Combine Harvester #CH-01 (Grain Reaping)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-space-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Target Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={tractorDate}
+                      onChange={(e) => setTractorDate(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Target Acreage (Ha)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      required
+                      value={tractorAcreage}
+                      onChange={(e) => setTractorAcreage(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-label-sm font-semibold text-on-surface">Farm Cadastral Lot / Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={tractorPlot}
+                    onChange={(e) => setTractorPlot(e.target.value)}
+                    className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="p-space-xs bg-surface-container-low rounded text-label-sm text-on-surface-variant flex items-center justify-between">
+                  <span>Subsidized Member Rate:</span>
+                  <span className="font-bold text-primary">₦18,500 / Ha (Direct Union Sweep)</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                  <button
+                    type="button"
+                    onClick={() => setShowTractorModal(false)}
+                    className="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    onClick={() => {}}
+                    className="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Confirm Booking
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

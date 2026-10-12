@@ -187,12 +187,12 @@ export default async function OrderDetailPage({
                   Confirm Delivery &amp; Release Escrow
                 </Button>
               </form>
-              <button
-                type="button"
+              <Link
+                href={`/${lang}/account/support?dispute_order=${order.id}&fulfilment=${f.id}`}
                 className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-danger hover:bg-red-100 transition"
               >
                 Dispute
-              </button>
+              </Link>
             </div>
           </Card>
         ))}

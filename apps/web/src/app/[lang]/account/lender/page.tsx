@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { LenderHub } from "@/components/screens/lender-hub";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -52,10 +53,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/lender
             Apply for Agricultural Credit Facility
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -122,20 +121,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/lender
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Submit Credit Appraisal
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -155,13 +149,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/lender
           actions: (
             <div className="flex items-center gap-space-sm">
               <ScreenDialog title="Apply for Facility" side="center" panel={applyModal}>
-                <button
-                  type="button"
+                <Button
                   className="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-lg flex items-center gap-1.5 hover:bg-primary-container transition-all shadow-sm font-semibold"
                 >
                   <Icon name="add_circle" className="text-[18px]" />
                   <span>+ New Facility Appraisal</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/reports`}

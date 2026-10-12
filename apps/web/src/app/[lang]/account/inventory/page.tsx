@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { InventoryHub } from "@/components/screens/inventory-hub";
@@ -82,10 +83,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
             <p className="font-body-sm text-body-sm text-on-surface-variant">Add new item with storehouse allocation &amp; unit valuation</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -228,14 +227,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
         </div>
 
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
             Confirm Stock Reception
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -251,10 +248,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
             <p className="font-body-sm text-body-sm text-on-surface-variant">Issue to operations, log depletion, or record restock</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -340,14 +335,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
         </div>
 
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
             Authorize &amp; Update Stock
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -363,10 +356,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
             <p className="font-body-sm text-body-sm text-on-surface-variant">Register silo, warehouse, cold room or shed</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -418,14 +409,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
         </div>
 
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
             Create Location
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -445,33 +434,33 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
           actions: (
             <div className="flex flex-wrap items-center gap-space-xs">
               <ScreenDialog title="Register SKU / Stock In" side="center" panel={modalReceiveStock}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all"
                   type="button"
                 >
                   <Icon name="add_shopping_cart" className="text-lg" />
                   <span>Receive Goods / Stock In</span>
-                </button>
+                </Button>
               </ScreenDialog>
 
               <ScreenDialog title="Record Stock Movement" side="center" panel={modalIssueStock}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors"
                   type="button"
                 >
                   <Icon name="output" className="text-lg" />
                   <span>Issue Stock to Operation</span>
-                </button>
+                </Button>
               </ScreenDialog>
 
               <ScreenDialog title="New Storage Location" side="center" panel={modalAddLocation}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-sm py-2.5 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm"
                   type="button"
                 >
                   <Icon name="warehouse" className="text-lg" />
                   <span>Add Storehouse</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),
@@ -679,12 +668,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/invent
                           </td>
                           <td className="py-3.5 px-space-md text-right">
                             <ScreenDialog title="Record Stock Movement" side="center" panel={modalIssueStock}>
-                              <button
+                              <Button
                                 className="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-sm text-label-sm font-semibold transition-colors"
                                 type="button"
                               >
                                 Movement
-                              </button>
+                              </Button>
                             </ScreenDialog>
                           </td>
                         </tr>

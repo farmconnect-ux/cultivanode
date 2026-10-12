@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { OfftakeContracts } from "@/components/screens/offtake-contracts";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -64,10 +65,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/contra
             Draft Master Off-take Contract
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -189,20 +188,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/contra
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Create Master Contract
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -222,13 +216,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/contra
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="Draft Master Contract" side="center" panel={draftModal}>
-                <button
-                  type="button"
+                <Button
                   className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md"
                 >
                   <Icon name="add_circle" className="text-[18px]" />
                   <span>Draft Master Contract</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/harvest`}
@@ -315,24 +308,24 @@ export default async function Page({ params }: PageProps<"/[lang]/account/contra
                         {!isEscrowActive && !isCompleted && (
                           <form action={signOfftakeContract}>
                             <input type="hidden" name="contract_id" value={contract.id} />
-                            <button
+                            <Button
                               type="submit"
                               className="px-space-sm py-1 bg-secondary text-on-secondary rounded text-label-sm font-label-sm hover:opacity-90 font-semibold transition-opacity"
                             >
                               Sign &amp; Lock
-                            </button>
+                            </Button>
                           </form>
                         )}
                         {isEscrowActive && (
                           <form action={updateContractStatus}>
                             <input type="hidden" name="contract_id" value={contract.id} />
                             <input type="hidden" name="status" value="delivered" />
-                            <button
+                            <Button
                               type="submit"
                               className="px-space-sm py-1 bg-primary text-on-primary rounded text-label-sm font-label-sm hover:bg-primary-container font-semibold transition-colors"
                             >
                               Confirm Delivery
-                            </button>
+                            </Button>
                           </form>
                         )}
                       </div>

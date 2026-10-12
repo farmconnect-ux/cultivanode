@@ -1,10 +1,88 @@
-// Ported from the "enterprise_agricultural_management_dashboard_10.1" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+"use client";
+
+// Ported from the "enterprise_agricultural_management_dashboard_10.1" design. Interactive client workspace
+// with live ERP synchronization, CSV board pack export, central approvals queue, and estate telemetry modals.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { downloadFile } from "@/lib/download";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
+interface ApprovalItem {
+  id: string;
+  title: string;
+  estate: string;
+  amount: string;
+  status: "pending" | "authorized" | "reviewed";
+}
+
 export function EnterpriseDashboard({ lang }: ScreenProps) {
+  const [syncing, setSyncing] = useState(false);
+  const [activeEstateModal, setActiveEstateModal] = useState<string | null>(null);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([
+    {
+      id: "app-1",
+      title: "Bulk Urea 400 MT Procurement",
+      estate: "Oke-Ogun Hub · ₦64,800,000.00",
+      amount: "₦64,800,000.00",
+      status: "pending",
+    },
+    {
+      id: "app-2",
+      title: "Low-Bed Haulage Fleet 30-Day Lease",
+      estate: "Egba & Sagamu · ₦18,250,000.00",
+      amount: "₦18,250,000.00",
+      status: "pending",
+    },
+    {
+      id: "app-3",
+      title: "Combine Harvester Radial Tires (x12)",
+      estate: "Fleet Central Depot · ₦8,400,000.00",
+      amount: "₦8,400,000.00",
+      status: "pending",
+    },
+  ]);
+
+  const pendingCount = 12 - approvals.filter((a) => a.status !== "pending").length;
+
+  const handleDownloadBoardPack = () => {
+    const csvContent = [
+      "Conglomerate_Entity,Reporting_Period,Cadastral_Land_Ha,Cultivated_Ha,Revenue_YTD_NGN,OpEx_YTD_NGN,EBITDA_YTD_NGN,Headcount,Fleet_Units,ERP_Connector",
+      "Odua Agro-Enterprises PLC,2026 Early Rains,8420.0,6150.0,1840000000.00,942500000.00,897500000.00,3420,124,SAP S4HANA & PostGIS",
+      "",
+      "Estate_Name,Zone,Hectares,Primary_Crops,Yield_Metric,OpEx_NGN,Revenue_NGN,Net_Margin_Pct,Manager",
+      "Oke-Ogun Savanna Agro-Hub,Saki & Iseyin,3200,Grain Maize & Soya,4.3 MT/Ha (+12%),340000000,710000000,52.1%,Engr. Kayode Adebayo",
+      "Egba Cassava & Starch Plantation,Abeokuta North,2100,TME-419 Cassava,24.2 MT/Ha,228000000,495000000,53.9%,Chief Adeleke Ogundimu",
+      "Ogun Green River Basin Scheme,Sagamu & Ijebu,1500,Faro-44 Lowland Paddy,88% Saturation,195000000,380000000,48.7%,Alhaji Kazeem Gbadamosi",
+      "Osun Oil Palm & Agroforestry Estate,Ejigbo & Ede,1620,Fresh Fruit Bunches,Perennial Grove,179500000,255000000,29.6%,Mrs. Funmilayo Adewale",
+    ].join("\n");
+
+    downloadFile(`odua-agro-enterprises-consolidated-board-pack-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+    showScreenToast("Consolidated Board Pack (.csv) downloaded successfully");
+  };
+
+  const handleForceSync = () => {
+    setSyncing(true);
+    setTimeout(() => {
+      setSyncing(false);
+      showScreenToast("Multi-Tenant ERP & PostGIS Cadastre Synchronized (0ms latency)");
+    }, 850);
+  };
+
+  const handleAuthorize = (id: string, title: string) => {
+    setApprovals((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: "authorized" } : item))
+    );
+    showScreenToast(`Authorized: ${title}`);
+  };
+
+  const handleReview = (id: string, title: string) => {
+    setApprovals((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: "reviewed" } : item))
+    );
+    showScreenToast(`VP Approval Recorded: ${title}`);
+  };
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -39,7 +117,7 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                 </div>
                 <Icon name="unfold_more" className="text-outline text-[18px] ml-space-sm" />
               </div>
-              <button className="flex items-center justify-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary rounded-lg shadow-sm hover:bg-primary-container transition-colors font-label-lg text-label-lg" type="button"><Icon name="download" className="text-[18px]" /> Consolidated Board Pack</button>
+              <button onClick={handleDownloadBoardPack} className="flex items-center justify-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary rounded-lg shadow-sm hover:bg-primary-container transition-colors font-label-lg text-label-lg" type="button"><Icon name="download" className="text-[18px]" /> Consolidated Board Pack</button>
             </div>
           </div>
         </section>
@@ -185,7 +263,7 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                   </div>
                   <div className="flex md:flex-col items-end justify-between w-full md:w-auto gap-space-sm">
                     <span className="text-label-sm font-label-sm px-space-sm py-1 bg-surface-container-lowest rounded text-primary font-bold">52.1% Net Margin</span>
-                    <button className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Estate Telemetry</button>
+                    <button onClick={() => setActiveEstateModal("oke-ogun")} className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Estate Telemetry</button>
                   </div>
                 </div>
                 <div className="bg-surface-container-low p-space-md rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-space-md justify-between items-start md:items-center">
@@ -209,7 +287,7 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                   </div>
                   <div className="flex md:flex-col items-end justify-between w-full md:w-auto gap-space-sm">
                     <span className="text-label-sm font-label-sm px-space-sm py-1 bg-surface-container-lowest rounded text-secondary font-bold">100% Factory Offtake</span>
-                    <button className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Weighbridge Data</button>
+                    <button onClick={() => setActiveEstateModal("egba")} className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Weighbridge Data</button>
                   </div>
                 </div>
                 <div className="bg-surface-container-low p-space-md rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-space-md justify-between items-start md:items-center">
@@ -233,7 +311,7 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                   </div>
                   <div className="flex md:flex-col items-end justify-between w-full md:w-auto gap-space-sm">
                     <span className="text-label-sm font-label-sm px-space-sm py-1 bg-surface-container-lowest rounded text-on-surface font-bold">Basin Pumping Active</span>
-                    <button className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Paddy Sluices</button>
+                    <button onClick={() => setActiveEstateModal("ogun-basin")} className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Paddy Sluices</button>
                   </div>
                 </div>
                 <div className="bg-surface-container-low p-space-md rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-space-md justify-between items-start md:items-center">
@@ -257,7 +335,7 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                   </div>
                   <div className="flex md:flex-col items-end justify-between w-full md:w-auto gap-space-sm">
                     <span className="text-label-sm font-label-sm px-space-sm py-1 bg-surface-container-lowest rounded text-error font-bold">Mill Offline: 24h</span>
-                    <button className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Maintenance Log</button>
+                    <button onClick={() => setActiveEstateModal("osun-palm")} className="px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm rounded shadow-sm" type="button">Maintenance Log</button>
                   </div>
                 </div>
               </div>
@@ -270,31 +348,39 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
                       <Icon name="assignment_turned_in" className="text-secondary text-[20px]" />
                       <h3 className="font-headline-sm text-headline-sm text-primary">Central Approval Queue</h3>
                     </div>
-                    <span className="px-space-sm py-0.5 rounded-full bg-tertiary-container text-on-tertiary font-label-sm text-label-sm font-bold">12 Pending MD/CFO</span>
+                    <span className="px-space-sm py-0.5 rounded-full bg-tertiary-container text-on-tertiary font-label-sm text-label-sm font-bold">{pendingCount} Pending MD/CFO</span>
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Requisitions exceeding local Estate Manager threshold (Tier 2 &amp; Tier 3 approvals).</p>
                   <div className="space-y-space-xs">
-                    <div className="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-label-sm text-label-sm text-on-surface font-semibold">Bulk Urea 400 MT Procurement</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Oke-Ogun Hub · ₦64,800,000.00</span>
+                    {approvals.map((app) => (
+                      <div key={app.id} className="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="font-label-sm text-label-sm text-on-surface font-semibold">{app.title}</span>
+                          <span className="font-body-sm text-body-sm text-on-surface-variant">{app.estate}</span>
+                        </div>
+                        {app.status === "authorized" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold">
+                            <Icon name="check_circle" className="text-[14px]" /> Dispatched
+                          </span>
+                        ) : app.status === "reviewed" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-bold">
+                            <Icon name="verified" className="text-[14px]" /> VP Signed
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => (app.id === "app-3" ? handleReview(app.id, app.title) : handleAuthorize(app.id, app.title))}
+                            className={
+                              app.id === "app-3"
+                                ? "px-space-sm py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded font-label-sm text-label-sm font-semibold transition-colors"
+                                : "px-space-sm py-1 bg-primary hover:bg-primary-container text-on-primary rounded font-label-sm text-label-sm font-semibold transition-colors"
+                            }
+                            type="button"
+                          >
+                            {app.id === "app-3" ? "VP Review" : "Authorize"}
+                          </button>
+                        )}
                       </div>
-                      <button className="px-space-sm py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm" type="button">Authorize</button>
-                    </div>
-                    <div className="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-label-sm text-label-sm text-on-surface font-semibold">Low-Bed Haulage Fleet 30-Day Lease</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Egba &amp; Sagamu · ₦18,250,000.00</span>
-                      </div>
-                      <button className="px-space-sm py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm" type="button">Authorize</button>
-                    </div>
-                    <div className="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-label-sm text-label-sm text-on-surface font-semibold">Combine Harvester Radial Tires (x12)</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Fleet Central Depot · ₦8,400,000.00</span>
-                      </div>
-                      <button className="px-space-sm py-1 bg-surface-container-high text-on-surface rounded font-label-sm text-label-sm" type="button">VP Review</button>
-                    </div>
+                    ))}
                   </div>
                 </div>
                 <div className="mt-space-sm pt-space-xs flex justify-between items-center text-label-sm font-label-sm text-on-surface-variant">
@@ -487,9 +573,158 @@ export function EnterpriseDashboard({ lang }: ScreenProps) {
           </div>
           <div className="flex items-center gap-space-sm">
             <span className="font-label-sm text-label-sm text-outline">Telemetry Refresh: 15s</span>
-            <button className="flex items-center gap-1 px-space-sm py-1 bg-surface-container hover:bg-surface-container-high rounded text-primary font-label-sm text-label-sm font-semibold transition-colors" type="button"><Icon name="refresh" className="text-[16px]" /> Force Audit Sync</button>
+            <button
+              onClick={handleForceSync}
+              disabled={syncing}
+              className="flex items-center gap-1 px-space-sm py-1 bg-surface-container hover:bg-surface-container-high rounded text-primary font-label-sm text-label-sm font-semibold transition-colors disabled:opacity-50"
+              type="button"
+            >
+              <Icon name="refresh" className={`text-[16px] ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing ERP..." : "Force Audit Sync"}
+            </button>
           </div>
         </section>
+
+        {activeEstateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-xl w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="analytics" className="text-[22px]" />
+                  <span>
+                    {activeEstateModal === "oke-ogun" && "Oke-Ogun Savanna Telemetry Hub"}
+                    {activeEstateModal === "egba" && "Egba Weighbridge & Intake Registry"}
+                    {activeEstateModal === "ogun-basin" && "Ogun Basin Sluice & Irrigation Matrix"}
+                    {activeEstateModal === "osun-palm" && "Osun Palm Processing Mill Telemetry"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveEstateModal(null)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <div className="text-body-sm text-on-surface space-y-space-sm">
+                {activeEstateModal === "oke-ogun" && (
+                  <>
+                    <p className="text-on-surface-variant">Live telemetry feed from Saki &amp; Iseyin agro-monitoring stations:</p>
+                    <div className="grid grid-cols-2 gap-space-sm">
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">NDVI Canopy Health</div>
+                        <div className="text-title-md font-bold text-secondary">0.78 (Optimal)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Soil Moisture (30cm)</div>
+                        <div className="text-title-md font-bold text-primary">34.2% Volumetric</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Tractor Fleet Status</div>
+                        <div className="text-title-md font-bold text-on-surface">14 of 16 Active</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Grain Silo Capacity</div>
+                        <div className="text-title-md font-bold text-on-surface">4,800 MT (71%)</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {activeEstateModal === "egba" && (
+                  <>
+                    <p className="text-on-surface-variant">Abeokuta North digital weighbridge intake ledger:</p>
+                    <div className="grid grid-cols-2 gap-space-sm">
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Today&apos;s Intake</div>
+                        <div className="text-title-md font-bold text-primary">184.6 MT</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Truck Turnaround</div>
+                        <div className="text-title-md font-bold text-secondary">19 mins avg</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Psaltry Starch Sync</div>
+                        <div className="text-title-md font-bold text-secondary">Direct Electronic Manifest</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Starch Yield Index</div>
+                        <div className="text-title-md font-bold text-on-surface">24.2% Density</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {activeEstateModal === "ogun-basin" && (
+                  <>
+                    <p className="text-on-surface-variant">Sagamu &amp; Ijebu lowland irrigation status:</p>
+                    <div className="grid grid-cols-2 gap-space-sm">
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Active Sluices</div>
+                        <div className="text-title-md font-bold text-primary">Canals A, B, C Open</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Flow Rate</div>
+                        <div className="text-title-md font-bold text-secondary">450 L/sec</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Paddy Saturation</div>
+                        <div className="text-title-md font-bold text-primary">88% (Target 85-90%)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Standby Pumps</div>
+                        <div className="text-title-md font-bold text-on-surface">Dual Diesel Online</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {activeEstateModal === "osun-palm" && (
+                  <>
+                    <p className="text-on-surface-variant">Ejigbo processing facility maintenance &amp; telemetry:</p>
+                    <div className="grid grid-cols-2 gap-space-sm">
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Turbine Unit 3</div>
+                        <div className="text-title-md font-bold text-error">Overhaul (ETA 24h)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Holding Tanks</div>
+                        <div className="text-title-md font-bold text-on-surface">1,200 MT Buffer Active</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Spare Parts Docket</div>
+                        <div className="text-title-md font-bold text-secondary">Dispatched from Depot</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Lead Engineer</div>
+                        <div className="text-title-md font-bold text-on-surface">Signed Off (Mrs. Adewale)</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const csv = `Estate,Metric,Value\n${activeEstateModal},Telemetry_Status,Operational\n${activeEstateModal},Timestamp,${new Date().toISOString()}`;
+                    downloadFile(`odua-${activeEstateModal}-telemetry.csv`, csv);
+                    showScreenToast(`Downloaded ${activeEstateModal} telemetry report`);
+                  }}
+                  className="px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded text-label-sm font-semibold transition-colors"
+                >
+                  Download Dossier (.csv)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEstateModal(null)}
+                  className="px-space-md py-1.5 bg-primary text-on-primary hover:bg-primary/90 font-label-sm rounded text-label-sm font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

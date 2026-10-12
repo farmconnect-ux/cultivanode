@@ -1,12 +1,23 @@
+"use client";
+
 // Ported from the "contact_extension_liaison_support_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { slot, type ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export type ContactPageSlot = "form";
 
 export function ContactPage({ lang, slots }: ScreenProps<ContactPageSlot>) {
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    showScreenToast("Support Ticket Transmitted", "Ticket reference CN-2025-4819 generated. Regional ADP officer notified.");
+  };
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -268,9 +279,9 @@ export function ContactPage({ lang, slots }: ScreenProps<ContactPageSlot>) {
                       <label className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer" htmlFor="ndpaConsentCheckbox">I hereby consent to CultivaNode collecting and processing this incident data according to the <strong className="text-on-surface">Nigeria Data Protection Act (NDPA 2023)</strong> and the terms detailed in the <Link className="text-primary underline font-semibold" href={`/${lang}/privacy`}>Privacy Policy</Link>.</label>
                     </div>
                     <div>
-                      <button className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary transition-colors shadow-sm" id="submitTicketBtn" type="submit"><Icon name="send" className="text-[20px]" /> Transmit Verified Support Ticket</button>
+                      <button onClick={handleSubmit} className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary transition-colors shadow-sm" id="submitTicketBtn" type="submit"><Icon name="send" className="text-[20px]" /> Transmit Verified Support Ticket</button>
                     </div>
-                    <div className="hidden p-4 rounded-lg bg-secondary-container text-on-secondary-container" id="form-success-toast">
+                    <div className={`${submitted ? "block" : "hidden"} p-4 rounded-lg bg-secondary-container text-on-secondary-container`} id="form-success-toast">
                       <div className="flex items-center gap-3">
                         <Icon name="check_circle" className="text-[24px] text-secondary" />
                         <div>

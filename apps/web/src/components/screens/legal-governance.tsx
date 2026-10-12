@@ -1,10 +1,15 @@
+"use client";
+
 // Ported from the "statutory_governance_legal_policies_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function LegalGovernance({ lang = "en" }: ScreenProps) {
+  const [activeTab, setActiveTab] = useState<"privacy" | "terms" | "booking" | "dispute" | "sharing">("privacy");
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -118,31 +123,117 @@ export function LegalGovernance({ lang = "en" }: ScreenProps) {
                 <span className="text-on-surface-variant font-label-sm text-label-sm">• Select an active covenant</span>
               </div>
               <div className="flex items-center gap-2">
-                <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs hover:bg-surface-container transition-colors" id="btn-print-docket" type="button"><Icon name="print" className="text-[16px]" /> Print Entire Docket</button>
-                <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs hover:bg-surface-container transition-colors" id="btn-copy-dpo" type="button"><Icon name="mail" className="text-[16px]" /> Copy DPO Registry Contact</button>
+                <button
+                  onClick={() => {
+                    if (typeof window !== "undefined") window.print();
+                    showScreenToast("Printing legal covenants and statutory trust docket...");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs hover:bg-surface-container transition-colors"
+                  id="btn-print-docket"
+                  type="button"
+                >
+                  <Icon name="print" className="text-[16px]" /> Print Entire Docket
+                </button>
+                <button
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText("dpo@cultivanode.ng");
+                    }
+                    showScreenToast("DPO Registry email (dpo@cultivanode.ng) copied to clipboard.");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs hover:bg-surface-container transition-colors"
+                  id="btn-copy-dpo"
+                  type="button"
+                >
+                  <Icon name="mail" className="text-[16px]" /> Copy DPO Registry Contact
+                </button>
               </div>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-1" id="policy-tabs">
-              <button className="tab-btn px-4 py-3 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap shadow-sm transition-all" data-tab="tab-privacy" type="button">
+              <button
+                onClick={() => {
+                  setActiveTab("privacy");
+                  showScreenToast("Viewing NDPA 2023 & Smallholder Farmer Privacy Covenant.");
+                }}
+                className={`tab-btn px-4 py-3 rounded-xl font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap transition-all ${
+                  activeTab === "privacy"
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-xs"
+                }`}
+                data-tab="tab-privacy"
+                type="button"
+              >
                 <Icon name="verified_user" className="text-[18px]" />
                 <span>NDPA 2023 &amp; Farmer Privacy (/en/privacy)</span>
-                <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />
+                {activeTab === "privacy" && <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />}
               </button>
-              <button className="tab-btn px-4 py-3 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap shadow-xs transition-all" data-tab="tab-terms" type="button">
+              <button
+                onClick={() => {
+                  setActiveTab("terms");
+                  showScreenToast("Viewing Master Terms & Mesh Usage Covenant.");
+                }}
+                className={`tab-btn px-4 py-3 rounded-xl font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap transition-all ${
+                  activeTab === "terms"
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-xs"
+                }`}
+                data-tab="tab-terms"
+                type="button"
+              >
                 <Icon name="contract" className="text-[18px]" />
                 <span>Master Terms &amp; Mesh Usage (/en/terms)</span>
+                {activeTab === "terms" && <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />}
               </button>
-              <button className="tab-btn px-4 py-3 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap shadow-xs transition-all" data-tab="tab-booking" type="button">
+              <button
+                onClick={() => {
+                  setActiveTab("booking");
+                  showScreenToast("Viewing Mechanization Escrow & Refunds Covenant.");
+                }}
+                className={`tab-btn px-4 py-3 rounded-xl font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap transition-all ${
+                  activeTab === "booking"
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-xs"
+                }`}
+                data-tab="tab-booking"
+                type="button"
+              >
                 <Icon name="agriculture" className="text-[18px]" />
                 <span>Mechanization Escrow &amp; Refunds (/en/booking-policy)</span>
+                {activeTab === "booking" && <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />}
               </button>
-              <button className="tab-btn px-4 py-3 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap shadow-xs transition-all" data-tab="tab-dispute" type="button">
+              <button
+                onClick={() => {
+                  setActiveTab("dispute");
+                  showScreenToast("Viewing Proof-of-Work (PoW) & Arbitration Covenant.");
+                }}
+                className={`tab-btn px-4 py-3 rounded-xl font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap transition-all ${
+                  activeTab === "dispute"
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-xs"
+                }`}
+                data-tab="tab-dispute"
+                type="button"
+              >
                 <Icon name="balance" className="text-[18px]" />
                 <span>Proof-of-Work (PoW) &amp; Arbitration (/en/dispute-policy)</span>
+                {activeTab === "dispute" && <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />}
               </button>
-              <button className="tab-btn px-4 py-3 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap shadow-xs transition-all" data-tab="tab-sharing" type="button">
+              <button
+                onClick={() => {
+                  setActiveTab("sharing");
+                  showScreenToast("Viewing Data Sharing & Institutional Registry Covenant.");
+                }}
+                className={`tab-btn px-4 py-3 rounded-xl font-label-lg text-label-lg flex items-center gap-2.5 whitespace-nowrap transition-all ${
+                  activeTab === "sharing"
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-xs"
+                }`}
+                data-tab="tab-sharing"
+                type="button"
+              >
                 <Icon name="hub" className="text-[18px]" />
                 <span>Data Sharing &amp; Institutional Registry (/en/data-sharing)</span>
+                {activeTab === "sharing" && <span className="w-2 h-2 rounded-full bg-secondary-fixed ml-1" />}
               </button>
             </div>
           </div>

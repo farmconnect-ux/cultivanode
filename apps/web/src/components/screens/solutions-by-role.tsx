@@ -1,10 +1,16 @@
+"use client";
+
 // Ported from the "solutions_by_agricultural_role_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function SolutionsByRole({ lang }: ScreenProps) {
+  const [activeFilter, setActiveFilter] = useState("all");
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -45,15 +51,105 @@ export function SolutionsByRole({ lang }: ScreenProps) {
                 <span className="font-label-sm text-label-sm text-secondary font-medium">9 Calibrated Architecture Profiles</span>
               </div>
               <div className="flex flex-wrap gap-space-xs" id="role-filter-container">
-                <button className="filter-pill active px-space-md py-space-xs rounded-full font-label-md text-label-md bg-primary text-on-primary shadow-sm transition-all flex items-center gap-1.5" data-filter="all" type="button"><Icon name="apps" className="text-[16px]" /> All Roles (9)</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="production" type="button"><Icon name="agriculture" className="text-[16px] text-secondary" /> Farmers &amp; Operators</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="machinery" type="button"><Icon name="precision_manufacturing" className="text-[16px] text-secondary" /> Machinery Fleet Owners</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="services" type="button"><Icon name="badge" className="text-[16px] text-secondary" /> Service Providers</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="inputs" type="button"><Icon name="storefront" className="text-[16px] text-secondary" /> Agro-Dealers</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="offtake" type="button"><Icon name="local_shipping" className="text-[16px] text-secondary" /> Commodity Buyers</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="logistics" type="button"><Icon name="rv_hookup" className="text-[16px] text-secondary" /> Logistics</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="federations" type="button"><Icon name="groups" className="text-[16px] text-secondary" /> Cooperatives</button>
-                <button className="filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" data-filter="institutional" type="button"><Icon name="account_balance" className="text-[16px] text-secondary" /> Institutions</button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "all" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="all"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("all");
+                    showScreenToast("Displaying all 9 agricultural stakeholder solution profiles.");
+                  }}
+                >
+                  <Icon name="apps" className="text-[16px]" /> All Roles (9)
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "production" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="production"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("production");
+                    showScreenToast("Filtered to Farmers & Commercial Producers.");
+                  }}
+                >
+                  <Icon name="agriculture" className="text-[16px] text-secondary" /> Farmers &amp; Operators
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "machinery" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="machinery"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("machinery");
+                    showScreenToast("Filtered to Machinery Fleet Owners & Syndicates.");
+                  }}
+                >
+                  <Icon name="precision_manufacturing" className="text-[16px] text-secondary" /> Machinery Fleet Owners
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "services" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="services"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("services");
+                    showScreenToast("Filtered to Agronomic & Field Service Providers.");
+                  }}
+                >
+                  <Icon name="badge" className="text-[16px] text-secondary" /> Service Providers
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "inputs" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="inputs"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("inputs");
+                    showScreenToast("Filtered to Agro-Dealers & Chemical Stockists.");
+                  }}
+                >
+                  <Icon name="storefront" className="text-[16px] text-secondary" /> Agro-Dealers
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "offtake" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="offtake"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("offtake");
+                    showScreenToast("Filtered to Commodity Buyers & Corporate Off-takers.");
+                  }}
+                >
+                  <Icon name="local_shipping" className="text-[16px] text-secondary" /> Commodity Buyers
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "logistics" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="logistics"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("logistics");
+                    showScreenToast("Filtered to Haulage & Reefer Logistics Fleets.");
+                  }}
+                >
+                  <Icon name="rv_hookup" className="text-[16px] text-secondary" /> Logistics
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "federations" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="federations"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("federations");
+                    showScreenToast("Filtered to Agricultural Cooperatives & Guilds.");
+                  }}
+                >
+                  <Icon name="groups" className="text-[16px] text-secondary" /> Cooperatives
+                </button>
+                <button
+                  className={`filter-pill px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all flex items-center gap-1.5 ${activeFilter === "institutional" ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"}`}
+                  data-filter="institutional"
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter("institutional");
+                    showScreenToast("Filtered to Institutional Lenders, Donors & Government.");
+                  }}
+                >
+                  <Icon name="account_balance" className="text-[16px] text-secondary" /> Institutions
+                </button>
               </div>
             </div>
           </div>

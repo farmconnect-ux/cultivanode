@@ -1,9 +1,20 @@
+"use client";
+
 // Ported from the "institutional_partnerships_ecosystem_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export function PartnershipsPage(_props: ScreenProps) {
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    showScreenToast("Institutional Inquiry Transmitted", "EoI ref #CN-INS-2025-089 logged. Docket will be issued within 48 business hours.");
+  };
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -493,10 +504,10 @@ export function PartnershipsPage(_props: ScreenProps) {
                 </div>
                 <div className="md:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                   <div className="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm"><Icon name="verified_user" className="text-secondary text-[18px]" /> Encrypted via CultivaNode Gov-TLS Rails</div>
-                  <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-all shadow-md font-label-lg text-label-lg font-semibold" type="submit"><Icon name="send" className="text-[20px]" /> Transmit Institutional Inquiry</button>
+                  <button onClick={handleSubmit} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-all shadow-md font-label-lg text-label-lg font-semibold" type="submit"><Icon name="send" className="text-[20px]" /> Transmit Institutional Inquiry</button>
                 </div>
               </div>
-              <div className="hidden mt-6 p-6 rounded-xl bg-secondary-container text-on-secondary-container flex items-start gap-4" id="formSuccessMessage">
+              <div className={`${submitted ? "flex" : "hidden"} mt-6 p-6 rounded-xl bg-secondary-container text-on-secondary-container items-start gap-4`} id="formSuccessMessage">
                 <Icon name="check_circle" className="text-[28px] text-secondary shrink-0" />
                 <div className="flex flex-col gap-1">
                   <h4 className="font-headline-sm text-headline-sm font-bold">Institutional Transmission Logged</h4>

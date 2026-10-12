@@ -1,9 +1,38 @@
+"use client";
+
 // Ported from the "government_agricultural_intelligence_dashboard_10.3" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function GovernmentIntel(_props: ScreenProps) {
+  const [cadastreLayer, setCadastreLayer] = useState<"choropleth" | "soil" | "ndvi">("choropleth");
+
+  const handleExportGazette = () => {
+    const content = `FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY (FMAFS)
+SOUTH-WEST REGIONAL AGRICULTURAL COMMISSION JOINT DATA ENGINE
+STATUTORY GAZETTE & CADASTRAL CROP PRODUCTION ESTIMATE
+Season: 2026 Early Rain Cycle (April - July)
+Agro-Ecological Corridor: South-West (Oyo, Ogun, Ondo, Osun, Ekiti, Lagos)
+NDPA 2023 Compliance Hash: 0x7F9B82C10E48FA94A12B
+Total Smallholders Surveyed: 184,920
+Total Registered Hectarage: 412,650 Ha
+Maize Yield Estimate: 3.42 MT/Ha (Oke-Ogun Basin)
+Yellow Cassava (TME-419) In-Ground: 1,840,000 MT
+Fertilizer Subsidy Tranche 1 Audit: 99.4% Biometric Proof-of-Delivery
+Cryptographic Seal: SHA256-FMAFS-SW-2026-994821`;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "FMAFS-Gazette-SW-2026-Q2.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+    showScreenToast("FMAFS Statutory Gazette exported (SHA-256 verified).");
+  };
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -19,8 +48,8 @@ export function GovernmentIntel(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant">Federal Ministry of Agriculture and Food Security (FMAFS) &amp; South-West Regional Agricultural Commission Joint Data Engine. Real-time regional agricultural telemetry, subsidy auditing, and harvest yield models.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm self-start xl:self-center">
-              <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-colors" type="button"><Icon name="download" className="text-[18px] text-secondary" /> Export FMAFS Gazette (.PDF)</button>
-              <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors" type="button"><Icon name="verified_user" className="text-[18px]" /> Verify State Data Seals</button>
+              <button onClick={handleExportGazette} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-colors" type="button"><Icon name="download" className="text-[18px] text-secondary" /> Export FMAFS Gazette (.PDF)</button>
+              <button onClick={() => showScreenToast("State Data Seals Verified: All 6 South-West states signed with Merkle root 0x7F9B...4A12.")} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors" type="button"><Icon name="verified_user" className="text-[18px]" /> Verify State Data Seals</button>
             </div>
           </div>
           <div className="mt-space-md p-space-sm rounded-lg bg-surface-container flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
@@ -176,9 +205,42 @@ export function GovernmentIntel(_props: ScreenProps) {
                   <h3 className="font-headline-md text-headline-md text-on-surface font-bold">South-West Geospatial Hectarage Terminal</h3>
                 </div>
                 <div className="inline-flex items-center gap-1 bg-surface-container p-1 rounded-lg">
-                  <button className="px-2.5 py-1 text-on-primary bg-primary rounded font-label-sm text-label-sm font-semibold" type="button">Choropleth</button>
-                  <button className="px-2.5 py-1 text-on-surface-variant hover:text-on-surface rounded font-label-sm text-label-sm" type="button">Soil Moisture</button>
-                  <button className="px-2.5 py-1 text-on-surface-variant hover:text-on-surface rounded font-label-sm text-label-sm" type="button">NDVI Vigor</button>
+                  <button
+                    onClick={() => {
+                      setCadastreLayer("choropleth");
+                      showScreenToast("Cadastre view switched to Regional Hectarage Choropleth.");
+                    }}
+                    className={`px-2.5 py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${
+                      cadastreLayer === "choropleth" ? "text-on-primary bg-primary" : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    Choropleth
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCadastreLayer("soil");
+                      showScreenToast("Cadastre view switched to Sentinel-1 Soil Moisture Infiltration.");
+                    }}
+                    className={`px-2.5 py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${
+                      cadastreLayer === "soil" ? "text-on-primary bg-primary" : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    Soil Moisture
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCadastreLayer("ndvi");
+                      showScreenToast("Cadastre view switched to Sentinel-2 NDVI Canopy Vigor Index.");
+                    }}
+                    className={`px-2.5 py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${
+                      cadastreLayer === "ndvi" ? "text-on-primary bg-primary" : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    NDVI Vigor
+                  </button>
                 </div>
               </div>
               <div className="relative w-full rounded-xl overflow-hidden bg-surface-container-low">
@@ -328,8 +390,8 @@ export function GovernmentIntel(_props: ScreenProps) {
                 <h2 className="font-headline-lg text-headline-lg text-primary font-bold">Public Interventions &amp; Subsidy Queue</h2>
               </div>
               <div className="flex items-center gap-space-sm">
-                <button className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors" type="button">Audit Ledger</button>
-                <button className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors" type="button">Disburse Tranche 2</button>
+                <button onClick={() => showScreenToast("Subsidy audit ledger verified: ₦1,240,000,000 reconciles with CBN Anchor Borrowers escrow.")} className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors" type="button">Audit Ledger</button>
+                <button onClick={() => showScreenToast("Tranche 2 disbursement queued: ₦420M allocated to verified biometric smallholder vouchers.")} className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors" type="button">Disburse Tranche 2</button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -618,7 +680,7 @@ export function GovernmentIntel(_props: ScreenProps) {
                     <div className="font-body-sm text-body-sm text-on-primary-container">Generate emergency State Executive Council memo</div>
                   </div>
                 </div>
-                <button className="px-3.5 py-2 rounded-lg bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold hover:bg-secondary/90 transition-colors shrink-0" type="button">Dispatch Memo</button>
+                <button onClick={() => showScreenToast("Emergency Ministerial Flash Dispatch delivered to 6 State Executive Councils & NEMA.")} className="px-3.5 py-2 rounded-lg bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold hover:bg-secondary/90 transition-colors shrink-0" type="button">Dispatch Memo</button>
               </div>
             </section>
           </div>

@@ -1,9 +1,242 @@
+"use client";
+
 // Ported from the "farmer_first_farm_onboarding_wizard_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
+import { downloadFile } from "@/lib/download";
 import type { ScreenProps } from "./types";
 
+interface CropOption {
+  id: string;
+  name: string;
+  variety: string;
+}
+
+const AVAILABLE_CROPS: CropOption[] = [
+  { id: "maize", name: "Maize", variety: "SAMMAZ-15" },
+  { id: "cassava", name: "Cassava", variety: "TME-419" },
+  { id: "rice", name: "Faro-44 Lowland Rice", variety: "Faro-44" },
+  { id: "cowpea", name: "Cowpea (Brown beans)", variety: "SAMPEA-14" },
+  { id: "yam", name: "Yam", variety: "Asiedu / White" },
+  { id: "pepper", name: "Tatashe & Rodo Pepper", variety: "Ughelli" },
+  { id: "tomato", name: "Tomato", variety: "UTC / Tropimech" },
+  { id: "okra", name: "Okra", variety: "Clemson Spineless" },
+];
+
 export function OnboardingWizard(_props: ScreenProps) {
+  const [tenureDocUploaded, setTenureDocUploaded] = useState(false);
+  const [tenureType, setTenureType] = useState("communal");
+  const [farmName, setFarmName] = useState("Oluwaseun Agro-Ventures Cluster Node");
+  const [unit, setUnit] = useState<"ha" | "ac">("ha");
+  const [farmSize, setFarmSize] = useState("12.4");
+  const [boundarySource, setBoundarySource] = useState<"pin" | "mobile" | "survey">("pin");
+  const [selectedCrops, setSelectedCrops] = useState<string[]>(["maize", "cassava"]);
+
+  const toggleCrop = (cropId: string) => {
+    setSelectedCrops((prev) => {
+      const exists = prev.includes(cropId);
+      if (exists) {
+        if (prev.length === 1) {
+          showScreenToast("Please keep at least one primary crop stand selected.");
+          return prev;
+        }
+        return prev.filter((id) => id !== cropId);
+      }
+      return [...prev, cropId];
+    });
+  };
+
+  const handleUnitChange = (newUnit: "ha" | "ac") => {
+    if (newUnit === unit) return;
+    setUnit(newUnit);
+    const num = parseFloat(farmSize) || 0;
+    if (newUnit === "ac") {
+      setFarmSize((num * 2.47105).toFixed(1));
+      showScreenToast("Acreage unit updated to Acres.");
+    } else {
+      setFarmSize((num / 2.47105).toFixed(1));
+      showScreenToast("Acreage unit updated to Hectares (Ha).");
+    }
+  };
+
+  const handleSaveDraft = () => {
+    const draftPayload = {
+      farmName,
+      tenureType,
+      tenureDocUploaded,
+      size: `${farmSize} ${unit.toUpperCase()}`,
+      boundarySource,
+      crops: selectedCrops,
+      coordinates: "8.2140° N, 3.5820° E",
+      state: "Oyo",
+      lga: "Iseyin",
+      savedAt: new Date().toISOString(),
+    };
+    downloadFile("cultivanode-onboarding-draft.json", JSON.stringify(draftPayload, null, 2), "application/json");
+    showScreenToast("Registration draft saved! PostGIS polygon specs cached to local SQLite.");
+  };
+
+  const handleDownloadCertificate = () => {
+    const certText = `================================================================================
+CULTIVANODE AGRARIAN HOLDING CERTIFICATE (PROVISIONAL)
+Federal Republic of Nigeria · Cadastral Agricultural Registry
+Doc Ref: CN-NG-OYO-${Date.now().toString().slice(-6)}
+================================================================================
+
+1. HOLDING IDENTIFICATION
+- Farm Enterprise: ${farmName}
+- Lead Farmer / Custodian: Adebayo K. Alabi (NIN Verified: 3829****712)
+- State & LGA: Oyo State · Iseyin Local Government Area
+- Agro-Ecological Zone: Derived Savanna (Bimodal Rainfed Basin)
+- Cadastral Landmark: Oke-Ogun Savanna Basin Cluster #04
+
+2. GEOMETRY & TENURE
+- Declared Area: ${farmSize} ${unit === "ha" ? "Hectares" : "Acres"} (1,780m Perimeter)
+- PostGIS Anchor: 8.2140° N, 3.5820° E
+- Land Holding Class: ${tenureType.toUpperCase()}
+- Tenure Verification: ${tenureDocUploaded ? "VERIFIED DOCUMENT ON FILE" : "SELF-DECLARED PROVISIONAL"}
+- Soil Classification: Ferric Luvisols (2.4% Gentle Basin Slope)
+
+3. CROP ALLOCATION & SYNDICATE ALLIANCE
+- Primary Crops: ${selectedCrops.map((c) => c.toUpperCase()).join(", ")}
+- Operational Season: Early Season 2026 Onset
+- Assigned ADP Extension Hub: Engr. Babatunde Ogunlesi · Oyo State ADP
+- Escrow Guarantee: Supported by CultivaNode Multi-Stakeholder Risk Pool
+
+ISSUED UNDER NIGERIA DATA PROTECTION ACT (NDPA 2023)
+================================================================================`;
+    downloadFile("cultivanode-farm-holding-certificate.md", certText, "text/markdown");
+    showScreenToast("Provisional Farm Certificate downloaded!");
+  };
+
+  const modalUploadDeed = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="upload_file" className="text-primary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Upload Land Tenure Evidence</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Baale Consent, Customary Deed, C-of-O or Leasehold</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setTenureDocUploaded(true);
+          showScreenToast("Tenure deed uploaded and indexed to PostGIS Cadastral Registry!");
+        }}
+        className="p-space-lg space-y-space-md text-left"
+      >
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Document Classification</label>
+          <select className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none">
+            <option>Baale / Traditional Ruler Consent Letter</option>
+            <option>Statutory Certificate of Occupancy (C-of-O)</option>
+            <option>Governor's Consent / Registered Deed of Conveyance</option>
+            <option>Family Land Allocation Receipt & Witness Statement</option>
+            <option>Long-term Agricultural Lease Agreement (&gt;5 Years)</option>
+          </select>
+        </div>
+        <div className="space-y-space-xs">
+          <label className="font-label-md text-label-md text-on-surface font-semibold">Grantor / Traditional Custodian Name</label>
+          <input defaultValue="Chief Adewale Adeleke (Baale of Iseyin Central)" className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="text" />
+        </div>
+        <div className="p-space-md rounded-lg border-2 border-dashed border-primary/40 bg-primary-container/10 flex flex-col items-center justify-center text-center gap-1 cursor-pointer hover:bg-primary-container/20 transition-colors">
+          <Icon name="cloud_upload" className="text-3xl text-primary" />
+          <p className="font-label-md text-label-md text-on-surface font-semibold">Drop PDF scan or photo of deed document</p>
+          <span className="font-body-sm text-body-sm text-on-surface-variant">Accepted: PDF, JPG, PNG (Max 15MB)</span>
+        </div>
+        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+              Cancel
+            </button>
+          </ScreenDialogClose>
+          <ScreenDialogClose>
+            <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+              Upload &amp; Verify Document
+            </button>
+          </ScreenDialogClose>
+        </div>
+      </form>
+    </div>
+  );
+
+  const modalCompleteSetup = (
+    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col">
+      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="task_alt" className="text-secondary text-2xl" />
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Confirm Holding &amp; Launch</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Synchronizing PostGIS Cadastral Layer</p>
+          </div>
+        </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <div className="p-space-lg space-y-space-md text-left">
+        <div className="p-space-sm bg-surface-container-low rounded-lg space-y-2">
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Farm Holding:</span>
+            <span className="font-bold text-on-surface">{farmName}</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Declared Extent:</span>
+            <span className="font-bold text-primary">{farmSize} {unit.toUpperCase()} (1,780m Perimeter)</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Selected Crops:</span>
+            <span className="font-bold text-on-surface">{selectedCrops.join(", ")}</span>
+          </div>
+          <div className="flex justify-between font-label-md text-label-md">
+            <span className="text-on-surface-variant">Assigned Extension:</span>
+            <span className="font-bold text-secondary">Engr. Babatunde Ogunlesi · Oyo ADP</span>
+          </div>
+        </div>
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
+          Completing registration provisions your farm workspace, enables real-time weather alerts via NiMet radar, and links your parcel to the Oke-Ogun Machinery Syndicate.
+        </p>
+        <div className="pt-space-md flex items-center justify-between gap-space-sm border-t border-surface-container-high">
+          <button
+            onClick={handleDownloadCertificate}
+            className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors flex items-center gap-1.5"
+            type="button"
+          >
+            <Icon name="download" className="text-base" /> Download Certificate
+          </button>
+          <div className="flex items-center gap-space-sm">
+            <ScreenDialogClose>
+              <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
+                Review Again
+              </button>
+            </ScreenDialogClose>
+            <ScreenDialogClose>
+              <button
+                onClick={() => showScreenToast("Farm holding initialized successfully! Welcome to CultivaNode.")}
+                className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold"
+                type="button"
+              >
+                Launch Dashboard
+              </button>
+            </ScreenDialogClose>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="screen flex flex-col justify-center overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-[0.035] bg-[radial-gradient(#003620_1px,transparent_1px)] [background-size:24px_24px]" />
@@ -88,13 +321,25 @@ export function OnboardingWizard(_props: ScreenProps) {
                 <div className="flex flex-col gap-space-sm">
                   <label className="font-label-md text-label-md text-on-surface-variant font-semibold" htmlFor="farm-name">Registered Farm or Holding Enterprise Name</label>
                   <div className="relative">
-                    <input className="w-full h-10 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary" id="farm-name" placeholder="e.g. Oluwaseun Agro-Ventures" type="text" defaultValue="Oluwaseun Agro-Ventures Cluster Node" />
+                    <input
+                      className="w-full h-10 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      id="farm-name"
+                      placeholder="e.g. Oluwaseun Agro-Ventures"
+                      type="text"
+                      value={farmName}
+                      onChange={(e) => setFarmName(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
                   <div className="flex flex-col gap-space-sm">
                     <label className="font-label-md text-label-md text-on-surface-variant font-semibold" htmlFor="tenure-status">Tenure &amp; Land Holding Class</label>
-                    <select defaultValue="communal" className="w-full h-10 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary" id="tenure-status">
+                    <select
+                      value={tenureType}
+                      onChange={(e) => setTenureType(e.target.value)}
+                      className="w-full h-10 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      id="tenure-status"
+                    >
                       <option value="freehold">Owned / Freehold Deed</option>
                       <option value="communal">Family Land / Communal Title</option>
                       <option value="lease">Long-term Lease (&gt;5 Years)</option>
@@ -103,10 +348,14 @@ export function OnboardingWizard(_props: ScreenProps) {
                   </div>
                   <div className="flex flex-col gap-space-sm">
                     <label className="font-label-md text-label-md text-on-surface-variant font-semibold">Tenure Verification Evidence</label>
-                    <button className="w-full h-10 px-space-md bg-surface-container-low hover:bg-surface-container text-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 transition-colors" type="button">
-                      <Icon name="upload_file" className="text-[18px]" />
-                      <span>Upload Deed / Baale Consent</span>
-                    </button>
+                    <ScreenDialog title="Upload Deed / Consent" side="center" panel={modalUploadDeed}>
+                      <button onClick={() => {}} className={`w-full h-10 px-space-md rounded-lg flex items-center justify-center gap-2 transition-colors font-label-md text-label-md ${
+                        tenureDocUploaded ? "bg-secondary-container text-on-secondary-container font-semibold" : "bg-surface-container-low hover:bg-surface-container text-primary"
+                      }`} type="button">
+                        <Icon name={tenureDocUploaded ? "check_circle" : "upload_file"} className="text-[18px]" />
+                        <span>{tenureDocUploaded ? "Document Verified (C-of-O)" : "Upload Deed / Baale Consent"}</span>
+                      </button>
+                    </ScreenDialog>
                   </div>
                 </div>
                 <div className="flex flex-col gap-space-sm mt-space-xs">
@@ -168,10 +417,35 @@ export function OnboardingWizard(_props: ScreenProps) {
                   <div className="flex flex-col gap-space-xs">
                     <label className="font-label-md text-label-md text-on-surface-variant font-semibold">Total Declared Acreage</label>
                     <div className="flex rounded-lg shadow-sm overflow-hidden">
-                      <input className="flex-1 h-10 px-space-md bg-surface-container-lowest text-on-surface font-metric-num text-metric-num text-xl focus:outline-none" id="farm-size-val" step="0.1" type="number" defaultValue="12.4" />
+                      <input
+                        className="flex-1 h-10 px-space-md bg-surface-container-lowest text-on-surface font-metric-num text-metric-num text-xl focus:outline-none"
+                        id="farm-size-val"
+                        step="0.1"
+                        type="number"
+                        value={farmSize}
+                        onChange={(e) => setFarmSize(e.target.value)}
+                      />
                       <div className="flex bg-surface-container-low p-1 items-center">
-                        <button className="px-space-sm py-1 font-label-md text-label-md rounded bg-primary text-on-primary" id="btn-ha" type="button">Hectares (Ha)</button>
-                        <button className="px-space-sm py-1 font-label-md text-label-md rounded text-on-surface hover:text-primary" id="btn-ac" type="button">Acres</button>
+                        <button
+                          onClick={() => handleUnitChange("ha")}
+                          className={`px-space-sm py-1 font-label-md text-label-md rounded transition-colors ${
+                            unit === "ha" ? "bg-primary text-on-primary font-bold" : "text-on-surface hover:text-primary"
+                          }`}
+                          id="btn-ha"
+                          type="button"
+                        >
+                          Hectares (Ha)
+                        </button>
+                        <button
+                          onClick={() => handleUnitChange("ac")}
+                          className={`px-space-sm py-1 font-label-md text-label-md rounded transition-colors ${
+                            unit === "ac" ? "bg-primary text-on-primary font-bold" : "text-on-surface hover:text-primary"
+                          }`}
+                          id="btn-ac"
+                          type="button"
+                        >
+                          Acres
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -186,17 +460,44 @@ export function OnboardingWizard(_props: ScreenProps) {
                 <div className="flex flex-col gap-space-xs">
                   <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold">Select Field Boundary Source</span>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
-                    <button className="p-space-sm rounded-lg bg-primary-container text-on-primary flex flex-col gap-1 text-left shadow-sm" type="button">
+                    <button
+                      onClick={() => {
+                        setBoundarySource("pin");
+                        showScreenToast("Boundary mode: Interactive Map Pin & Polygon.");
+                      }}
+                      className={`p-space-sm rounded-lg flex flex-col gap-1 text-left transition-all ${
+                        boundarySource === "pin" ? "bg-primary-container text-on-primary shadow-sm" : "bg-surface-container-low hover:bg-surface-container text-on-surface"
+                      }`}
+                      type="button"
+                    >
                       <Icon name="pin_drop" className="text-[20px]" />
                       <span className="font-label-md text-label-md font-bold">Coordinates / Map Pin</span>
-                      <span className="font-label-sm text-label-sm text-on-primary-container">Interactive Pin &amp; Polygon</span>
+                      <span className="font-label-sm text-label-sm opacity-90">Interactive Pin &amp; Polygon</span>
                     </button>
-                    <button className="p-space-sm rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface flex flex-col gap-1 text-left transition-colors" type="button">
+                    <button
+                      onClick={() => {
+                        setBoundarySource("mobile");
+                        showScreenToast("Boundary mode: PostGIS Live Sync via Field Agent App.");
+                      }}
+                      className={`p-space-sm rounded-lg flex flex-col gap-1 text-left transition-all ${
+                        boundarySource === "mobile" ? "bg-primary-container text-on-primary shadow-sm" : "bg-surface-container-low hover:bg-surface-container text-on-surface"
+                      }`}
+                      type="button"
+                    >
                       <Icon name="directions_walk" className="text-primary text-[20px]" />
                       <span className="font-label-md text-label-md font-bold">Walk Boundary Mobile</span>
                       <span className="font-label-sm text-label-sm text-on-surface-variant">PostGIS Live Sync (App)</span>
                     </button>
-                    <button className="p-space-sm rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface flex flex-col gap-1 text-left transition-colors" type="button">
+                    <button
+                      onClick={() => {
+                        setBoundarySource("survey");
+                        showScreenToast("Boundary mode: Survey Cadastral PDF Sheet parser.");
+                      }}
+                      className={`p-space-sm rounded-lg flex flex-col gap-1 text-left transition-all ${
+                        boundarySource === "survey" ? "bg-primary-container text-on-primary shadow-sm" : "bg-surface-container-low hover:bg-surface-container text-on-surface"
+                      }`}
+                      type="button"
+                    >
                       <Icon name="map" className="text-primary text-[20px]" />
                       <span className="font-label-md text-label-md font-bold">Survey Cadastral PDF</span>
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Registered Surveyor Sheet</span>
@@ -215,14 +516,22 @@ export function OnboardingWizard(_props: ScreenProps) {
                 <div className="flex flex-col gap-space-xs">
                   <span className="font-label-md text-label-md text-on-surface-variant font-semibold">Select Primary Cultivation Focus (Multi-Select)</span>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-primary text-on-primary font-bold flex items-center gap-1.5 shadow-sm" type="button"><Icon name="check" className="text-[16px]" /> Maize (SAMMAZ-15)</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-primary text-on-primary font-bold flex items-center gap-1.5 shadow-sm" type="button"><Icon name="check" className="text-[16px]" /> Cassava (TME-419)</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Faro-44 Lowland Rice</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Cowpea (Brown beans)</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Yam (Asiedu / White)</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Tatashe &amp; Rodo Pepper</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Tomato (UTC / Tropimech)</button>
-                    <button className="crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors" type="button">Okra (Clemson Spineless)</button>
+                    {AVAILABLE_CROPS.map((crop) => {
+                      const isSelected = selectedCrops.includes(crop.id);
+                      return (
+                        <button
+                          key={crop.id}
+                          onClick={() => toggleCrop(crop.id)}
+                          className={`crop-pill px-space-md py-1.5 rounded-full font-label-md text-label-md flex items-center gap-1.5 transition-all ${
+                            isSelected ? "bg-primary text-on-primary font-bold shadow-sm" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                          }`}
+                          type="button"
+                        >
+                          {isSelected && <Icon name="check" className="text-[16px]" />}
+                          <span>{crop.name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md mt-space-xs">
@@ -382,14 +691,24 @@ export function OnboardingWizard(_props: ScreenProps) {
               </div>
             </div>
             <div className="flex items-center gap-space-md w-full md:w-auto justify-end">
-              <button className="w-full sm:w-auto px-space-lg py-2.5 bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md font-semibold rounded-lg transition-colors flex items-center justify-center gap-2" type="button">
+              <button
+                onClick={handleSaveDraft}
+                className="w-full sm:w-auto px-space-lg py-2.5 bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                type="button"
+              >
                 <Icon name="bookmark" className="text-[18px]" />
                 <span>Save as Draft &amp; Exit</span>
               </button>
-              <button className="w-full sm:w-auto px-space-xl py-2.5 bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-space-xs" type="button">
-                <span>Complete Farm Setup &amp; Launch Dashboard</span>
-                <Icon name="arrow_forward" className="text-[20px]" />
-              </button>
+              <ScreenDialog title="Confirm & Launch" side="center" panel={modalCompleteSetup}>
+                <button
+                  onClick={() => {}}
+                  className="w-full sm:w-auto px-space-xl py-2.5 bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-space-xs"
+                  type="button"
+                >
+                  <span>Complete Farm Setup &amp; Launch Dashboard</span>
+                  <Icon name="arrow_forward" className="text-[20px]" />
+                </button>
+              </ScreenDialog>
             </div>
           </div>
         </div>

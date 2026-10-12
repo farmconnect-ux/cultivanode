@@ -1,6 +1,9 @@
+"use client";
+
 // Ported from the "super_admin_system_health_dashboard" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import { slot, type ScreenProps } from "./types";
 
 export type SystemHealthSlot = "kpis" | "services" | "queue" | "ledger";
@@ -37,11 +40,11 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                 <p className="font-body-md text-body-md text-on-surface-variant">Global platform telemetry, multi-tenant cluster orchestration, integration uptime, verification backlogs, and tamper-evident administrative audit controls.</p>
               </div>
               <div className="flex flex-wrap items-center gap-space-xs shrink-0">
-                <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-health-diagnostic" type="button">
+                <button onClick={() => showScreenToast("Diagnostic sweep executed: 14 node microservices healthy, 99.98% telemetry uptime.")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-health-diagnostic" type="button">
                   <Icon name="vital_signs" className="text-secondary text-base" />
                   <span>Run Diagnostics</span>
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-maintenance-modal" type="button">
+                <button onClick={() => showScreenToast("Cluster migration status: All active PostgreSQL read replicas synced. Platform lock disabled.")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-maintenance-modal" type="button">
                   <Icon name="lock" className="text-tertiary-container text-base" />
                   <span>Platform Lock / Migration</span>
                 </button>
@@ -453,8 +456,8 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect</button>
-                              <button className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
+                              <button onClick={() => showScreenToast("Inspecting Tractor Syndicate dossier: 4x Massey Ferguson units, Leadway insurance policy #LAD-2026-904 valid.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect</button>
+                              <button onClick={() => showScreenToast("Tractor Syndicate verified: Tier 2 Fleet Operator credentials unlocked.")} className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
                             </div>
                           </td>
                         </tr>
@@ -477,7 +480,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect Docs</button>
+                              <button onClick={() => showScreenToast("Inspecting Odo-Ogun Cooperative documents: 82 members registered, CAC registration verified.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect Docs</button>
                             </div>
                           </td>
                         </tr>
@@ -500,7 +503,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
+                              <button onClick={() => showScreenToast("Dr. S. Adeyemi approved: NVMA veterinary license #8402 verified with Saki outpost access.")} className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
                             </div>
                           </td>
                         </tr>
@@ -573,7 +576,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <div className="font-bold text-secondary">₦7,100</div>
                       </div>
                     </div>
-                    <button className="w-full mt-1 py-2 px-3 rounded bg-secondary text-on-secondary font-label-lg text-label-lg font-semibold hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center gap-1.5" id="btn-arbitrate-action" type="button">
+                    <button onClick={() => showScreenToast("Escrow settlement executed via Paystack: ₦39,900 released to operator, ₦7,100 refunded to farmer.")} className="w-full mt-1 py-2 px-3 rounded bg-secondary text-on-secondary font-label-lg text-label-lg font-semibold hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center gap-1.5" id="btn-arbitrate-action" type="button">
                       <Icon name="task_alt" className="text-base" />
                       <span>Authorize Prorated Release (Paystack Escrow)</span>
                     </button>

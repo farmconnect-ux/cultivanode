@@ -1,11 +1,165 @@
+"use client";
+
 // Ported from the "field_agent_assisted_onboarding_hub" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
+import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
 
 export type AgentOnboardingHubSlot = "agentLine" | "actions" | "kpis" | "wizard" | "roster";
 
+interface FarmerRecord {
+  id: string;
+  caseId: string;
+  name: string;
+  phone: string;
+  community: string;
+  enterprise: string;
+  areaHa: number;
+  tier: string;
+  incentive: string;
+  synced: boolean;
+  nin: string;
+}
+
+const INITIAL_ROSTER: FarmerRecord[] = [
+  {
+    id: "f-1",
+    caseId: "#FMR-2026-089",
+    name: "Alhaji Rasheed Adeleke",
+    phone: "+234 803 112 4091",
+    community: "Ado-Awaye Village",
+    enterprise: "Cassava / Maize",
+    areaHa: 5.0,
+    tier: "Tier 2 Payout-Ready",
+    incentive: "₦3,500",
+    synced: true,
+    nin: "7382 9104 2910",
+  },
+  {
+    id: "f-2",
+    caseId: "#FMR-2026-090",
+    name: "Madam Folashade Alabi",
+    phone: "+234 812 770 1933",
+    community: "Odo-Ogun Community",
+    enterprise: "Tomato Roma VF",
+    areaHa: 2.5,
+    tier: "Tier 1 Verified",
+    incentive: "₦2,250",
+    synced: true,
+    nin: "8821 0039 4419",
+  },
+  {
+    id: "f-3",
+    caseId: "#FMR-2026-091",
+    name: "Babatunde Ogundipe",
+    phone: "+234 705 889 0211",
+    community: "Iseyin East Outskirts",
+    enterprise: "Cowpea & Soy",
+    areaHa: 8.0,
+    tier: "Pending BVN match",
+    incentive: "₦5,000",
+    synced: false,
+    nin: "4920 1948 2011",
+  },
+  {
+    id: "f-4",
+    caseId: "#FMR-2026-092",
+    name: "Funke Balogun",
+    phone: "+234 814 621 9904",
+    community: "Oke-Ola Farm Settlement",
+    enterprise: "Poultry (500 Broilers)",
+    areaHa: 1.8,
+    tier: "Tier 2 Payout-Ready",
+    incentive: "₦1,900",
+    synced: true,
+    nin: "6629 1849 5502",
+  },
+];
+
 export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot>) {
+  const [roster, setRoster] = useState<FarmerRecord[]>(INITIAL_ROSTER);
+  const [communityFilter, setCommunityFilter] = useState<string>("all");
+  const [offlinePendingCount, setOfflinePendingCount] = useState<number>(14);
+  const [wizardStep, setWizardStep] = useState<number>(1);
+  const [jobDispatched, setJobDispatched] = useState<boolean>(false);
+
+  // Form states
+  const [fullName, setFullName] = useState<string>("Gbadamosi Lateef Adebowale");
+  const [phone, setPhone] = useState<string>("803 459 2819");
+  const [nin, setNin] = useState<string>("7382 9104 2910");
+  const [village, setVillage] = useState<string>("Ado-Awaye settlement, Ward 4");
+  const [selectedEnterprises, setSelectedEnterprises] = useState<string[]>(["Cassava (TME 419)", "Yellow Maize"]);
+
+  // GPS Walk state
+  const [waypointsCount, setWaypointsCount] = useState<number>(24);
+  const [calculatedArea, setCalculatedArea] = useState<number>(3.48);
+  const [perimeterMeters, setPerimeterMeters] = useState<number>(812);
+
+  const toggleEnterprise = (crop: string) => {
+    if (selectedEnterprises.includes(crop)) {
+      setSelectedEnterprises(selectedEnterprises.filter((c) => c !== crop));
+    } else {
+      setSelectedEnterprises([...selectedEnterprises, crop]);
+    }
+  };
+
+  const handleSyncOffline = () => {
+    if (offlinePendingCount === 0) {
+      showScreenToast("PowerSync queue already clean. All records mirrored to master Supabase instance.");
+      return;
+    }
+    const count = offlinePendingCount;
+    setOfflinePendingCount(0);
+    setRoster(roster.map((r) => ({ ...r, synced: true })));
+    showScreenToast(`PowerSync flushed: ${count} offline field submissions synced via 4G gateway.`);
+  };
+
+  const handleExportRoster = () => {
+    const csvContent =
+      "Case ID,Farmer Name,Phone,Community,Enterprise,Area (Ha),Verification Tier,Incentive (NGN),Sync Status,NIN\n" +
+      roster
+        .map(
+          (r) =>
+            `"${r.caseId}","${r.name}","${r.phone}","${r.community}","${r.enterprise}",${r.areaHa},"${r.tier}","${r.incentive}",${
+              r.synced ? "SYNCED" : "QUEUED"
+            },"${r.nin}"`
+        )
+        .join("\n");
+
+    downloadFile("cultivanode-farmer-onboarding-roster.csv", csvContent, "text/csv");
+    showScreenToast("Farmer onboarding portfolio exported to CSV.");
+  };
+
+  const handleFinishWizard = () => {
+    const newCaseId = `#FMR-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const newRecord: FarmerRecord = {
+      id: `f-${Date.now()}`,
+      caseId: newCaseId,
+      name: fullName,
+      phone: `+234 ${phone}`,
+      community: village,
+      enterprise: selectedEnterprises.join(" / ") || "Field Crops",
+      areaHa: calculatedArea,
+      tier: "Tier 1 Verified",
+      incentive: "₦2,500",
+      synced: false,
+      nin,
+    };
+
+    setRoster([newRecord, ...roster]);
+    setOfflinePendingCount((prev) => prev + 1);
+    setWizardStep(1);
+    showScreenToast(`Farmer ${fullName} registered (${newCaseId}). Polygon of ${calculatedArea} Ha cached to SQLite.`);
+  };
+
+  const filteredRoster = roster.filter((r) => {
+    if (communityFilter === "all") return true;
+    return r.community.toLowerCase().includes(communityFilter.toLowerCase());
+  });
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full pb-16 space-y-8">
@@ -13,11 +167,15 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
           <div className="flex flex-col space-y-2 max-w-3xl">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm uppercase tracking-wider">Extension Office M1 &amp; M7 Operational Hub</span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container text-primary font-label-sm text-label-sm"><span className="w-2 h-2 rounded-full bg-secondary animate-pulse" /> Jurisdiction: Iseyin &amp; Oke-Ogun South</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container text-primary font-label-sm text-label-sm">
+                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" /> Jurisdiction: Iseyin &amp; Oke-Ogun South
+              </span>
             </div>
             <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface tracking-tight">Field Agent &amp; Assisted Onboarding Hub</h1>
             <p className="font-body-md text-body-md text-on-surface-variant">Community field registrations, GPS boundary walk capture, assisted service bookings, and PowerSync offline sync queue.</p>
-            {slot(slots, "agentLine", (
+            {slot(
+              slots,
+              "agentLine",
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <div className="inline-flex items-center gap-2 text-on-surface font-label-md text-label-md">
                   <Icon name="badge" className="text-secondary text-lg" />
@@ -26,29 +184,58 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 <span className="text-outline-variant">•</span>
                 <div className="inline-flex items-center gap-1.5 text-on-surface-variant font-label-md text-label-md bg-surface-container-low px-2.5 py-1 rounded-md">
                   <Icon name="cloud_sync" className="text-secondary text-base" />
-                  <span>PowerSync SQLite Node: <strong>14 Records Queued</strong></span>
+                  <span>
+                    PowerSync SQLite Node: <strong>{offlinePendingCount} Records Queued</strong>
+                  </span>
                 </div>
               </div>
-            ))}
+            )}
           </div>
-          {slot(slots, "actions", (
+          {slot(
+            slots,
+            "actions",
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 self-start xl:self-center">
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-primary-container text-on-primary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-primary transition-all" type="button">
+              <button
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary-container text-on-primary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-primary transition-all"
+                type="button"
+                onClick={() => {
+                  setWizardStep(1);
+                  const el = document.getElementById("wizard-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                  showScreenToast("Assisted Farmer Onboarding Wizard ready.");
+                }}
+              >
                 <Icon name="person_add" className="text-lg" />
                 <span>+ Register Farmer (NIN Assisted)</span>
               </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-low text-on-surface rounded-lg font-label-lg text-label-lg hover:bg-surface-container transition-all" type="button">
+              <button
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-low text-on-surface rounded-lg font-label-lg text-label-lg hover:bg-surface-container transition-all"
+                type="button"
+                onClick={() => {
+                  setWizardStep(2);
+                  const el = document.getElementById("wizard-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                  showScreenToast("GPS Boundary Walk mode active.");
+                }}
+              >
                 <Icon name="timeline" className="text-secondary text-lg" />
                 <span>Start GPS Boundary Walk</span>
               </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest text-secondary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all" type="button">
+              <button
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest text-secondary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all"
+                type="button"
+                onClick={handleSyncOffline}
+              >
                 <Icon name="sync" className="text-lg" />
                 <span>Sync Offline Submissions</span>
               </button>
             </div>
-          ))}
+          )}
         </section>
-        {slot(slots, "kpis", (
+
+        {slot(
+          slots,
+          "kpis",
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             <div className="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
@@ -59,7 +246,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               </div>
               <div className="mt-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-metric-num text-metric-num text-on-surface">128 Farmers</span>
+                  <span className="font-metric-num text-metric-num text-on-surface">{roster.length + 124} Farmers</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 text-secondary font-label-md text-label-md">
                   <Icon name="trending_up" className="text-base" />
@@ -124,8 +311,11 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               </div>
             </div>
           </section>
-        ))}
-        {slot(slots, "wizard", (
+        )}
+
+        {slot(
+          slots,
+          "wizard",
           <section className="bg-surface-container-lowest rounded-xl p-6 lg:p-8 shadow-sm" id="wizard-section">
             <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-surface-container gap-4">
               <div className="flex flex-col">
@@ -140,102 +330,170 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 <span>Field Mode: Standalone Form Auto-Cache</span>
               </div>
             </div>
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 my-6">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container-high text-on-surface">
-                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-md text-label-md font-bold">1</div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-label-sm text-label-sm text-primary font-bold uppercase">Identity &amp; NIN</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant truncate">OTP, NIN, Portrait</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low text-on-surface">
-                <div className="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-label-md text-label-md font-bold">2</div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-label-sm text-label-sm text-on-surface font-semibold uppercase">GPS Boundary Walk</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant truncate">Real-time Polygon (Ha)</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low text-on-surface">
-                <div className="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-label-md text-label-md font-bold">3</div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-label-sm text-label-sm text-on-surface font-semibold uppercase">Enterprise Selection</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant truncate">Crops, Seed, Planting</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low text-on-surface">
-                <div className="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-label-md text-label-md font-bold">4</div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-label-sm text-label-sm text-on-surface font-semibold uppercase">Tier Verification</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant truncate">Tier 1 / Tier 2 Payout</span>
-                </div>
-              </div>
+              {[
+                { step: 1, title: "Identity & NIN", desc: "OTP, NIN, Portrait" },
+                { step: 2, title: "GPS Boundary Walk", desc: "Real-time Polygon (Ha)" },
+                { step: 3, title: "Enterprise Selection", desc: "Crops, Seed, Planting" },
+                { step: 4, title: "Tier Verification", desc: "Tier 1 / Tier 2 Payout" },
+              ].map((item) => (
+                <button
+                  key={item.step}
+                  className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
+                    wizardStep === item.step
+                      ? "bg-surface-container-high text-on-surface shadow-sm ring-1 ring-primary"
+                      : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                  }`}
+                  type="button"
+                  onClick={() => setWizardStep(item.step)}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-label-md text-label-md font-bold ${
+                      wizardStep === item.step ? "bg-primary-container text-on-primary" : "bg-surface-container text-on-surface"
+                    }`}
+                  >
+                    {item.step}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-label-sm text-label-sm font-bold uppercase">{item.title}</span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant truncate">{item.desc}</span>
+                  </div>
+                </button>
+              ))}
             </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
               <div className="lg:col-span-7 space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2"><Icon name="person_pin" className="text-secondary text-lg" /> Step 1: Bio-Data &amp; National Identity</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Full Name (as per NIN)</label>
-                      <input className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container" type="text" defaultValue="Gbadamosi Lateef Adebowale" />
-                    </div>
-                    <div>
-                      <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Mobile Phone Number</label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 rounded-l-lg bg-surface-container font-label-md text-label-md text-on-surface">+234</span>
-                        <input className="w-full px-3.5 py-2.5 rounded-r-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container" type="tel" defaultValue="803 459 2819" />
+                {wizardStep === 1 && (
+                  <div className="space-y-4">
+                    <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+                      <Icon name="person_pin" className="text-secondary text-lg" /> Step 1: Bio-Data &amp; National Identity
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Full Name (as per NIN)</label>
+                        <input
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container border border-surface-container"
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                        />
                       </div>
-                    </div>
-                    <div>
-                      <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">National Identity Number (NIN)</label>
-                      <div className="relative">
-                        <input className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container" type="text" defaultValue="7382 9104 2910" />
-                        <Icon name="verified" className="absolute right-3 top-2.5 text-secondary text-lg" label="Live NIMC validation active" />
+                      <div>
+                        <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Mobile Phone Number</label>
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-lg bg-surface-container font-label-md text-label-md text-on-surface">+234</span>
+                          <input
+                            className="w-full px-3.5 py-2.5 rounded-r-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container border border-surface-container"
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Village / Hamlet</label>
-                      <input className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container" type="text" defaultValue="Ado-Awaye settlement, Ward 4" />
+                      <div>
+                        <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">National Identity Number (NIN)</label>
+                        <div className="relative">
+                          <input
+                            className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container border border-surface-container"
+                            type="text"
+                            value={nin}
+                            onChange={(e) => setNin(e.target.value)}
+                          />
+                          <Icon name="verified" className="absolute right-3 top-2.5 text-secondary text-lg" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-label-md text-label-md text-on-surface-variant mb-1.5">Village / Hamlet</label>
+                        <input
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container border border-surface-container"
+                          type="text"
+                          value={village}
+                          onChange={(e) => setVillage(e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="space-y-4 pt-4 border-t border-surface-container">
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2"><Icon name="spa" className="text-secondary text-lg" /> Enterprise &amp; Production Focus</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <label className="flex items-center gap-3 p-3.5 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-all">
-                      <input defaultChecked className="w-4 h-4 text-primary rounded" type="checkbox" />
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Cassava (TME 419)</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Tubers / Stems</span>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-3.5 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-all">
-                      <input defaultChecked className="w-4 h-4 text-primary rounded" type="checkbox" />
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Yellow Maize</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Early Rains &apos;26</span>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-3.5 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-all">
-                      <input className="w-4 h-4 text-primary rounded" type="checkbox" />
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface">Soybean (TGX)</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Intercropped</span>
-                      </div>
-                    </label>
+                )}
+
+                {wizardStep >= 2 && (
+                  <div className="space-y-4 pt-4 border-t border-surface-container">
+                    <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+                      <Icon name="spa" className="text-secondary text-lg" /> Enterprise &amp; Production Focus
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { title: "Cassava (TME 419)", sub: "Tubers / Stems" },
+                        { title: "Yellow Maize", sub: "Early Rains '26" },
+                        { title: "Soybean (TGX)", sub: "Intercropped" },
+                      ].map((item) => (
+                        <label
+                          key={item.title}
+                          className="flex items-center gap-3 p-3.5 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-all"
+                        >
+                          <input
+                            checked={selectedEnterprises.includes(item.title)}
+                            onChange={() => toggleEnterprise(item.title)}
+                            className="w-4 h-4 text-primary rounded"
+                            type="checkbox"
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-label-md text-label-md text-on-surface">{item.title}</span>
+                            <span className="font-body-sm text-body-sm text-on-surface-variant">{item.sub}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between pt-4">
-                  <button className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high" type="button">Save Draft to Tablet</button>
+                )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-surface-container">
+                  <button
+                    className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"
+                    type="button"
+                    onClick={() => {
+                      showScreenToast("Draft saved locally to tablet SQLite node.");
+                    }}
+                  >
+                    Save Draft to Tablet
+                  </button>
                   <div className="flex items-center gap-3">
-                    <button className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high" type="button">SMS OTP Challenge</button>
-                    <button className="px-6 py-2.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary transition-all flex items-center gap-2" type="button">
-                      <span>Next: Boundary GPS Walk</span>
-                      <Icon name="arrow_forward" className="text-base" />
+                    <button
+                      className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"
+                      type="button"
+                      onClick={() => {
+                        showScreenToast(`NIMC OTP Challenge sent via SMS to +234 ${phone}.`);
+                      }}
+                    >
+                      SMS OTP Challenge
                     </button>
+                    {wizardStep < 4 ? (
+                      <button
+                        className="px-6 py-2.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary transition-all flex items-center gap-2"
+                        type="button"
+                        onClick={() => {
+                          setWizardStep(wizardStep + 1);
+                          showScreenToast(`Advancing to Step ${wizardStep + 1}...`);
+                        }}
+                      >
+                        <span>Next Step</span>
+                        <Icon name="arrow_forward" className="text-base" />
+                      </button>
+                    ) : (
+                      <button
+                        className="px-6 py-2.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md shadow-sm hover:opacity-90 transition-all flex items-center gap-2 font-bold"
+                        type="button"
+                        onClick={handleFinishWizard}
+                      >
+                        <span>Complete Registration</span>
+                        <Icon name="check_circle" className="text-base" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
+
               <div className="lg:col-span-5 space-y-5">
                 <div className="bg-surface-container-low p-5 rounded-xl space-y-4">
                   <div className="flex items-center justify-between">
@@ -243,12 +501,18 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                       <Icon name="explore" className="text-secondary" />
                       <span className="font-headline-sm text-headline-sm text-on-surface">GPS Boundary Walk Capture</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded text-xs bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">HDOP: 0.8m (Accurate)</span>
+                    <span className="px-2 py-0.5 rounded text-xs bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+                      HDOP: 0.8m (Accurate)
+                    </span>
                   </div>
                   <div className="relative w-full h-56 rounded-lg overflow-hidden bg-inverse-surface shadow-inner flex flex-col justify-between p-3" data-location="Iseyin, Oyo State, Nigeria">
                     <div className="flex items-center justify-between z-10">
-                      <span className="bg-inverse-surface/80 text-inverse-on-surface px-2.5 py-1 rounded text-xs font-label-sm text-label-sm flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary-fixed" /> 24 Coordinates Logged</span>
-                      <span className="bg-inverse-surface/80 text-inverse-on-surface px-2 py-1 rounded font-label-sm text-label-sm">Lat: 7.9732° N | Long: 3.5961° E</span>
+                      <span className="bg-inverse-surface/80 text-inverse-on-surface px-2.5 py-1 rounded text-xs font-label-sm text-label-sm flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-secondary-fixed" /> {waypointsCount} Coordinates Logged
+                      </span>
+                      <span className="bg-inverse-surface/80 text-inverse-on-surface px-2 py-1 rounded font-label-sm text-label-sm">
+                        Lat: 7.9732° N | Long: 3.5961° E
+                      </span>
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
                       <svg className="w-full h-full stroke-secondary fill-secondary-container/20" viewBox="0 0 200 120">
@@ -264,9 +528,18 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                     <div className="flex items-center justify-between z-10 bg-inverse-surface/90 text-inverse-on-surface p-2 rounded-lg">
                       <div>
                         <span className="text-xs font-body-sm text-body-sm block text-surface-container-highest">Live Calculated Area</span>
-                        <span className="font-headline-md text-headline-md font-bold text-secondary-fixed">3.48 Hectares</span>
+                        <span className="font-headline-md text-headline-md font-bold text-secondary-fixed">{calculatedArea} Hectares</span>
                       </div>
-                      <button className="px-3 py-1.5 bg-secondary text-on-secondary rounded text-xs font-label-md text-label-md hover:bg-primary transition-all flex items-center gap-1" type="button">
+                      <button
+                        className="px-3 py-1.5 bg-secondary text-on-secondary rounded text-xs font-label-md text-label-md hover:bg-primary transition-all flex items-center gap-1 font-semibold"
+                        type="button"
+                        onClick={() => {
+                          setWaypointsCount((prev) => prev + 1);
+                          setCalculatedArea((prev) => Number((prev + 0.12).toFixed(2)));
+                          setPerimeterMeters((prev) => prev + 35);
+                          showScreenToast(`Waypoint #${waypointsCount + 1} dropped at 7.9734° N, 3.5964° E.`);
+                        }}
+                      >
                         <Icon name="flag" className="text-sm" />
                         <span>Drop Waypoint</span>
                       </button>
@@ -275,7 +548,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="p-3 bg-surface-container-lowest rounded-lg shadow-sm">
                       <span className="font-label-sm text-label-sm text-on-surface-variant block">Perimeter</span>
-                      <span className="font-headline-sm text-headline-sm text-on-surface font-bold">812 meters</span>
+                      <span className="font-headline-sm text-headline-sm text-on-surface font-bold">{perimeterMeters} meters</span>
                     </div>
                     <div className="p-3 bg-surface-container-lowest rounded-lg shadow-sm">
                       <span className="font-label-sm text-label-sm text-on-surface-variant block">Satellite Fix</span>
@@ -285,24 +558,36 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 </div>
                 <div className="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center gap-4">
                   <div className="w-16 h-16 rounded-lg bg-surface-container-high flex items-center justify-center flex-shrink-0 text-on-surface-variant relative overflow-hidden">
-                    <img className="w-full h-full object-cover rounded-lg" data-alt="Close up photographic portrait of a smiling middle-aged Nigerian farmer in rural agricultural attire during daylight field session with lush farm background" src="/images/screens/722639a830c2.webp" alt="" loading="lazy" decoding="async" />
+                    <img className="w-full h-full object-cover rounded-lg" data-alt="Portrait of farmer" src="/images/screens/722639a830c2.webp" alt="" loading="lazy" decoding="async" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <span className="font-label-md text-label-md text-on-surface font-bold">Farmer Portrait Capture</span>
-                      <span className="text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="check_circle" className="text-sm" /> Attached</span>
+                      <span className="text-secondary font-label-sm text-label-sm flex items-center gap-1">
+                        <Icon name="check_circle" className="text-sm" /> Attached
+                      </span>
                     </div>
                     <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">NIN facial matching tolerance: 98.2% verified.</p>
                   </div>
-                  <button className="p-2.5 bg-surface-container-low rounded-lg text-on-surface hover:bg-surface-container" title="Retake Photo" type="button">
+                  <button
+                    className="p-2.5 bg-surface-container-low rounded-lg text-on-surface hover:bg-surface-container transition-colors"
+                    title="Retake Photo"
+                    type="button"
+                    onClick={() => {
+                      showScreenToast("Camera activated. New portrait captured and facial geometry cross-verified.");
+                    }}
+                  >
                     <Icon name="photo_camera" className="text-lg" />
                   </button>
                 </div>
               </div>
             </div>
           </section>
-        ))}
-        {slot(slots, "roster", (
+        )}
+
+        {slot(
+          slots,
+          "roster",
           <section className="bg-surface-container-lowest rounded-xl shadow-sm p-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-container">
               <div>
@@ -312,14 +597,22 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Icon name="filter_alt" className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" />
-                  <select className="pl-9 pr-8 py-2 bg-surface-container-low rounded-lg text-on-surface font-label-md text-label-md focus:outline-none cursor-pointer">
-                    <option>All Communities (4 Zones)</option>
-                    <option>Ado-Awaye Village</option>
-                    <option>Odo-Ogun Community</option>
-                    <option>Iseyin East Cluster</option>
+                  <select
+                    className="pl-9 pr-8 py-2 bg-surface-container-low rounded-lg text-on-surface font-label-md text-label-md focus:outline-none cursor-pointer"
+                    value={communityFilter}
+                    onChange={(e) => setCommunityFilter(e.target.value)}
+                  >
+                    <option value="all">All Communities (4 Zones)</option>
+                    <option value="Ado-Awaye">Ado-Awaye Village</option>
+                    <option value="Odo-Ogun">Odo-Ogun Community</option>
+                    <option value="Iseyin">Iseyin East Cluster</option>
                   </select>
                 </div>
-                <button className="flex items-center gap-1.5 px-3 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all" type="button">
+                <button
+                  className="flex items-center gap-1.5 px-3 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all"
+                  type="button"
+                  onClick={handleExportRoster}
+                >
                   <Icon name="download" className="text-base" />
                   <span>Export CSV</span>
                 </button>
@@ -340,163 +633,123 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface">
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Alhaji Rasheed Adeleke</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">#FMR-2026-089 • +234 803 112 4091</span>
+                  {filteredRoster.map((farmer) => {
+                    const panelDossier = (
+                      <div className="w-full max-w-md rounded-xl bg-surface-container-lowest p-space-md flex flex-col gap-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-surface-container">
+                          <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Farmer Dossier: {farmer.name}</h3>
+                          <ScreenDialogClose>
+                            <button onClick={() => {}} className="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant" type="button">
+                              <Icon name="close" className="text-lg" />
+                            </button>
+                          </ScreenDialogClose>
+                        </div>
+                        <div className="p-3 rounded-lg bg-surface-container-low space-y-1.5 text-body-sm">
+                          <div className="flex justify-between"><span>Case ID:</span><strong className="font-mono">{farmer.caseId}</strong></div>
+                          <div className="flex justify-between"><span>Phone:</span><strong>{farmer.phone}</strong></div>
+                          <div className="flex justify-between"><span>NIN:</span><span className="font-mono">{farmer.nin}</span></div>
+                          <div className="flex justify-between"><span>Location:</span><span>{farmer.community}</span></div>
+                          <div className="flex justify-between"><span>Enterprise:</span><span>{farmer.enterprise}</span></div>
+                          <div className="flex justify-between"><span>Mapped Area:</span><strong className="text-primary">{farmer.areaHa} Ha</strong></div>
+                          <div className="flex justify-between"><span>Tier Status:</span><strong className="text-secondary">{farmer.tier}</strong></div>
+                          <div className="flex justify-between"><span>Accrued Incentive:</span><strong className="text-primary">{farmer.incentive}</strong></div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                          <button
+                            className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold"
+                            type="button"
+                            onClick={() => {
+                              downloadFile(
+                                `Farmer-Dossier-${farmer.caseId.replace("#", "")}.txt`,
+                                `CULTIVANODE ASSISTED ONBOARDING DOSSIER\nCase: ${farmer.caseId}\nName: ${farmer.name}\nPhone: ${farmer.phone}\nNIN: ${farmer.nin}\nCommunity: ${farmer.community}\nEnterprise: ${farmer.enterprise}\nLand Size: ${farmer.areaHa} Ha\nTier: ${farmer.tier}\nExtension Officer: Quadri Olapade (#AG-OYO-042)\nVerification: PASS`,
+                                "text/plain"
+                              );
+                              showScreenToast(`Dossier ${farmer.caseId} downloaded.`);
+                            }}
+                          >
+                            Download Dossier
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-4 px-4 text-on-surface-variant">
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="place" className="text-secondary text-base" />
-                        <span>Ado-Awaye Village</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface">Cassava / Maize</span>
-                    </td>
-                    <td className="py-4 px-4 font-headline-sm text-headline-sm font-semibold">5.0 Ha</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Tier 2 Payout-Ready</span>
-                    </td>
-                    <td className="py-4 px-4 font-label-md text-label-md text-primary font-bold">₦3,500</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm"><Icon name="cloud_done" className="text-base" /> Synced</span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="View Dossier" type="button">
-                          <Icon name="visibility" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Edit GPS Polygon" type="button">
-                          <Icon name="edit_location" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Log Farm Visit" type="button">
-                          <Icon name="add_task" className="text-base" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Madam Folashade Alabi</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">#FMR-2026-090 • +234 812 770 1933</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-on-surface-variant">
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="place" className="text-secondary text-base" />
-                        <span>Odo-Ogun Community</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface">Tomato Roma VF</span>
-                    </td>
-                    <td className="py-4 px-4 font-headline-sm text-headline-sm font-semibold">2.5 Ha</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Tier 1 Verified</span>
-                    </td>
-                    <td className="py-4 px-4 font-label-md text-label-md text-primary font-bold">₦2,250</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm"><Icon name="cloud_done" className="text-base" /> Synced</span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="View Dossier" type="button">
-                          <Icon name="visibility" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Edit GPS Polygon" type="button">
-                          <Icon name="edit_location" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Log Farm Visit" type="button">
-                          <Icon name="add_task" className="text-base" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Babatunde Ogundipe</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">#FMR-2026-091 • +234 705 889 0211</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-on-surface-variant">
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="place" className="text-secondary text-base" />
-                        <span>Iseyin East Outskirts</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface">Cowpea &amp; Soy</span>
-                    </td>
-                    <td className="py-4 px-4 font-headline-sm text-headline-sm font-semibold">8.0 Ha</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm"><span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> Pending BVN match</span>
-                    </td>
-                    <td className="py-4 px-4 font-label-md text-label-md text-on-surface-variant font-bold">₦5,000</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm"><Icon name="sync_problem" className="text-base" /> Queued Locally</span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="View Dossier" type="button">
-                          <Icon name="visibility" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Edit GPS Polygon" type="button">
-                          <Icon name="edit_location" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Log Farm Visit" type="button">
-                          <Icon name="add_task" className="text-base" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Funke Balogun</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant">#FMR-2026-092 • +234 814 621 9904</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-on-surface-variant">
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="place" className="text-secondary text-base" />
-                        <span>Oke-Ola Farm Settlement</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface">Poultry (500 Broilers)</span>
-                    </td>
-                    <td className="py-4 px-4 font-headline-sm text-headline-sm font-semibold">1.8 Ha</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Tier 2 Payout-Ready</span>
-                    </td>
-                    <td className="py-4 px-4 font-label-md text-label-md text-primary font-bold">₦1,900</td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm"><Icon name="cloud_done" className="text-base" /> Synced</span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="View Dossier" type="button">
-                          <Icon name="visibility" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Edit GPS Polygon" type="button">
-                          <Icon name="edit_location" className="text-base" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="Log Farm Visit" type="button">
-                          <Icon name="add_task" className="text-base" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    );
+
+                    return (
+                      <tr key={farmer.id} className="hover:bg-surface-container-low/50 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-label-md text-label-md text-on-surface font-bold">{farmer.name}</span>
+                            <span className="font-label-sm text-label-sm text-on-surface-variant">
+                              {farmer.caseId} • {farmer.phone}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-on-surface-variant">
+                          <div className="flex items-center gap-1.5">
+                            <Icon name="place" className="text-secondary text-base" />
+                            <span>{farmer.community}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface">
+                            {farmer.enterprise}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-headline-sm text-headline-sm font-semibold">{farmer.areaHa} Ha</td>
+                        <td className="py-4 px-4">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> {farmer.tier}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-label-md text-label-md text-primary font-bold">{farmer.incentive}</td>
+                        <td className="py-4 px-4">
+                          {farmer.synced ? (
+                            <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm">
+                              <Icon name="cloud_done" className="text-base" /> Synced
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+                              <Icon name="sync_problem" className="text-base" /> Queued Locally
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <ScreenDialog title={`Farmer Dossier - ${farmer.name}`} side="center" panel={panelDossier}>
+                              <button onClick={() => {}} className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant" title="View Dossier" type="button">
+                                <Icon name="visibility" className="text-base" />
+                              </button>
+                            </ScreenDialog>
+                            <button
+                              className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant"
+                              title="Edit GPS Polygon"
+                              type="button"
+                              onClick={() => {
+                                showScreenToast(`GPS Polygon editor opened for ${farmer.name} (${farmer.areaHa} Ha).`);
+                              }}
+                            >
+                              <Icon name="edit_location" className="text-base" />
+                            </button>
+                            <button
+                              className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant"
+                              title="Log Farm Visit"
+                              type="button"
+                              onClick={() => {
+                                showScreenToast(`Field extension visit logged for ${farmer.name}.`);
+                              }}
+                            >
+                              <Icon name="add_task" className="text-base" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
-        ))}
+        )}
+
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-surface-container">
@@ -509,7 +762,9 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <span className="font-body-sm text-body-sm text-on-surface-variant">Machine Syndicate Aggregation Module</span>
                 </div>
               </div>
-              <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-sm text-label-sm font-semibold">Dispatch Ready</span>
+              <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-sm text-label-sm font-semibold">
+                {jobDispatched ? "Dispatched" : "Dispatch Ready"}
+              </span>
             </div>
             <div className="bg-surface-container-low p-4 rounded-xl space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -563,9 +818,19 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <span className="font-body-sm text-body-sm text-on-surface-variant">MF 375 (75 HP) + Heavy Disc Harrow • Available Tomorrow</span>
                 </div>
               </div>
-              <button className="w-full sm:w-auto px-4 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md shadow-sm hover:bg-primary transition-all whitespace-nowrap" type="button">Dispatch Job (Escrow Funded)</button>
+              <button
+                className="w-full sm:w-auto px-4 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md shadow-sm hover:bg-primary transition-all whitespace-nowrap"
+                type="button"
+                onClick={() => {
+                  setJobDispatched(true);
+                  showScreenToast("Harrowing job dispatched to Alhaji Kazeem Tractor Syndicate! ₦240,000 escrow secured.");
+                }}
+              >
+                {jobDispatched ? "Job Dispatched (Escrow Locked)" : "Dispatch Job (Escrow Funded)"}
+              </button>
             </div>
           </div>
+
           <div className="lg:col-span-5 bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-surface-container">
               <div className="flex items-center gap-2">
@@ -579,7 +844,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 <Icon name="sync" className="text-2xl" />
               </div>
               <div className="flex-1">
-                <span className="font-headline-sm text-headline-sm text-on-surface font-bold">14 Forms Pending</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface font-bold">{offlinePendingCount} Forms Pending</span>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">Will auto-stream to Master Node when signal reaches 3G/4G or Wi-Fi.</p>
               </div>
             </div>
@@ -611,7 +876,11 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 <span>Local Storage Cache Used:</span>
                 <span className="text-on-surface font-semibold">18.4 MB of 512 MB</span>
               </div>
-              <button className="w-full py-2.5 px-4 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all flex items-center justify-center gap-2" type="button">
+              <button
+                className="w-full py-2.5 px-4 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all flex items-center justify-center gap-2"
+                type="button"
+                onClick={handleSyncOffline}
+              >
                 <Icon name="cloud_upload" className="text-base" />
                 <span>Force Network Handshake</span>
               </button>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { MachineryFleet } from "@/components/screens/machinery-fleet";
@@ -75,10 +76,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
             <p className="font-body-sm text-body-sm text-on-surface-variant">Register tractor, implement, or heavy machinery to fleet</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -212,14 +211,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
         </div>
 
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
             Register Asset to Fleet
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -235,10 +232,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
             <p className="font-body-sm text-body-sm text-on-surface-variant">Update telemetry odometer and operational expenses</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -327,14 +322,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
         </div>
 
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
             Save Operation Telemetry
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -354,23 +347,23 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm shrink-0">
               <ScreenDialog title="Add Machinery Asset" side="center" panel={modalAddAsset}>
-                <button
+                <Button
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors font-label-lg text-label-lg font-semibold shadow-sm"
                   type="button"
                 >
                   <Icon name="add_circle" className="text-lg" />
                   <span>Add Machinery Asset</span>
-                </button>
+                </Button>
               </ScreenDialog>
 
               <ScreenDialog title="Log Machine Hours & Fuel" side="center" panel={modalLogUsage}>
-                <button
+                <Button
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors font-label-lg text-label-lg font-semibold shadow-sm"
                   type="button"
                 >
                   <Icon name="speed" className="text-lg text-secondary" />
                   <span>Log Machine Hours</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),
@@ -526,12 +519,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/machin
                         </div>
 
                         <ScreenDialog title="Log Machine Hours & Fuel" side="center" panel={modalLogUsage}>
-                          <button
+                          <Button
                             className="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-sm text-label-sm font-semibold transition-colors"
                             type="button"
                           >
                             Log Hours
-                          </button>
+                          </Button>
                         </ScreenDialog>
                       </div>
                     </div>

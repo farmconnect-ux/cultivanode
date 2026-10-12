@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { FarmBooks } from "@/components/screens/farm-books";
@@ -95,10 +96,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
             <p className="font-body-sm text-body-sm text-on-surface-variant">Set revenue targets and expenditure limits</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -180,14 +179,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
         </div>
 
         <div className="flex items-center justify-end gap-space-sm pt-4 border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
             Create Enterprise Budget
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -203,10 +200,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
             <p className="font-body-sm text-body-sm text-on-surface-variant">Allocate operational expenses to enterprise budgets</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -296,14 +291,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
         </div>
 
         <div className="flex items-center justify-end gap-space-sm pt-4 border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
             Save Budget Line
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -319,10 +312,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
             <p className="font-body-sm text-body-sm text-on-surface-variant">Calibrate yield, fertilizer rate or labour deviation</p>
           </div>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -429,14 +420,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
         </div>
 
         <div className="flex items-center justify-end gap-space-sm pt-4 border-t border-surface-container-high">
-          <ScreenDialogClose>
-            <button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md" type="button">
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
+            Cancel
           </ScreenDialogClose>
-          <button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
+          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
             Log Calibration Variance
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -456,33 +445,33 @@ export default async function Page({ params }: PageProps<"/[lang]/account/financ
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="New Enterprise Budget" side="center" panel={modalCreateBudget}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-primary-container transition-all"
                   type="button"
                 >
                   <Icon name="account_balance" className="text-base" />
                   <span>Create Budget</span>
-                </button>
+                </Button>
               </ScreenDialog>
 
               <ScreenDialog title="Add Budget Line Item" side="center" panel={modalAddLine}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container transition-all"
                   type="button"
                 >
                   <Icon name="add_card" className="text-base text-secondary" />
                   <span>Log Expense Line</span>
-                </button>
+                </Button>
               </ScreenDialog>
 
               <ScreenDialog title="Record Agronomic Variance" side="center" panel={modalLogVariance}>
-                <button
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-low transition-all"
                   type="button"
                 >
                   <Icon name="balance" className="text-base text-primary" />
                   <span>Log Variance</span>
-                </button>
+                </Button>
               </ScreenDialog>
             </div>
           ),

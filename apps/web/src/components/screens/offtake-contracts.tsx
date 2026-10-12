@@ -1,11 +1,38 @@
-// Ported from the "agricultural_contracts_off_take_agreements_6.7" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+"use client";
+
+// Ported from the "agricultural_contracts_off_take_agreements_6.7" design. Interactive client workspace
+// with live settlement console, milestone release authorization, e-waybill generation, and quality certificates.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { downloadFile } from "@/lib/download";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function OfftakeContracts(_props: ScreenProps) {
   const lang = _props?.lang ?? "en";
+  const [authorizedPayout, setAuthorizedPayout] = useState(false);
+  const [activeModal, setActiveModal] = useState<"settlement" | "waybills" | "quality" | null>(null);
+  const [activePage, setActivePage] = useState(1);
+
+  const handleAuthorizeMilestone = () => {
+    setAuthorizedPayout(true);
+    showScreenToast("Milestone 3 Payout Authorized: ₦42,510,000.00 released via Zenith Escrow NIBSS");
+  };
+
+  const handleGenerateWaybill = () => {
+    const csv = [
+      "Waybill_ID,Contract_ID,Consignment,Gross_Weight_KG,Tare_KG,Net_MT,Destination,Carrier,Status",
+      "WB-2026-9921,AGR-CTR-2026-081,Industrial Cassava (TME-419),42850,14350,28.50,Psaltry Starch Plant,Bedford Tipper OYO-442-XA,Certified & Delivered",
+      "WB-2026-9922,AGR-CTR-2026-081,Industrial Cassava (TME-419),41200,14200,27.00,Psaltry Starch Plant,Mack Truck OG-112-AB,Intake Verified",
+      "",
+      "Total_Consignment_MT,Quality_Assay_Ref,Release_Authorization,Escrow_NIBSS",
+      "55.50 MT,QC-NG-2026-8819,EXECUTED,Zenith Bank PLC Instant",
+    ].join("\n");
+
+    downloadFile(`ewaybill-psaltry-M3-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    showScreenToast("e-Waybill & Receipt (.csv) generated successfully");
+  };
   return (
     <div className="screen">
       <div className="flex items-center gap-space-xs text-body-sm font-body-sm text-on-surface-variant mb-space-md">
@@ -250,7 +277,13 @@ export function OfftakeContracts(_props: ScreenProps) {
                   <Icon name="fingerprint" className="text-[16px] text-secondary" />
                   <span>Signed: Dr. Y. Olusola (CEO, Psaltry) &amp; Chief A. Tijani (Union)</span>
                 </div>
-                <button className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5" type="button">View Live Settlement Console →</button>
+                <button
+                  onClick={() => setActiveModal("settlement")}
+                  className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5"
+                  type="button"
+                >
+                  View Live Settlement Console →
+                </button>
               </div>
             </div>
             <div className="flex flex-col bg-surface-container-low rounded-xl p-space-lg shadow-sm justify-between">
@@ -334,7 +367,13 @@ export function OfftakeContracts(_props: ScreenProps) {
                   <Icon name="security" className="text-[16px] text-secondary" />
                   <span>Zenith Escrow Vault #ZE-094-AGR Verified</span>
                 </div>
-                <button className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5" type="button">Dossier &amp; Transit Waybills →</button>
+                <button
+                  onClick={() => setActiveModal("waybills")}
+                  className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5"
+                  type="button"
+                >
+                  Dossier &amp; Transit Waybills →
+                </button>
               </div>
             </div>
             <div className="flex flex-col bg-surface-container-low rounded-xl p-space-lg shadow-sm justify-between">
@@ -393,7 +432,13 @@ export function OfftakeContracts(_props: ScreenProps) {
               </div>
               <div className="flex flex-wrap items-center justify-between pt-space-sm mt-space-sm text-label-sm font-label-sm text-on-surface-variant">
                 <span>Tripartite Guarantor: NIRSAL Agribusiness Credit Guarantee</span>
-                <button className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5" type="button">Audit Quality Certificates →</button>
+                <button
+                  onClick={() => setActiveModal("quality")}
+                  className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5"
+                  type="button"
+                >
+                  Audit Quality Certificates →
+                </button>
               </div>
             </div>
             <div className="flex flex-col bg-surface-container-low rounded-xl p-space-lg shadow-sm justify-between">
@@ -452,7 +497,13 @@ export function OfftakeContracts(_props: ScreenProps) {
               </div>
               <div className="flex flex-wrap items-center justify-between pt-space-sm mt-space-sm text-label-sm font-label-sm text-on-surface-variant">
                 <span>Escrow Underwriter: Leadway Assurance Agricultural Bond</span>
-                <button className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5" type="button">Inspect Intake Queue →</button>
+                <button
+                  className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5"
+                  type="button"
+                  onClick={() => showScreenToast("Intake Queue: 190 MT staged at Abeokuta depot. Moisture verified at 12.8% by Leadway Assurance bond inspector.")}
+                >
+                  Inspect Intake Queue →
+                </button>
               </div>
             </div>
           </div>
@@ -538,7 +589,20 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> 98.4% SLA</span>
                   </td>
                   <td className="py-space-md px-space-md text-right">
-                    <button className="px-space-sm py-1 bg-primary text-on-primary rounded text-label-sm font-label-sm hover:bg-primary-container font-semibold transition-colors" type="button">Inspect Dossier</button>
+                    <button
+                      className="px-space-sm py-1 bg-primary text-on-primary rounded text-label-sm font-label-sm hover:bg-primary-container font-semibold transition-colors"
+                      type="button"
+                      onClick={() => {
+                        downloadFile(
+                          "Dossier-AGR-CTR-2026-081.txt",
+                          "MASTER CONTRACT DOSSIER #AGR-CTR-2026-081\nBuyer: Psaltry International PLC\nSeller: Iseyin Cassava Outgrowers Cooperative\nCrop: Industrial Cassava Roots (TME-419)\nTotal Quota: 1,500 MT (1,120 MT Cleared)\nGate Price: NGN 115,000 / MT (+ 5% Starch Premium)\nEscrow Partner: Zenith Dual-Key Release (NGN 43,700,000 Locked)\nUnderwriter: Leadway Assurance Agricultural Bond\nSLA Compliance: 98.4%",
+                          "text/plain"
+                        );
+                        showScreenToast("Master Dossier #AGR-CTR-2026-081 downloaded.");
+                      }}
+                    >
+                      Inspect Dossier
+                    </button>
                   </td>
                 </tr>
                 <tr className="bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
@@ -576,7 +640,20 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> 99.1% SLA</span>
                   </td>
                   <td className="py-space-md px-space-md text-right">
-                    <button className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors" type="button">Inspect Dossier</button>
+                    <button
+                      className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors"
+                      type="button"
+                      onClick={() => {
+                        downloadFile(
+                          "Dossier-AGR-CTR-2026-094.txt",
+                          "MASTER CONTRACT DOSSIER #AGR-CTR-2026-094\nBuyer: Grand Cereals Ltd (Oluyole Terminal)\nSeller: Iseyin Savanna Growers\nCrop: Yellow Maize (SAMMAZ)\nTotal Quota: 1,200 MT (850 MT Cleared)\nGate Price: NGN 420,000 / MT (Fixed Price Gate)\nEscrow Partner: Zenith Corporate LC (NGN 147,000,000 Locked)\nSLA Compliance: 99.1%",
+                          "text/plain"
+                        );
+                        showScreenToast("Master Dossier #AGR-CTR-2026-094 downloaded.");
+                      }}
+                    >
+                      Inspect Dossier
+                    </button>
                   </td>
                 </tr>
                 <tr className="hover:bg-surface-container-low transition-colors">
@@ -614,7 +691,20 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> 96.0% SLA</span>
                   </td>
                   <td className="py-space-md px-space-md text-right">
-                    <button className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors" type="button">Inspect Dossier</button>
+                    <button
+                      className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors"
+                      type="button"
+                      onClick={() => {
+                        downloadFile(
+                          "Dossier-AGR-CTR-2026-105.txt",
+                          "MASTER CONTRACT DOSSIER #AGR-CTR-2026-105\nBuyer: Premium Edible Oils (Ede Complex)\nSeller: Oke-Ogun Soya Alliance\nCrop: Soybeans (TGX-1448E)\nTotal Quota: 800 MT (610 MT Cleared)\nGate Price: NGN 680,000 / MT (+ Quality Bonus Cleared)\nEscrow Partner: Zenith Escrow Vault (NGN 129,200,000 Locked)\nSLA Compliance: 96.0%",
+                          "text/plain"
+                        );
+                        showScreenToast("Master Dossier #AGR-CTR-2026-105 downloaded.");
+                      }}
+                    >
+                      Inspect Dossier
+                    </button>
                   </td>
                 </tr>
                 <tr className="bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
@@ -652,7 +742,20 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-surface-container-high text-primary font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> 94.8% SLA</span>
                   </td>
                   <td className="py-space-md px-space-md text-right">
-                    <button className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors" type="button">Inspect Dossier</button>
+                    <button
+                      className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors"
+                      type="button"
+                      onClick={() => {
+                        downloadFile(
+                          "Dossier-AGR-CTR-2026-112.txt",
+                          "MASTER CONTRACT DOSSIER #AGR-CTR-2026-112\nBuyer: Olam Agri (Sagamu Rice Mill)\nSeller: Egba Rice Farmers\nCrop: Paddy Rice (Faro 44)\nTotal Quota: 500 MT (310 MT Cleared)\nGate Price: NGN 540,000 / MT (Indexed Floor)\nEscrow Partner: Zenith Escrow Vault (NGN 102,600,000 Locked)\nSLA Compliance: 94.8%",
+                          "text/plain"
+                        );
+                        showScreenToast("Master Dossier #AGR-CTR-2026-112 downloaded.");
+                      }}
+                    >
+                      Inspect Dossier
+                    </button>
                   </td>
                 </tr>
                 <tr className="hover:bg-surface-container-low transition-colors">
@@ -690,7 +793,20 @@ export function OfftakeContracts(_props: ScreenProps) {
                     <span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> 99.8% SLA</span>
                   </td>
                   <td className="py-space-md px-space-md text-right">
-                    <button className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors" type="button">Inspect Dossier</button>
+                    <button
+                      className="px-space-sm py-1 bg-surface-container text-on-surface rounded text-label-sm font-label-sm hover:bg-surface-container-high font-semibold transition-colors"
+                      type="button"
+                      onClick={() => {
+                        downloadFile(
+                          "Dossier-AGR-CTR-2026-118.txt",
+                          "MASTER CONTRACT DOSSIER #AGR-CTR-2026-118\nBuyer: Nestlé Nigeria PLC (Agbara Factory)\nSeller: Ogun Sorghum Clusters\nCrop: White Sorghum (CSR-01)\nTotal Quota: 600 MT (520 MT Cleared)\nGate Price: NGN 490,000 / MT (Premium Food Grade)\nEscrow Partner: Zenith Escrow Vault (NGN 39,200,000 Locked)\nAflatoxin Max: 4.0 ppb\nSLA Compliance: 99.8%",
+                          "text/plain"
+                        );
+                        showScreenToast("Master Dossier #AGR-CTR-2026-118 downloaded.");
+                      }}
+                    >
+                      Inspect Dossier
+                    </button>
                   </td>
                 </tr>
                   </>
@@ -701,11 +817,60 @@ export function OfftakeContracts(_props: ScreenProps) {
           <div className="flex flex-wrap items-center justify-between pt-space-md mt-space-sm text-body-sm font-body-sm text-on-surface-variant">
             <span>Showing 5 of 24 active master contracts (All registered under CAMA 2020)</span>
             <div className="flex items-center gap-space-xs">
-              <button className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high" type="button">Previous</button>
-              <button className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold" type="button">1</button>
-              <button className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high" type="button">2</button>
-              <button className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high" type="button">3</button>
-              <button className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high" type="button">Next</button>
+              <button
+                className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high disabled:opacity-50"
+                type="button"
+                disabled={activePage === 1}
+                onClick={() => {
+                  const p = Math.max(1, activePage - 1);
+                  setActivePage(p);
+                  showScreenToast(`Viewing page ${p} of master contracts`);
+                }}
+              >
+                Previous
+              </button>
+              <button
+                className={`px-space-sm py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${activePage === 1 ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface hover:bg-surface-container-high"}`}
+                type="button"
+                onClick={() => {
+                  setActivePage(1);
+                  showScreenToast("Viewing page 1 of master contracts");
+                }}
+              >
+                1
+              </button>
+              <button
+                className={`px-space-sm py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${activePage === 2 ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface hover:bg-surface-container-high"}`}
+                type="button"
+                onClick={() => {
+                  setActivePage(2);
+                  showScreenToast("Viewing page 2 of master contracts");
+                }}
+              >
+                2
+              </button>
+              <button
+                className={`px-space-sm py-1 rounded font-label-sm text-label-sm font-semibold transition-colors ${activePage === 3 ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface hover:bg-surface-container-high"}`}
+                type="button"
+                onClick={() => {
+                  setActivePage(3);
+                  showScreenToast("Viewing page 3 of master contracts");
+                }}
+              >
+                3
+              </button>
+              <button
+                className="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high disabled:opacity-50"
+                type="button"
+                disabled={activePage === 3}
+                onClick={() => {
+                  const p = Math.min(3, activePage + 1);
+                  setActivePage(p);
+                  showScreenToast(`Viewing page ${p} of master contracts`);
+                }}
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
@@ -798,11 +963,20 @@ export function OfftakeContracts(_props: ScreenProps) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
-              <button className="flex-1 inline-flex items-center justify-center gap-space-xs px-space-md py-3 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md font-semibold" type="button">
+              <button
+                onClick={handleAuthorizeMilestone}
+                disabled={authorizedPayout}
+                className="flex-1 inline-flex items-center justify-center gap-space-xs px-space-md py-3 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md font-semibold disabled:opacity-60"
+                type="button"
+              >
                 <Icon name="lock_open" className="text-[20px]" />
-                <span>Authorize Milestone 3 Payout (₦42.51M)</span>
+                <span>{authorizedPayout ? "Milestone 3 Payout Authorized" : "Authorize Milestone 3 Payout (₦42.51M)"}</span>
               </button>
-              <button className="inline-flex items-center gap-space-xs px-space-md py-3 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm font-semibold" type="button">
+              <button
+                onClick={handleGenerateWaybill}
+                className="inline-flex items-center gap-space-xs px-space-md py-3 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm font-semibold"
+                type="button"
+              >
                 <Icon name="receipt_long" className="text-[20px]" />
                 <span>Generate e-Waybill &amp; Receipt</span>
               </button>
@@ -912,6 +1086,126 @@ export function OfftakeContracts(_props: ScreenProps) {
             <span className="px-space-xs py-0.5 rounded bg-surface-container font-semibold text-on-surface">Oyo / Osun / Ogun Cluster</span>
           </div>
         </div>
+
+        {/* Interactive Contract Modals */}
+        {activeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-xl w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name={activeModal === "settlement" ? "account_balance" : activeModal === "waybills" ? "receipt_long" : "biotech"} className="text-[22px]" />
+                  <span>
+                    {activeModal === "settlement" && "Live Escrow Settlement Console (§6.7)"}
+                    {activeModal === "waybills" && "Dossier & Transit Waybill Registry"}
+                    {activeModal === "quality" && "Lab Quality Assay & Certificate Audit"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <div className="text-body-sm text-on-surface space-y-space-sm">
+                {activeModal === "settlement" && (
+                  <>
+                    <p className="text-on-surface-variant">Zenith Bank automated escrow ledger for contract #AGR-CTR-2026-081:</p>
+                    <div className="p-space-sm bg-surface-container-low rounded-lg space-y-2">
+                      <div className="flex justify-between">
+                        <span>Milestone 1 (500 MT):</span>
+                        <strong className="text-secondary">₦57,500,000 Disbursed (28 Apr)</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Milestone 2 (620 MT):</span>
+                        <strong className="text-secondary">₦71,300,000 Disbursed (18 May)</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Milestone 3 (380 MT):</span>
+                        <strong className={authorizedPayout ? "text-secondary" : "text-primary"}>
+                          {authorizedPayout ? "₦42,510,000 Authorized & Released" : "₦43,700,000 Held in Escrow"}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-space-xs bg-surface-container text-label-sm rounded flex items-center justify-between">
+                      <span>Total Value: ₦172,500,000</span>
+                      <span className="text-secondary font-bold">100% NIBSS Instant Clearing</span>
+                    </div>
+                  </>
+                )}
+
+                {activeModal === "waybills" && (
+                  <>
+                    <p className="text-on-surface-variant">Certified electronic waybills for active produce haulage:</p>
+                    <div className="space-y-2">
+                      <div className="p-space-sm bg-surface-container-low rounded flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-on-surface">#WB-2026-9921 · 28.5 MT</div>
+                          <div className="text-label-sm text-outline">Bedford Tipper OYO-442-XA → Psaltry</div>
+                        </div>
+                        <span className="text-secondary font-bold text-label-sm">Delivered</span>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-on-surface">#WB-2026-9922 · 27.0 MT</div>
+                          <div className="text-label-sm text-outline">Mack Truck OG-112-AB → Psaltry</div>
+                        </div>
+                        <span className="text-primary font-bold text-label-sm">Gate Verified</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeModal === "quality" && (
+                  <>
+                    <p className="text-on-surface-variant">Accredited laboratory quality parameters and certificates:</p>
+                    <div className="grid grid-cols-2 gap-space-sm">
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Starch Density Index</div>
+                        <div className="text-title-md font-bold text-secondary">24.2% (Target &gt;21.5%)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Moisture Content</div>
+                        <div className="text-title-md font-bold text-secondary">12.7% (Max ≤13.0%)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Aflatoxin Contaminant</div>
+                        <div className="text-title-md font-bold text-secondary">3.2 ppb (Limit ≤10 ppb)</div>
+                      </div>
+                      <div className="p-space-sm bg-surface-container-low rounded">
+                        <div className="text-label-sm text-outline">Certifying Lab</div>
+                        <div className="text-title-md font-bold text-on-surface">SON #2026 Assayed</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const csv = `Contract,Modal,Timestamp\nAGR-CTR-2026-081,${activeModal},${new Date().toISOString()}`;
+                    downloadFile(`contract-${activeModal}-report.csv`, csv);
+                    showScreenToast(`Downloaded ${activeModal} report`);
+                  }}
+                  className="px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded text-label-sm font-semibold transition-colors"
+                >
+                  Download Dossier (.csv)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="px-space-md py-1.5 bg-primary text-on-primary hover:bg-primary/90 font-label-sm rounded text-label-sm font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

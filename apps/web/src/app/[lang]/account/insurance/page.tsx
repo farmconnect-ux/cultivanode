@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { InsuranceHub } from "@/components/screens/insurance-hub";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -59,10 +60,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/insura
             Underwrite Multi-Peril / Parametric Policy
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -128,20 +127,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/insura
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Activate Policy
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -161,13 +155,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/insura
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="Underwrite New Policy" side="center" panel={newPolicyModal}>
-                <button
-                  type="button"
+                <Button
                   className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-lg shadow-sm font-semibold"
                 >
                   <Icon name="add_moderator" className="text-[18px]" />
                   <span>+ Underwrite New Policy</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/crops`}

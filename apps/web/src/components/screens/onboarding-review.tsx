@@ -1,7 +1,10 @@
+"use client";
+
 // Ported from the "onboarding_review_ready_cultivanode_agrarian_gateway" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function OnboardingReview({ lang = "en" }: ScreenProps) {
@@ -81,7 +84,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Centralized Agrarian ID Network Node: CN-AGR-OYO-08492</span>
                     </div>
                   </div>
-                  <button className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
+                  <button onClick={() => showScreenToast("Navigating to Step 1: Agrarian Identity & Tenancy Protocol editor.")} className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
                     <Icon name="edit" className="text-[16px]" />
                     <span>Edit Step 1</span>
                   </button>
@@ -133,7 +136,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Oke-Ogun Savanna Basin Cluster · Iseyin LGA, Oyo State</span>
                     </div>
                   </div>
-                  <button className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
+                  <button onClick={() => showScreenToast("Navigating to Step 2: Cadastral Boundary & Soil Dossier editor.")} className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
                     <Icon name="edit" className="text-[16px]" />
                     <span>Edit Step 2</span>
                   </button>
@@ -195,7 +198,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Early Season 2026 Production Slate · Intercropped Relay Configuration</span>
                     </div>
                   </div>
-                  <button className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
+                  <button onClick={() => showScreenToast("Navigating to Step 3: Crop Varieties & Production Calendar editor.")} className="flex items-center gap-1 font-label-md text-label-md text-secondary hover:text-primary transition-colors py-1 px-2 rounded-md hover:bg-surface-container" type="button">
                     <Icon name="edit" className="text-[16px]" />
                     <span>Edit Step 3</span>
                   </button>
@@ -360,7 +363,33 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                     <span className="font-label-sm text-label-sm text-secondary font-bold">₦0.00 Pre-fee</span>
                   </div>
                 </div>
-                <button className="w-full mb-space-md flex items-center justify-center gap-space-xs bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors py-2.5 px-space-md rounded-lg font-label-md text-label-md" type="button">
+                <button
+                  onClick={() => {
+                    const cert = `CULTIVANODE AGRARIAN CADASTRE CERTIFICATE
+Reference: CN-AGR-OYO-08492
+Producer: Adebayo K. Alabi (BVN Verified)
+Cluster: Oke-Ogun Savanna Basin Cluster · Iseyin LGA, Oyo State
+Centroid: 8.2140° N, 3.5820° E
+Total Hectarage: 12.4 Ha (124,000 m²)
+Tenancy Deed: Baale Customary Attestation (Perpetual Usufruct)
+Soil Assay: Sandy Clay Loam (pH 6.4, CEC 14.8 cmol/kg)
+Season 2026 Production Slate:
+- Maize (SAMMAZ-15 Hybrid): 7.2 Ha (58%)
+- Yellow Cassava (TME-419 Certified): 5.2 Ha (42%)
+Regulatory Endorsement: Oyo State Agricultural Development Programme (Oyo ADP)
+Cryptographic Seal: SHA256-CN-OYO-08492-CADASTRAL-2026`;
+                    const blob = new Blob([cert], { type: "text/plain;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Farm-Cadastral-Certificate-CN-AGR-OYO-08492.txt";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showScreenToast("Farm Cadastral Certificate downloaded successfully.");
+                  }}
+                  className="w-full mb-space-md flex items-center justify-center gap-space-xs bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors py-2.5 px-space-md rounded-lg font-label-md text-label-md"
+                  type="button"
+                >
                   <Icon name="picture_as_pdf" className="text-[18px] text-secondary" />
                   <span>Download Farm Cadastral Certificate</span>
                 </button>
@@ -375,7 +404,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                     <span>Confirm &amp; Launch Farm Operations Hub</span>
                     <Icon name="arrow_forward" className="text-[18px]" />
                   </Link>
-                  <button className="w-full flex items-center justify-center gap-space-xs bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-space-md rounded-lg font-label-md text-label-md transition-colors" type="button">
+                  <button onClick={() => showScreenToast("Onboarding draft saved to local SQLite cache and synchronized with cloud node.")} className="w-full flex items-center justify-center gap-space-xs bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-space-md rounded-lg font-label-md text-label-md transition-colors" type="button">
                     <Icon name="save" className="text-[16px]" />
                     <span>Save as Draft &amp; Return Later</span>
                   </button>

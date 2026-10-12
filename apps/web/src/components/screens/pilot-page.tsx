@@ -1,12 +1,32 @@
+"use client";
+
 // Ported from the "join_the_south_west_pilot_cultivanode_agrarian_mesh" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { slot, type ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export type PilotPageSlot = "form";
 
 export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
+  const [selectedRole, setSelectedRole] = useState("Smallholder Farmer");
+  const [selectedState, setSelectedState] = useState("Oyo");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleRoleSelect = (role: string, label: string) => {
+    setSelectedRole(role);
+    showScreenToast("Pilot Cohort Selected", `Assigned role set to: ${label}. Enrollment form updated.`);
+    const el = document.getElementById("enrollment-form");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    showScreenToast("Enrollment Dossier Transmitted", "Dossier ref CN-SW-2025-9941 registered. ADP field officer will contact you within 24-72 hours.");
+  };
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -209,7 +229,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     </div>
                   </div>
                 </div>
-                <button className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
+                <button onClick={() => handleRoleSelect("Smallholder Farmer", "Smallholder Farmer")} className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group">
                 <div>
@@ -234,7 +254,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     </div>
                   </div>
                 </div>
-                <button className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
+                <button onClick={() => handleRoleSelect("Tractor Syndicate Owner", "Tractor & Machinery Syndicate")} className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group">
                 <div>
@@ -259,7 +279,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     </div>
                   </div>
                 </div>
-                <button className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
+                <button onClick={() => handleRoleSelect("Agro-Operator / Sprayer", "Skilled Agro-Operator & Sprayer")} className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group">
                 <div>
@@ -284,7 +304,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     </div>
                   </div>
                 </div>
-                <button className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
+                <button onClick={() => handleRoleSelect("Input Merchant / Agro-Dealer", "Input Merchant & Agro-Dealer")} className="w-full py-2.5 px-3 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-colors text-center" type="button">Select This Role →</button>
               </div>
             </div>
           </div>
@@ -554,7 +574,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface font-semibold mb-2" htmlFor="participantRole">Participant Role <span className="text-error">*</span></label>
-                        <select defaultValue="" className="w-full h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="participantRole" required>
+                        <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="w-full h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="participantRole" required>
                           <option disabled value="">Select category...</option>
                           <option value="Smallholder Farmer">Smallholder Farmer (1-10 Ha)</option>
                           <option value="Commercial Farmer">Commercial Agro-Enterprise (10-50+ Ha)</option>
@@ -565,7 +585,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                       </div>
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface font-semibold mb-2" htmlFor="targetState">Target State <span className="text-error">*</span></label>
-                        <select defaultValue="" className="w-full h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="targetState" required>
+                        <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="w-full h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="targetState" required>
                           <option disabled value="">Select South-West State...</option>
                           <option value="Oyo">Oyo State</option>
                           <option value="Ogun">Ogun State</option>
@@ -579,6 +599,10 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                         <label className="block font-label-md text-label-md text-on-surface font-semibold mb-2" htmlFor="targetLga">Local Govt Area (LGA) <span className="text-error">*</span></label>
                         <select defaultValue="" className="w-full h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="targetLga" required>
                           <option disabled value="">Select State first...</option>
+                          <option value="Ibadan North">Ibadan North</option>
+                          <option value="Ibarapa Central">Ibarapa Central</option>
+                          <option value="Oyo West">Oyo West</option>
+                          <option value="Saki West">Saki West</option>
                         </select>
                       </div>
                     </div>
@@ -614,12 +638,12 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                       <Icon name="lock" className="text-secondary text-[18px]" />
                       <span>Encrypted 256-bit TLS Gateway • Instant SMS Confirmation</span>
                     </div>
-                    <button className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-lg text-label-lg shadow-sm transition-all flex items-center justify-center gap-2" id="submitButton" type="submit">
+                    <button onClick={handleSubmit} className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-lg text-label-lg shadow-sm transition-all flex items-center justify-center gap-2" id="submitButton" type="submit">
                       <Icon name="send" className="text-[20px]" />
                       <span>Submit Pilot Enrollment Dossier</span>
                     </button>
                   </div>
-                  <div className="hidden rounded-xl p-5 bg-secondary-container text-on-secondary-container" id="submissionAlert">
+                  <div className={`${submitted ? "block" : "hidden"} rounded-xl p-5 bg-secondary-container text-on-secondary-container`} id="submissionAlert">
                     <div className="flex items-start gap-3">
                       <Icon name="task_alt" className="text-[24px] text-secondary" />
                       <div>

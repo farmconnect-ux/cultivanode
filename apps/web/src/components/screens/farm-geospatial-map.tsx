@@ -13,6 +13,8 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWalkingBoundary, setIsWalkingBoundary] = useState(false);
   const [infraModalOpen, setInfraModalOpen] = useState(false);
+  const [basemap, setBasemap] = useState<"satellite" | "topo" | "cadastral">("satellite");
+  const [layerPanelOpen, setLayerPanelOpen] = useState(true);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -233,18 +235,58 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
                 <Icon name="layers" className="text-primary text-xl" />
                 <span className="font-headline-sm text-headline-sm text-on-surface font-bold">GIS Layers &amp; Overlays</span>
               </div>
-              <button className="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors" title="Collapse Layer Panel" type="button">
-                <Icon name="unfold_less" className="text-lg" />
+              <button
+                onClick={() => setLayerPanelOpen((p) => !p)}
+                className="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors"
+                title={layerPanelOpen ? "Collapse Layer Panel" : "Expand Layer Panel"}
+                type="button"
+              >
+                <Icon name={layerPanelOpen ? "unfold_less" : "unfold_more"} className="text-lg" />
               </button>
             </div>
-            <div className="flex flex-col gap-1.5 p-space-sm bg-surface-container-low rounded-lg">
-              <span className="font-label-sm text-label-sm text-on-surface-variant font-bold tracking-wider uppercase">Basemap Provider</span>
-              <div className="grid grid-cols-3 gap-1">
-                <button className="py-1 px-1.5 text-center rounded bg-primary-container text-on-primary font-label-sm text-label-sm font-medium shadow-xs" type="button">Satellite</button>
-                <button className="py-1 px-1.5 text-center rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">Topographic</button>
-                <button className="py-1 px-1.5 text-center rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">Cadastral</button>
-              </div>
-            </div>
+            {layerPanelOpen && (
+              <>
+                <div className="flex flex-col gap-1.5 p-space-sm bg-surface-container-low rounded-lg">
+                  <span className="font-label-sm text-label-sm text-on-surface-variant font-bold tracking-wider uppercase">Basemap Provider</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={() => {
+                        setBasemap("satellite");
+                        triggerToast("Basemap: Sentinel-2 Satellite Multi-Spectral View.");
+                      }}
+                      className={`py-1 px-1.5 text-center rounded font-label-sm text-label-sm font-medium transition-all ${
+                        basemap === "satellite" ? "bg-primary-container text-on-primary shadow-xs font-bold" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      Satellite
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBasemap("topo");
+                        triggerToast("Basemap: Topographic Elevation Contours.");
+                      }}
+                      className={`py-1 px-1.5 text-center rounded font-label-sm text-label-sm font-medium transition-all ${
+                        basemap === "topo" ? "bg-primary-container text-on-primary shadow-xs font-bold" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      Topographic
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBasemap("cadastral");
+                        triggerToast("Basemap: SURCON Cadastral Parcel Boundaries.");
+                      }}
+                      className={`py-1 px-1.5 text-center rounded font-label-sm text-label-sm font-medium transition-all ${
+                        basemap === "cadastral" ? "bg-primary-container text-on-primary shadow-xs font-bold" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      Cadastral
+                    </button>
+                  </div>
+                </div>
             <div className="flex flex-col gap-2.5 pt-1">
               <span className="font-label-sm text-label-sm text-on-surface-variant font-bold tracking-wider uppercase">Operational Layers</span>
               <div className="flex flex-col gap-1 p-2 rounded-lg hover:bg-surface-container-low transition-colors">
@@ -334,6 +376,8 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
                 <span>0.88 (Dense)</span>
               </div>
             </div>
+            </>
+            )}
           </div>
           {viewMode === "google_maps" ? (
             <div className="relative flex-1 w-full h-full min-h-[760px] overflow-hidden">
@@ -451,22 +495,47 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
             </div>
             <div className="absolute right-4 top-4 z-20 flex flex-col gap-2">
               <div className="bg-surface-container-lowest rounded-xl shadow-md p-1 flex flex-col items-center">
-                <button className="w-9 h-9 flex items-center justify-center text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" title="Zoom In" type="button">
+                <button
+                  onClick={() => triggerToast("Map canvas zoomed in (+1.5x zoom level).")}
+                  className="w-9 h-9 flex items-center justify-center text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
+                  title="Zoom In"
+                  type="button"
+                >
                   <Icon name="add" className="text-xl" />
                 </button>
                 <div className="w-6 h-px bg-surface-container my-0.5" />
-                <button className="w-9 h-9 flex items-center justify-center text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" title="Zoom Out" type="button">
+                <button
+                  onClick={() => triggerToast("Map canvas zoomed out (-1.5x zoom level).")}
+                  className="w-9 h-9 flex items-center justify-center text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
+                  title="Zoom Out"
+                  type="button"
+                >
                   <Icon name="remove" className="text-xl" />
                 </button>
               </div>
               <div className="bg-surface-container-lowest rounded-xl shadow-md p-1 flex flex-col items-center">
-                <button className="w-9 h-9 flex items-center justify-center text-primary hover:bg-surface-container-low rounded-lg transition-colors" title="Compass Orientation" type="button">
+                <button
+                  onClick={() => triggerToast("Re-centered and aligned compass to true Geodetic North (0° azimuth).")}
+                  className="w-9 h-9 flex items-center justify-center text-primary hover:bg-surface-container-low rounded-lg transition-colors"
+                  title="Compass Orientation"
+                  type="button"
+                >
                   <Icon name="explore" className="text-xl" />
                 </button>
-                <button className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" title="Area & Distance Measurement" type="button">
+                <button
+                  onClick={() => triggerToast("Geodesic measurement tool active: Click on two boundary anchors to compute distance & parcel area.")}
+                  className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
+                  title="Area & Distance Measurement"
+                  type="button"
+                >
                   <Icon name="straighten" className="text-xl" />
                 </button>
-                <button className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" title="Fullscreen Geospatial Canvas" type="button">
+                <button
+                  onClick={() => triggerToast("Full-screen geospatial command viewport toggled.")}
+                  className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
+                  title="Fullscreen Geospatial Canvas"
+                  type="button"
+                >
                   <Icon name="fullscreen" className="text-xl" />
                 </button>
               </div>
@@ -563,22 +632,39 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
                       <span className="font-body-sm text-xs text-on-surface-variant">Field Supervisor + 4 Hands</span>
                     </div>
                   </div>
-                  <button className="p-1 text-primary hover:bg-surface-container rounded transition-colors" title="Call or Message Supervisor" type="button">
+                  <button
+                    onClick={() => triggerToast("Direct USSD dispatch initiated to Field Supervisor Tunde Balogun (+234 803 291 8841).")}
+                    className="p-1 text-primary hover:bg-surface-container rounded transition-colors"
+                    title="Call or Message Supervisor"
+                    type="button"
+                  >
                     <Icon name="call" className="text-lg" />
                   </button>
                 </div>
               </div>
               <div className="flex flex-col gap-2 pt-space-xs mt-auto">
-                <button className="w-full py-2.5 px-space-md bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 hover:opacity-95 transition-opacity shadow-sm" type="button">
+                <button
+                  onClick={() => triggerToast("Loading Field 01 Master Agronomic Dossier (Soil pH 6.2, NDVI 0.78, Biomass 4.2 MT/Ha)...")}
+                  className="w-full py-2.5 px-space-md bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 hover:opacity-95 transition-opacity shadow-sm"
+                  type="button"
+                >
                   <Icon name="open_in_new" className="text-lg" />
                   <span>View Field Full Master File</span>
                 </button>
                 <div className="grid grid-cols-2 gap-2">
-                  <button className="py-2 px-space-sm bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors" type="button">
+                  <button
+                    onClick={() => triggerToast("Scouting alert logged: FAW spot-treatment work order queued for Field 01.")}
+                    className="py-2 px-space-sm bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                    type="button"
+                  >
                     <Icon name="flag" className="text-base text-error" />
                     <span>Log Scouting</span>
                   </button>
-                  <button className="py-2 px-space-sm bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors" type="button">
+                  <button
+                    onClick={() => triggerToast("Machinery syndicate requisition dispatched: Boom sprayer requested for Field 01.")}
+                    className="py-2 px-space-sm bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                    type="button"
+                  >
                     <Icon name="precision_manufacturing" className="text-base text-tertiary" />
                     <span>Order Machine</span>
                   </button>
@@ -726,6 +812,7 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
                   Cancel
                 </button>
                 <button
+                  onClick={() => {}}
                   type="submit"
                   className="px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-container shadow-sm"
                 >

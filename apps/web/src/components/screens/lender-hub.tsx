@@ -1,47 +1,112 @@
-// Ported from the "lender_agricultural_credit_9.2" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+"use client";
+
+// Ported from the "lender_agricultural_credit_9.2" design. Interactive client workspace
+// with credit committee docket modal, CSV audit export, facility appraisal form, and Interswitch/NIBSS sweep execution.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogAction, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { downloadFile } from "@/lib/download";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function LenderHub(_props: ScreenProps) {
+  const [showDocketModal, setShowDocketModal] = useState(false);
+  const [showNewAppraisalModal, setShowNewAppraisalModal] = useState(false);
+  const [showTermSheetModal, setShowTermSheetModal] = useState(false);
+  const [disbursedTranche, setDisbursedTranche] = useState(false);
+  const [resolutionSigned, setResolutionSigned] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<"all" | "appraisal" | "kyc" | "approved" | "servicing">("all");
+
+  // Appraisal Form
+  const [appApplicant, setAppApplicant] = useState("");
+  const [appCluster, setAppCluster] = useState("Iseyin Savanna Cluster");
+  const [appLimit, setAppLimit] = useState("12000000");
+  const [appCrop, setAppCrop] = useState("Hybrid SAMMAZ-52 Maize");
+  const [appHectares, setAppHectares] = useState("30");
+
+  const handleAuditExport = () => {
+    const csv = [
+      "Facility_Ref,Borrower_Or_Coop,Cluster_Ha,Limit_NGN,Approved_Terms,CRG_Guarantee,Status",
+      "LN-2026-088,Quadri Olapade,Iseyin (42.5 Ha),15000000,9.50% APR (180-Day Bullet),75% NIRSAL CRG,Committee Approved",
+      "LN-2026-089,Oke-Ogun Soya Alliance,Saki West (220 Ha),32000000,10.0% APR (Seasonal),75% NIRSAL CRG,Under Risk Review",
+      "LN-2026-091,Ado-Awaye Outgrowers,Ado-Awaye (480 Farmers),24000000,Bullet 12-Mo,Leadway Multi-Peril,Approved Pending Signature",
+      "",
+      "Total_Credit_Portfolio_NGN,Active_Facilities,NPL_Ratio,Escrow_Sweep_Provider",
+      "428500000.00,142 Facilities,1.82%,Interswitch & NIBSS Operational",
+    ].join("\n");
+
+    downloadFile(`lender-credit-facilities-audit-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    showScreenToast("Credit Portfolio Audit (.csv) exported successfully");
+  };
+
+  const handleExecuteSweep = () => {
+    setDisbursedTranche(true);
+    showScreenToast("Interswitch / NIBSS Sweep Executed: ₦7,500,000 disbursed to verified supplier escrow");
+  };
+
+  const handleSignResolution = () => {
+    setResolutionSigned(true);
+    showScreenToast("Credit Committee Resolution Docket Signed for Facility #LN-2026-088");
+  };
+
+  const handleCreateAppraisal = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowNewAppraisalModal(false);
+    showScreenToast(`New Facility Appraisal created for ${appApplicant || "Applicant"} (₦${Number(appLimit).toLocaleString()})`);
+  };
+
   const panelEscrowmodal = (
     <div className="bg-surface-container-lowest max-w-lg w-full rounded-2xl shadow-xl p-space-lg">
-        <div className="flex items-center justify-between pb-space-sm border-b border-surface-container mb-space-md">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
-              <Icon name="lock_reset" className="text-[20px]" />
-            </div>
-            <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold">Confirm Escrow Tranche Disbursement</h3>
+      <div className="flex items-center justify-between pb-space-sm border-b border-surface-container mb-space-md">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+            <Icon name="lock_reset" className="text-[20px]" />
           </div>
-          <ScreenDialogClose><button className="text-on-surface-variant hover:text-on-surface" id="closeModalBtn" type="button">
-              <Icon name="close" />
-            </button></ScreenDialogClose>
+          <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold">Confirm Escrow Tranche Disbursement</h3>
         </div>
-        <p className="font-body-md text-body-md text-on-surface-variant mb-space-md">You are authorizing the release of Tranche 1 Working Capital for <strong className="text-on-surface">Quadri Olapade (Facility #LN-2026-088)</strong> directly into the verified input supplier and mechanization escrow contracts.</p>
-        <div className="bg-surface-container-low p-space-md rounded-xl space-y-2 mb-space-lg text-body-sm">
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant">Disbursement Amount:</span>
-            <span className="font-bold text-on-surface">₦7,500,000 (Tranche 1 of 2)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant">Designated Payee 1 (Seed/Inputs):</span>
-            <span className="font-semibold text-on-surface">Premier Seed Nigeria Ltd (₦4,200,000)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant">Designated Payee 2 (Mechanization):</span>
-            <span className="font-semibold text-on-surface">Iseyin Tractor Syndicate (₦3,300,000)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant">NIRSAL CRG Backing:</span>
-            <span className="font-bold text-secondary">Verified (75% Active)</span>
-          </div>
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="text-on-surface-variant hover:text-on-surface" id="closeModalBtn" type="button">
+            <Icon name="close" />
+          </button>
+        </ScreenDialogClose>
+      </div>
+      <p className="font-body-md text-body-md text-on-surface-variant mb-space-md">You are authorizing the release of Tranche 1 Working Capital for <strong className="text-on-surface">Quadri Olapade (Facility #LN-2026-088)</strong> directly into the verified input supplier and mechanization escrow contracts.</p>
+      <div className="bg-surface-container-low p-space-md rounded-xl space-y-2 mb-space-lg text-body-sm">
+        <div className="flex justify-between">
+          <span className="text-on-surface-variant">Disbursement Amount:</span>
+          <span className="font-bold text-on-surface">{disbursedTranche ? "₦7,500,000 (DISBURSED)" : "₦7,500,000 (Tranche 1 of 2)"}</span>
         </div>
-        <div className="flex items-center justify-end gap-space-sm">
-          <ScreenDialogClose><button className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors" id="cancelModalBtn" type="button">Cancel</button></ScreenDialogClose>
-          <ScreenDialogAction><button className="px-space-lg py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-sm" id="executeDisbursementBtn" type="button"><Icon name="verified" className="text-[18px]" /> Execute Interswitch / NIBSS Sweep</button></ScreenDialogAction>
+        <div className="flex justify-between">
+          <span className="text-on-surface-variant">Designated Payee 1 (Seed/Inputs):</span>
+          <span className="font-semibold text-on-surface">Premier Seed Nigeria Ltd (₦4,200,000)</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-on-surface-variant">Designated Payee 2 (Mechanization):</span>
+          <span className="font-semibold text-on-surface">Iseyin Tractor Syndicate (₦3,300,000)</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-on-surface-variant">NIRSAL CRG Backing:</span>
+          <span className="font-bold text-secondary">Verified (75% Active)</span>
         </div>
       </div>
+      <div className="flex items-center justify-end gap-space-sm">
+        <ScreenDialogClose>
+          <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors" id="cancelModalBtn" type="button">Cancel</button>
+        </ScreenDialogClose>
+        <ScreenDialogAction>
+          <button
+            onClick={handleExecuteSweep}
+            disabled={disbursedTranche}
+            className="px-space-lg py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+            id="executeDisbursementBtn"
+            type="button"
+          >
+            <Icon name="verified" className="text-[18px]" />
+            {disbursedTranche ? "Disbursement Executed" : "Execute Interswitch / NIBSS Sweep"}
+          </button>
+        </ScreenDialogAction>
+      </div>
+    </div>
   );
   return (
     <div className="screen">
@@ -56,9 +121,31 @@ export function LenderHub(_props: ScreenProps) {
             <div className="flex items-center gap-space-sm">
               {_props.slots?.actions ?? (
                 <>
-                  <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-surface-container-high transition-colors" id="docketBtn" type="button"><Icon name="folder_special" className="text-[18px]" /> Credit Committee Docket <span className="bg-primary text-on-primary px-1.5 py-0.2 rounded-full text-label-sm">3 Pending</span></button>
-                  <button className="px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 hover:bg-surface-container-high transition-colors" type="button"><Icon name="download" className="text-[18px]" /> Audit Export (.csv)</button>
-                  <button className="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-primary-container transition-all shadow-sm" type="button"><Icon name="add_circle" className="text-[18px]" /> + New Facility Appraisal</button>
+                  <button
+                    onClick={() => setShowDocketModal(true)}
+                    className="px-space-md py-1.5 rounded-lg bg-surface-container text-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-surface-container-high transition-colors"
+                    id="docketBtn"
+                    type="button"
+                  >
+                    <Icon name="folder_special" className="text-[18px]" />
+                    Credit Committee Docket <span className="bg-primary text-on-primary px-1.5 py-0.2 rounded-full text-label-sm">3 Pending</span>
+                  </button>
+                  <button
+                    onClick={handleAuditExport}
+                    className="px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 hover:bg-surface-container-high transition-colors"
+                    type="button"
+                  >
+                    <Icon name="download" className="text-[18px]" />
+                    Audit Export (.csv)
+                  </button>
+                  <button
+                    onClick={() => setShowNewAppraisalModal(true)}
+                    className="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-1.5 hover:bg-primary-container transition-all shadow-sm"
+                    type="button"
+                  >
+                    <Icon name="add_circle" className="text-[18px]" />
+                    + New Facility Appraisal
+                  </button>
                 </>
               )}
             </div>
@@ -193,11 +280,61 @@ export function LenderHub(_props: ScreenProps) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-1 p-1 bg-surface-container-low rounded-lg mb-space-md text-body-sm">
-                <button className="px-space-sm py-1 rounded bg-surface-container-lowest font-label-sm text-label-sm text-primary font-bold shadow-sm" type="button">All Applications (18)</button>
-                <button className="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" type="button">Initial Appraisal (6)</button>
-                <button className="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" type="button">Doc / KYC Pending (4)</button>
-                <button className="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" type="button">Approved / Escrow Ready (5)</button>
-                <button className="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" type="button">Active Servicing (142)</button>
+                <button
+                  onClick={() => setActiveFilter("all")}
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-all ${
+                    activeFilter === "all"
+                      ? "bg-surface-container-lowest text-primary font-bold shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  type="button"
+                >
+                  All Applications (18)
+                </button>
+                <button
+                  onClick={() => setActiveFilter("appraisal")}
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-all ${
+                    activeFilter === "appraisal"
+                      ? "bg-surface-container-lowest text-primary font-bold shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  type="button"
+                >
+                  Initial Appraisal (6)
+                </button>
+                <button
+                  onClick={() => setActiveFilter("kyc")}
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-all ${
+                    activeFilter === "kyc"
+                      ? "bg-surface-container-lowest text-primary font-bold shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  type="button"
+                >
+                  Doc / KYC Pending (4)
+                </button>
+                <button
+                  onClick={() => setActiveFilter("approved")}
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-all ${
+                    activeFilter === "approved"
+                      ? "bg-surface-container-lowest text-primary font-bold shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  type="button"
+                >
+                  Approved / Escrow Ready (5)
+                </button>
+                <button
+                  onClick={() => setActiveFilter("servicing")}
+                  className={`px-space-sm py-1 rounded font-label-sm text-label-sm transition-all ${
+                    activeFilter === "servicing"
+                      ? "bg-surface-container-lowest text-primary font-bold shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  type="button"
+                >
+                  Active Servicing (142)
+                </button>
               </div>
               <div className="flex flex-col gap-space-md">
                 <div className="p-space-md rounded-xl bg-surface-container-lowest ring-2 ring-primary/20 shadow-sm transition-all">
@@ -234,9 +371,9 @@ export function LenderHub(_props: ScreenProps) {
                       <span className="font-label-sm text-label-sm">Agronomist Quad-attested (COREN #29184)</span>
                     </div>
                     <div className="flex items-center gap-space-xs">
-                      <button className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors" type="button">Examine Dossier</button>
+                      <button onClick={() => showScreenToast("Dossier loaded for Facility #LN-2026-088: Quadri Olapade (Oke-Ogun Maize & Cassava).")} className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors" type="button">Examine Dossier</button>
                       <ScreenDialog title="Confirm Escrow Tranche Disbursement" side="center" panel={panelEscrowmodal}>
-                        <button className="px-space-md py-1 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-all shadow-sm" id="disburseTrigger" type="button">Trigger Escrow Disbursement</button>
+                        <button onClick={() => {}} className="px-space-md py-1 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-all shadow-sm" id="disburseTrigger" type="button">Trigger Escrow Disbursement</button>
                       </ScreenDialog>
                     </div>
                   </div>
@@ -270,7 +407,7 @@ export function LenderHub(_props: ScreenProps) {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><Icon name="sync_problem" className="text-[16px] text-tertiary-container" /> NDPA Member Consent: 298/310 Confirmed via SMS OTP</span>
-                    <button className="px-space-md py-1 rounded-lg bg-surface-container-highest text-primary font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">Inspect Farm Dossier (§9.1)</button>
+                    <button onClick={() => showScreenToast("Farm dossier opened: Oke-Ogun Soya Alliance Co-op (310 members, 220 Ha, NIRSAL guaranteed).")} className="px-space-md py-1 rounded-lg bg-surface-container-highest text-primary font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">Inspect Farm Dossier (§9.1)</button>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-low shadow-sm hover:shadow transition-all">
@@ -302,7 +439,13 @@ export function LenderHub(_props: ScreenProps) {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><Icon name="sms" className="text-[16px] text-tertiary-container" /> Termii SMS Prompt queued for Syndicate President</span>
-                    <button className="px-space-md py-1 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors" type="button">Request Missing Item via SMS</button>
+                    <button
+                      onClick={() => showScreenToast("Termii SMS requirement prompt dispatched to Syndicate President")}
+                      className="px-space-md py-1 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors"
+                      type="button"
+                    >
+                      Request Missing Item via SMS
+                    </button>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-low shadow-sm hover:shadow transition-all">
@@ -334,7 +477,13 @@ export function LenderHub(_props: ScreenProps) {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><Icon name="thumb_up" className="text-[16px] text-secondary" /> Term Sheet dispatched to USSD *384*44#</span>
-                    <button className="px-space-md py-1 rounded-lg bg-surface-container-highest text-primary font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">View Term Sheet</button>
+                    <button
+                      onClick={() => setShowTermSheetModal(true)}
+                      className="px-space-md py-1 rounded-lg bg-surface-container-highest text-primary font-label-sm text-label-sm hover:bg-surface-container transition-colors"
+                      type="button"
+                    >
+                      View Term Sheet
+                    </button>
                   </div>
                 </div>
               </div>
@@ -451,7 +600,15 @@ export function LenderHub(_props: ScreenProps) {
                     <span className="font-label-md text-label-md font-semibold">₦118,750 / Month</span>
                   </div>
                 </div>
-                <button className="w-full py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:bg-secondary/90 transition-all flex items-center justify-center gap-1.5 shadow-sm" type="button"><Icon name="verified" className="text-[18px]" /> Sign Credit Committee Resolution Docket</button>
+                <button
+                  onClick={handleSignResolution}
+                  disabled={resolutionSigned}
+                  className="w-full py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:bg-secondary/90 transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60"
+                  type="button"
+                >
+                  <Icon name="verified" className="text-[18px]" />
+                  {resolutionSigned ? "Resolution Docket Signed" : "Sign Credit Committee Resolution Docket"}
+                </button>
               </div>
             </div>
           </div>
@@ -614,6 +771,250 @@ export function LenderHub(_props: ScreenProps) {
             </div>
           </div>
         </section>
+
+        {/* Credit Committee Docket Modal */}
+        {showDocketModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-2xl w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="folder_special" className="text-[22px]" />
+                  <span>Credit Committee Resolution Docket (3 Facilities)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDocketModal(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <div className="space-y-space-sm text-body-sm">
+                <div className="p-space-sm bg-surface-container-low rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-on-surface">#LN-2026-088 · Quadri Olapade</div>
+                    <div className="text-label-sm text-outline">₦15.0M · Iseyin Cluster · 9.5% APR</div>
+                  </div>
+                  <span className="px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm font-bold">Approved</span>
+                </div>
+
+                <div className="p-space-sm bg-surface-container-low rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-on-surface">#LN-2026-089 · Oke-Ogun Soya Alliance</div>
+                    <div className="text-label-sm text-outline">₦32.0M · Saki West · 10.0% APR</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => showScreenToast("Risk committee endorsement added for #LN-2026-089")}
+                    className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-sm font-semibold hover:bg-primary-container"
+                  >
+                    Endorse Docket
+                  </button>
+                </div>
+
+                <div className="p-space-sm bg-surface-container-low rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-on-surface">#LN-2026-091 · Ado-Awaye Outgrowers</div>
+                    <div className="text-label-sm text-outline">₦24.0M · 480 Farmers · Bullet 12-Mo</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => showScreenToast("Farmer term sheet dispatch re-triggered via USSD")}
+                    className="px-space-sm py-1 rounded bg-surface-container-highest text-primary font-label-sm font-semibold hover:bg-surface-container"
+                  >
+                    Push USSD Notice
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => setShowDocketModal(false)}
+                  className="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors"
+                >
+                  Close Docket
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Facility Appraisal Modal */}
+        {showNewAppraisalModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="analytics" className="text-[22px]" />
+                  <span>+ New Facility Appraisal (§9.2 Underwriting)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewAppraisalModal(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateAppraisal} className="flex flex-col gap-space-md">
+                <div className="flex flex-col gap-1">
+                  <label className="text-label-sm font-semibold text-on-surface">Borrower / Primary Enterprise</label>
+                  <input
+                    type="text"
+                    required
+                    value={appApplicant}
+                    onChange={(e) => setAppApplicant(e.target.value)}
+                    placeholder="e.g. Samuel Kolawole (Kolawole Agro Farms)"
+                    className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-space-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Cluster / Jurisdiction</label>
+                    <select
+                      value={appCluster}
+                      onChange={(e) => setAppCluster(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    >
+                      <option value="Iseyin Savanna Cluster">Iseyin Savanna Cluster</option>
+                      <option value="Saki Highland Zone">Saki Highland Zone</option>
+                      <option value="Ago-Are Corridor">Ago-Are Corridor</option>
+                      <option value="Sagamu Agro-Park">Sagamu Agro-Park</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Requested Limit (₦)</label>
+                    <input
+                      type="number"
+                      required
+                      value={appLimit}
+                      onChange={(e) => setAppLimit(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-space-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Commodity / Value Chain</label>
+                    <input
+                      type="text"
+                      required
+                      value={appCrop}
+                      onChange={(e) => setAppCrop(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface">Cultivated Land (Ha)</label>
+                    <input
+                      type="number"
+                      required
+                      value={appHectares}
+                      onChange={(e) => setAppHectares(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-lg border border-outline bg-surface-container-low text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-space-xs bg-surface-container-low rounded text-label-sm text-on-surface-variant flex items-center justify-between">
+                  <span>Credit Protection:</span>
+                  <span className="font-bold text-secondary">NIRSAL CRG 75% First-Loss Guarantee</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAppraisalModal(false)}
+                    className="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {}}
+                    type="submit"
+                    className="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors"
+                  >
+                    Submit for Underwriting
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Term Sheet Modal */}
+        {showTermSheetModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md backdrop-blur-xs">
+            <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-elevation-3 border border-outline-variant flex flex-col gap-space-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-space-sm">
+                <div className="flex items-center gap-space-xs text-primary font-headline-sm">
+                  <Icon name="description" className="text-[22px]" />
+                  <span>Term Sheet: #LN-2026-091</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTermSheetModal(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              </div>
+
+              <div className="space-y-space-sm text-body-sm">
+                <div className="p-space-sm bg-surface-container-low rounded-lg space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Borrower Entity:</span>
+                    <strong className="text-on-surface">Ado-Awaye Outgrowers Union</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Facility Amount:</span>
+                    <strong className="text-primary">₦24,000,000.00</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Tenor:</span>
+                    <span className="text-on-surface font-semibold">12 Months (Bullet at Harvest)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Interest Rate:</span>
+                    <span className="text-on-surface font-semibold">9.75% per annum</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Insurance Underwriter:</span>
+                    <span className="text-secondary font-semibold">Leadway Multi-Peril Shield</span>
+                  </div>
+                </div>
+                <div className="p-space-xs bg-surface-container rounded text-label-sm text-on-surface-variant">
+                  Dispatched via USSD Code <strong>*384*44#</strong> with digital signature verification.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadFile("term-sheet-LN-2026-091.csv", "Facility,Borrower,Amount,Rate\nLN-2026-091,Ado-Awaye Outgrowers Union,24000000,9.75%");
+                    showScreenToast("Downloaded Term Sheet (.csv)");
+                  }}
+                  className="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md font-semibold transition-colors"
+                >
+                  Download (.csv)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTermSheetModal(false)}
+                  className="px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

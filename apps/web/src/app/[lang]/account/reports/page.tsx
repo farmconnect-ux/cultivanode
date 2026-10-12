@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { CreditReadiness } from "@/components/screens/credit-readiness";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -55,10 +56,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/report
             Generate Credit Readiness Dossier (§9.1 / §9.6)
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -94,20 +93,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/report
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Compile &amp; Seal Dossier
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -127,13 +121,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/report
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm self-start lg:self-center">
               <ScreenDialog title="Generate Credit Dossier" side="center" panel={generateDossierModal}>
-                <button
-                  type="button"
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-all font-label-lg text-label-lg shadow-sm"
                 >
                   <Icon name="verified_user" className="text-[18px]" />
                   <span>Generate Credit Dossier</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/lender`}

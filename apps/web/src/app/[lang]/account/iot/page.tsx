@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { IotSmartFarm } from "@/components/screens/iot-smart-farm";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -51,10 +52,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/iot">)
             Simulate / Ingest Sensor Telemetry
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -138,20 +137,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/iot">)
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Dispatch Telemetry Packet
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -171,13 +165,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/iot">)
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="Simulate Sensor Reading" side="center" panel={sensorModal}>
-                <button
-                  type="button"
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-all font-label-lg text-label-lg shadow-sm font-semibold"
                 >
                   <Icon name="sensors" className="text-[18px]" />
                   <span>Ingest / Test Reading</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/irrigation`}

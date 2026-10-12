@@ -198,12 +198,13 @@ export default async function FarmDetailPage({ params }: Props) {
                     <form action={deleteFarmPlot}>
                       <input type="hidden" name="plot_id" value={plot.id} />
                       <input type="hidden" name="farm_id" value={farm.id} />
-                      <button
+                      <Button
                         type="submit"
-                        className="text-xs text-danger-600 hover:text-danger-800 transition-colors"
+                        variant="ghost"
+                        className="h-auto p-0 text-xs text-danger-600 hover:text-danger-800 transition-colors"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 </Card>

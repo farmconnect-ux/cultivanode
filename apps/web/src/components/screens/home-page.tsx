@@ -1,8 +1,11 @@
+"use client";
+
 // Ported from the "homepage_en_your_farm_s_working_partner" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { slot, type ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export type HomePageSlot = "heroTitle" | "heroLede" | "heroMedia";
 
@@ -764,7 +767,7 @@ export function HomePage({ lang, slots }: ScreenProps<HomePageSlot>) {
                   </div>
                 </div>
                 <div className="p-5 pt-0">
-                  <button className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
+                  <button onClick={() => showScreenToast("Commodity Added to Cart", "Clean Dry White Maize (₦64,000 / 100kg bag) added to escrow order.")} className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
                     <Icon name="add_shopping_cart" className="text-[18px]" />
                     <span>Order Stock</span>
                   </button>
@@ -786,7 +789,7 @@ export function HomePage({ lang, slots }: ScreenProps<HomePageSlot>) {
                   </div>
                 </div>
                 <div className="p-5 pt-0">
-                  <button className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
+                  <button onClick={() => showScreenToast("Commodity Added to Cart", "Premium Cassava Roots (₦85,000 / MT) added to escrow order.")} className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
                     <Icon name="add_shopping_cart" className="text-[18px]" />
                     <span>Order Stock</span>
                   </button>
@@ -808,7 +811,7 @@ export function HomePage({ lang, slots }: ScreenProps<HomePageSlot>) {
                   </div>
                 </div>
                 <div className="p-5 pt-0">
-                  <button className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
+                  <button onClick={() => showScreenToast("Commodity Added to Cart", "Faro-44 Milled Rice (₦44,500 / 50kg bag) added to escrow order.")} className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
                     <Icon name="add_shopping_cart" className="text-[18px]" />
                     <span>Order Stock</span>
                   </button>
@@ -830,7 +833,7 @@ export function HomePage({ lang, slots }: ScreenProps<HomePageSlot>) {
                   </div>
                 </div>
                 <div className="p-5 pt-0">
-                  <button className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
+                  <button onClick={() => showScreenToast("Commodity Added to Cart", "Garri White Fine Grain (₦38,000 / 80kg bag) added to escrow order.")} className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-2" type="button">
                     <Icon name="add_shopping_cart" className="text-[18px]" />
                     <span>Order Stock</span>
                   </button>

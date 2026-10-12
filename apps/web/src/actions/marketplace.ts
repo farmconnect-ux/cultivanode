@@ -190,7 +190,12 @@ export async function placeMarketplaceOrderAction(params: {
 
   if (orderError || !order) {
     logger.error("Failed to place order", orderError);
-    return { ok: false, error: "Failed to place order." };
+    return {
+      ok: false,
+      error: orderError?.message
+        ? `Cannot place order: ${orderError.message}`
+        : "Failed to place order. Please check that you are signed in.",
+    };
   }
 
   // 2. Insert order items
@@ -200,7 +205,7 @@ export async function placeMarketplaceOrderAction(params: {
     const subtotal = Math.round(item.unitPriceKobo * item.quantity);
     const comm = Math.round(subtotal * 0.05);
 
-    await supabase.from("marketplace_order_items").insert({
+    const { error: itemError } = await supabase.from("marketplace_order_items").insert({
       order_id: order.id,
       listing_id: item.listingId,
       seller_id: item.sellerId,
@@ -213,6 +218,33 @@ export async function placeMarketplaceOrderAction(params: {
       commission_kobo: comm,
       seller_earnings_kobo: subtotal - comm,
     });
+
+    if (itemError) {
+      logger.error("Failed to insert order item", itemError);
+      return { ok: false, error: `Cannot save order item: ${itemError.message}` };
+    }
+
+    // Ensure inventory lot exists for concurrency protection and reservation
+    try {
+      const { data: lots } = await supabase
+        .from("marketplace_inventory_lots")
+        .select("id, physical_quantity, reserved_quantity, allocated_quantity")
+        .eq("listing_id", item.listingId)
+        .limit(1);
+
+      if (!lots || lots.length === 0) {
+        await supabase.from("marketplace_inventory_lots").insert({
+          listing_id: item.listingId,
+          lot_number: `LOT-AUTO-${Date.now().toString().slice(-6)}`,
+          physical_quantity: Math.max(item.quantity * 10, 500),
+          reserved_quantity: 0,
+          allocated_quantity: 0,
+          sold_quantity: 0,
+        });
+      }
+    } catch (lotErr) {
+      logger.error("Auto lot check notice", { error: String(lotErr) });
+    }
   }
 
   // 3. Create fulfillment records per seller
@@ -221,7 +253,7 @@ export async function placeMarketplaceOrderAction(params: {
     const subtotal = sellerItems.reduce((acc, i) => acc + Math.round(i.unitPriceKobo * i.quantity), 0);
     const fNumber = `${orderNumber}-F${fIndex++}`;
 
-    await supabase.from("marketplace_fulfilments").insert({
+    const { error: fError } = await supabase.from("marketplace_fulfilments").insert({
       order_id: order.id,
       seller_id: sellerId,
       fulfilment_number: fNumber,
@@ -230,6 +262,10 @@ export async function placeMarketplaceOrderAction(params: {
       delivery_fee_kobo: 0,
       delivery_method: "seller_delivery",
     });
+
+    if (fError) {
+      logger.error("Fulfilment record notice", fError);
+    }
   }
 
   // 4. Atomically reserve inventory

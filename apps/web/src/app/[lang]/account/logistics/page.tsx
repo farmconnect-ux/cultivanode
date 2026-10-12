@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { LogisticsHub } from "@/components/screens/logistics-hub";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -59,10 +60,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/logist
             Schedule Freight Waybill &amp; Haulage
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -182,20 +181,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/logist
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Issue Waybill &amp; Dispatch
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -215,13 +209,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/logist
           actions: (
             <div className="flex items-center gap-space-sm flex-wrap">
               <ScreenDialog title="Schedule Freight Dispatch" side="center" panel={dispatchModal}>
-                <button
-                  type="button"
+                <Button
                   className="px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all shadow-sm flex items-center gap-space-xs"
                 >
                   <Icon name="local_shipping" className="text-[18px]" />
                   <span>Schedule Freight Dispatch</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/harvest`}
@@ -286,12 +279,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/logist
                         <form action={updateWaybillStatus}>
                           <input type="hidden" name="waybill_id" value={waybill.id} />
                           <input type="hidden" name="status" value="delivered" />
-                          <button
+                          <Button
                             type="submit"
                             className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container transition-colors font-semibold"
                           >
                             Confirm PoD
-                          </button>
+                          </Button>
                         </form>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-secondary text-xs font-semibold">

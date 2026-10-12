@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { GrantsHub } from "@/components/screens/grants-hub";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -51,10 +52,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/grants
             Apply for Agro-Subsidy &amp; Input Voucher
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -118,20 +117,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/grants
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Submit Application
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -151,13 +145,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/grants
           actions: (
             <div className="flex items-center gap-space-sm">
               <ScreenDialog title="Apply for Voucher" side="center" panel={grantModal}>
-                <button
-                  type="button"
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-1.5 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-primary transition-all font-semibold"
                 >
                   <Icon name="assignment_add" className="text-[18px] text-secondary-fixed" />
                   <span>Apply for Voucher</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/cooperative`}

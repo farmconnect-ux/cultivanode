@@ -163,12 +163,12 @@ export default async function CropDetailPage({ params }: Props) {
                               name="completed_date"
                               value={new Date().toISOString().split("T")[0]}
                             />
-                            <button
+                            <Button
                               type="submit"
                               className="rounded bg-leaf-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-leaf-700 transition-colors shadow-xs"
                             >
                               ✓ Mark Done
-                            </button>
+                            </Button>
                           </form>
                         )}
                       </div>
@@ -230,12 +230,13 @@ export default async function CropDetailPage({ params }: Props) {
                                 <form action={updateOperationPlannedInputs}>
                                   <input type="hidden" name="crop_cycle_id" value={cycle.id} />
                                   <input type="hidden" name="operation_id" value={op.id} />
-                                  <button
+                                  <Button
                                     type="submit"
-                                    className="text-[11px] text-neutral-500 hover:text-danger-700 underline"
+                                    variant="ghost"
+                                    className="h-auto p-0 text-[11px] text-neutral-500 hover:text-danger-700 underline"
                                   >
                                     Reset Plan
-                                  </button>
+                                  </Button>
                                 </form>
                               </div>
                             </div>
@@ -248,12 +249,13 @@ export default async function CropDetailPage({ params }: Props) {
                                 <form action={adoptAdvisoryInputs}>
                                   <input type="hidden" name="crop_cycle_id" value={cycle.id} />
                                   <input type="hidden" name="operation_id" value={op.id} />
-                                  <button
+                                  <Button
                                     type="submit"
-                                    className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
+                                    variant="ghost"
+                                    className="h-auto p-0 text-xs font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
                                   >
                                     + Follow Advisory Benchmark
-                                  </button>
+                                  </Button>
                                 </form>
                               )}
                             </div>
@@ -299,12 +301,12 @@ export default async function CropDetailPage({ params }: Props) {
                                   />
                                 </div>
                               </div>
-                              <button
+                              <Button
                                 type="submit"
                                 className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-1 rounded"
                               >
                                 Save Custom Plan
-                              </button>
+                              </Button>
                             </form>
                           </details>
                         </div>

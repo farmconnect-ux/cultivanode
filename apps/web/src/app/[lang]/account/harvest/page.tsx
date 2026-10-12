@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
+import { Button } from "@/components/ui";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { HarvestCommerce } from "@/components/screens/harvest-commerce";
@@ -65,10 +66,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/harves
             List New Harvest Lot
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -184,20 +183,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/harves
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Publish Harvest Lot
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -217,13 +211,13 @@ export default async function Page({ params }: PageProps<"/[lang]/account/harves
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm shrink-0">
               <ScreenDialog title="List New Harvest Lot" side="center" panel={newLotModal}>
-                <button
+                <Button
                   type="button"
                   className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-semibold hover:bg-primary-container transition-all shadow-md hover:shadow-lg"
                 >
                   <Icon name="add_circle" className="text-lg" />
                   <span>List New Harvest Lot</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/contracts`}
@@ -322,22 +316,22 @@ export default async function Page({ params }: PageProps<"/[lang]/account/harves
                           {batch.status !== "listed_marketplace" && (
                             <form action={listHarvestOnMarketplace}>
                               <input type="hidden" name="batch_id" value={batch.id} />
-                              <button
+                              <Button
                                 type="submit"
                                 className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors shadow-sm"
                               >
                                 Publish to Marketplace
-                              </button>
+                              </Button>
                             </form>
                           )}
                           <form action={deleteHarvestBatch}>
                             <input type="hidden" name="id" value={batch.id} />
-                            <button
+                            <Button
                               type="submit"
                               className="px-3 py-1.5 rounded-lg bg-surface-container text-error hover:bg-error-container hover:text-on-error-container font-label-sm text-label-sm font-semibold transition-colors"
                             >
                               Archive
-                            </button>
+                            </Button>
                           </form>
                         </div>
                       </div>

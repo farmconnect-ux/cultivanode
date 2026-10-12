@@ -15,6 +15,7 @@ export function FarmHealthRisk({ lang, weatherData }: FarmHealthRiskProps) {
   const [alertsAcknowledged, setAlertsAcknowledged] = useState(false);
   const [valveOverridden, setValveOverridden] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // Extract real live weather telemetry
   const oyoForecast = weatherData?.ok
@@ -244,14 +245,65 @@ Mitigation: Enforce nitrogen fertiliser hold until post-squall soil drainage che
                   <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Live automated threat triangulation correlating satellite, in-situ IoT probes, and agronomic logic models.</p>
                 </div>
                 <div className="flex items-center rounded-lg bg-surface-container p-1 shrink-0 text-on-surface-variant font-label-md text-label-md font-semibold">
-                  <button className="filter-tab px-3 py-1 rounded bg-surface-container-lowest text-primary shadow-sm" data-category="all" type="button">All (3)</button>
-                  <button className="filter-tab px-3 py-1 rounded text-on-surface-variant hover:text-on-surface" data-category="arable" type="button">Arable Plots</button>
-                  <button className="filter-tab px-3 py-1 rounded text-on-surface-variant hover:text-on-surface" data-category="livestock" type="button">Livestock</button>
-                  <button className="filter-tab px-3 py-1 rounded text-on-surface-variant hover:text-on-surface" data-category="infrastructure" type="button">Infrastructure</button>
-                  <button className="filter-tab px-3 py-1 rounded text-on-surface-variant hover:text-on-surface" data-category="financial" type="button">Financial</button>
+                  <button
+                    className={`filter-tab px-3 py-1 rounded transition-colors ${selectedCategory === "all" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                    data-category="all"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("all");
+                      triggerToast("Showing all threat vectors across the farm cluster.");
+                    }}
+                  >
+                    All (3)
+                  </button>
+                  <button
+                    className={`filter-tab px-3 py-1 rounded transition-colors ${selectedCategory === "arable" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                    data-category="arable"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("arable");
+                      triggerToast("Filtered to arable plot threats (2 active).");
+                    }}
+                  >
+                    Arable Plots
+                  </button>
+                  <button
+                    className={`filter-tab px-3 py-1 rounded transition-colors ${selectedCategory === "livestock" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                    data-category="livestock"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("livestock");
+                      triggerToast("Filtered to livestock & poultry threats (1 active).");
+                    }}
+                  >
+                    Livestock
+                  </button>
+                  <button
+                    className={`filter-tab px-3 py-1 rounded transition-colors ${selectedCategory === "infrastructure" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                    data-category="infrastructure"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("infrastructure");
+                      triggerToast("Filtered to infrastructure & generator threats (1 active).");
+                    }}
+                  >
+                    Infrastructure
+                  </button>
+                  <button
+                    className={`filter-tab px-3 py-1 rounded transition-colors ${selectedCategory === "financial" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                    data-category="financial"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("financial");
+                      triggerToast("Filtered to financial indemnity & input insurance risks.");
+                    }}
+                  >
+                    Financial
+                  </button>
                 </div>
               </div>
               <div className="p-space-md sm:p-space-lg flex flex-col gap-space-md">
+                {(selectedCategory === "all" || selectedCategory === "arable") && (
                 <article className="risk-card rounded-xl bg-surface-container-low p-space-md flex flex-col gap-space-sm" data-category="arable">
                   <div className="flex flex-wrap items-start justify-between gap-space-xs">
                     <div className="flex items-center gap-2">
@@ -280,11 +332,25 @@ Mitigation: Enforce nitrogen fertiliser hold until post-squall soil drainage che
                       <span className="flex items-center gap-1"><Icon name="database" className="text-sm text-secondary" /> PowerSync Local Verified</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="btn-action px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-on-surface transition-colors shadow-sm" type="button">Hold Urea Dispatch (₦420,000)</button>
-                      <button className="btn-action px-3.5 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md font-semibold shadow-sm transition-colors flex items-center gap-1" type="button"><Icon name="construction" className="text-sm" /> Verify Culvert Clearance</button>
+                      <button
+                        className="btn-action px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-on-surface transition-colors shadow-sm"
+                        type="button"
+                        onClick={() => triggerToast("Urea dispatch hold active: ₦420,000 consignment preserved in central storage until post-squall soil check.")}
+                      >
+                        Hold Urea Dispatch (₦420,000)
+                      </button>
+                      <button
+                        className="btn-action px-3.5 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md font-semibold shadow-sm transition-colors flex items-center gap-1"
+                        type="button"
+                        onClick={() => triggerToast("Drainage swale #3 culvert inspection logged. Lift pumps primed and ready.")}
+                      >
+                        <Icon name="construction" className="text-sm" /> Verify Culvert Clearance
+                      </button>
                     </div>
                   </div>
                 </article>
+                )}
+                {(selectedCategory === "all" || selectedCategory === "arable") && (
                 <article className="risk-card rounded-xl bg-surface-container-low p-space-md flex flex-col gap-space-sm" data-category="arable">
                   <div className="flex flex-wrap items-start justify-between gap-space-xs">
                     <div className="flex items-center gap-2">
@@ -313,11 +379,25 @@ Mitigation: Enforce nitrogen fertiliser hold until post-squall soil drainage che
                       <span className="flex items-center gap-1"><Icon name="inventory_2" className="text-sm text-secondary" /> Copper Hydroxide In Stock (14kg)</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="btn-action px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-on-surface transition-colors shadow-sm" type="button">View Leaf Macro Imagery</button>
-                      <button className="btn-action px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md font-semibold shadow-sm transition-colors flex items-center gap-1" type="button"><Icon name="science" className="text-sm" /> Check Knapsack Pre-Mix</button>
+                      <button
+                        className="btn-action px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-on-surface transition-colors shadow-sm"
+                        type="button"
+                        onClick={() => triggerToast("Leaf macro imagery inspected: Alternaria solani target-spot lesions identified on canopy tier 2.")}
+                      >
+                        View Leaf Macro Imagery
+                      </button>
+                      <button
+                        className="btn-action px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md font-semibold shadow-sm transition-colors flex items-center gap-1"
+                        type="button"
+                        onClick={() => triggerToast("Knapsack pre-mix verified: Copper Hydroxide (2.5 g/L) calibrated with 7-day PHI lock.")}
+                      >
+                        <Icon name="science" className="text-sm" /> Check Knapsack Pre-Mix
+                      </button>
                     </div>
                   </div>
                 </article>
+                )}
+                {(selectedCategory === "all" || selectedCategory === "livestock" || selectedCategory === "infrastructure") && (
                 <article className="risk-card rounded-xl bg-surface-container-low p-space-md flex flex-col gap-space-sm" data-category="livestock infrastructure">
                   <div className="flex flex-wrap items-start justify-between gap-space-xs">
                     <div className="flex items-center gap-2">
@@ -346,10 +426,27 @@ Mitigation: Enforce nitrogen fertiliser hold until post-squall soil drainage che
                       <span className="flex items-center gap-1"><Icon name="store" className="text-sm text-primary" /> Central Silo Reserve: 840L</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="btn-action px-3.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-primary shadow-sm transition-colors flex items-center gap-1" type="button"><Icon name="send" className="text-sm" /> Issue 50L Diesel Requisition</button>
+                      <button
+                        className="btn-action px-3.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container font-label-md text-label-md font-semibold text-primary shadow-sm transition-colors flex items-center gap-1"
+                        type="button"
+                        onClick={() => triggerToast("50L diesel requisition transmitted to Central Silo Storekeeper for Broiler House 1 backup GenSet.")}
+                      >
+                        <Icon name="send" className="text-sm" /> Issue 50L Diesel Requisition
+                      </button>
                     </div>
                   </div>
                 </article>
+                )}
+                {selectedCategory === "financial" && (
+                <article className="risk-card rounded-xl bg-surface-container-low p-space-md flex flex-col gap-space-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold flex items-center gap-1"><Icon name="shield" className="text-xs" /> FINANCIAL &amp; INDEMNITY COVERAGE</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">Policy #NAIC-2026-9041</span>
+                  </div>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1">Leadway Multi-Peril Crop Insurance Active</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Plots A1 &amp; A2 covered under index-based drought and excess precipitation trigger (40mm 24h threshold). Automatic payout protocol primed.</p>
+                </article>
+                )}
               </div>
             </section>
             <section className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden flex flex-col">

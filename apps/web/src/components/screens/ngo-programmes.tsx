@@ -1,9 +1,53 @@
+"use client";
+
 // Ported from the "ngo_development_programmes_10.4" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import { downloadFile } from "@/lib/download";
+import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import type { ScreenProps } from "./types";
 
 export function NgoProgrammes(_props: ScreenProps) {
+  const [selectedDonor, setSelectedDonor] = useState<string>("all");
+
+  const panelInterventionFilter = (
+    <div className="flex flex-col gap-4 p-4 max-w-md">
+      <div className="flex items-center gap-2">
+        <Icon name="tune" className="text-xl text-primary" />
+        <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Multilateral Intervention Filters</h3>
+      </div>
+      <p className="font-body-sm text-body-sm text-on-surface-variant">
+        Filter development programs by lead donor organization, thematic intervention, and execution partner.
+      </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="font-label-sm text-label-sm font-semibold text-on-surface block mb-1">Donor Agency</label>
+          <select
+            value={selectedDonor}
+            onChange={(e) => {
+              setSelectedDonor(e.target.value);
+              showScreenToast(`Donor filter applied: ${e.target.value.toUpperCase()}`);
+            }}
+            className="w-full bg-surface-container-low p-2 rounded-lg text-body-sm border border-outline-variant focus:outline-none"
+          >
+            <option value="all">All Donors (USAID, IFAD, AGRA, FCDO)</option>
+            <option value="usaid">USAID • Feed the Future</option>
+            <option value="ifad">IFAD • VCDP</option>
+            <option value="agra_fcdo">AGRA &amp; FCDO Climate / Gender Compact</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <ScreenDialogClose>
+          <button onClick={() => {}} type="button" className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold">
+            Apply Filters
+          </button>
+        </ScreenDialogClose>
+      </div>
+    </div>
+  );
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -25,10 +69,12 @@ export function NgoProgrammes(_props: ScreenProps) {
                 <span className="text-on-surface-variant">Sync Cadence:</span>
                 <span className="font-semibold text-primary">Hourly Webhook (SmileID • PostGIS)</span>
               </div>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors" id="donorFilterTrigger" type="button">
-                <Icon name="tune" className="text-[16px]" />
-                <span>Intervention Filter</span>
-              </button>
+              <ScreenDialog title="Intervention Filters" side="center" panel={panelInterventionFilter}>
+                <button onClick={() => {}} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors" id="donorFilterTrigger" type="button">
+                  <Icon name="tune" className="text-[16px]" />
+                  <span>Intervention Filter</span>
+                </button>
+              </ScreenDialog>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t-0">
@@ -199,10 +245,46 @@ export function NgoProgrammes(_props: ScreenProps) {
                   <h2 className="font-headline-md text-headline-md text-primary font-bold">Panel A: Active Donor Programmes &amp; Capital Drawdowns</h2>
                 </div>
                 <div className="flex items-center gap-1.5 bg-surface-container p-1 rounded-lg">
-                  <button className="px-2.5 py-1 text-label-sm font-label-sm rounded bg-surface-container-lowest text-primary font-semibold shadow-xs" type="button">All Donors (4)</button>
-                  <button className="px-2.5 py-1 text-label-sm font-label-sm rounded text-on-surface-variant hover:text-on-surface" type="button">USAID</button>
-                  <button className="px-2.5 py-1 text-label-sm font-label-sm rounded text-on-surface-variant hover:text-on-surface" type="button">IFAD</button>
-                  <button className="px-2.5 py-1 text-label-sm font-label-sm rounded text-on-surface-variant hover:text-on-surface" type="button">AGRA / FCDO</button>
+                  <button
+                    className={`px-2.5 py-1 text-label-sm font-label-sm rounded transition-colors ${selectedDonor === "all" ? "bg-surface-container-lowest text-primary font-semibold shadow-xs" : "text-on-surface-variant hover:text-on-surface"}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDonor("all");
+                      showScreenToast("Showing all 4 multilateral donor interventions.");
+                    }}
+                  >
+                    All Donors (4)
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 text-label-sm font-label-sm rounded transition-colors ${selectedDonor === "usaid" ? "bg-surface-container-lowest text-primary font-semibold shadow-xs" : "text-on-surface-variant hover:text-on-surface"}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDonor("usaid");
+                      showScreenToast("Filtered to USAID Feed the Future intervention.");
+                    }}
+                  >
+                    USAID
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 text-label-sm font-label-sm rounded transition-colors ${selectedDonor === "ifad" ? "bg-surface-container-lowest text-primary font-semibold shadow-xs" : "text-on-surface-variant hover:text-on-surface"}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDonor("ifad");
+                      showScreenToast("Filtered to IFAD Value Chain Development Programme.");
+                    }}
+                  >
+                    IFAD
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 text-label-sm font-label-sm rounded transition-colors ${selectedDonor === "agra_fcdo" ? "bg-surface-container-lowest text-primary font-semibold shadow-xs" : "text-on-surface-variant hover:text-on-surface"}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDonor("agra_fcdo");
+                      showScreenToast("Filtered to AGRA & FCDO interventions.");
+                    }}
+                  >
+                    AGRA / FCDO
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
@@ -628,7 +710,20 @@ export function NgoProgrammes(_props: ScreenProps) {
                       <div className="font-label-sm text-label-sm text-on-surface-variant">Validated XML feed with activity-level disbursements</div>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors shrink-0" type="button">Generate XML</button>
+                  <button
+                    className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors shrink-0"
+                    type="button"
+                    onClick={() => {
+                      downloadFile(
+                        "iati-activities-southwest-ng-2026.xml",
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<iati-activities version=\"2.03\">\n  <iati-activity default-currency=\"USD\">\n    <iati-identifier>NG-GOV-OYO-CLV-2026</iati-identifier>\n    <title>CultivaNode South-West Agro Interventions Compact</title>\n    <description>Multilateral outgrower and mechanization development intervention across Oyo, Ogun, Osun.</description>\n  </iati-activity>\n</iati-activities>",
+                        "application/xml"
+                      );
+                      showScreenToast("IATI Standard XML 2.03 generated and downloaded.");
+                    }}
+                  >
+                    Generate XML
+                  </button>
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-lg flex items-center justify-between hover:bg-surface-container transition-colors">
                   <div className="flex items-center gap-3">
@@ -640,7 +735,20 @@ export function NgoProgrammes(_props: ScreenProps) {
                       <div className="font-label-sm text-label-sm text-on-surface-variant">Feed the Future Q1-2026 Executive Summary &amp; MEL charts</div>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0" type="button">Download PDF</button>
+                  <button
+                    className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0"
+                    type="button"
+                    onClick={() => {
+                      downloadFile(
+                        "USAID-Feed-the-Future-Q1-2026-Dossier.txt",
+                        "USAID FEED THE FUTURE QUARTERLY DOSSIER (Q1-2026)\nIntervention: South-West Grain Corridor Outgrower Initiative\nTotal Pool: $6,500,000 USD\nDisbursed: $5,330,000 USD (82.0%)\nBeneficiaries: 9,840 Smallholders Validated (100% NIN/vNIN PostGIS geofenced)\nKey Result: 42,000 MT maize & soybean staged for industrial off-takers.",
+                        "text/plain"
+                      );
+                      showScreenToast("USAID Quarterly Dossier downloaded.");
+                    }}
+                  >
+                    Download PDF
+                  </button>
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-lg flex items-center justify-between hover:bg-surface-container transition-colors">
                   <div className="flex items-center gap-3">
@@ -652,7 +760,20 @@ export function NgoProgrammes(_props: ScreenProps) {
                       <div className="font-label-sm text-label-sm text-on-surface-variant">Anonymized PostGIS polygons &amp; gender metrics (28,450 rows)</div>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0" type="button">Export CSV</button>
+                  <button
+                    className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0"
+                    type="button"
+                    onClick={() => {
+                      downloadFile(
+                        "open-data-beneficiaries-southwest-2026.csv",
+                        "Beneficiary_UUID,LGA,State,Crop,Holding_Ha,Gender,Intervention_Code,NIN_Verified\nBNF-9921,Saki West,Oyo,Maize,2.4,Female,USAID-FTF-01,TRUE\nBNF-9922,Iseyin,Oyo,Soybean,3.1,Male,USAID-FTF-01,TRUE\nBNF-9923,Abeokuta North,Ogun,Cassava,1.8,Female,IFAD-VCDP-02,TRUE\nBNF-9924,Odo Otin,Osun,Cocoa Biochar,4.0,Female,AGRA-SHC-03,TRUE",
+                        "text/csv"
+                      );
+                      showScreenToast("Open Data Beneficiary CSV exported.");
+                    }}
+                  >
+                    Export CSV
+                  </button>
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-lg flex items-center justify-between hover:bg-surface-container transition-colors">
                   <div className="flex items-center gap-3">
@@ -664,7 +785,20 @@ export function NgoProgrammes(_props: ScreenProps) {
                       <div className="font-label-sm text-label-sm text-on-surface-variant">Randomized Controlled Trial (RCT) &amp; Baselines Whitepaper</div>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0" type="button">View Doc</button>
+                  <button
+                    className="px-3 py-1.5 rounded-lg bg-surface-container text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-high transition-colors shrink-0"
+                    type="button"
+                    onClick={() => {
+                      downloadFile(
+                        "CultivaNode-MEL-RCT-Methodology-Whitepaper.md",
+                        "# CultivaNode Impact Evaluation & MEL Architecture\n\n## Methodology: Cluster Randomized Controlled Trial (c-RCT)\n\n### Baseline Indicators:\n1. Yield per hectare (MT/Ha) normalized against regional agro-ecological baseline.\n2. Farmgate income uplift (NGN/Ha) net of input financing costs.\n3. Female smallholder mechanization access ratio.",
+                        "text/markdown"
+                      );
+                      showScreenToast("Impact Evaluation Whitepaper downloaded.");
+                    }}
+                  >
+                    View Doc
+                  </button>
                 </div>
                 <div className="hidden p-2.5 rounded-lg bg-secondary-fixed/50 text-on-secondary-fixed-variant font-label-sm text-label-sm flex items-center gap-2" id="exportStatusBox">
                   <Icon name="task_alt" className="text-[16px] text-secondary" />

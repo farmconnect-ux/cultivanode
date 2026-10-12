@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { SmartIrrigation } from "@/components/screens/smart-irrigation";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -53,10 +54,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/irriga
             Execute Precision Irrigation Run
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -126,20 +125,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/irriga
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Start Water Cycle
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -159,13 +153,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/irriga
           actions: (
             <div className="flex items-center gap-space-sm">
               <ScreenDialog title="Execute Water Cycle" side="center" panel={flushModal}>
-                <button
-                  type="button"
+                <Button
                   className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg flex items-center gap-1.5 shadow-sm hover:bg-primary-container transition-colors font-semibold"
                 >
                   <Icon name="water_drop" className="text-[18px]" />
                   <span>Start Precision Run</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/iot`}

@@ -14,8 +14,16 @@ import { Icon } from "./icon";
 type Ctx = { close: () => void; confirm: (label?: string) => void };
 const DialogCtx = React.createContext<Ctx | null>(null);
 
-// One toast at a time is plenty for confirmations.
 let toastSink: ((msg: string) => void) | null = null;
+
+export function showScreenToast(msg: string, detail?: string) {
+  const full = detail ? `${msg} — ${detail}` : msg;
+  if (toastSink) {
+    toastSink(full);
+  } else if (typeof window !== "undefined") {
+    console.log("[Toast]", full);
+  }
+}
 
 function ToastHost() {
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -42,35 +50,63 @@ function ToastHost() {
 
 export function ScreenDialog({
   title,
+  subtitle,
+  onClose,
+  open: controlledOpen,
+  onOpenChange,
   panel,
   side = "center",
   children,
 }: {
   title: string;
+  subtitle?: React.ReactNode;
+  onClose?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   panel: React.ReactNode;
   side?: "center" | "right";
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(true);
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : (children ? uncontrolledOpen : true);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onClose?.();
+    }
+    if (onOpenChange) {
+      onOpenChange(nextOpen);
+    }
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen);
+    }
+  };
+
   const ctx = React.useMemo<Ctx>(
     () => ({
-      close: () => setOpen(false),
+      close: () => {
+        handleOpenChange(false);
+      },
       confirm: (label) => {
-        setOpen(false);
+        handleOpenChange(false);
         toastSink?.(label ? `${label} — saved in preview` : "Saved in preview");
       },
     }),
-    [],
+    [onClose, onOpenChange, isControlled],
   );
+
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-      <DialogPrimitive.Trigger asChild>{children}</DialogPrimitive.Trigger>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange}>
+      {children ? (
+        <DialogPrimitive.Trigger asChild>{children}</DialogPrimitive.Trigger>
+      ) : null}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#0b1c30]/45 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           onPointerDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
+            if (e.target === e.currentTarget) handleOpenChange(false);
           }}
           className={cn(
             "fixed inset-0 z-50 flex overflow-y-auto outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -90,33 +126,73 @@ export function ScreenDialog({
 }
 
 /** Wrap a panel button so it closes the dialog. */
-export function ScreenDialogClose({ children }: { children: React.ReactNode }) {
+export function ScreenDialogClose({
+  children,
+  onClick,
+  className,
+}: {
+  children?: React.ReactNode;
+  onClick?: (e: React.MouseEvent<any>) => void;
+  className?: string;
+}) {
   const ctx = React.useContext(DialogCtx);
+  const handleClick = (e: React.MouseEvent<any>) => {
+    onClick?.(e);
+    ctx?.close();
+  };
+
+  if (React.isValidElement(children)) {
+    return (
+      <Slot.Root onClick={handleClick}>
+        {children}
+      </Slot.Root>
+    );
+  }
+
   return (
-    <Slot.Root
-      onClick={(e: React.MouseEvent) => {
-        e.preventDefault();
-        ctx?.close();
-      }}
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn("px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors", className)}
     >
       {children}
-    </Slot.Root>
+    </button>
   );
 }
 
 /** Wrap a panel's primary action: closes the dialog and confirms with a toast. */
-export function ScreenDialogAction({ children }: { children: React.ReactNode }) {
+export function ScreenDialogAction({
+  children,
+  onClick,
+  className,
+}: {
+  children?: React.ReactNode;
+  onClick?: (e: React.MouseEvent<any>) => void;
+  className?: string;
+}) {
   const ctx = React.useContext(DialogCtx);
+  const handleClick = (e: React.MouseEvent<any>) => {
+    onClick?.(e);
+    const label = (e.currentTarget?.textContent ?? "").replace(/[-]/g, "").trim();
+    ctx?.confirm(label);
+  };
+
+  if (React.isValidElement(children)) {
+    return (
+      <Slot.Root onClick={handleClick}>
+        {children}
+      </Slot.Root>
+    );
+  }
+
   return (
-    <Slot.Root
-      onClick={(e: React.MouseEvent<HTMLElement>) => {
-        e.preventDefault();
-        const label = (e.currentTarget.textContent ?? "").replace(/[-]/g, "").trim();
-        ctx?.confirm(label);
-      }}
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn("px-space-md py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors", className)}
     >
       {children}
-    </Slot.Root>
+    </button>
   );
 }
 

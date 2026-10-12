@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/ds/icon";
 import { LiveStrip } from "@/components/ds/live-strip";
 import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
+import { Button } from "@/components/ui";
 import { ProcessingOps } from "@/components/screens/processing-ops";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
@@ -54,10 +55,8 @@ export default async function Page({ params }: PageProps<"/[lang]/account/proces
             Log Raw Material Intake &amp; Run
           </h3>
         </div>
-        <ScreenDialogClose>
-          <button className="p-1 text-on-surface-variant hover:text-on-surface" type="button">
-            <Icon name="close" />
-          </button>
+        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
+          <Icon name="close" />
         </ScreenDialogClose>
       </div>
 
@@ -134,20 +133,15 @@ export default async function Page({ params }: PageProps<"/[lang]/account/proces
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium"
-            >
-              Cancel
-            </button>
+          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
+            Cancel
           </ScreenDialogClose>
-          <button
+          <Button
             type="submit"
             className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
           >
             Start Processing Run
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -167,13 +161,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/proces
           actions: (
             <div className="flex flex-wrap items-center gap-space-sm">
               <ScreenDialog title="Log Raw Material Intake" side="center" panel={intakeModal}>
-                <button
-                  type="button"
+                <Button
                   className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-all"
                 >
                   <Icon name="input" className="text-[18px]" />
                   <span>Log Raw Material Intake</span>
-                </button>
+                </Button>
               </ScreenDialog>
               <Link
                 href={`/${lang}/account/harvest`}
@@ -219,12 +212,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/proces
                       {!isCompleted ? (
                         <form action={recordProcessingOutput}>
                           <input type="hidden" name="batch_id" value={batch.id} />
-                          <button
+                          <Button
                             type="submit"
                             className="px-2 py-1 rounded bg-primary text-on-primary text-xs font-semibold hover:bg-primary-container transition-colors"
                           >
                             Complete Batch
-                          </button>
+                          </Button>
                         </form>
                       ) : (
                         <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold font-label-sm text-label-sm">

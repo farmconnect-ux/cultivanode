@@ -1,10 +1,15 @@
+"use client";
+
 // Ported from the "platform_architecture_capabilities_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
+import { showScreenToast } from "@/components/screens/screen-toast";
 
 export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
+  const [activeRole, setActiveRole] = useState<"smallholder" | "commercial" | "machinery" | "aggregators">("smallholder");
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -347,13 +352,69 @@ export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant">CultivaNode provides distinct interfaces designed specifically for farmers, fleet syndicates, and off-takers.</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-space-xs bg-surface-container p-1 rounded-xl max-w-3xl mx-auto" id="role-tab-triggers">
-              <button className="px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors bg-surface-container-lowest text-primary shadow-sm" id="tab-btn-smallholder" type="button">Smallholder Farmers</button>
-              <button className="px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface" id="tab-btn-commercial" type="button">Commercial Agribusinesses</button>
-              <button className="px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface" id="tab-btn-machinery" type="button">Machinery Fleet Owners</button>
-              <button className="px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface" id="tab-btn-aggregators" type="button">Commodity Aggregators</button>
+              <button
+                className={`px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors ${
+                  activeRole === "smallholder"
+                    ? "bg-surface-container-lowest text-primary shadow-sm font-semibold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-btn-smallholder"
+                type="button"
+                onClick={() => {
+                  setActiveRole("smallholder");
+                  showScreenToast("Viewing Smallholder Farmers interface.");
+                }}
+              >
+                Smallholder Farmers
+              </button>
+              <button
+                className={`px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors ${
+                  activeRole === "commercial"
+                    ? "bg-surface-container-lowest text-primary shadow-sm font-semibold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-btn-commercial"
+                type="button"
+                onClick={() => {
+                  setActiveRole("commercial");
+                  showScreenToast("Viewing Commercial Agribusinesses interface.");
+                }}
+              >
+                Commercial Agribusinesses
+              </button>
+              <button
+                className={`px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors ${
+                  activeRole === "machinery"
+                    ? "bg-surface-container-lowest text-primary shadow-sm font-semibold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-btn-machinery"
+                type="button"
+                onClick={() => {
+                  setActiveRole("machinery");
+                  showScreenToast("Viewing Machinery Fleet Owners interface.");
+                }}
+              >
+                Machinery Fleet Owners
+              </button>
+              <button
+                className={`px-space-md py-space-sm rounded-lg font-label-md text-label-md transition-colors ${
+                  activeRole === "aggregators"
+                    ? "bg-surface-container-lowest text-primary shadow-sm font-semibold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+                id="tab-btn-aggregators"
+                type="button"
+                onClick={() => {
+                  setActiveRole("aggregators");
+                  showScreenToast("Viewing Commodity Aggregators interface.");
+                }}
+              >
+                Commodity Aggregators
+              </button>
             </div>
             <div className="bg-surface-container-lowest p-space-lg lg:p-10 rounded-xl shadow-md">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center" id="role-panel-smallholder">
+              <div className={`${activeRole === "smallholder" ? "grid" : "hidden"} grid-cols-1 lg:grid-cols-12 gap-space-lg items-center`} id="role-panel-smallholder">
                 <div className="lg:col-span-7 flex flex-col gap-space-md">
                   <div className="inline-flex items-center gap-1.5 text-secondary font-label-sm text-label-sm bg-surface-container px-space-sm py-1 rounded-full self-start"><Icon name="person" className="text-[16px]" /> Smallholder &amp; Family Clusters</div>
                   <h3 className="font-headline-lg text-headline-lg text-primary">Zero Technical Barrier, Maximum Clout</h3>
@@ -382,7 +443,7 @@ export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
                   </div>
                 </div>
               </div>
-              <div className="hidden grid-cols-1 lg:grid-cols-12 gap-space-lg items-center" id="role-panel-commercial">
+              <div className={`${activeRole === "commercial" ? "grid" : "hidden"} grid-cols-1 lg:grid-cols-12 gap-space-lg items-center`} id="role-panel-commercial">
                 <div className="lg:col-span-7 flex flex-col gap-space-md">
                   <div className="inline-flex items-center gap-1.5 text-secondary font-label-sm text-label-sm bg-surface-container px-space-sm py-1 rounded-full self-start"><Icon name="domain" className="text-[16px]" /> Multi-Estate Enterprise</div>
                   <h3 className="font-headline-lg text-headline-lg text-primary">Orchestrate Multi-Hectare Farm Portfolios</h3>
@@ -405,7 +466,7 @@ export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
                   </div>
                 </div>
               </div>
-              <div className="hidden grid-cols-1 lg:grid-cols-12 gap-space-lg items-center" id="role-panel-machinery">
+              <div className={`${activeRole === "machinery" ? "grid" : "hidden"} grid-cols-1 lg:grid-cols-12 gap-space-lg items-center`} id="role-panel-machinery">
                 <div className="lg:col-span-7 flex flex-col gap-space-md">
                   <div className="inline-flex items-center gap-1.5 text-secondary font-label-sm text-label-sm bg-surface-container px-space-sm py-1 rounded-full self-start"><Icon name="rv_hookup" className="text-[16px]" /> Machinery Operators &amp; Owners</div>
                   <h3 className="font-headline-lg text-headline-lg text-primary">Maximize Machine Utilization with Zero Non-Payment Risk</h3>
@@ -428,7 +489,7 @@ export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
                   </div>
                 </div>
               </div>
-              <div className="hidden grid-cols-1 lg:grid-cols-12 gap-space-lg items-center" id="role-panel-aggregators">
+              <div className={`${activeRole === "aggregators" ? "grid" : "hidden"} grid-cols-1 lg:grid-cols-12 gap-space-lg items-center`} id="role-panel-aggregators">
                 <div className="lg:col-span-7 flex flex-col gap-space-md">
                   <div className="inline-flex items-center gap-1.5 text-secondary font-label-sm text-label-sm bg-surface-container px-space-sm py-1 rounded-full self-start"><Icon name="factory" className="text-[16px]" /> Processing Plants &amp; Aggregators</div>
                   <h3 className="font-headline-lg text-headline-lg text-primary">Guaranteed Farm Provenance &amp; Forward Offtake</h3>

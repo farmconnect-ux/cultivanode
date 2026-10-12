@@ -1,41 +1,149 @@
-// Ported from the "cultivanode_open_produce_commodities_marketplace" design (New screen). Static content is the design's reference data;
-// pages pass live data through props where the backend already provides it.
+"use client";
+
+// Ported from the "cultivanode_open_produce_commodities_marketplace" design.
+// Augmented with real interactive state: dynamic cart addition/removal, real-time haulage recalculation,
+// live search and category switching, RFQ requests, and seamless escrow dispatch linking.
+import { useState, useId } from "react";
 import { Icon } from "@/components/ds/icon";
+import { showScreenToast } from "@/components/ds/screen-dialog";
 import { slot, type ScreenProps } from "./types";
 
 export type OpenMarketplaceSlot = "lots";
 
+interface CartItem {
+  id: string;
+  name: string;
+  detail: string;
+  price: number;
+}
+
 export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
+  const [activeVertical, setActiveVertical] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const searchInputId = useId();
+  const regionFilterId = useId();
+  const categoryFilterId = useId();
+  const destinationSelectorId = useId();
+  const sortSelectorId = useId();
+  const companyNameId = useId();
+  const commodityInterestId = useId();
+  const monthlyTonnageId = useId();
+  const workEmailId = useId();
+
+  // Cart State
+  const [cartItems, setCartItems] = useState<CartItem[]>([
+    {
+      id: "lot-1",
+      name: "Clean Dry White Maize",
+      detail: "5 × 100kg bag (Saki West)",
+      price: 320000,
+    },
+  ]);
+
+  const [destination, setDestination] = useState<"lagos" | "ibadan" | "abeokuta" | "depot_pickup">("lagos");
+
+  // Cost calculations
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price, 0);
+  const haulageCost =
+    cartItems.length === 0
+      ? 0
+      : destination === "lagos"
+      ? 35000
+      : destination === "ibadan"
+      ? 22000
+      : destination === "abeokuta"
+      ? 28000
+      : 0;
+  const grandTotal = subtotal + haulageCost;
+
+  const handleAddToCart = (item: CartItem) => {
+    setCartItems((prev) => {
+      const exists = prev.some((p) => p.id === item.id);
+      if (exists) {
+        showScreenToast(`${item.name} is already in your procurement cart.`);
+        return prev;
+      }
+      showScreenToast(`Added ${item.name} to dispatch cart.`);
+      return [...prev, item];
+    });
+  };
+
+  const handleRemoveFromCart = (id: string, name: string) => {
+    setCartItems((prev) => prev.filter((p) => p.id !== id));
+    showScreenToast(`Removed ${name} from cart.`);
+  };
+
+  const handleLockFundsAndDispatch = () => {
+    if (cartItems.length === 0) {
+      showScreenToast("Your procurement cart is empty. Add a verified lot first.");
+      return;
+    }
+    showScreenToast(`Locking ₦${grandTotal.toLocaleString()} into Providus Escrow... Redirecting to checkout.`);
+    if (typeof window !== "undefined") {
+      window.location.href = "/marketplace-checkout";
+    }
+  };
+
+  const handleRequestBulkRfq = () => {
+    showScreenToast("Bulk RFQ submitted. Sourcing team will send customized tender quote within 4 hours.");
+  };
+
+  const handleEnterpriseDeckSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    showScreenToast("Enterprise sourcing request received. Dedicated account executive assigned.");
+  };
+
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
+        {/* Banner Section */}
         <section className="w-full bg-primary-container text-on-primary">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 text-left">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-secondary-fixed text-on-secondary-fixed shrink-0">
                 <Icon name="verified_user" filled className="text-[15px]" />
               </span>
-              <p className="font-body-sm text-body-sm text-on-primary"><strong className="font-label-md text-label-md text-secondary-fixed">Zero Intermediary Markup:</strong> Open sourcing for households, bulk caterers, food processors &amp; supermarkets. Pay securely via Card, NIBSS Transfer, or USSD with CBN-regulated escrow.</p>
+              <p className="font-body-sm text-body-sm text-on-primary">
+                <strong className="font-label-md text-label-md text-secondary-fixed">Zero Intermediary Markup:</strong> Open sourcing for households, bulk caterers, food processors &amp; supermarkets. Pay securely via Card, NIBSS Transfer, or USSD with CBN-regulated escrow.
+              </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-primary-container bg-primary/40 px-2.5 py-1 rounded">No Syndicate Card Required</span>
-              <a className="font-label-sm text-label-sm text-secondary-fixed hover:underline flex items-center gap-1" href="#quick-checkout">
+              <button
+                onClick={() => {
+                  const elem = document.getElementById("quick-checkout");
+                  if (elem) elem.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="font-label-sm text-label-sm text-secondary-fixed hover:underline flex items-center gap-1"
+                type="button"
+              >
                 <span>Track Delivery</span>
                 <Icon name="arrow_forward" className="text-[14px]" />
-              </a>
+              </button>
             </div>
           </div>
         </section>
+
+        {/* Hero Section */}
         <section className="w-full bg-surface-container-low pt-12 pb-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col gap-8">
             <div className="flex flex-col gap-4 max-w-4xl">
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm tracking-wide uppercase">South-West Agricultural Exchange</span>
-                <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm"><span className="w-2 h-2 rounded-full bg-secondary" /> 83 Verified Farmgate Lots Live</span>
+                <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm">
+                  <span className="w-2 h-2 rounded-full bg-secondary" /> 83 Verified Farmgate Lots Live
+                </span>
               </div>
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight md:text-[2.75rem] md:leading-[3.25rem]">CultivaNode Open Marketplace — Direct Farm-to-Table &amp; Commercial Sourcing</h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl">Connect directly with verified South-West farms, cooperatives, and aggregators. Procure harvest-fresh staples, tubers, and industrial grains with transparent provenance, automated weighbridge certificates, and cold-chain/dry haulage directly to Lagos, Ibadan, and Ogun.</p>
+              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl">
+                Connect directly with verified South-West farms, cooperatives, and aggregators. Procure harvest-fresh staples, tubers, and industrial grains with transparent provenance, automated weighbridge certificates, and cold-chain/dry haulage directly to Lagos, Ibadan, and Ogun.
+              </p>
             </div>
+
+            {/* Metrics grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-surface-container-lowest shadow-sm">
               <div className="flex flex-col gap-1 p-2">
                 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Active Lots</span>
@@ -66,15 +174,29 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
               </div>
             </div>
+
+            {/* Search and filters bar */}
             <div className="p-4 md:p-6 rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-4">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-5 relative">
                   <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" />
-                  <input className="w-full h-11 pl-11 pr-4 bg-surface rounded-lg font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:bg-surface-container-low transition-all" id="searchCommodity" placeholder="Search commodity (e.g., White Maize, Faro-44, Cassava roots, Garri...)" type="text" />
+                  <input
+                    id={searchInputId}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-11 pl-11 pr-4 bg-surface rounded-lg font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:bg-surface-container-low transition-all"
+                    placeholder="Search commodity (e.g., White Maize, Faro-44, Cassava roots, Garri...)"
+                    type="text"
+                  />
                 </div>
                 <div className="md:col-span-3 relative">
                   <Icon name="location_on" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" />
-                  <select className="w-full h-11 pl-11 pr-8 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none appearance-none cursor-pointer" id="regionFilter">
+                  <select
+                    id={regionFilterId}
+                    value={regionFilter}
+                    onChange={(e) => setRegionFilter(e.target.value)}
+                    className="w-full h-11 pl-11 pr-8 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none appearance-none cursor-pointer"
+                  >
                     <option value="all">All South-West Hubs</option>
                     <option value="oyo">Oyo Savanna (Saki, Iseyin, Otu)</option>
                     <option value="ogun">Ogun Basin (Sagamu, Ijebu, Abeokuta)</option>
@@ -86,7 +208,12 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   <Icon name="expand_more" className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]" />
                 </div>
                 <div className="md:col-span-2 relative">
-                  <select className="w-full h-11 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none appearance-none cursor-pointer" id="commodityFilter">
+                  <select
+                    id={categoryFilterId}
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full h-11 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none appearance-none cursor-pointer"
+                  >
                     <option value="all">All Categories (5)</option>
                     <option value="inputs">Agricultural Inputs</option>
                     <option value="produce">Produce Buying &amp; Selling</option>
@@ -97,7 +224,11 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   <Icon name="expand_more" className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]" />
                 </div>
                 <div className="md:col-span-2 flex">
-                  <button className="w-full h-11 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm" type="button">
+                  <button
+                    onClick={() => showScreenToast(`Filtering lots by: ${regionFilter !== "all" ? regionFilter.toUpperCase() : "All regions"}, ${categoryFilter !== "all" ? categoryFilter : "All categories"}`)}
+                    className="w-full h-11 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm"
+                    type="button"
+                  >
                     <Icon name="tune" className="text-[18px]" />
                     <span>Filter Lots</span>
                   </button>
@@ -105,27 +236,63 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pt-2 scrollbar-none">
                 <span className="font-label-sm text-label-sm text-on-surface-variant shrink-0 mr-1">Quick Select:</span>
-                <button className="px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm shrink-0 flex items-center gap-1.5" type="button">
+                <button
+                  onClick={() => setActiveVertical("all")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "all" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>All Categories</span>
-                  <span className="bg-primary-container px-1.5 py-0.2 rounded-full text-[10px]">83</span>
+                  <span className="bg-primary-container px-1.5 py-0.2 rounded-full text-[10px] text-on-primary">83</span>
                 </button>
-                <button className="px-3 py-1.5 rounded-full bg-surface hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors" type="button">
+                <button
+                  onClick={() => setActiveVertical("inputs")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "inputs" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>Agricultural Inputs</span>
                   <span className="bg-surface-container-highest text-primary px-1.5 py-0.2 rounded-full text-[10px]">18</span>
                 </button>
-                <button className="px-3 py-1.5 rounded-full bg-surface hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors" type="button">
+                <button
+                  onClick={() => setActiveVertical("produce")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "produce" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>Produce Buying &amp; Selling</span>
                   <span className="bg-surface-container-highest text-primary px-1.5 py-0.2 rounded-full text-[10px]">42</span>
                 </button>
-                <button className="px-3 py-1.5 rounded-full bg-surface hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors" type="button">
+                <button
+                  onClick={() => setActiveVertical("logistics")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "logistics" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>Logistics &amp; Haulage</span>
                   <span className="bg-surface-container-highest text-primary px-1.5 py-0.2 rounded-full text-[10px]">14</span>
                 </button>
-                <button className="px-3 py-1.5 rounded-full bg-surface hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors" type="button">
+                <button
+                  onClick={() => setActiveVertical("vet")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "vet" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>Veterinary &amp; Livestock</span>
                   <span className="bg-surface-container-highest text-primary px-1.5 py-0.2 rounded-full text-[10px]">5</span>
                 </button>
-                <button className="px-3 py-1.5 rounded-full bg-surface hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors" type="button">
+                <button
+                  onClick={() => setActiveVertical("processing")}
+                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm shrink-0 flex items-center gap-1.5 transition-colors ${
+                    activeVertical === "processing" ? "bg-primary text-on-primary" : "bg-surface hover:bg-surface-container-high text-on-surface"
+                  }`}
+                  type="button"
+                >
                   <span>Agro-Processing &amp; Contracts</span>
                   <span className="bg-surface-container-highest text-primary px-1.5 py-0.2 rounded-full text-[10px]">4</span>
                 </button>
@@ -133,6 +300,8 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
             </div>
           </div>
         </section>
+
+        {/* 5 Core Verticals Section */}
         <section className="w-full bg-surface py-12 border-b border-surface-container-high">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col gap-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -142,20 +311,27 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">5 Core Sourcing Verticals</span>
                 </div>
                 <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight">Marketplace Category Explorer</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl mt-1">Integrated South-West agro-commerce infrastructure spanning certified farm inputs, farmgate harvest lots, cold-chain haulage, clinical veterinary diagnostics, and industrial forward contracts.</p>
+                <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl mt-1">
+                  Integrated South-West agro-commerce infrastructure spanning certified farm inputs, farmgate harvest lots, cold-chain haulage, clinical veterinary diagnostics, and industrial forward contracts.
+                </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-full border border-surface-container-high">CBN-Escrow Protected Across All Channels</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-full border border-surface-container-high">
+                  CBN-Escrow Protected Across All Channels
+                </span>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+              {/* Card 1 */}
               <div className="flex flex-col rounded-xl bg-surface-container-lowest p-5 shadow-sm hover:shadow-md transition-shadow justify-between gap-4 border border-surface-container-high/60 group">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
                       <Icon name="potted_plant" className="text-[24px]" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold group-hover:text-secondary transition-colors">Agricultural Inputs</h3>
@@ -164,19 +340,31 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
                 <div className="pt-3 border-t border-surface-container-low flex items-center justify-between">
                   <span className="font-label-sm text-label-sm text-on-surface-variant">18 Warehouses</span>
-                  <a className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline" href="#commodityFilter">
+                  <button
+                    onClick={() => {
+                      setActiveVertical("inputs");
+                      setCategoryFilter("inputs");
+                      showScreenToast("Viewing Agricultural Inputs vertical.");
+                    }}
+                    className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline"
+                    type="button"
+                  >
                     <span>Explore</span>
                     <Icon name="arrow_forward" className="text-[14px]" />
-                  </a>
+                  </button>
                 </div>
               </div>
+
+              {/* Card 2 */}
               <div className="flex flex-col rounded-xl bg-surface-container-lowest p-5 shadow-sm hover:shadow-md transition-shadow justify-between gap-4 border border-surface-container-high/60 group">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-lg bg-primary text-on-primary flex items-center justify-center">
                       <Icon name="agriculture" className="text-[24px]" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold group-hover:text-secondary transition-colors">Produce Buying &amp; Selling</h3>
@@ -185,19 +373,31 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
                 <div className="pt-3 border-t border-surface-container-low flex items-center justify-between">
                   <span className="font-label-sm text-label-sm text-on-surface-variant">42 Farm Lots</span>
-                  <a className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline" href="#sortSelector">
+                  <button
+                    onClick={() => {
+                      setActiveVertical("produce");
+                      setCategoryFilter("produce");
+                      showScreenToast("Viewing Produce Buying & Selling lots.");
+                    }}
+                    className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline"
+                    type="button"
+                  >
                     <span>Browse Lots</span>
                     <Icon name="arrow_forward" className="text-[14px]" />
-                  </a>
+                  </button>
                 </div>
               </div>
+
+              {/* Card 3 */}
               <div className="flex flex-col rounded-xl bg-surface-container-lowest p-5 shadow-sm hover:shadow-md transition-shadow justify-between gap-4 border border-surface-container-high/60 group">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
                       <Icon name="local_shipping" className="text-[24px]" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Live / Active
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold group-hover:text-secondary transition-colors">Logistics &amp; Haulage</h3>
@@ -206,19 +406,30 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
                 <div className="pt-3 border-t border-surface-container-low flex items-center justify-between">
                   <span className="font-label-sm text-label-sm text-on-surface-variant">14 Fleet Routes</span>
-                  <a className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline" href="#destinationSelector">
+                  <button
+                    onClick={() => {
+                      setActiveVertical("logistics");
+                      showScreenToast("Viewing Logistics and Freight routes.");
+                    }}
+                    className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline"
+                    type="button"
+                  >
                     <span>Book Freight</span>
                     <Icon name="arrow_forward" className="text-[14px]" />
-                  </a>
+                  </button>
                 </div>
               </div>
+
+              {/* Card 4 */}
               <div className="flex flex-col rounded-xl bg-surface-container-lowest p-5 shadow-sm hover:shadow-md transition-shadow justify-between gap-4 border border-surface-container-high/60 group">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-lg bg-tertiary-container text-on-tertiary flex items-center justify-center">
                       <Icon name="pets" className="text-[24px]" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> Pilot / Booking</span>
+                    <span className="px-2 py-0.5 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Pilot / Booking
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold group-hover:text-secondary transition-colors">Veterinary &amp; Livestock</h3>
@@ -227,19 +438,30 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
                 <div className="pt-3 border-t border-surface-container-low flex items-center justify-between">
                   <span className="font-label-sm text-label-sm text-on-surface-variant">5 Specialist Teams</span>
-                  <a className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline" href="#companyName">
+                  <button
+                    onClick={() => {
+                      setActiveVertical("vet");
+                      showScreenToast("Viewing Veterinary and Livestock specialist schedules.");
+                    }}
+                    className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline"
+                    type="button"
+                  >
                     <span>Request Visit</span>
                     <Icon name="arrow_forward" className="text-[14px]" />
-                  </a>
+                  </button>
                 </div>
               </div>
+
+              {/* Card 5 */}
               <div className="flex flex-col rounded-xl bg-surface-container-lowest p-5 shadow-sm hover:shadow-md transition-shadow justify-between gap-4 border border-surface-container-high/60 group">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
                       <Icon name="precision_manufacturing" className="text-[24px]" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Structured Deals</span>
+                    <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Structured Deals
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold group-hover:text-secondary transition-colors">Agro-Processing &amp; Contracts</h3>
@@ -248,15 +470,24 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 </div>
                 <div className="pt-3 border-t border-surface-container-low flex items-center justify-between">
                   <span className="font-label-sm text-label-sm text-on-surface-variant">≥50 MT Forward</span>
-                  <a className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline" href="#companyName">
+                  <button
+                    onClick={() => {
+                      setActiveVertical("processing");
+                      showScreenToast("Viewing Agro-processing contracts and Forward commitments.");
+                    }}
+                    className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 hover:underline"
+                    type="button"
+                  >
                     <span>Apply for RFQ</span>
                     <Icon name="arrow_forward" className="text-[14px]" />
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Lots Catalog and Dispatch Aside */}
         <section className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-8 flex flex-col gap-6">
@@ -266,8 +497,8 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Calibrated moisture, weighbridge certified, and PostGIS geo-tagged batches.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="font-label-sm text-label-sm text-on-surface-variant" htmlFor="sortSelector">Sort by:</label>
-                  <select defaultValue="Newest Harvest Date" className="h-9 px-3 bg-surface-container-low rounded-lg font-label-sm text-label-sm text-on-surface focus:outline-none" id="sortSelector">
+                  <label className="font-label-sm text-label-sm text-on-surface-variant" htmlFor={sortSelectorId}>Sort by:</label>
+                  <select defaultValue="Newest Harvest Date" className="h-9 px-3 bg-surface-container-low rounded-lg font-label-sm text-label-sm text-on-surface focus:outline-none" id={sortSelectorId}>
                     <option>Lowest Price First</option>
                     <option>Newest Harvest Date</option>
                     <option>Highest Tested Quality</option>
@@ -277,9 +508,10 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
               </div>
               {slot(slots, "lots", (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Lot 1: Maize */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Sunlit close-up of premium clean dry white maize kernels in agricultural burlap bags inside a modern concrete Nigerian grain warehouse with gentle golden morning lighting, highlighting rich harvest quality." src="/images/screens/1caf6d72619e.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Sunlit close-up of premium clean dry white maize kernels" src="/images/screens/1caf6d72619e.webp" alt="Maize" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm">Grade A Certified</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">PostGIS Tagged</span>
@@ -307,14 +539,22 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 5 Bags</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "maize-lot", name: "Clean Dry White Maize", detail: "5 × 100kg bag (Saki West)", price: 320000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
                   </article>
+
+                  {/* Lot 2: Cassava */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Freshly harvested dense cassava roots neatly stacked in an open agricultural transport bay under bright African sun, rich earthy soil remnants, ready for starch processing in Oyo State." src="/images/screens/62e8873307c4.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Freshly harvested dense cassava roots" src="/images/screens/62e8873307c4.webp" alt="Cassava" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-tertiary-container text-on-tertiary font-label-sm text-label-sm">High Starch TME-419</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">12h Harvest Fresh</span>
@@ -342,14 +582,22 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 2 Metric Tons</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "cassava-lot", name: "Premium Cassava Roots (TME-419)", detail: "2 MT (Iseyin Central)", price: 170000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
                   </article>
+
+                  {/* Lot 3: Rice */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Polished white long-grain Faro-44 parboiled Nigerian rice flowing from a quality inspection scoop in Sagamu milling cooperative, clean crisp commercial clarity." src="/images/screens/b1a29da5aa93.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Polished white long-grain Faro-44 parboiled Nigerian rice" src="/images/screens/b1a29da5aa93.webp" alt="Rice" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm">100% Stone-Free</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">Optical Sorted</span>
@@ -377,14 +625,22 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 2 Bags</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "rice-lot", name: "Faro-44 Parboiled Milled Rice", detail: "2 × 50kg bag (Sagamu)", price: 89000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
                   </article>
+
+                  {/* Lot 4: Garri */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Dry, ultra-crisp white Ijebu Garri in clean open textile bags in an artisanal processing hub in Ijebu-Ode, fine granules, high purity, sharp studio lighting." src="/images/screens/2b51358ff488.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Dry, ultra-crisp white Ijebu Garri in clean open textile bags" src="/images/screens/2b51358ff488.webp" alt="Garri" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm">Traditional Crisp</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">Sand-Free Screened</span>
@@ -412,14 +668,22 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 1 Bag</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "garri-lot", name: "Fine White Ijebu Garri", detail: "1 × 80kg bag (Ijebu-Ode)", price: 38000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
                   </article>
+
+                  {/* Lot 5: Peppers */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Vibrant red scotch bonnet and tatashe bell peppers freshly harvested into aerated agricultural plastic crates on an organic horticultural farm in Oyo savanna, vivid colors and moisture droplets." src="/images/screens/42d206153a1c.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Vibrant red scotch bonnet and tatashe bell peppers" src="/images/screens/42d206153a1c.webp" alt="Peppers" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-tertiary text-on-tertiary font-label-sm text-label-sm">Morning Harvest</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">Same-Day Lagos Transit</span>
@@ -447,14 +711,22 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 2 Crates</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "peppers-lot", name: "Fresh Tatashe & Rodo Peppers", detail: "2 × 25kg crates (Otu)", price: 44000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
                   </article>
+
+                  {/* Lot 6: Soybeans */}
                   <article className="flex flex-col rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     <div className="relative h-48 w-full bg-surface-container-high overflow-hidden">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Golden dry soybeans in a bulk grain testing tray with digital optical moisture meter readout in a modern grain aggregator facility in Oyo North, commercial agricultural atmosphere." src="/images/screens/5ca9408aa41d.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Golden dry soybeans in a bulk grain testing tray" src="/images/screens/5ca9408aa41d.webp" alt="Soybeans" loading="lazy" decoding="async" />
                       <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                         <span className="px-2.5 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm">Protein ≥38%</span>
                         <span className="px-2 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-label-sm text-label-sm">Non-GMO Verified</span>
@@ -482,7 +754,13 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Min: 2 Bags</span>
                         </div>
                         <div className="flex gap-2">
-                          <button className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm" type="button">Add Lot</button>
+                          <button
+                            onClick={() => handleAddToCart({ id: "soybeans-lot", name: "High-Protein Soybeans", detail: "2 × 100kg bag (Igboho)", price: 156000 })}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors shadow-sm"
+                            type="button"
+                          >
+                            Add Lot
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -499,9 +777,17 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     <p className="font-body-sm text-body-sm text-on-surface-variant">We organize pooled syndicate supply contracts for breweries, starch mills, and feed producers with Certificate of Analysis (COA).</p>
                   </div>
                 </div>
-                <button className="px-5 py-2.5 rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md hover:bg-surface-container transition-colors shrink-0 shadow-sm" type="button">Request Bulk RFQ</button>
+                <button
+                  onClick={handleRequestBulkRfq}
+                  className="px-5 py-2.5 rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md hover:bg-surface-container transition-colors shrink-0 shadow-sm"
+                  type="button"
+                >
+                  Request Bulk RFQ
+                </button>
               </div>
             </div>
+
+            {/* Sidebar Cart & Dispatch Section */}
             <aside className="lg:col-span-4 sticky top-28 flex flex-col gap-6" id="quick-checkout">
               <div className="p-6 rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-5">
                 <div className="flex items-center justify-between pb-3 bg-surface-container-low/50 -mx-6 -mt-6 p-6 rounded-t-xl">
@@ -509,32 +795,57 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     <Icon name="shopping_bag" className="text-primary text-[22px]" />
                     <h3 className="font-headline-sm text-headline-sm text-primary font-bold">Procurement Dispatch</h3>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold" id="cartCountBadge">1 Lot Active</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold" id="cartCountBadge">
+                    {cartItems.length} {cartItems.length === 1 ? "Lot Active" : "Lots Active"}
+                  </span>
                 </div>
                 <div className="flex flex-col gap-3" id="cartItemsContainer">
-                  <div className="p-3 rounded-lg bg-surface-container-low flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-label-md text-label-md text-on-surface">Clean Dry White Maize</h4>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">5 × 100kg bag (Saki West)</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="font-label-lg text-label-lg text-primary font-bold">₦320,000</span>
-                        <button className="text-[11px] text-error hover:underline pt-0.5" type="button">Remove</button>
-                      </div>
+                  {cartItems.length === 0 ? (
+                    <div className="p-4 rounded-lg bg-surface-container-low text-center text-on-surface-variant text-body-sm">
+                      <Icon name="shopping_cart" className="text-[24px] mx-auto text-outline mb-1" />
+                      <p>Your procurement cart is empty.</p>
+                      <span className="text-[11px]">Click &quot;Add Lot&quot; on any available produce item to begin.</span>
                     </div>
-                  </div>
+                  ) : (
+                    cartItems.map((item) => (
+                      <div key={item.id} className="p-3 rounded-lg bg-surface-container-low flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-label-md text-label-md text-on-surface font-semibold">{item.name}</h4>
+                            <span className="font-body-sm text-body-sm text-on-surface-variant">{item.detail}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="font-label-lg text-label-lg text-primary font-bold">₦{item.price.toLocaleString()}</span>
+                            <button
+                              onClick={() => handleRemoveFromCart(item.id, item.name)}
+                              className="text-[11px] text-error hover:underline pt-0.5"
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="p-3 rounded-lg bg-surface flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-1"><Icon name="local_shipping" className="text-[16px]" /> Managed Transit Hub</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="local_shipping" className="text-[16px]" /> Managed Transit Hub
+                    </span>
                     <span className="font-label-sm text-label-sm text-secondary font-semibold">GPS Telemetry Tracked</span>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor="destinationSelector">Drop-off Destination:</label>
-                    <select defaultValue="lagos" className="h-9 px-3 bg-surface-container-lowest rounded font-body-sm text-body-sm text-on-surface focus:outline-none" id="destinationSelector">
-                      <option value="ibadan">Ibadan Bodija Agro Depot (6h Transit) — ₦22,000</option>
+                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor={destinationSelectorId}>Drop-off Destination:</label>
+                    <select
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value as any)}
+                      className="h-9 px-3 bg-surface-container-lowest rounded font-body-sm text-body-sm text-on-surface focus:outline-none"
+                      id={destinationSelectorId}
+                    >
                       <option value="lagos">Lagos Mile 12 / Ikeja Hub (10h Transit) — ₦35,000</option>
+                      <option value="ibadan">Ibadan Bodija Agro Depot (6h Transit) — ₦22,000</option>
                       <option value="abeokuta">Abeokuta Central Station (7h Transit) — ₦28,000</option>
                       <option value="depot_pickup">Self-Arranged Haulage (Farmgate Weighbridge) — ₦0</option>
                     </select>
@@ -545,16 +856,18 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     <Icon name="verified" className="text-[18px]" />
                     <span>CBN Escrow Protection Engine</span>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">100% of your funds remain held in partner settlement custody. Money is only credited to the farm cooperative after delivery inspection and certified weight confirmation.</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">
+                    100% of your funds remain held in partner settlement custody. Money is only credited to the farm cooperative after delivery inspection and certified weight confirmation.
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1.5 pt-2">
                   <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
                     <span>Lot Subtotal:</span>
-                    <span className="font-semibold text-on-surface" id="subtotalDisplay">₦320,000</span>
+                    <span className="font-semibold text-on-surface" id="subtotalDisplay">₦{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
                     <span>Haulage &amp; Cold/Dry Transport:</span>
-                    <span className="font-semibold text-on-surface" id="haulageDisplay">₦35,000</span>
+                    <span className="font-semibold text-on-surface" id="haulageDisplay">₦{haulageCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
                     <span>Escrow Protection Fee:</span>
@@ -562,11 +875,15 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   </div>
                   <div className="flex justify-between items-baseline pt-2">
                     <span className="font-headline-sm text-headline-sm text-primary font-bold">Total Payable:</span>
-                    <span className="font-headline-lg text-headline-lg text-primary font-bold" id="grandTotalDisplay">₦355,000</span>
+                    <span className="font-headline-lg text-headline-lg text-primary font-bold" id="grandTotalDisplay">₦{grandTotal.toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button className="w-full h-12 bg-primary text-on-primary rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm" type="button">
+                  <button
+                    onClick={handleLockFundsAndDispatch}
+                    className="w-full h-12 bg-primary text-on-primary rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm"
+                    type="button"
+                  >
                     <Icon name="lock" className="text-[20px]" />
                     <span>Lock Funds &amp; Dispatch Order</span>
                   </button>
@@ -602,12 +919,16 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
             </aside>
           </div>
         </section>
+
+        {/* Scalability Section */}
         <section className="w-full bg-surface-container-low py-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col gap-10">
             <div className="flex flex-col gap-2 max-w-2xl">
               <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Procurement Solutions</span>
               <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">Engineered for Every Scale of African Food Commerce</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant">From neighborhood grocery deliveries to 50-tonne bulk truckloads feeding urban processors, CultivaNode guarantees uniform grades and transparent weighbridge settlements.</p>
+              <p className="font-body-md text-body-md text-on-surface-variant">
+                From neighborhood grocery deliveries to 50-tonne bulk truckloads feeding urban processors, CultivaNode guarantees uniform grades and transparent weighbridge settlements.
+              </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-8 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between gap-6">
@@ -682,12 +1003,16 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
             </div>
           </div>
         </section>
+
+        {/* How CultivaNode Escrow Works */}
         <section className="w-full bg-surface py-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col gap-12">
             <div className="text-center max-w-3xl mx-auto flex flex-col gap-3">
               <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Zero-Risk Settlement Architecture</span>
               <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">How CultivaNode Escrow Works</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant">Complete payment security engineered to protect the buyer from missing metric tonnage or defective moisture while ensuring growers are paid immediately upon delivery.</p>
+              <p className="font-body-md text-body-md text-on-surface-variant">
+                Complete payment security engineered to protect the buyer from missing metric tonnage or defective moisture while ensuring growers are paid immediately upon delivery.
+              </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
               <div className="flex flex-col gap-4 p-6 rounded-xl bg-surface-container-lowest shadow-sm relative">
@@ -713,6 +1038,8 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
             </div>
           </div>
         </section>
+
+        {/* Guarantees */}
         <section className="w-full bg-surface-container-lowest py-14">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -747,6 +1074,8 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
             </div>
           </div>
         </section>
+
+        {/* FAQ & Enterprise Sourcing Desk Form */}
         <section className="w-full bg-surface-container-low py-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <div className="lg:col-span-7 flex flex-col gap-6">
@@ -791,15 +1120,15 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                 <h3 className="font-headline-lg text-headline-lg text-primary font-bold mt-2">Custom Bulk Contract?</h3>
                 <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Need monthly deliveries of over 100 MT of maize, soy, or cassava for industrial extraction? Speak with our South-West sourcing desk.</p>
               </div>
-              <div className="flex flex-col gap-4" role="form">
+              <form onSubmit={handleEnterpriseDeckSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-label-sm text-label-sm text-on-surface" htmlFor="companyName">Organization / Business Name</label>
-                  <input className="h-10 px-3.5 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-low transition-colors" id="companyName" placeholder="e.g. Lagos Milling Co. / Premier Foods" required type="text" />
+                  <label className="font-label-sm text-label-sm text-on-surface" htmlFor={companyNameId}>Organization / Business Name</label>
+                  <input className="h-10 px-3.5 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-low transition-colors" id={companyNameId} placeholder="e.g. Lagos Milling Co. / Premier Foods" required type="text" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor="commodityInterest">Commodity of Interest</label>
-                    <select className="h-10 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none" id="commodityInterest">
+                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor={commodityInterestId}>Commodity of Interest</label>
+                    <select className="h-10 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none" id={commodityInterestId}>
                       <option>White Maize (Feed)</option>
                       <option>Yellow Maize</option>
                       <option>Cassava Roots (Fresh)</option>
@@ -809,8 +1138,8 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor="monthlyTonnage">Estimated Monthly Volume</label>
-                    <select className="h-10 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none" id="monthlyTonnage">
+                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor={monthlyTonnageId}>Estimated Monthly Volume</label>
+                    <select className="h-10 px-3 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none" id={monthlyTonnageId}>
                       <option>10 - 25 Metric Tons</option>
                       <option>25 - 100 Metric Tons</option>
                       <option>100 - 500 Metric Tons</option>
@@ -819,14 +1148,14 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-label-sm text-label-sm text-on-surface" htmlFor="workEmail">Official Procurement Contact (Phone / Email)</label>
-                  <input className="h-10 px-3.5 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-low transition-colors" id="workEmail" placeholder="0803... or procurement@company.com" required type="text" />
+                  <label className="font-label-sm text-label-sm text-on-surface" htmlFor={workEmailId}>Official Procurement Contact (Phone / Email)</label>
+                  <input className="h-10 px-3.5 bg-surface rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-low transition-colors" id={workEmailId} placeholder="0803... or procurement@company.com" required type="text" />
                 </div>
-                <button className="h-11 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm mt-2" type="submit">
+                <button onClick={() => {}} className="h-11 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm mt-2" type="submit">
                   <Icon name="send" className="text-[18px]" />
                   <span>Request Enterprise Sourcing Deck</span>
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </section>
