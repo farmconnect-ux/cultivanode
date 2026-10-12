@@ -47,12 +47,22 @@ export async function createFarmPlot(form: FormData): Promise<void> {
 
   let { error } = await supabase.from("plots").insert(fullPayload as any);
 
-  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const metaParts = [
+      code ? `plot_code:${code}` : "",
+      soilType ? `soil_texture:${soilType}` : "",
+      slope ? `slope:${slope}` : "",
+      irrigationStatus ? `irrigation_type:${irrigationStatus}` : "",
+      accessibility ? `accessibility:${accessibility}` : "",
+    ].filter(Boolean);
+    const metaNote = metaParts.length > 0 ? `[front_end_meta: ${metaParts.join(", ")}]` : "";
+    const combinedNotes = [userNotes, metaNote].filter(Boolean).join(" | ");
+
     const fallbackPayload = {
       farm_id: farmId,
       name,
       area_ha: Math.round(areaHa * 10000) / 10000,
-      notes: userNotes || null,
+      notes: combinedNotes || null,
     };
     const retry = await supabase.from("plots").insert(fallbackPayload as any);
     error = retry.error;
@@ -113,11 +123,21 @@ export async function updateFarmPlot(form: FormData): Promise<void> {
 
   let { error } = await supabase.from("plots").update(updatePayload as any).eq("id", plotId);
 
-  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const metaParts = [
+      code ? `plot_code:${code}` : "",
+      soilType ? `soil_texture:${soilType}` : "",
+      slope ? `slope:${slope}` : "",
+      irrigationStatus ? `irrigation_type:${irrigationStatus}` : "",
+      accessibility ? `accessibility:${accessibility}` : "",
+    ].filter(Boolean);
+    const metaNote = metaParts.length > 0 ? `[front_end_meta: ${metaParts.join(", ")}]` : "";
+    const combinedNotes = [notes, metaNote].filter(Boolean).join(" | ");
+
     const fallbackPayload = {
       name,
       area_ha: Math.round(areaHa * 10000) / 10000,
-      notes: notes || null,
+      notes: combinedNotes || null,
       updated_at: new Date().toISOString(),
     };
     const retry = await supabase.from("plots").update(fallbackPayload as any).eq("id", plotId);

@@ -223,14 +223,27 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
     .select()
     .single();
 
-  if (cycleErr && (cycleErr.code === "PGRST204" || cycleErr.code === "42703")) {
-    // Schema cache fallback to strict original columns
+  if (cycleErr && (cycleErr.code === "PGRST204" || cycleErr.code === "42703" || cycleErr.message.includes("column") || cycleErr.message.includes("schema cache"))) {
+    // Schema cache fallback to strict original columns ONLY
+    const metaParts = [
+      `crop_name:${cropName}`,
+      variety ? `variety:${variety}` : "",
+      `planted_area_hectares:${plantedAreaHectares}`,
+      `start_date:${startDate}`,
+      `target_harvest_date:${calculatedHarvestDate}`,
+      `budget_cap_minor:${budgetCapMinor}`,
+    ].filter(Boolean);
+    const metaNote = `[front_end_meta: ${metaParts.join(", ")}]`;
+    const notesStr = [
+      standardObj ? `Agronomic standard: ${standardObj.cropName} (${standardObj.variety || "Standard"})` : "",
+      metaNote,
+    ].filter(Boolean).join(" | ");
+
     const fallbackPayload = {
       farm_id: farmId,
       plot_id: plotId,
       standard_id: resolvedStandardUuid,
       crop_id: cropName.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
-      crop_name: cropName,
       variety_id: variety || null,
       season,
       target_area_ha: plantedAreaHectares,
@@ -240,7 +253,7 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
       estimated_budget_kobo: budgetCapMinor,
       status: "planning",
       current_stage: "Planning",
-      notes: standardObj ? `Standard: ${standardObj.cropName} (${standardObj.variety || "Standard"})` : null,
+      notes: notesStr || null,
     };
     const retry = await supabase.from("crop_cycles").insert(fallbackPayload as any).select().single();
     cycle = retry.data;
@@ -281,7 +294,21 @@ export async function createCropCycle(form: FormData): Promise<{ id?: string; er
       }));
 
       if (opsToInsert.length > 0) {
-        await supabase.from("crop_cycle_operations").insert(opsToInsert as any);
+        let { error: opsErr } = await supabase.from("crop_cycle_operations").insert(opsToInsert as any);
+        if (opsErr && (opsErr.code === "PGRST204" || opsErr.code === "42703" || opsErr.message.includes("column") || opsErr.message.includes("schema cache"))) {
+          // Fallback if planned_inputs or cycle_id column is not yet present on hosted DB
+          const fallbackOps = opsToInsert.map((op) => ({
+            crop_cycle_id: op.crop_cycle_id,
+            name: op.name,
+            operation_type: op.operation_type,
+            stage: op.stage,
+            scheduled_date: op.scheduled_date,
+            status: op.status,
+            required_inputs: op.required_inputs,
+            notes: `${op.notes} | planned_inputs:${JSON.stringify(op.planned_inputs)}`,
+          }));
+          await supabase.from("crop_cycle_operations").insert(fallbackOps as any);
+        }
       }
     } catch {
       // Non-fatal if advisory ops generation fails
@@ -300,15 +327,24 @@ export async function adoptAdvisoryInputs(form: FormData): Promise<void> {
 
   const { data: op } = await supabase
     .from("crop_cycle_operations")
-    .select("required_inputs")
+    .select("required_inputs, notes")
     .eq("id", opId)
     .maybeSingle();
 
   if (op) {
-    await supabase
+    let { error } = await supabase
       .from("crop_cycle_operations")
       .update({ planned_inputs: (op as any).required_inputs || [] } as any)
       .eq("id", opId);
+
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+      const notes = (op as any).notes || "";
+      const updatedNotes = `${notes} | planned_inputs:${JSON.stringify((op as any).required_inputs || [])}`;
+      await supabase
+        .from("crop_cycle_operations")
+        .update({ notes: updatedNotes } as any)
+        .eq("id", opId);
+    }
   }
   if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
 }
@@ -324,10 +360,24 @@ export async function updateOperationPlannedInputs(form: FormData): Promise<void
   if (!opId) return;
 
   const inputs = itemName ? [{ itemName, quantity, unit }] : [];
-  await supabase
+  let { error } = await supabase
     .from("crop_cycle_operations")
     .update({ planned_inputs: inputs } as any)
     .eq("id", opId);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const { data: op } = await supabase
+      .from("crop_cycle_operations")
+      .select("notes")
+      .eq("id", opId)
+      .maybeSingle();
+    const notes = op?.notes || "";
+    const cleanNotes = notes.replace(/ \| planned_inputs:.*$/, "");
+    await supabase
+      .from("crop_cycle_operations")
+      .update({ notes: `${cleanNotes} | planned_inputs:${JSON.stringify(inputs)}` } as any)
+      .eq("id", opId);
+  }
 
   if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
 }
@@ -358,9 +408,21 @@ export async function logCropOperation(form: FormData): Promise<void> {
     };
     if (customInputs) updatePayload.actual_inputs = customInputs;
     if (notes) updatePayload.notes = notes;
-    await supabase.from("crop_cycle_operations").update(updatePayload as any).eq("id", opId);
+
+    let { error } = await supabase.from("crop_cycle_operations").update(updatePayload as any).eq("id", opId);
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+      const fallbackPayload: Record<string, any> = {
+        completed_date: completedDate,
+        status: completedDate ? "completed" : "pending",
+        actual_cost_kobo: actualCostKobo,
+      };
+      if (notes || customInputs) {
+        fallbackPayload.notes = [notes, customInputs ? `actual_inputs:${JSON.stringify(customInputs)}` : ""].filter(Boolean).join(" | ");
+      }
+      await supabase.from("crop_cycle_operations").update(fallbackPayload as any).eq("id", opId);
+    }
   } else if (cycleId && name) {
-    await supabase.from("crop_cycle_operations").insert({
+    const insertPayload: Record<string, any> = {
       crop_cycle_id: cycleId,
       cycle_id: cycleId,
       name,
@@ -371,13 +433,32 @@ export async function logCropOperation(form: FormData): Promise<void> {
       status: completedDate ? "completed" : "pending",
       actual_cost_kobo: actualCostKobo,
       direct_cost_minor: actualCostKobo,
+      notes: notes || null,
+      required_inputs: [],
       planned_inputs: customInputs || [],
       actual_inputs: completedDate && customInputs ? customInputs : [],
-      notes: notes || null,
-    } as any);
+    };
+
+    let { error } = await supabase.from("crop_cycle_operations").insert(insertPayload as any);
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+      const fallbackInsert: Record<string, any> = {
+        crop_cycle_id: cycleId,
+        name,
+        operation_type: operationType,
+        stage,
+        scheduled_date: scheduledDate,
+        completed_date: completedDate,
+        status: completedDate ? "completed" : "pending",
+        actual_cost_kobo: actualCostKobo,
+        notes: [notes, customInputs ? `actual_inputs:${JSON.stringify(customInputs)}` : ""].filter(Boolean).join(" | ") || null,
+        required_inputs: [],
+      };
+      await supabase.from("crop_cycle_operations").insert(fallbackInsert as any);
+    }
   }
 
   if (cycleId) revalidatePath(`/account/crops/${cycleId}`);
+  revalidatePath("/account/crops");
 }
 
 export async function logCropObservation(form: FormData): Promise<void> {
@@ -391,15 +472,32 @@ export async function logCropObservation(form: FormData): Promise<void> {
 
   if (!cycleId || !title) return;
 
-  await supabase.from("crop_observations").insert({
+  const validDbCat = ["pest", "disease", "nutrient_deficiency", "weed_infestation", "water_stress", "general"].includes(rawCat) ? rawCat : "general";
+  const validDbSeverity = ["low", "medium", "high", "critical"].includes(severity) ? severity : "low";
+
+  const fullObs = {
     crop_cycle_id: cycleId,
     observation_type: rawCat,
-    severity,
+    category: validDbCat,
+    severity: validDbSeverity,
     title,
-    description: description || null,
+    description: description || title,
     recommended_action: recommendedAction || null,
     observed_at: new Date().toISOString(),
-  });
+  };
+
+  let { error: obsErr } = await supabase.from("crop_observations").insert(fullObs as any);
+  if (obsErr && (obsErr.code === "PGRST204" || obsErr.code === "42703" || obsErr.message.includes("column") || obsErr.message.includes("schema cache"))) {
+    const fallbackObs = {
+      crop_cycle_id: cycleId,
+      category: validDbCat,
+      severity: validDbSeverity,
+      title,
+      description: recommendedAction ? `${description || title} | Action: ${recommendedAction}` : (description || title),
+      observed_at: new Date().toISOString(),
+    };
+    await supabase.from("crop_observations").insert(fallbackObs as any);
+  }
 
   revalidatePath(`/account/crops/${cycleId}`);
   revalidatePath("/account/crops/scouting");

@@ -34,6 +34,7 @@ CultivaNode resolves this by operating as **Connected Intelligence for Agricultu
 4. **Proof of Work (PoW) Integrity:** Every mechanization job requires GPS check-in (geofence verified inside farm boundary), timestamped before/after photo evidence, and bilateral confirmation before completion.
 5. **Defensive Agronomy & Chemical Guardrails:** Agronomic advisory is strictly grounded in NAFDAC, IITA, and NIHORT standards. The AI assistant strictly blocks banned chemicals (Paraquat, Carbofuran, DDT) and never invents chemical dosages.
 6. **Field-First Usability:** 48px minimum touch targets, high-contrast WCAG AA compliance, full Yorùbá diacritics support, and offline-first data queues for Android devices in rural areas.
+7. **Standing Order: Front-End Primacy & Backend Accommodation:** The front-end syntax, UX workflows, and naming conventions take absolute precedence across all modules. Where existing backend schemas, tables, columns, or calculation engines differ or lack support, the backend and engines must be built, adapted, and extended to satisfy the front-end without stripping or downgrading UI capabilities. Never delete or downgrade front-end capabilities to match legacy backend limitations. When a UI field exists, the backend must persistently store and retrieve it.
 
 ---
 

@@ -43,24 +43,58 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
   const { data: cycles } = plotIds.length
     ? await supabase
         .from("crop_cycles")
-        .select("id, plot_id, crop_name, variety, status, start_date")
+        .select("*")
         .in("plot_id", plotIds)
-        .order("start_date", { ascending: false })
+        .order("created_at", { ascending: false })
     : { data: [] };
 
-  const cycleList = cycles ?? [];
+  const rawCycles = (cycles ?? []) as any[];
+  const cycleList = rawCycles.map((c) => {
+    let cropName = c.crop_name;
+    let variety = c.variety || c.variety_id || "";
+    let startDate = c.start_date || c.planting_date;
+
+    if (!cropName && c.notes && typeof c.notes === "string" && c.notes.includes("[front_end_meta:")) {
+      const match = c.notes.match(/\[front_end_meta:\s*([^\]]+)\]/);
+      if (match && match[1]) {
+        const parts = match[1].split(",").map((s: string) => s.trim());
+        for (const part of parts) {
+          const [k, v] = part.split(":");
+          if (k === "crop_name" && v) cropName = v;
+          if (k === "variety" && v && !variety) variety = v;
+          if (k === "start_date" && v && !startDate) startDate = v;
+        }
+      }
+    }
+
+    if (!cropName) {
+      cropName = c.crop_id ? c.crop_id.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Crop";
+    }
+
+    return {
+      ...c,
+      crop_name: cropName,
+      variety,
+      start_date: startDate,
+    };
+  });
   const cycleIds = cycleList.map((c) => c.id);
   const cycleMap = new Map(cycleList.map((c) => [c.id, c]));
 
   const { data: observations } = cycleIds.length
     ? await supabase
         .from("crop_observations")
-        .select("id, crop_cycle_id, observation_type, severity, title, description, recommended_action, observed_at")
+        .select("*")
         .in("crop_cycle_id", cycleIds)
         .order("observed_at", { ascending: false })
     : { data: [] };
 
-  const obsList = observations ?? [];
+  const rawObs = (observations ?? []) as any[];
+  const obsList = rawObs.map((o) => ({
+    ...o,
+    observation_type: o.observation_type || o.category || "General",
+    recommended_action: o.recommended_action || "",
+  }));
   const hasLiveObs = obsList.length > 0;
   const criticalCount = obsList.filter((o) => o.severity === "high" || o.severity === "critical").length;
 

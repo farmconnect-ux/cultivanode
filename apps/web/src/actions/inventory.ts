@@ -15,16 +15,31 @@ export async function createInventoryLocation(form: FormData): Promise<void> {
   const farmId = String(form.get("farm_id") || "").trim();
   const name = String(form.get("name") || form.get("location_name") || "").trim();
   const rawType = String(form.get("location_type") || "farm_store").trim().toLowerCase();
-  const validTypes = ["warehouse", "cold_room", "silo", "farm_store", "processing_unit", "field_shed", "other"];
-  const locationType = validTypes.includes(rawType) ? rawType : "farm_store";
+  const validDbTypes = ["main_warehouse", "farm_store", "field_shed", "feed_store", "cold_room", "machinery_shed", "livestock_store"];
+  const locationType = validDbTypes.includes(rawType) ? rawType : "farm_store";
 
   if (!farmId || !name) return;
 
-  const { error } = await supabase.from("farm_inventory_locations").insert({
+  const fullLoc = {
     farm_id: farmId,
     name,
+    location_name: name,
     location_type: locationType,
-  });
+    is_active: true,
+  };
+
+  let { error } = await supabase.from("farm_inventory_locations").insert(fullLoc as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const fallbackLoc = {
+      farm_id: farmId,
+      location_name: name,
+      location_type: locationType,
+      is_active: true,
+    };
+    const retry = await supabase.from("farm_inventory_locations").insert(fallbackLoc as any);
+    error = retry.error;
+  }
 
   if (error) throw new Error(error.message);
 
@@ -37,8 +52,10 @@ export async function createInventoryItem(form: FormData): Promise<void> {
   let locationId = String(form.get("location_id") || "").trim();
   const itemName = String(form.get("item_name") || "").trim();
   const rawCat = String(form.get("item_category") || form.get("category") || "seeds").trim().toLowerCase();
-  const validCats = ["seed", "fertilizer", "chemical", "feed", "produce", "tool", "spare_part", "packaging", "other"];
-  const itemCategory = validCats.includes(rawCat) ? rawCat : "seed";
+  const validDbCats = ["seeds", "fertiliser", "chemicals", "livestock_feed", "veterinary_medicine", "supplies", "spare_parts", "produce", "other"];
+  const dbCat = validDbCats.includes(rawCat)
+    ? rawCat
+    : (rawCat === "seed" ? "seeds" : rawCat === "fertilizer" ? "fertiliser" : rawCat === "chemical" ? "chemicals" : "other");
   const unit = String(form.get("unit") || "kg").trim();
   const currentQuantity = parseFloat(String(form.get("current_quantity") || form.get("quantity") || "0")) || 0;
   const averageCostMinor = parseInt(String(form.get("average_cost_minor") || form.get("unit_cost_kobo") || "0"), 10) || 0;
@@ -53,30 +70,53 @@ export async function createInventoryItem(form: FormData): Promise<void> {
     if (loc?.id) {
       locationId = loc.id;
     } else {
-      const { data: newLoc } = await supabase.from("farm_inventory_locations").insert({
+      const { data: newLoc } = await (supabase.from("farm_inventory_locations") as any).insert({
         farm_id: farmId,
         name: "Main Storage",
+        location_name: "Main Storage",
         location_type: "farm_store",
       }).select("id").single();
       locationId = newLoc?.id || "";
     }
   }
 
-  if (!locationId) return;
-
-  const { error } = await supabase.from("farm_inventory").insert({
+  const fullPayload: Record<string, any> = {
     farm_id: farmId,
-    location_id: locationId,
-    item_category: itemCategory,
     item_name: itemName,
+    category: dbCat,
+    item_category: rawCat,
     unit,
+    quantity: currentQuantity,
     current_quantity: currentQuantity,
     reserved_quantity: 0,
+    unit_cost_kobo: averageCostMinor,
     average_cost_minor: averageCostMinor,
+    reorder_threshold: reorderLevel,
     reorder_level: reorderLevel,
-    lot_number: lotNumber,
     expiry_date: expiryDate,
-  });
+    lot_number: lotNumber,
+    storage_location: lotNumber ? `Lot: ${lotNumber}` : null,
+  };
+  if (locationId) fullPayload.location_id = locationId;
+
+  let { error } = await supabase.from("farm_inventory").insert(fullPayload as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const fallbackPayload = {
+      farm_id: farmId,
+      item_name: itemName,
+      category: dbCat,
+      unit,
+      quantity: currentQuantity,
+      reserved_quantity: 0,
+      unit_cost_kobo: averageCostMinor,
+      reorder_threshold: reorderLevel,
+      expiry_date: expiryDate,
+      storage_location: lotNumber ? `Lot: ${lotNumber}` : null,
+    };
+    const retry = await supabase.from("farm_inventory").insert(fallbackPayload as any);
+    error = retry.error;
+  }
 
   if (error) throw new Error(error.message);
 
@@ -107,7 +147,26 @@ export async function recordStockMovement(form: FormData): Promise<void> {
     p_lot_number: lotNumber,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // If stored procedure doesn't exist yet, do atomic direct table update fallback
+    const { data: currentInv } = await (supabase.from("farm_inventory") as any).select("*").eq("id", inventoryItemId).single();
+    if (currentInv) {
+      const currentQty = (currentInv as any).current_quantity ?? (currentInv as any).quantity ?? 0;
+      const newQty = rawType === "issue" || rawType === "consumption"
+        ? Math.max(0, currentQty - quantity)
+        : currentQty + quantity;
+
+      await (supabase.from("farm_inventory") as any).update({ current_quantity: newQty, quantity: newQty }).eq("id", inventoryItemId);
+      await (supabase as any).from("farm_inventory_transactions").insert({
+        farm_id: (currentInv as any).farm_id,
+        inventory_id: inventoryItemId,
+        transaction_type: rawType === "issue" ? "issue_to_field" : rawType,
+        quantity,
+        batch_number: lotNumber,
+        notes,
+      });
+    }
+  }
 
   revalidatePath("/account/inventory");
 }

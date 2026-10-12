@@ -116,11 +116,30 @@ export default async function FarmDetailPage({ params }: Props) {
             <div className="grid gap-3 sm:grid-cols-2">
               {plots.map((plot) => {
                 const plotArea = Number(plot.area_ha ?? (plot as any).size_hectares ?? 0);
-                const plotCode = (plot as any).plot_code || (plot as any).code;
-                const soil = (plot as any).soil_texture || (plot as any).soil_type;
-                const slope = (plot as any).slope;
-                const irrigation = (plot as any).irrigation_type || (plot as any).irrigation_status;
-                const access = (plot as any).accessibility;
+                let plotCode = (plot as any).plot_code || (plot as any).code;
+                let soil = (plot as any).soil_texture || (plot as any).soil_type;
+                let slope = (plot as any).slope;
+                let irrigation = (plot as any).irrigation_type || (plot as any).irrigation_status;
+                let access = (plot as any).accessibility;
+
+                if (plot.notes && typeof plot.notes === "string" && plot.notes.includes("[front_end_meta:")) {
+                  const match = plot.notes.match(/\[front_end_meta:\s*([^\]]+)\]/);
+                  if (match && match[1]) {
+                    const parts = match[1].split(",").map((s: string) => s.trim());
+                    for (const part of parts) {
+                      const [k, v] = part.split(":");
+                      if (k === "plot_code" && v && !plotCode) plotCode = v;
+                      if (k === "soil_texture" && v && !soil) soil = v;
+                      if (k === "slope" && v && !slope) slope = v;
+                      if (k === "irrigation_type" && v && !irrigation) irrigation = v;
+                      if (k === "accessibility" && v && !access) access = v;
+                    }
+                  }
+                }
+
+                const cleanNotes = plot.notes
+                  ? plot.notes.replace(/\s*\|\s*\[front_end_meta:.*?\]/g, "").replace(/\[front_end_meta:.*?\]/g, "").trim()
+                  : "";
 
                 return (
                   <Card key={plot.id} className="p-4 border border-line flex flex-col justify-between gap-3">
@@ -162,9 +181,9 @@ export default async function FarmDetailPage({ params }: Props) {
                         )}
                       </div>
 
-                      {plot.notes && (
+                      {cleanNotes && (
                         <p className="text-[11px] text-muted pt-1 leading-relaxed border-t border-line/60">
-                          {plot.notes}
+                          {cleanNotes}
                         </p>
                       )}
                     </div>

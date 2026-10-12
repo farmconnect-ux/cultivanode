@@ -21,14 +21,35 @@ export async function createFarmBudget(form: FormData): Promise<void> {
 
   if (!farmId || !enterpriseName) return;
 
-  const { error } = await supabase.from("farm_budgets").insert({
+  const fullBudget = {
     farm_id: farmId,
+    title: enterpriseName,
     enterprise_name: enterpriseName,
-    season,
+    enterprise_type: "crop",
+    fiscal_year: year,
     year,
+    season,
+    total_budget_kobo: plannedCostMinor,
     planned_revenue_minor: plannedRevenueMinor,
     planned_cost_minor: plannedCostMinor,
-  });
+    status: "draft",
+  };
+
+  let { error } = await supabase.from("farm_budgets").insert(fullBudget as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const fallbackBudget = {
+      farm_id: farmId,
+      title: enterpriseName,
+      enterprise_type: "crop",
+      fiscal_year: year,
+      total_budget_kobo: plannedCostMinor,
+      status: "draft",
+      notes: [season ? `Season: ${season}` : "", plannedRevenueMinor ? `Revenue: ${plannedRevenueMinor}` : ""].filter(Boolean).join(" | ") || null,
+    };
+    const retry = await supabase.from("farm_budgets").insert(fallbackBudget as any);
+    error = retry.error;
+  }
 
   if (error) throw new Error(error.message);
 
@@ -46,14 +67,32 @@ export async function addBudgetLine(form: FormData): Promise<void> {
 
   if (!budgetId || !description) return;
 
-  const { error } = await supabase.from("farm_budget_lines").insert({
+  const fullLine = {
     budget_id: budgetId,
     category,
     cost_type: costType,
+    line_item: description,
     description,
+    budgeted_amount_kobo: plannedMinor,
     planned_minor: plannedMinor,
+    actual_amount_kobo: actualMinor,
     actual_minor: actualMinor,
-  });
+  };
+
+  let { error } = await supabase.from("farm_budget_lines").insert(fullLine as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const fallbackLine = {
+      budget_id: budgetId,
+      category,
+      line_item: description,
+      budgeted_amount_kobo: plannedMinor,
+      actual_amount_kobo: actualMinor,
+      notes: costType ? `Cost Type: ${costType}` : null,
+    };
+    const retry = await supabase.from("farm_budget_lines").insert(fallbackLine as any);
+    error = retry.error;
+  }
 
   if (error) throw new Error(error.message);
 
@@ -75,18 +114,42 @@ export async function recordPlanActualVariance(form: FormData): Promise<void> {
 
   if (!farmId || !metric) return;
 
-  const { error } = await supabase.from("farm_plan_actual_variances").insert({
+  const fullVariance = {
     farm_id: farmId,
     crop_cycle_id: cycleId,
+    entity_type: "crop",
+    metric_name: metric,
     metric,
+    unit: "kg",
     standard_value: standardValue,
+    plan_value: plannedValue,
     planned_value: plannedValue,
     actual_value: actualValue,
     variance_percentage: variancePercentage,
     variance_nature: varianceNature,
+    farmer_deviation_reason: rootCause,
     root_cause: rootCause,
     corrective_action: correctiveAction,
-  });
+  };
+
+  let { error } = await supabase.from("farm_plan_actual_variances").insert(fullVariance as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703" || error.message.includes("column") || error.message.includes("schema cache"))) {
+    const fallbackVariance = {
+      farm_id: farmId,
+      crop_cycle_id: cycleId,
+      entity_type: "crop",
+      metric_name: metric,
+      unit: "kg",
+      standard_value: standardValue,
+      plan_value: plannedValue,
+      actual_value: actualValue,
+      farmer_deviation_reason: [rootCause, correctiveAction ? `Action: ${correctiveAction}` : ""].filter(Boolean).join(" | ") || null,
+      is_farmer_override: Boolean(rootCause),
+    };
+    const retry = await supabase.from("farm_plan_actual_variances").insert(fallbackVariance as any);
+    error = retry.error;
+  }
 
   if (error) throw new Error(error.message);
 
