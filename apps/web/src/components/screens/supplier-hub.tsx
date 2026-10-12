@@ -20,10 +20,10 @@ export function SupplierHub(_props: ScreenProps) {
           <div className="flex flex-wrap items-center gap-space-sm self-start md:self-auto">
             {_props.slots?.actions ?? (
               <>
-                <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
+                <a className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" href="/api/documents/waybills">
                   <Icon name="file_download" className="text-[18px] text-on-surface-variant" />
                   <span>Export Waybills (CSV)</span>
-                </button>
+                </a>
                 <button className="flex items-center gap-space-xs px-space-md py-2 bg-surface-container-lowest text-on-surface font-label-lg text-label-lg rounded-lg shadow-sm hover:bg-surface-container-high transition-colors" type="button">
                   <Icon name="verified" className="text-[18px] text-secondary" />
                   <span>Import Manifest</span>
@@ -760,9 +760,9 @@ export function SupplierHub(_props: ScreenProps) {
                     <span className="text-on-surface-variant text-label-sm">SAMMAZ-52 Pure Hybrid Stock · NASC Audit Pass</span>
                   </div>
                 </div>
-                <button className="text-primary hover:text-on-surface" title="Download Certificate PDF" type="button">
+                <a className="text-primary hover:text-on-surface" title="Download Certificate PDF" href="/api/documents/supplier-certificate">
                   <Icon name="download" className="text-[18px]" />
-                </button>
+                </a>
               </div>
               <div className="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
                 <div className="flex items-center gap-space-sm">
@@ -772,9 +772,9 @@ export function SupplierHub(_props: ScreenProps) {
                     <span className="text-on-surface-variant text-label-sm">Emamectin Benzoate 5% SG &amp; Atrazine 500 SC</span>
                   </div>
                 </div>
-                <button className="text-primary hover:text-on-surface" title="Download Certificate PDF" type="button">
+                <a className="text-primary hover:text-on-surface" title="Download Certificate PDF" href="/api/documents/supplier-certificate">
                   <Icon name="download" className="text-[18px]" />
-                </button>
+                </a>
               </div>
             </div>
           </div>

@@ -89,6 +89,7 @@ The CultivaNode web ecosystem consists of **64 comprehensive screens** covering 
 |---|---|---|
 | `/[lang]` | `HomePage` | Primary landing page. Brand promise, 3 interactive scenes (Plan, Hire, Record), live hero picture carousel from admin, pilot notice, Yoruba/English locale switch. |
 | `/[lang]/platform` | `PlatformCapabilities` | Detailed breakdown of the 6 core pillars of the Agro-Enterprise Suite (GIS, Agronomy, Mechanization, Commerce, IoT, Credit). |
+| `/[lang]/whitepaper` | `TechnicalWhitepaper` | Technical specification detailing Cadastral GIS, degree-day thermal phenology, cryptographic double-entry ledger, and VRPTW tractor transit optimization. |
 | `/[lang]/solutions` | `SolutionsByRole` | Solution guides tailored by persona (Farmers, Equipment Owners, Aggregators, Banks, Government). |
 | `/[lang]/how-it-works` | `HowItWorks` | Interactive step-by-step guides explaining how jobs, crop planning, and verification work. |
 | `/[lang]/marketplace` | `OpenMarketplace` | Public multi-category marketplace directory (Machinery, Services, Inputs, Seeds, Produce). Filter by state, LGA, category, price. |

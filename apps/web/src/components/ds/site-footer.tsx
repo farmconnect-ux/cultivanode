@@ -12,6 +12,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
       title: "Solutions",
       links: [
         { href: `/${lang}/platform`, label: "Platform & architecture" },
+        { href: `/${lang}/whitepaper`, label: "Technical whitepaper" },
         { href: `/${lang}/solutions`, label: "Solutions by role" },
         { href: `/${lang}/marketplace`, label: "Escrow marketplace" },
         { href: `/${lang}/machinery`, label: "Machinery & services" },

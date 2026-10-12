@@ -51,14 +51,14 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
               <p className="font-body-md text-body-md text-on-surface-variant mt-2 leading-relaxed">Continuous cryptographic audit trails, privileged session authorization, Zero-Trust Row Level Security (RLS) enforcement, and NDPA 2023 regulatory data privacy oversight across all agro-nodes.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" id="btn-export-proof" type="button">
+              <a className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" id="btn-export-proof" href="/api/documents/json-ld-proofs">
                 <Icon name="download_for_offline" className="text-[18px]" />
                 <span>Export JSON-LD Proofs</span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" type="button">
+              </a>
+              <a className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all shadow-sm" href="/api/documents/compliance-audit">
                 <Icon name="policy" className="text-[18px]" />
                 <span>NDPA Compliance Report</span>
-              </button>
+              </a>
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-error hover:bg-error hover:text-on-error font-label-md text-label-md transition-colors shadow-sm" id="btn-lockdown" type="button">
                 <Icon name="lock_clock" className="text-[18px]" />
                 <span>Lockdown Protocol</span>

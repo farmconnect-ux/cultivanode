@@ -533,16 +533,16 @@ export function ResearchExtension(_props: ScreenProps) {
                       <div className="text-xs text-on-surface-variant">Author: Institute of Agricultural Research &amp; Training (IAR&amp;T) Moor Plantation</div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button className="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface" title="Download Dossier PDF" type="button">
+                      <a className="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface inline-flex items-center justify-center" title="Download Dossier PDF" href="/api/documents/agronomy-dossier">
                         <Icon name="picture_as_pdf" className="text-[18px]" />
-                      </button>
+                      </a>
                       <button className="px-3 py-1.5 rounded-lg bg-secondary text-on-secondary text-xs font-semibold hover:bg-on-secondary-container inline-flex items-center gap-1" type="button"><Icon name="send_to_mobile" className="text-[14px]" /> Deploy to Field App</button>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-space-sm mt-auto border-t-0">
                   <span className="text-xs text-on-surface-variant">48 Versioned Agronomic Standards registered in repository</span>
-                  <button className="text-xs font-semibold text-secondary hover:underline" type="button">Batch Export SOP Repository (.zip)</button>
+                  <a className="text-xs font-semibold text-secondary hover:underline" href="/api/documents/sop-repository">Batch Export SOP Repository (.zip)</a>
                 </div>
               </div>
             </div>

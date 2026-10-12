@@ -24,10 +24,10 @@ export function WorkspaceSettings(_props: ScreenProps) {
               <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl">Multi-tenant identity lifecycle, hardware-bound cryptographic keys, and field-parcel permissions matrix tailored for Iseyin Savanna Cluster syndicates.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm">
-              <button className="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors font-label-lg text-label-lg shadow-sm" type="button">
+              <a className="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors font-label-lg text-label-lg shadow-sm" href="/api/account/export">
                 <Icon name="history_edu" className="text-base" />
                 <span>Export Audit</span>
-              </button>
+              </a>
               <button className="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors font-label-lg text-label-lg shadow-sm" type="button">
                 <Icon name="rule" className="text-base" />
                 <span>Request New Role</span>
@@ -1009,10 +1009,10 @@ export function WorkspaceSettings(_props: ScreenProps) {
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Tamper-evident operational events cryptographically hashed with SHA-256 state chain.</p>
                 </div>
-                <button className="h-8 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm flex items-center gap-1 shadow-sm" type="button">
+                <a className="h-8 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm flex items-center gap-1 shadow-sm" href="/api/documents/nibss">
                   <Icon name="download" className="text-base" />
                   <span>Download CSV (NIBSS Format)</span>
-                </button>
+                </a>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left font-body-sm text-body-sm">
@@ -1069,7 +1069,7 @@ export function WorkspaceSettings(_props: ScreenProps) {
                   <Icon name="lock" className="text-base text-secondary" />
                   <span>Cryptographic Merkle Root: 0x9b4ae1c098df...verified across 3 decentralized cluster validator nodes.</span>
                 </div>
-                <button className="font-label-sm text-label-sm text-primary font-bold hover:underline" type="button">Verify Merkle Proof →</button>
+                <a className="font-label-sm text-label-sm text-primary font-bold hover:underline" href="/api/documents/json-ld-proofs">Verify Merkle Proof →</a>
               </div>
             </div>
           </div>

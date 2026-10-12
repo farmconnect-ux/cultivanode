@@ -460,7 +460,7 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                 <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-space-md">
                   <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-surface-container-lowest text-primary hover:bg-surface-container transition-colors shadow-sm" href={`/${lang}/sign-up`}><Icon name="how_to_reg" className="mr-space-xs text-[20px]" /> Apply to Join Pilot (Farmers &amp; Fleets)</Link>
                   <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm" href={`/${lang}/contact`}><Icon name="handshake" className="mr-space-xs text-[20px]" /> Institutional &amp; State Partnerships</Link>
-                  <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-semibold px-space-md py-space-sm rounded-lg text-on-primary hover:bg-primary transition-colors" href={`/${lang}/platform`}><Icon name="menu_book" className="mr-space-xs text-[20px]" /> Technical Whitepaper</Link>
+                  <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-semibold px-space-md py-space-sm rounded-lg text-on-primary hover:bg-primary transition-colors" href={`/${lang}/whitepaper`}><Icon name="menu_book" className="mr-space-xs text-[20px]" /> Technical Whitepaper</Link>
                 </div>
               </div>
             </div>

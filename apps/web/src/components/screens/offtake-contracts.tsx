@@ -28,18 +28,18 @@ export function OfftakeContracts(_props: ScreenProps) {
             <div className="flex flex-wrap items-center gap-space-sm">
               {_props.slots?.actions ?? (
                 <>
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
+                  <a className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" href="/api/documents/legal-pack">
                     <Icon name="gavel" className="text-[18px]" />
                     <span>Legal Templates</span>
-                  </button>
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button">
+                  </a>
+                  <a className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" href="/api/documents/contracts-registry">
                     <Icon name="download" className="text-[18px]" />
                     <span>Export Registry</span>
-                  </button>
-                  <button className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md" type="button">
+                  </a>
+                  <Link className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-colors shadow-md" href={`/${lang}/contact?subject=draft-master-contract`}>
                     <Icon name="add_circle" className="text-[18px]" />
                     <span>Draft Master Contract</span>
-                  </button>
+                  </Link>
                 </>
               )}
             </div>
@@ -862,33 +862,33 @@ export function OfftakeContracts(_props: ScreenProps) {
               <div>
                 <span className="font-label-sm text-label-sm uppercase font-semibold text-outline block mb-space-xs">Vaulted Legal Covenants &amp; Instruments</span>
                 <div className="space-y-space-xs font-body-sm text-body-sm">
-                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
+                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="/api/documents/outgrower-covenant">
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="description" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Psaltry_AdoAwaye_MasterAgreement_2026.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">SHA-256 Valid</span>
-                  </Link>
-                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
+                  </a>
+                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="/api/documents/escrow-guarantee">
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="account_balance" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Zenith_Bank_Tripartite_Escrow_Guarantee.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">Executed</span>
-                  </Link>
-                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
+                  </a>
+                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="/api/documents/coop-ratification">
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="how_to_reg" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Co-op_General_Assembly_Ratification_Minute.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">Tier 1 Signed</span>
-                  </Link>
+                  </a>
                 </div>
               </div>
             </div>
             <div className="pt-space-sm mt-space-xs flex items-center justify-between text-label-sm font-label-sm">
               <span className="text-outline">Need rapid legal amendment?</span>
-              <button className="text-primary font-semibold hover:underline inline-flex items-center gap-1" type="button">Escalate to CultivaNode Legal Council →</button>
+              <Link className="text-primary font-semibold hover:underline inline-flex items-center gap-1" href={`/${lang}/contact?subject=legal-council-escalation`}>Escalate to CultivaNode Legal Council →</Link>
             </div>
           </div>
         </div>

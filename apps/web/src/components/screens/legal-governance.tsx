@@ -471,7 +471,7 @@ export function LegalGovernance({ lang = "en" }: ScreenProps) {
                   <div className="font-headline-sm text-headline-sm font-bold text-on-surface">Download Executable Statutory Documentation</div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Authenticated PDF documents stamped with cryptographic signatures for offline cooperative review.</p>
                 </div>
-                <button className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-2 hover:bg-primary-container transition-colors shadow-xs" id="btn-download-all" type="button"><Icon name="download" className="text-[18px]" /> Download Master Legal Bundle (.ZIP)</button>
+                <a className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-2 hover:bg-primary-container transition-colors shadow-xs" id="btn-download-all" href="/api/documents/legal-pack?download=1"><Icon name="download" className="text-[18px]" /> Download Master Legal Bundle (.ZIP)</a>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
@@ -483,7 +483,7 @@ export function LegalGovernance({ lang = "en" }: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">NDPA 2023 Compliance &amp; Privacy Charter</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 74-NDPA-v3.1</div>
                   </div>
-                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/privacy`}>Read Charter <Icon name="arrow_forward" className="text-[16px]" /></Link>
+                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="/api/documents/privacy-charter">Read Charter <Icon name="arrow_forward" className="text-[16px]" /></a>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
                   <div className="flex items-start justify-between">
@@ -505,7 +505,7 @@ export function LegalGovernance({ lang = "en" }: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">Machinery Escrow &amp; Cancellation Code</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 02-ESC-§4.19</div>
                   </div>
-                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/legal`}>Read Policy <Icon name="arrow_forward" className="text-[16px]" /></Link>
+                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="/api/documents/escrow-rules">Read Policy <Icon name="arrow_forward" className="text-[16px]" /></a>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
                   <div className="flex items-start justify-between">
@@ -516,7 +516,7 @@ export function LegalGovernance({ lang = "en" }: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">Dispute Arbitration Framework</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 02-ARB-48H</div>
                   </div>
-                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/legal`}>Read Policy <Icon name="arrow_forward" className="text-[16px]" /></Link>
+                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="/api/documents/dispute-procedure">Read Policy <Icon name="arrow_forward" className="text-[16px]" /></a>
                 </div>
               </div>
             </div>

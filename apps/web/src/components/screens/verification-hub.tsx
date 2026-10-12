@@ -39,10 +39,10 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 <Icon name="tune" className="text-[18px] text-on-surface-variant" />
                 <span>Re-Verification Policy</span>
               </button>
-              <button className="px-space-md py-2 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-label-md text-label-md flex items-center gap-1.5 shadow-sm" type="button">
+              <a className="px-space-md py-2 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-label-md text-label-md flex items-center gap-1.5 shadow-sm" href="/api/documents/compliance-audit">
                 <Icon name="download" className="text-[18px] text-on-surface-variant" />
                 <span>Export Compliance Audit</span>
-              </button>
+              </a>
               <button className="px-space-md py-2 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-md text-label-md flex items-center gap-1.5 shadow-sm" type="button">
                 <Icon name="fact_check" className="text-[18px]" />
                 <span>Manual Verification Batch</span>
@@ -300,22 +300,22 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 <div className="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-2 shadow-sm">
                   <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Attached Legal Instruments</span>
                   <div className="grid grid-cols-2 gap-2">
-                    <button className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" type="button">
+                    <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="description" className="text-[16px] text-primary" />
                       <span className="font-label-sm text-label-sm text-on-surface truncate">CAC_Form_1_1.pdf</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" type="button">
+                    </a>
+                    <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="receipt_long" className="text-[16px] text-primary" />
                       <span className="font-label-sm text-label-sm text-on-surface truncate">Zenith_Bank_Statement.pdf</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" type="button">
+                    </a>
+                    <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="assignment" className="text-[16px] text-primary" />
                       <span className="font-label-sm text-label-sm text-on-surface truncate">MF375_Invoices_Title.pdf</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" type="button">
+                    </a>
+                    <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="security" className="text-[16px] text-primary" />
                       <span className="font-label-sm text-label-sm text-on-surface truncate">Leadway_Policy_Cert.pdf</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
                 <div className="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-1 shadow-sm">

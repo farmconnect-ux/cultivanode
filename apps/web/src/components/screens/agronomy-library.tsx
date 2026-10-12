@@ -380,7 +380,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Comprehensive reference guide covering cooperative formation, cluster delineation standards, dispute management protocols, and multi-crop spraying schedules.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Master Handbook</Link>
+                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="/api/documents/handbook?download=1"><Icon name="download" className="text-[18px]" /> Download Master Handbook</a>
                 </div>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -395,7 +395,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Laminated field-office poster detailing active ingredient safety classes, PPE standards, and Pre-Harvest Intervals (PHI) for common pesticides and fungicides.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Wall Poster</Link>
+                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="/api/documents/pest-poster?download=1"><Icon name="download" className="text-[18px]" /> Download Wall Poster</a>
                 </div>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -410,7 +410,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Field-ready daily log sheets for equipment operators: recording hour-meter reads, diesel consumption, implement wear, hectare counters, and farm manager sign-offs.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Operator Logbook</Link>
+                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="/api/documents/scout-logbook?download=1"><Icon name="download" className="text-[18px]" /> Download Operator Logbook</a>
                 </div>
               </div>
             </div>
