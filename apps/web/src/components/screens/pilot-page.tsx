@@ -1,21 +1,22 @@
 // Ported from the "join_the_south_west_pilot_cultivanode_agrarian_mesh" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { slot, type ScreenProps } from "./types";
 
 export type PilotPageSlot = "form";
 
-export function PilotPage({ slots }: ScreenProps<PilotPageSlot>) {
+export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
         <div className="w-full bg-surface-container-low py-3">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-wrap items-center justify-between gap-4">
             <nav className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
-              <a className="hover:text-primary transition-colors flex items-center gap-1.5" href="#">
+              <Link className="hover:text-primary transition-colors flex items-center gap-1.5" href={`/${lang}`}>
                 <Icon name="hub" className="text-[16px]" />
                 <span>Pilot Expansion</span>
-              </a>
+              </Link>
               <span className="text-outline-variant">/</span>
               <span className="text-on-surface-variant">South-West Agrarian Pilot</span>
               <span className="text-outline-variant">/</span>
@@ -42,10 +43,10 @@ export function PilotPage({ slots }: ScreenProps<PilotPageSlot>) {
                     <Icon name="assignment_add" className="text-[20px]" />
                     <span>Submit Pilot Application</span>
                   </a>
-                  <a className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all" href="#">
+                  <Link className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all" href={`/${lang}/resources`}>
                     <Icon name="download" className="text-[20px] text-primary" />
                     <span>Participant Handbook (PDF)</span>
-                  </a>
+                  </Link>
                 </div>
               </div>
               <div className="lg:col-span-4 bg-surface-container-low rounded-xl p-6 shadow-sm flex flex-col gap-4">

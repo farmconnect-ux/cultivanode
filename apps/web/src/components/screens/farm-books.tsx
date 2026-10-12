@@ -186,9 +186,9 @@ export function FarmBooks({ lang: _lang, slots }: ScreenProps<"actions" | "kpis"
                   <Icon name="expand_more" className="text-sm" />
                 </button>
                 <div className="hidden absolute right-0 mt-2 w-48 bg-surface-container-lowest rounded-lg shadow-xl z-30 py-1" id="exportDropdownMenu">
-                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="picture_as_pdf" className="text-base text-error" /> PDF Financial Summary</a>
-                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="table_view" className="text-base text-secondary" /> Excel / CSV Full Ledger</a>
-                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="#"><Icon name="receipt_long" className="text-base text-tertiary" /> Tax Audit Pack (FIRS/Oyo)</a>
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="/api/account/export" download><Icon name="picture_as_pdf" className="text-base text-error" /> PDF Financial Summary</a>
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="/api/account/export" download><Icon name="table_view" className="text-base text-secondary" /> Excel / CSV Full Ledger</a>
+                  <a className="flex items-center gap-2 px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container" href="/api/account/export" download><Icon name="receipt_long" className="text-base text-tertiary" /> Tax Audit Pack (FIRS/Oyo)</a>
                 </div>
               </div>
             </div>

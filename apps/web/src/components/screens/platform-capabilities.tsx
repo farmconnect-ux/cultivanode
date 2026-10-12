@@ -1,9 +1,10 @@
 // Ported from the "platform_architecture_capabilities_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function PlatformCapabilities(_props: ScreenProps) {
+export function PlatformCapabilities({ lang = "en" }: ScreenProps) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -33,7 +34,7 @@ export function PlatformCapabilities(_props: ScreenProps) {
                 <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl leading-relaxed">CultivaNode synchronizes precision farm GIS delineation, phenological crop planning, mechanized syndicate hiring, and verifiable financial records into one unified, offline-resilient architecture engineered for South-West Nigeria.</p>
                 <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
                   <a className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-primary text-on-primary px-space-md py-3 rounded-lg shadow-sm hover:bg-primary-container transition-colors" href="#architecture-tiers"><Icon name="account_tree" className="text-[20px]" /> Explore Architecture</a>
-                  <a className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-surface-container-lowest text-primary px-space-md py-3 rounded-lg shadow-sm hover:bg-surface-container transition-colors" href="#"><Icon name="how_to_reg" className="text-[20px]" /> Create Free Account</a>
+                  <Link className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-surface-container-lowest text-primary px-space-md py-3 rounded-lg shadow-sm hover:bg-surface-container transition-colors" href={`/${lang}/sign-up`}><Icon name="how_to_reg" className="text-[20px]" /> Create Free Account</Link>
                   <a className="inline-flex items-center gap-space-xs font-label-lg text-label-lg text-secondary px-space-md py-3 rounded-lg hover:bg-surface-container transition-colors" href="#pilot-clusters"><Icon name="explore" className="text-[20px]" /> Review Pilot Clusters</a>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-xs pt-space-md">
@@ -646,8 +647,8 @@ export function PlatformCapabilities(_props: ScreenProps) {
             <h2 className="font-display-lg text-headline-xl-mobile sm:text-headline-xl lg:text-display-lg tracking-tight max-w-3xl">Ready to Connect Your Farm or Syndicate to the Regional Mesh?</h2>
             <p className="font-body-lg text-body-lg text-primary-fixed-dim max-w-2xl leading-relaxed">Join over 1,400 verified hectares across Oyo, Ogun, Ondo, and Osun. Register your farm plot in three minutes or invite an accredited ADP field agent to delineate your boundaries.</p>
             <div className="flex flex-wrap items-center justify-center gap-space-sm pt-space-sm">
-              <a className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-secondary-fixed text-on-secondary-fixed px-space-lg py-3 rounded-lg shadow-md hover:bg-secondary-fixed-dim transition-colors font-bold" href="#"><Icon name="how_to_reg" className="text-[20px]" /> Register in 3 Minutes</a>
-              <a className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-primary-container text-on-primary px-space-lg py-3 rounded-lg shadow-sm hover:bg-surface-container-highest hover:text-primary transition-colors" href="#"><Icon name="support_agent" className="text-[20px]" /> Schedule Field Agent Visit</a>
+              <Link className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-secondary-fixed text-on-secondary-fixed px-space-lg py-3 rounded-lg shadow-md hover:bg-secondary-fixed-dim transition-colors font-bold" href={`/${lang}/sign-up`}><Icon name="how_to_reg" className="text-[20px]" /> Register in 3 Minutes</Link>
+              <Link className="inline-flex items-center gap-space-xs font-label-lg text-label-lg bg-primary-container text-on-primary px-space-lg py-3 rounded-lg shadow-sm hover:bg-surface-container-highest hover:text-primary transition-colors" href={`/${lang}/contact`}><Icon name="support_agent" className="text-[20px]" /> Schedule Field Agent Visit</Link>
             </div>
             <div className="flex items-center gap-space-md text-on-primary-container font-body-sm text-body-sm pt-space-sm">
               <span className="flex items-center gap-1"><Icon name="check" className="text-[16px] text-secondary-fixed" /> Free Pilot Onboarding</span>

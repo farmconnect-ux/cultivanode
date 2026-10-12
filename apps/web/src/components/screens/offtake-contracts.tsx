@@ -1,9 +1,11 @@
 // Ported from the "agricultural_contracts_off_take_agreements_6.7" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
 export function OfftakeContracts(_props: ScreenProps) {
+  const lang = _props?.lang ?? "en";
   return (
     <div className="screen">
       <div className="flex items-center gap-space-xs text-body-sm font-body-sm text-on-surface-variant mb-space-md">
@@ -860,27 +862,27 @@ export function OfftakeContracts(_props: ScreenProps) {
               <div>
                 <span className="font-label-sm text-label-sm uppercase font-semibold text-outline block mb-space-xs">Vaulted Legal Covenants &amp; Instruments</span>
                 <div className="space-y-space-xs font-body-sm text-body-sm">
-                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="#">
+                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="description" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Psaltry_AdoAwaye_MasterAgreement_2026.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">SHA-256 Valid</span>
-                  </a>
-                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="#">
+                  </Link>
+                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="account_balance" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Zenith_Bank_Tripartite_Escrow_Guarantee.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">Executed</span>
-                  </a>
-                  <a className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href="#">
+                  </Link>
+                  <Link className="flex items-center justify-between p-space-xs px-space-sm rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface transition-colors" href={`/${lang}/legal`}>
                     <div className="flex items-center gap-space-xs truncate">
                       <Icon name="how_to_reg" className="text-[18px] text-primary" />
                       <span className="truncate font-medium">Co-op_General_Assembly_Ratification_Minute.pdf</span>
                     </div>
                     <span className="text-label-sm font-label-sm text-outline shrink-0">Tier 1 Signed</span>
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

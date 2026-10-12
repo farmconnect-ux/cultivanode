@@ -1,9 +1,10 @@
 // Ported from the "onboarding_review_ready_cultivanode_agrarian_gateway" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function OnboardingReview(_props: ScreenProps) {
+export function OnboardingReview({ lang = "en" }: ScreenProps) {
   return (
     <div className="screen flex flex-col justify-center overflow-hidden">
       <div className="flex flex-col w-full">
@@ -370,10 +371,10 @@ export function OnboardingReview(_props: ScreenProps) {
                   </label>
                 </div>
                 <div className="flex flex-col gap-space-sm">
-                  <a className="w-full flex items-center justify-center gap-space-sm bg-primary-container hover:bg-primary text-on-primary py-3 px-space-lg rounded-lg font-label-lg text-label-lg transition-all shadow-sm hover:shadow-md text-center" href="/hub/dashboard">
+                  <Link className="w-full flex items-center justify-center gap-space-sm bg-primary-container hover:bg-primary text-on-primary py-3 px-space-lg rounded-lg font-label-lg text-label-lg transition-all shadow-sm hover:shadow-md text-center" href={`/${lang}/account`}>
                     <span>Confirm &amp; Launch Farm Operations Hub</span>
                     <Icon name="arrow_forward" className="text-[18px]" />
-                  </a>
+                  </Link>
                   <button className="w-full flex items-center justify-center gap-space-xs bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-space-md rounded-lg font-label-md text-label-md transition-colors" type="button">
                     <Icon name="save" className="text-[16px]" />
                     <span>Save as Draft &amp; Return Later</span>

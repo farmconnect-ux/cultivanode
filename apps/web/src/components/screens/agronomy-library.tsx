@@ -253,7 +253,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <Icon name="verified" className="text-[16px] text-secondary" />
                   <span>Rainfall distribution telemetry cross-referenced with NIMET 2025 Seasonal Climate Prediction for Oyo, Ogun, Ondo, and Osun.</span>
                 </div>
-                <a className="text-primary font-semibold hover:underline flex items-center gap-1" href="#">Download Complete Agro-Ecological Schedule (CSV) <Icon name="arrow_outward" className="text-[14px]" /></a>
+                <a className="text-primary font-semibold hover:underline flex items-center gap-1" href="/api/engines/agronomy/schedule" target="_blank" rel="noopener noreferrer">Download Complete Agro-Ecological Schedule (JSON/CSV) <Icon name="arrow_outward" className="text-[14px]" /></a>
               </div>
             </div>
           </div>
@@ -380,7 +380,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Comprehensive reference guide covering cooperative formation, cluster delineation standards, dispute management protocols, and multi-crop spraying schedules.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="#"><Icon name="download" className="text-[18px]" /> Download Master Handbook</a>
+                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Master Handbook</Link>
                 </div>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -395,7 +395,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Laminated field-office poster detailing active ingredient safety classes, PPE standards, and Pre-Harvest Intervals (PHI) for common pesticides and fungicides.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="#"><Icon name="download" className="text-[18px]" /> Download Wall Poster</a>
+                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Wall Poster</Link>
                 </div>
               </div>
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -410,7 +410,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <p className="font-body-sm text-body-sm text-on-surface-variant">Field-ready daily log sheets for equipment operators: recording hour-meter reads, diesel consumption, implement wear, hectare counters, and farm manager sign-offs.</p>
                 </div>
                 <div className="pt-space-md mt-auto">
-                  <a className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href="#"><Icon name="download" className="text-[18px]" /> Download Operator Logbook</a>
+                  <Link className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors" href={`/${lang}/resources`}><Icon name="download" className="text-[18px]" /> Download Operator Logbook</Link>
                 </div>
               </div>
             </div>
@@ -426,9 +426,9 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                 <p className="font-body-md text-body-md text-on-primary/80">Connect immediately with CultivaNode AI Agronomist, or route your geo-tagged farm photos directly to state ADP extension specialists in Ibadan, Abeokuta, Akure, or Osogbo.</p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm shrink-0 w-full lg:w-auto">
-                <a className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-secondary-container text-on-secondary-container font-label-md text-label-md font-semibold hover:bg-secondary-fixed transition-colors shadow-sm" href="#"><Icon name="smart_toy" className="text-[20px]" /> Consult AI Farm Assistant</a>
+                <Link className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-secondary-container text-on-secondary-container font-label-md text-label-md font-semibold hover:bg-secondary-fixed transition-colors shadow-sm" href={`/${lang}/account/assistant`}><Icon name="smart_toy" className="text-[20px]" /> Consult AI Farm Assistant</Link>
                 <a className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md font-semibold hover:bg-surface transition-colors shadow-sm" href="https://wa.me/2348000000000" target="_blank" rel="noopener noreferrer"><Icon name="chat" className="text-[20px]" /> ADP WhatsApp Desk</a>
-                <a className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-secondary transition-colors border border-outline-variant/20" href="#"><Icon name="contact_support" className="text-[20px]" /> Submit Query</a>
+                <Link className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-secondary transition-colors border border-outline-variant/20" href={`/${lang}/contact`}><Icon name="contact_support" className="text-[20px]" /> Submit Query</Link>
               </div>
             </div>
           </div>

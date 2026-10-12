@@ -77,7 +77,10 @@ export function MarketGrid({
             <option value="100">Within 100 km</option>
             <option value="200">Across Region</option>
           </Select>
-          <Button variant="primary" onClick={() => {}}>
+          <Button
+            variant="primary"
+            onClick={() => document.getElementById("marketplace-results")?.scrollIntoView({ behavior: "smooth" })}
+          >
             Search
           </Button>
         </div>
@@ -103,7 +106,7 @@ export function MarketGrid({
 
       {/* Grid of Listings */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white p-12 text-center">
+        <div id="marketplace-results" className="flex flex-col items-center justify-center rounded-xl border border-border bg-white p-12 text-center">
           <span className="text-4xl mb-3">🌾</span>
           <h3 className="text-lg font-bold text-on-surface">No marketplace listings match your query</h3>
           <p className="mt-1 text-sm text-on-surface-variant">
@@ -111,7 +114,7 @@ export function MarketGrid({
           </p>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div id="marketplace-results" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => (
             <Card key={item.id} className="flex flex-col justify-between hover:shadow-md transition">
               <div className="flex flex-col gap-3">

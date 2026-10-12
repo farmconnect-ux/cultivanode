@@ -1,19 +1,20 @@
 // Ported from the "machinery_services_directory_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function MachineryDirectory(_props: ScreenProps) {
+export function MachineryDirectory({ lang = "en" }: ScreenProps) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
         <section className="w-full bg-surface-container-low py-space-md">
           <div className="max-w-7xl mx-auto px-margin-desktop flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
             <div className="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant flex-wrap">
-              <a className="hover:text-primary transition-colors flex items-center gap-1" href="#">
+              <Link className="hover:text-primary transition-colors flex items-center gap-1" href={`/${lang}`}>
                 <Icon name="home" className="text-[16px]" />
                 <span>Mesh Portal</span>
-              </a>
+              </Link>
               <span className="text-outline-variant">/</span>
               <span className="text-on-surface-variant">Regional Operations</span>
               <span className="text-outline-variant">/</span>

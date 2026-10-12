@@ -1,9 +1,10 @@
 // Ported from the "statutory_governance_legal_policies_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function LegalGovernance(_props: ScreenProps) {
+export function LegalGovernance({ lang = "en" }: ScreenProps) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -24,7 +25,7 @@ export function LegalGovernance(_props: ScreenProps) {
         <section className="w-full bg-surface px-6 lg:px-12 pt-8 pb-12">
           <div className="max-w-7xl mx-auto flex flex-col gap-8">
             <nav aria-label="Breadcrumbs" className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
-              <a className="hover:text-primary transition-colors flex items-center gap-1" href="#"><Icon name="account_balance" className="text-[16px]" /> Legal Governance</a>
+              <Link className="hover:text-primary transition-colors flex items-center gap-1" href={`/${lang}/legal`}><Icon name="account_balance" className="text-[16px]" /> Legal Governance</Link>
               <span className="text-outline-variant">/</span>
               <span className="text-on-surface-variant">Regulatory Framework &amp; Statutory Trust</span>
               <span className="text-outline-variant">/</span>
@@ -482,7 +483,7 @@ export function LegalGovernance(_props: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">NDPA 2023 Compliance &amp; Privacy Charter</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 74-NDPA-v3.1</div>
                   </div>
-                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="#">Download PDF <Icon name="arrow_downward" className="text-[16px]" /></a>
+                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/privacy`}>Read Charter <Icon name="arrow_forward" className="text-[16px]" /></Link>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
                   <div className="flex items-start justify-between">
@@ -493,7 +494,7 @@ export function LegalGovernance(_props: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">Master Terms &amp; Mesh Conditions</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 02-TOS-2025</div>
                   </div>
-                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="#">Download PDF <Icon name="arrow_downward" className="text-[16px]" /></a>
+                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/terms`}>Read Terms <Icon name="arrow_forward" className="text-[16px]" /></Link>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
                   <div className="flex items-start justify-between">
@@ -504,7 +505,7 @@ export function LegalGovernance(_props: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">Machinery Escrow &amp; Cancellation Code</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 02-ESC-§4.19</div>
                   </div>
-                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="#">Download PDF <Icon name="arrow_downward" className="text-[16px]" /></a>
+                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/legal`}>Read Policy <Icon name="arrow_forward" className="text-[16px]" /></Link>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col justify-between gap-3">
                   <div className="flex items-start justify-between">
@@ -515,7 +516,7 @@ export function LegalGovernance(_props: ScreenProps) {
                     <div className="font-label-md text-label-md font-bold text-on-surface">Dispute Arbitration Framework</div>
                     <div className="font-body-sm text-body-sm text-on-surface-variant">Document Ref: 02-ARB-48H</div>
                   </div>
-                  <a className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href="#">Download PDF <Icon name="arrow_downward" className="text-[16px]" /></a>
+                  <Link className="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm font-semibold hover:underline" href={`/${lang}/legal`}>Read Policy <Icon name="arrow_forward" className="text-[16px]" /></Link>
                 </div>
               </div>
             </div>

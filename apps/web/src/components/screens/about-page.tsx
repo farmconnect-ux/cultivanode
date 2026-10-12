@@ -1,9 +1,10 @@
 // Ported from the "about_cultivanode_mission_leadership" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 
-export function AboutPage(_props: ScreenProps) {
+export function AboutPage({ lang = "en" }: ScreenProps) {
   return (
     <div className="screen">
       <div className="flex flex-col w-full">
@@ -457,9 +458,9 @@ export function AboutPage(_props: ScreenProps) {
                 <h2 className="font-display-lg text-headline-xl-mobile sm:text-headline-xl lg:text-display-lg font-bold text-on-primary leading-tight mb-space-sm">Join the Pilot Mesh or Partner With Us</h2>
                 <p className="font-body-lg text-body-lg text-surface-container-high leading-relaxed mb-space-xl">Whether you cultivate 20 hectares in Kisi, operate an 8-tractor fleet in Sagamu, or direct agricultural extension for state government, CultivaNode establishes your verified operational presence.</p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-space-md">
-                  <a className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-surface-container-lowest text-primary hover:bg-surface-container transition-colors shadow-sm" href="#"><Icon name="how_to_reg" className="mr-space-xs text-[20px]" /> Apply to Join Pilot (Farmers &amp; Fleets)</a>
-                  <a className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm" href="#"><Icon name="handshake" className="mr-space-xs text-[20px]" /> Institutional &amp; State Partnerships</a>
-                  <a className="inline-flex items-center justify-center font-label-lg text-label-lg font-semibold px-space-md py-space-sm rounded-lg text-on-primary hover:bg-primary transition-colors" href="#"><Icon name="menu_book" className="mr-space-xs text-[20px]" /> Technical Whitepaper</a>
+                  <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-surface-container-lowest text-primary hover:bg-surface-container transition-colors shadow-sm" href={`/${lang}/sign-up`}><Icon name="how_to_reg" className="mr-space-xs text-[20px]" /> Apply to Join Pilot (Farmers &amp; Fleets)</Link>
+                  <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm" href={`/${lang}/contact`}><Icon name="handshake" className="mr-space-xs text-[20px]" /> Institutional &amp; State Partnerships</Link>
+                  <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-semibold px-space-md py-space-sm rounded-lg text-on-primary hover:bg-primary transition-colors" href={`/${lang}/platform`}><Icon name="menu_book" className="mr-space-xs text-[20px]" /> Technical Whitepaper</Link>
                 </div>
               </div>
             </div>
