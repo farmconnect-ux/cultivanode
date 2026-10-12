@@ -31,7 +31,10 @@ export default async function FarmDetailPage({ params }: Props) {
     .eq("farm_id", id)
     .order("name");
 
-  const totalPlotArea = (plots || []).reduce((acc, p) => acc + (Number(p.size_hectares) || 0), 0);
+  const totalPlotArea = (plots || []).reduce(
+    (acc, p) => acc + (Number(p.area_ha ?? (p as any).size_hectares ?? 0)),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -111,23 +114,23 @@ export default async function FarmDetailPage({ params }: Props) {
             </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {plots.map((plot) => (
-                <Card key={plot.id} className="p-4 border border-line flex flex-col justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-ink">{plot.name}</h3>
-                      {plot.code && <Badge tone="default">{plot.code}</Badge>}
+              {plots.map((plot) => {
+                const plotArea = Number(plot.area_ha ?? (plot as any).size_hectares ?? 0);
+                return (
+                  <Card key={plot.id} className="p-4 border border-line flex flex-col justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-ink">{plot.name}</h3>
+                      </div>
+                      <p className="text-xs font-semibold text-leaf-800">
+                        {plotArea.toFixed(2)} Hectares
+                      </p>
+                      {plot.notes && (
+                        <p className="text-[11px] text-muted pt-1 leading-relaxed">
+                          {plot.notes}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-xs font-semibold text-leaf-800">
-                      {Number(plot.size_hectares).toFixed(2)} Hectares
-                    </p>
-                    <div className="flex flex-wrap gap-1 text-[11px] text-muted pt-1">
-                      {plot.soil_type && <span>Soil: {plot.soil_type} &bull;</span>}
-                      <span>Slope: {plot.slope} &bull;</span>
-                      <span>{plot.irrigation_status}</span>
-                    </div>
-                    {plot.notes && <p className="text-[11px] text-neutral-500 italic mt-1">{plot.notes}</p>}
-                  </div>
 
                   <div className="border-t border-line pt-2 flex items-center justify-between">
                     <Link
@@ -148,8 +151,9 @@ export default async function FarmDetailPage({ params }: Props) {
                     </form>
                   </div>
                 </Card>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           )}
         </div>
 

@@ -29,6 +29,7 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
 
   const scope = [
     `owner_id.eq.${account.userId}`,
+    ...(account.isAgent ? [`onboarded_by.eq.${account.userId}`] : []),
     ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
   ];
   const { data: farms } = await supabase
