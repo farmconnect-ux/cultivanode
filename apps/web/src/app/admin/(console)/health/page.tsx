@@ -24,18 +24,24 @@ export default async function AdminHealthPage() {
   const supabase = await createClient();
 
   // Live probes: database and auth round-trips from this server.
+  // eslint-disable-next-line react-hooks/purity -- Server-side latency measurement
   const t0 = performance.now();
   const { error: dbError } = await supabase.from("roles").select("role").limit(1);
+  // eslint-disable-next-line react-hooks/purity -- Server-side latency measurement
   const dbLatency = Math.round(performance.now() - t0);
+  // eslint-disable-next-line react-hooks/purity -- Server-side latency measurement
   const tAuth0 = performance.now();
   const { error: authError } = await supabase.auth.getUser();
+  // eslint-disable-next-line react-hooks/purity -- Server-side latency measurement
   const authLatency = Math.round(performance.now() - tAuth0);
 
   const { data: integrationsData } = await supabase.rpc("admin_integration_overview");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const integrations = (integrationsData ?? {}) as Record<string, any>;
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // eslint-disable-next-line react-hooks/purity -- Server Component: timestamp for 24h window queries
+  const now = Date.now();
+  const since = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const [
     { count: auditCount24h },
     { count: bookingEventsCount24h },

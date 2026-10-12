@@ -268,6 +268,7 @@ Certified by CultivaNode Diagnostic & Agronomy Engine.
           </div>
           <div className="space-y-space-xs">
             <label className="font-label-md text-label-md text-on-surface font-semibold">Target Date</label>
+            {/* eslint-disable react-hooks/purity -- Client component: default date for form input */}
             <input defaultValue={new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10)} className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none" type="date" />
           </div>
         </div>

@@ -43,8 +43,10 @@ export default async function AdminDisputesListPage() {
     .order("disputed_at", { ascending: false });
   const list = (data ?? []) as unknown as Dispute[];
   const frozen = list.reduce((s, d) => s + d.total_kobo, 0);
+  // eslint-disable-next-line react-hooks/purity -- Server Component: timestamp for age calculation
+  const now = Date.now();
   const oldestH = list.length
-    ? Math.max(...list.map((d) => (d.disputed_at ? (Date.now() - new Date(d.disputed_at).getTime()) / 36e5 : 0)))
+    ? Math.max(...list.map((d) => (d.disputed_at ? (now - new Date(d.disputed_at).getTime()) / 36e5 : 0)))
     : 0;
   const byFarmer = list.filter((d) => d.disputed_by === d.farmer_id).length;
 

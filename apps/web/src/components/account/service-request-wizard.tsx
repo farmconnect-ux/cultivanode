@@ -59,6 +59,7 @@ export function ServiceRequestWizard({
       : farms[0]?.id ?? "",
   );
   const [jobDate, setJobDate] = useState<string>(
+    // eslint-disable-next-line react-hooks/purity -- Client component: default date for form input
     new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
   );
   const [jobTime, setJobTime] = useState<string>("08:00");

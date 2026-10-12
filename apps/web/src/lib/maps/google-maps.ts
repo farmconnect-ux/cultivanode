@@ -4,6 +4,7 @@ export type GoogleMapsConfig = {
   apiKey: string | null;
   mapId?: string;
   defaultZoom: number;
+  defaultCenter: { lat: number; lng: number };
   mode: "test" | "live";
   providerConfigured: boolean;
 };
@@ -49,9 +50,13 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
     const hasSecretInDb = Boolean(secretRow);
 
     return {
-      apiKey: envKey, // Browser client uses public or env key
+      apiKey: envKey,
       mapId: modeConfig.map_id || undefined,
       defaultZoom: Number(modeConfig.default_zoom) || 14,
+      defaultCenter: {
+        lat: Number(modeConfig.default_lat) || 8.6672,
+        lng: Number(modeConfig.default_lng) || 3.3934,
+      },
       mode,
       providerConfigured: hasSecretInDb || Boolean(envKey),
     };
@@ -59,8 +64,21 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
     return {
       apiKey: envKey,
       defaultZoom: 14,
+      defaultCenter: { lat: 8.6672, lng: 3.3934 },
       mode: "test",
       providerConfigured: Boolean(envKey),
     };
   }
+}
+
+/**
+ * Returns only the public-safe configuration for client-side use.
+ * The API key is intentionally NOT included here - it should be loaded
+ * server-side and passed to the Maps JavaScript API loader.
+ */
+export async function getPublicGoogleMapsConfig(): Promise<Omit<GoogleMapsConfig, "apiKey">> {
+  const config = await getGoogleMapsConfig();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { apiKey: _apiKey, ...publicConfig } = config;
+  return publicConfig;
 }

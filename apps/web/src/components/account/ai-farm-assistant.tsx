@@ -107,6 +107,7 @@ export function AiFarmAssistant({
     if (!text || isPending) return;
 
     const userMsg: MessageItem = {
+      // eslint-disable-next-line react-hooks/purity -- Client component: ID generation in event handler
       id: `usr-${Date.now()}`,
       role: "user",
       text,
@@ -131,6 +132,7 @@ export function AiFarmAssistant({
         });
 
         const botMsg: MessageItem = {
+          // eslint-disable-next-line react-hooks/purity -- Client component: ID generation in async callback
           id: `bot-${Date.now()}`,
           role: "assistant",
           text: res.answer,

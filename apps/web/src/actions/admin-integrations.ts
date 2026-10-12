@@ -13,6 +13,17 @@ export type ActionResult = { ok: true; message: string } | { ok: false; message:
 type Kind = "sms" | "identity" | "weather" | "payment" | "maps";
 type Mode = "test" | "live";
 
+interface IntegrationProvider {
+  code: string;
+  name?: string;
+  mode?: Mode;
+  secrets?: Array<{ field: string; mode: Mode }>;
+}
+
+interface IntegrationOverview {
+  providers: IntegrationProvider[];
+}
+
 const MODES: readonly Mode[] = ["test", "live"];
 const KINDS: readonly Kind[] = ["sms", "identity", "weather", "payment", "maps"];
 const CODE = /^[a-z][a-z0-9_]{1,39}$/;
@@ -143,10 +154,10 @@ export async function sendIntegrationTest(_prev: ActionResult | null, form: Form
     try {
       const { data: overview, error: ovError } = await supabase.rpc("admin_integration_overview");
       if (!ovError && overview && typeof overview === "object" && "providers" in overview) {
-        const provs = (overview as any).providers ?? [];
-        const p = provs.find((item: any) => item.code === provider);
+        const provs = (overview as unknown as IntegrationOverview).providers ?? [];
+        const p = provs.find((item: IntegrationProvider) => item.code === provider);
         const mode: Mode = p?.mode ?? "test";
-        const hasKey = p?.secrets?.some((s: any) => s.mode === mode && (s.field === "secret_key" || s.field === "api_key" || s.field === "public_key"));
+        const hasKey = p?.secrets?.some((s) => s.mode === mode && (s.field === "secret_key" || s.field === "api_key" || s.field === "public_key"));
 
         if (!hasKey) {
           return {

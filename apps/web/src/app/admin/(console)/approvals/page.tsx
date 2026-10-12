@@ -60,7 +60,9 @@ export default async function ApprovalsPage() {
     for (const u of urls ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl);
   }
   const looseDocs = shownDocs.filter((d) => !d.role_request_id || !requestIds.has(d.role_request_id));
-  const oldestH = reqs.length ? Math.round((Date.now() - new Date(reqs[0]!.created_at).getTime()) / 36e5) : null;
+  // eslint-disable-next-line react-hooks/purity -- Server Component: timestamp for age calculation
+  const now = Date.now();
+  const oldestH = reqs.length ? Math.round((now - new Date(reqs[0]!.created_at).getTime()) / 36e5) : null;
 
   const docRow = (d: Doc) => (
     <li key={d.id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-container-lowest p-4">

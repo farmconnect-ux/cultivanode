@@ -2,10 +2,10 @@
 
 // Ported from the "farm_geospatial_map_cadastre_command_8.2" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
-import { GoogleMapView } from "@/components/maps/google-map-view";
+import { GoogleMapView, type MapPolygon, type LatLng } from "@/components/maps/google-map-view";
 import type { ScreenProps } from "./types";
 
 export function FarmGeospatialMap({ lang }: ScreenProps) {
@@ -15,6 +15,19 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
   const [infraModalOpen, setInfraModalOpen] = useState(false);
   const [basemap, setBasemap] = useState<"satellite" | "topo" | "cadastral">("satellite");
   const [layerPanelOpen, setLayerPanelOpen] = useState(true);
+  const [mapConfig, setMapConfig] = useState<{
+    mapId?: string;
+    defaultZoom: number;
+    defaultCenter: LatLng;
+    providerConfigured: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/maps/config")
+      .then((res) => res.json())
+      .then((data) => setMapConfig(data))
+      .catch(() => {});
+  }, []);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -384,7 +397,9 @@ export function FarmGeospatialMap({ lang }: ScreenProps) {
               <GoogleMapView
                 className="w-full h-full min-h-[760px]"
                 editable={isWalkingBoundary}
-                center={{ lat: 8.6672, lng: 3.3934 }}
+                center={mapConfig?.defaultCenter ?? { lat: 8.6672, lng: 3.3934 }}
+                zoom={mapConfig?.defaultZoom ?? 15}
+                mapId={mapConfig?.mapId}
               />
             </div>
           ) : (

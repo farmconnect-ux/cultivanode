@@ -26,12 +26,15 @@ export default async function AuditPage({ searchParams }: PageProps<"/admin/audi
     .order("created_at", { ascending: false })
     .limit(150);
   if (action) logQuery = logQuery.ilike("action", `%${action.replace(/[%_]/g, "")}%`);
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  // eslint-disable-next-line react-hooks/purity -- Server Component: timestamp for time-window queries
+  const now = Date.now();
+  const since = new Date(now - 24 * 3600 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(now - 30 * 864e5).toISOString();
   const [{ data: log }, { data: decisions }, { count: log24 }, { count: decisions30 }] = await Promise.all([
     logQuery,
     supabase.from("admin_actions").select("id, actor_id, permission, action, entity, entity_id, reason, created_at").order("created_at", { ascending: false }).limit(50),
     supabase.from("audit_log").select("id", { count: "exact", head: true }).gte("created_at", since),
-    supabase.from("admin_actions").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()),
+    supabase.from("admin_actions").select("id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgo),
   ]);
   const actorIds = [...new Set([...(log ?? []), ...(decisions ?? [])].map((r) => r.actor_id).filter((x): x is string => Boolean(x)))];
   const { data: actors } = actorIds.length

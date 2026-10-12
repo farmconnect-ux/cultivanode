@@ -51,6 +51,7 @@ export function AgentAssistedBooking({
   const [service, setService] = useState<string>("ploughing");
   const [hectares, setHectares] = useState<string>("2.0");
   const [jobDate, setJobDate] = useState<string>(
+    // eslint-disable-next-line react-hooks/purity -- Client component: default date for form input
     new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10),
   );
   const [instructions, setInstructions] = useState<string>("");

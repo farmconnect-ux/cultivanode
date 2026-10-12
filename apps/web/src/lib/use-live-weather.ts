@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { WeatherResponse, PlaceForecast } from "@cultivanode/shared";
 
 let memoryCache: { data: WeatherResponse; timestamp: number } | null = null;
@@ -19,9 +19,8 @@ export function useLiveWeather() {
   useEffect(() => {
     let cancelled = false;
 
+    // If we have valid cached data, state is already initialized (loading = !data), no need to fetch
     if (memoryCache && Date.now() - memoryCache.timestamp < CACHE_TTL_MS) {
-      setData(memoryCache.data);
-      setLoading(false);
       return;
     }
 
@@ -51,6 +50,22 @@ export function useLiveWeather() {
     };
   }, []);
 
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/weather", { cache: "no-store" });
+      if (!res.ok) throw new Error(`Weather fetch status: ${res.status}`);
+      const json: WeatherResponse = await res.json();
+      memoryCache = { data: json, timestamp: Date.now() };
+      setData(json);
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load weather");
+      setLoading(false);
+    }
+  }, []);
+
   const getPlaceForecast = (stateNameOrId?: string): PlaceForecast | null => {
     if (!data || !("ok" in data) || !data.ok || !data.forecasts) return null;
     if (!stateNameOrId) return data.forecasts[0] ?? null;
@@ -65,5 +80,5 @@ export function useLiveWeather() {
     );
   };
 
-  return { data, loading, error, getPlaceForecast };
+  return { data, loading, error, refresh, getPlaceForecast };
 }

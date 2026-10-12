@@ -21,6 +21,7 @@ const STEPS = [
 
 /** Field agent home: the assisted-onboarding design with the agent's real farmer roster. */
 export function AgentHome({ lang, account, farmers }: { lang: Locale; account: Account; farmers: Farmer[] }) {
+  // eslint-disable-next-line react-hooks/purity -- Server Component: timestamp for weekly stats
   const weekAgo = Date.now() - 7 * 864e5;
   const thisWeek = farmers.filter((f) => new Date(f.created_at).getTime() > weekAgo).length;
   const areas = new Set(farmers.map((f) => f.lga || f.state).filter(Boolean)).size;

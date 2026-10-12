@@ -28,6 +28,12 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const sp = searchParams ? await searchParams : {};
+
+  // Compute default harvest date once to avoid impure Date.now() in render
+  // eslint-disable-next-line react-hooks/purity -- Server Component: default date computed once per request
+  const defaultHarvestDate = new Date(Date.now() + 110 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
   const errorMessage = sp?.error ? decodeURIComponent(sp.error) : null;
   const account = await requireAccount(lang);
   const supabase = await createClient();
@@ -283,9 +289,7 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
                 <input
                   type="date"
                   name="target_harvest_date"
-                  defaultValue={
-                    new Date(Date.now() + 110 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-                  }
+                  defaultValue={defaultHarvestDate}
                   className="w-full h-11 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
