@@ -326,6 +326,7 @@ export async function addFarm(_prev: ActionState, form: FormData): Promise<Actio
   if (error && error.code === "42501") {
     try {
       await s.supabase.from("role_requests").insert({
+        profile_id: s.uid,
         role: "crop_farmer",
         provider_type: null,
         details: { source: "farm_registration_auto_activate" },

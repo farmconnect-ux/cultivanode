@@ -29,22 +29,34 @@ export async function createFarmPlot(form: FormData): Promise<void> {
     return;
   }
 
-  // Preserve all plot agronomic traits into notes
-  const meta: string[] = [];
-  if (code) meta.push(`[${code}]`);
-  if (soilType) meta.push(`Soil: ${soilType}`);
-  if (slope) meta.push(`Slope: ${slope}`);
-  if (irrigationStatus) meta.push(`Irrigation: ${irrigationStatus}`);
-  if (accessibility) meta.push(`Access: ${accessibility}`);
-  if (userNotes) meta.push(userNotes);
-  const notes = meta.join(" • ") || null;
-
-  const { error } = await supabase.from("plots").insert({
+  const fullPayload: Record<string, any> = {
     farm_id: farmId,
     name,
     area_ha: Math.round(areaHa * 10000) / 10000,
-    notes,
-  });
+    size_hectares: Math.round(areaHa * 10000) / 10000,
+    plot_code: code || null,
+    code: code || null,
+    soil_texture: soilType || null,
+    soil_type: soilType || null,
+    slope: slope || null,
+    irrigation_type: irrigationStatus || null,
+    irrigation_status: irrigationStatus || null,
+    accessibility: accessibility || null,
+    notes: userNotes || null,
+  };
+
+  let { error } = await supabase.from("plots").insert(fullPayload as any);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    const fallbackPayload = {
+      farm_id: farmId,
+      name,
+      area_ha: Math.round(areaHa * 10000) / 10000,
+      notes: userNotes || null,
+    };
+    const retry = await supabase.from("plots").insert(fallbackPayload as any);
+    error = retry.error;
+  }
 
   if (error) {
     logger.error("plot_insert_failed", { message: error.message, code: error.code, farmId });
@@ -64,19 +76,53 @@ export async function updateFarmPlot(form: FormData): Promise<void> {
   const name = String(form.get("name") || "").trim();
   const rawSize = String(form.get("area_ha") || form.get("size_hectares") || "0").replace(",", ".");
   const areaHa = parseFloat(rawSize);
+  const code = String(form.get("code") || form.get("plot_code") || "").trim();
+  const soilType = String(form.get("soil_type") || form.get("soil_texture") || "").trim();
+  const slope = String(form.get("slope") || "").trim();
+  const irrigationStatus = String(form.get("irrigation_status") || form.get("irrigation_type") || "").trim();
+  const accessibility = String(form.get("accessibility") || "").trim();
   const notes = String(form.get("notes") || "").trim();
 
   if (!plotId || !name || Number.isNaN(areaHa) || areaHa <= 0) return;
 
-  const { error } = await supabase
-    .from("plots")
-    .update({
+  const updatePayload: Record<string, any> = {
+    name,
+    area_ha: Math.round(areaHa * 10000) / 10000,
+    size_hectares: Math.round(areaHa * 10000) / 10000,
+    notes: notes || null,
+    updated_at: new Date().toISOString(),
+  };
+  if (code) {
+    updatePayload.plot_code = code;
+    updatePayload.code = code;
+  }
+  if (soilType) {
+    updatePayload.soil_texture = soilType;
+    updatePayload.soil_type = soilType;
+  }
+  if (slope) {
+    updatePayload.slope = slope;
+  }
+  if (irrigationStatus) {
+    updatePayload.irrigation_type = irrigationStatus;
+    updatePayload.irrigation_status = irrigationStatus;
+  }
+  if (accessibility) {
+    updatePayload.accessibility = accessibility;
+  }
+
+  let { error } = await supabase.from("plots").update(updatePayload as any).eq("id", plotId);
+
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    const fallbackPayload = {
       name,
       area_ha: Math.round(areaHa * 10000) / 10000,
       notes: notes || null,
       updated_at: new Date().toISOString(),
-    })
-    .eq("id", plotId);
+    };
+    const retry = await supabase.from("plots").update(fallbackPayload as any).eq("id", plotId);
+    error = retry.error;
+  }
 
   if (error) {
     logger.error("plot_update_failed", { message: error.message, code: error.code, plotId });

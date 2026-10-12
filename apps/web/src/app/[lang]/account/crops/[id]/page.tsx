@@ -18,11 +18,20 @@ export default async function CropDetailPage({ params }: Props) {
 
   const { data: cycle } = await supabase
     .from("crop_cycles")
-    .select("*, farms(name), plots(name, size_hectares)")
+    .select("*, farms(name), plots(name, area_ha)")
     .eq("id", id)
     .single();
 
   if (!cycle) notFound();
+
+  const rawCycle = cycle as any;
+  const cropName = rawCycle.crop_name || (rawCycle.crop_id ? rawCycle.crop_id.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Crop");
+  const variety = rawCycle.variety || rawCycle.variety_id || "";
+  const farmName = rawCycle.farms?.name || "Farm";
+  const plotName = rawCycle.plots?.name || "Whole Farm";
+  const plantedArea = Number(rawCycle.planted_area_hectares ?? rawCycle.target_area_ha ?? 1);
+  const startDate = rawCycle.start_date || rawCycle.planting_date || "Not set";
+  const targetHarvestDate = rawCycle.target_harvest_date || rawCycle.expected_harvest_date || "Not set";
 
   // Fetch operations
   const { data: operations } = await supabase
@@ -48,30 +57,30 @@ export default async function CropDetailPage({ params }: Props) {
               ← Back to Crop Cycles
             </Link>
             <span>/</span>
-            <span className="font-semibold text-ink">{cycle.crop_name}</span>
+            <span className="font-semibold text-ink">{cropName}</span>
           </div>
           <h1 className="mt-1 text-2xl font-black text-leaf-900 sm:text-3xl">
-            {cycle.crop_name} {cycle.variety ? `(${cycle.variety})` : ""}
+            {cropName} {variety ? `(${variety})` : ""}
           </h1>
           <p className="text-xs text-muted">
-            Farm: <span className="font-semibold text-ink">{cycle.farms?.name}</span> &bull; Plot:{" "}
-            <span className="font-semibold text-ink">{cycle.plots?.name}</span> &bull;{" "}
-            {Number(cycle.planted_area_hectares).toFixed(1)} ha
+            Farm: <span className="font-semibold text-ink">{farmName}</span> &bull; Plot:{" "}
+            <span className="font-semibold text-ink">{plotName}</span> &bull;{" "}
+            {plantedArea.toFixed(1)} ha
           </p>
         </div>
 
         <Badge
           tone={
-            cycle.status === "active"
+            rawCycle.status === "active"
               ? "leaf"
-              : cycle.status === "planning"
+              : rawCycle.status === "planning"
               ? "warning"
-              : cycle.status === "completed"
+              : rawCycle.status === "completed"
               ? "default"
               : "danger"
           }
         >
-          {cycle.status.toUpperCase()}
+          {String(rawCycle.status || "planning").toUpperCase()}
         </Badge>
       </div>
 
@@ -79,22 +88,22 @@ export default async function CropDetailPage({ params }: Props) {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="p-4 border-l-4 border-l-leaf-600">
           <p className="text-xs font-medium text-muted">Planted Date</p>
-          <p className="text-base font-bold text-ink mt-1">{cycle.start_date || "Not set"}</p>
+          <p className="text-base font-bold text-ink mt-1">{startDate}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-harvest-600">
           <p className="text-xs font-medium text-muted">Target Harvest</p>
-          <p className="text-base font-bold text-ink mt-1">{cycle.target_harvest_date || "Not set"}</p>
+          <p className="text-base font-bold text-ink mt-1">{targetHarvestDate}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-emerald-600">
           <p className="text-xs font-medium text-muted">Target Yield</p>
           <p className="text-base font-bold text-emerald-900 mt-1">
-            {cycle.target_yield_kg ? `${cycle.target_yield_kg.toLocaleString()} kg` : "N/A"}
+            {rawCycle.target_yield_kg ? `${Number(rawCycle.target_yield_kg).toLocaleString()} kg` : "N/A"}
           </p>
         </Card>
         <Card className="p-4 border-l-4 border-l-sky-600">
           <p className="text-xs font-medium text-muted">Actual Harvested</p>
           <p className="text-base font-bold text-sky-900 mt-1">
-            {cycle.actual_yield_kg ? `${cycle.actual_yield_kg.toLocaleString()} kg` : "In Progress"}
+            {rawCycle.actual_yield_kg ? `${Number(rawCycle.actual_yield_kg).toLocaleString()} kg` : "In Progress"}
           </p>
         </Card>
       </div>

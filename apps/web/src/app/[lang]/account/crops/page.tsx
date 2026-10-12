@@ -39,15 +39,23 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops"
   const plotIds = plotList.map((p) => p.id);
   const plotMap = new Map(plotList.map((p) => [p.id, p]));
 
-  const { data: cycles } = plotIds.length
+  const { data: cycles } = farmIds.length
     ? await supabase
         .from("crop_cycles")
-        .select("id, plot_id, farm_id, crop_name, variety, season, status, target_yield_kg, planted_area_hectares, start_date, expected_harvest_date, current_stage")
-        .in("plot_id", plotIds)
-        .order("start_date", { ascending: false })
+        .select("id, plot_id, farm_id, crop_name, crop_id, variety, variety_id, season, status, target_yield_kg, planted_area_hectares, target_area_ha, start_date, planting_date, expected_harvest_date, current_stage")
+        .in("farm_id", farmIds)
+        .order("planting_date", { ascending: false })
     : { data: [] };
 
-  const cycleList = cycles ?? [];
+  const rawCycles = cycles ?? [];
+  const cycleList = rawCycles.map((c) => ({
+    ...c,
+    crop_name: c.crop_name || (c.crop_id ? c.crop_id.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "Crop"),
+    variety: c.variety || c.variety_id || "",
+    planted_area_hectares: Number(c.planted_area_hectares ?? c.target_area_ha ?? 1),
+    start_date: c.start_date || c.planting_date,
+    target_yield_kg: Number(c.target_yield_kg ?? 0),
+  }));
   const cycleIds = cycleList.map((c) => c.id);
 
   const { data: observations } = cycleIds.length

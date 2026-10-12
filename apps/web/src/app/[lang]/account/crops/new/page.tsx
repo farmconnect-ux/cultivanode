@@ -18,9 +18,16 @@ const CROP_TEMPLATES = [
   { name: "Soybean", variety: "TGX 1448-2E", standardId: "soybean_savanna_v1", cycleDays: 105, targetYieldPerHa: 2200 },
 ];
 
-export default async function NewCropCyclePage({ params }: PageProps<"/[lang]/account/crops/new">) {
+interface Props {
+  params: Promise<{ lang: string }>;
+  searchParams?: Promise<{ error?: string }>;
+}
+
+export default async function NewCropCyclePage({ params, searchParams }: Props) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
+  const sp = searchParams ? await searchParams : {};
+  const errorMessage = sp?.error ? decodeURIComponent(sp.error) : null;
   const account = await requireAccount(lang);
   const supabase = await createClient();
 
@@ -47,13 +54,22 @@ export default async function NewCropCyclePage({ params }: PageProps<"/[lang]/ac
     "use server";
     const res = await createCropCycle(formData);
     if (res && "error" in res && res.error) {
-      throw new Error(res.error);
+      redirect(`/${lang}/account/crops/new?error=${encodeURIComponent(res.error)}`);
     }
     redirect(`/${lang}/account/crops`);
   }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      {errorMessage && (
+        <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 flex items-center gap-3 shadow-sm">
+          <Icon name="error" className="text-2xl text-red-600 flex-shrink-0" />
+          <div>
+            <p className="font-bold">Unable to launch crop cycle</p>
+            <p className="text-xs mt-0.5 text-red-700">{errorMessage}</p>
+          </div>
+        </div>
+      )}
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Link
@@ -116,22 +132,18 @@ export default async function NewCropCyclePage({ params }: PageProps<"/[lang]/ac
 
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-1">
-                  Target Plot <span className="text-error">*</span>
+                  Target Plot
                 </label>
                 <select
                   name="plot_id"
-                  required
                   className="w-full h-11 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  {plotList.length === 0 ? (
-                    <option value="">No plots created yet (will link to whole farm)</option>
-                  ) : (
-                    plotList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.area_ha ? `(${p.area_ha} Ha)` : ""}
-                      </option>
-                    ))
-                  )}
+                  <option value="">Whole Farm (No specific plot)</option>
+                  {plotList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.area_ha ? `(${p.area_ha} Ha)` : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

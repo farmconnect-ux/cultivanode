@@ -276,6 +276,10 @@ flowchart TD
   - Connect `apps/web/src/components/screens/crop-management.tsx` to `crop_cycles` and `crop_cycle_operations`.
   - Wire the scouting modal in `crop-management.tsx` to `crop_scouting_logs` via `logCropObservation` server action.
   - Implement crop cycle creation wizard (`/account/crops/new`) generating growth stage schedules from agronomy templates.
+  - Dedicated database attributes for `plots` and `crop_cycles` (`20261012040000_plots_and_crops_dedicated_columns.sql`) with resilient schema fallbacks (`plot_code`, `soil_texture`, `slope`, `irrigation_type`, `accessibility`, `planted_area_hectares`, `start_date`, `target_harvest_date`).
+- [x] **Field Plots & Demarcation (`/account/farms/[id]`):**
+  - Dedicated first-class database columns for plot code, soil texture, slope, and irrigation type.
+  - Dedicated visual pills and badges on plot cards instead of burying metadata in unstructured notes.
 - [x] **Field Scouting (`/account/crops/scouting`):**
   - Wire photo upload to Supabase Storage private bucket `crop-scouting`.
   - Save GPS coordinates, pest/disease category, and field notes.

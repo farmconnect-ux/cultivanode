@@ -116,17 +116,54 @@ export default async function FarmDetailPage({ params }: Props) {
             <div className="grid gap-3 sm:grid-cols-2">
               {plots.map((plot) => {
                 const plotArea = Number(plot.area_ha ?? (plot as any).size_hectares ?? 0);
+                const plotCode = (plot as any).plot_code || (plot as any).code;
+                const soil = (plot as any).soil_texture || (plot as any).soil_type;
+                const slope = (plot as any).slope;
+                const irrigation = (plot as any).irrigation_type || (plot as any).irrigation_status;
+                const access = (plot as any).accessibility;
+
                 return (
                   <Card key={plot.id} className="p-4 border border-line flex flex-col justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-ink">{plot.name}</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-bold text-ink">{plot.name}</h3>
+                          {plotCode && (
+                            <span className="inline-block text-[11px] font-mono text-neutral-500 font-semibold">
+                              ID: {plotCode}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-leaf-800 bg-leaf-50 px-2 py-0.5 rounded border border-leaf-200">
+                          {plotArea.toFixed(2)} Ha
+                        </span>
                       </div>
-                      <p className="text-xs font-semibold text-leaf-800">
-                        {plotArea.toFixed(2)} Hectares
-                      </p>
+
+                      <div className="flex flex-wrap gap-1 text-[11px]">
+                        {soil && (
+                          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">
+                            🌱 {soil}
+                          </span>
+                        )}
+                        {slope && (
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium capitalize">
+                            📐 {slope}
+                          </span>
+                        )}
+                        {irrigation && (
+                          <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200 font-medium capitalize">
+                            💧 {irrigation}
+                          </span>
+                        )}
+                        {access && (
+                          <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200 font-medium">
+                            🚶 {access}
+                          </span>
+                        )}
+                      </div>
+
                       {plot.notes && (
-                        <p className="text-[11px] text-muted pt-1 leading-relaxed">
+                        <p className="text-[11px] text-muted pt-1 leading-relaxed border-t border-line/60">
                           {plot.notes}
                         </p>
                       )}
