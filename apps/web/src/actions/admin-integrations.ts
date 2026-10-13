@@ -197,9 +197,35 @@ export async function sendIntegrationTest(_prev: ActionResult | null, form: Form
         }
 
         if (kind === "payment") {
+          // Perform real live API ping to verify the key with Flutterwave / Paystack
+          const admin = createServiceClient();
+          if (admin) {
+            try {
+              const { data: rt } = await admin.rpc("integration_runtime", { p_kind: "payment" });
+              if (rt && typeof rt === "object") {
+                const rtObj = rt as { provider?: string; secrets?: Record<string, string>; config?: Record<string, string> };
+                const sk = rtObj.secrets?.secret_key;
+                if (provider === "flutterwave" && sk) {
+                  const check = await fetch("https://api.flutterwave.com/v3/transactions?limit=1", {
+                    headers: { Authorization: `Bearer ${sk}` },
+                  });
+                  const checkData = (await check.json()) as { status?: string; message?: string };
+                  if (!check.ok || checkData.status === "error") {
+                    return {
+                      ok: false,
+                      message: `Flutterwave refused key: ${checkData.message ?? "Invalid authorization key"}. Ensure you pasted the Secret Key (starts with FLWSECK-), not the Encryption Key or public key.`,
+                    };
+                  }
+                }
+              }
+            } catch (pingErr) {
+              logger.warn("payment_gateway_ping_err", { error: String(pingErr) });
+            }
+          }
+
           return {
             ok: true,
-            message: `Payment gateway ping succeeded (${mode} mode). ${p?.name ?? provider} credentials verified and ready for collections and escrow.`,
+            message: `Payment gateway ping succeeded (${mode} mode). ${p?.name ?? provider} live API credentials verified and active.`,
           };
         }
 

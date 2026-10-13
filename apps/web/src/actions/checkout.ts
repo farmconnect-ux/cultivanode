@@ -180,7 +180,7 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
 
   let payUrl: string | null = null;
   if (runtime.provider === "flutterwave" && runtime.secretKey) {
-    payUrl = await startFlutterwave({
+    const flwRes = await startFlutterwave({
       orderId: order.id,
       orderNumber,
       amountKobo: total,
@@ -191,6 +191,7 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
       secretKey: runtime.secretKey,
       baseUrl: runtime.baseUrl || undefined,
     });
+    payUrl = flwRes.url ?? null;
   } else if (runtime.provider === "paystack" && runtime.secretKey) {
     payUrl = await startPaystack({
       orderId: order.id,
@@ -334,9 +335,9 @@ async function startFlutterwave(params: {
   returnPath: string;
   secretKey: string;
   baseUrl?: string;
-}): Promise<string | null> {
+}): Promise<{ url?: string; error?: string }> {
   const { orderId, orderNumber, amountKobo, email, phone, fullName, returnPath, secretKey, baseUrl } = params;
-  if (!secretKey) return null;
+  if (!secretKey) return { error: "Secret key is missing." };
   const reference = `FLW_${orderId}_${Date.now()}`;
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
   const amountNaira = amountKobo / 100;
@@ -375,7 +376,7 @@ async function startFlutterwave(params: {
     const body = (await res.json()) as { status?: string; message?: string; data?: { link?: string } };
     if (!res.ok || body.status !== "success" || !body.data?.link) {
       logger.warn("flutterwave_initialize_failed", { status: res.status, msg: body.message });
-      return null;
+      return { error: body.message || `Flutterwave API returned status ${res.status}` };
     }
 
     const admin = createServiceClient();
@@ -389,10 +390,10 @@ async function startFlutterwave(params: {
       });
       await admin.from("marketplace_orders").update({ status: "payment_pending" }).eq("id", orderId);
     }
-    return body.data.link;
+    return { url: body.data.link };
   } catch (error) {
     logger.warn("flutterwave_initialize_error", { reason: error instanceof Error ? error.name : "unknown" });
-    return null;
+    return { error: error instanceof Error ? error.message : "Network error contacting Flutterwave" };
   }
 }
 
@@ -469,8 +470,10 @@ export async function initiateOrderPayment(orderId: string, lang = "en"): Promis
   const phone = (order.delivery_address as { phone?: string } | null)?.phone || "";
 
   let payUrl: string | null = null;
+  let gatewayError: string | null = null;
+
   if (runtime.provider === "flutterwave" && runtime.secretKey) {
-    payUrl = await startFlutterwave({
+    const flwRes = await startFlutterwave({
       orderId: order.id,
       orderNumber: order.order_number,
       amountKobo: Number(order.total_amount_kobo),
@@ -481,6 +484,8 @@ export async function initiateOrderPayment(orderId: string, lang = "en"): Promis
       secretKey: runtime.secretKey,
       baseUrl: runtime.baseUrl || undefined,
     });
+    payUrl = flwRes.url ?? null;
+    gatewayError = flwRes.error ?? null;
   } else if (runtime.provider === "paystack" && runtime.secretKey) {
     payUrl = await startPaystack({
       orderId: order.id,
@@ -501,7 +506,8 @@ export async function initiateOrderPayment(orderId: string, lang = "en"): Promis
   }
 
   if (!payUrl) {
-    return { ok: false, error: `Could not connect to payment gateway (${runtime.provider}). Please verify live keys in Admin Integrations.` };
+    const detail = gatewayError ? `: ${gatewayError}` : ". Please verify live keys in Admin Integrations.";
+    return { ok: false, error: `Could not connect to payment gateway (${runtime.provider})${detail}` };
   }
 
   return { ok: true, redirectUrl: payUrl };
