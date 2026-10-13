@@ -103,6 +103,7 @@ const yo: Dictionary = {
     field_agent: `Aṣojú pápá ${brand.name}`,
     institutional_partner: 'Alábàáṣiṣẹ́pọ̀ ilé-iṣẹ́',
     investor: 'Olùdókòwò',
+    customer: 'Oníbàárà',
   },
   roleHints: {
     crop_farmer: 'Ṣètò ohun ọ̀gbìn, tọpinpin iṣẹ́ kí o sì gba olùrànlọ́wọ́',
@@ -115,6 +116,7 @@ const yo: Dictionary = {
     field_agent: 'Forúkọ àwọn àgbẹ̀ sílẹ̀ kí o sì ràn wọ́n lọ́wọ́ ní agbègbè rẹ',
     institutional_partner: 'Ó ń bọ̀ lẹ́yìn',
     investor: 'Ó ń bọ̀ lẹ́yìn',
+    customer: 'Ra èso àti ohun èlò oko lórí ọjà',
   },
   providerTypes: {
     farm_hand: 'Òṣìṣẹ́ oko',

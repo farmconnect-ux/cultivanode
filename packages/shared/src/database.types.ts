@@ -830,6 +830,35 @@ export type Database = {
           },
         ]
       }
+      calendar_feeds: {
+        Row: {
+          created_at: string
+          profile_id: string
+          rotated_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          rotated_at?: string | null
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          rotated_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_feeds_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           channel: string
@@ -8770,6 +8799,21 @@ export type Database = {
       }
       booking_detail: { Args: { p_booking: string }; Returns: Json }
       budget_farm_id: { Args: { p_budget: string }; Returns: string }
+      calendar_feed_events: {
+        Args: { p_token: string }
+        Returns: {
+          details: string
+          ends_on: string
+          farm_name: string
+          kind: string
+          location: string
+          starts_on: string
+          status: string
+          title: string
+          uid: string
+          updated_at: string
+        }[]
+      }
       can_edit_cycle_legacy: { Args: { p_cycle: string }; Returns: boolean }
       can_edit_farm: { Args: { p_farm: string }; Returns: boolean }
       can_manage_farm_iot: { Args: { p_farm_id: string }; Returns: boolean }
@@ -9284,6 +9328,7 @@ export type Database = {
         | "field_agent"
         | "institutional_partner"
         | "investor"
+        | "customer"
       booking_status:
         | "requested"
         | "accepted"
@@ -9588,6 +9633,7 @@ export const Constants = {
         "field_agent",
         "institutional_partner",
         "investor",
+        "customer",
       ],
       booking_status: [
         "requested",

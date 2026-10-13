@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Messages" };
 export default async function Page({ params, searchParams }: PageProps<"/[lang]/account/messages">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const supabase = await createClient();
   const sp = await searchParams;
   const [{ data: threads }, { data: people }, { data: mine }, sellers] = await Promise.all([

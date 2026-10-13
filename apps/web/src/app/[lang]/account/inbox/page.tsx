@@ -58,7 +58,7 @@ export default async function InboxPage({
 }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  await requireAccount(lang);
+  await requireAccount(lang, { customer: true });
   const sp = searchParams ? await searchParams : {};
   const currentCat = typeof sp.cat === "string" ? sp.cat : "all";
 

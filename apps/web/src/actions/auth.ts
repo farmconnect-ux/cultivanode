@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { isValidEmail, normalizeNgPhone } from "@cultivanode/shared";
 import { hasLocale, type Locale } from "@/i18n/config";
 import { logger } from "@/lib/logger";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 // Sign-in for the public website with Phone Number (SMS OTP) or Email Address (Email OTP).
@@ -80,7 +81,12 @@ export async function verifyCode(prev: AuthState, form: FormData): Promise<AuthS
 
   const { data: profile } = await supabase.from("profiles").select("onboarded_at").eq("id", data.user.id).maybeSingle();
   const lang = locale(form);
-  redirect(profile?.onboarded_at ? `/${lang}/account` : `/${lang}/onboarding`);
+  const next = safeNext(form.get("next"), lang);
+  if (profile?.onboarded_at) redirect(next ?? `/${lang}/account`);
+  const q = new URLSearchParams();
+  if (form.get("as") === "customer") q.set("as", "customer");
+  if (next) q.set("next", next);
+  redirect(`/${lang}/onboarding${q.size ? `?${q}` : ""}`);
 }
 
 export async function signOut(form: FormData): Promise<void> {

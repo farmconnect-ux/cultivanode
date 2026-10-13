@@ -4,6 +4,8 @@
 // livestock, labour, machinery, inventory, budgets and books, irrigation and IoT alerts.
 // Row level security (can_edit_farm / can_view_farm) decides access; inputs are validated here.
 import type { FormResult } from "@/components/live/action-form";
+import { redirect } from "next/navigation";
+import { OP_TYPES, addDays, missingOperations, suggestCropPlan } from "@/lib/crop-plan";
 import { actor, date, dbFail, fail, id, kobo, num, ok, oneOf, optText, refreshPages, text, today } from "@/lib/account/act";
 
 type R = Promise<FormResult>;
@@ -80,6 +82,103 @@ export async function createCropCycle(_: FormResult, form: FormData): R {
   return ok("Crop cycle started.");
 }
 
+type PlannedOp = { name: string; stage: string; operation_type: string; scheduled_date: string; required_machinery?: string | null; notes?: string | null };
+
+/**
+ * Crop planner: the cycle plus the operations the farmer kept from the suggestions (and any they added),
+ * in one step. Operations show up straight away on Field Operations & Calendar and the phone calendar feed.
+ */
+export async function createPlannedCropCycle(_: FormResult, form: FormData): R {
+  const { supabase, uid } = await actor(form);
+  const lang = text(form, "lang", 5) || "en";
+  const farmId = id(form, "farm_id");
+  const crop = text(form, "crop_id", 40).toLowerCase();
+  const planting = date(form, "planting_date");
+  const harvest = date(form, "expected_harvest_date");
+  const area = num(form, "target_area_ha");
+  if (!farmId || !crop) return fail("Choose a farm and a crop.");
+  if (!planting || !harvest || harvest < planting) return fail("Harvest date must be on or after the planting date.");
+  if (!area || area <= 0) return fail("Enter the area you will plant, in hectares.");
+
+  let planned: PlannedOp[] = [];
+  try {
+    const raw = JSON.parse(String(form.get("operations") ?? "[]"));
+    planned = (Array.isArray(raw) ? raw : []).slice(0, 80);
+  } catch {
+    return fail("The operations list couldn't be read. Please try again.");
+  }
+  const ops = planned
+    .map((o) => ({
+      name: String(o?.name ?? "").trim().slice(0, 120),
+      stage: String(o?.stage ?? "").trim().slice(0, 60) || "General",
+      operation_type: (OP_TYPES as readonly string[]).includes(String(o?.operation_type)) ? String(o.operation_type) : "other",
+      scheduled_date: /^\d{4}-\d{2}-\d{2}$/.test(String(o?.scheduled_date)) ? String(o.scheduled_date) : "",
+      required_machinery: o?.required_machinery ? String(o.required_machinery).slice(0, 120) : null,
+      notes: o?.notes ? String(o.notes).slice(0, 500) : null,
+    }))
+    .filter((o) => o.name.length >= 2 && o.scheduled_date);
+
+  const { data: std } = await supabase.from("farm_agronomic_standards").select("id").eq("crop_or_livestock_id", crop).eq("is_active", true).limit(1).maybeSingle();
+  const { data: cycle, error } = await supabase
+    .from("crop_cycles")
+    .insert({
+      farm_id: farmId,
+      plot_id: id(form, "plot_id"),
+      standard_id: std?.id ?? null,
+      crop_id: crop,
+      variety_id: optText(form, "variety_id", 60),
+      season: text(form, "season", 60) || `${new Date().getFullYear()} season`,
+      status: planting > today() ? "planning" : "planting",
+      current_stage: optText(form, "current_stage", 60) ?? undefined,
+      target_area_ha: area,
+      planting_date: planting,
+      expected_harvest_date: harvest,
+      target_yield_kg: num(form, "target_yield_kg") ?? undefined,
+      estimated_budget_kobo: kobo(form, "estimated_budget") ?? 0,
+      notes: optText(form, "notes"),
+      created_by: uid,
+    })
+    .select("id")
+    .single();
+  if (error || !cycle) return dbFail(error, "create_planned_crop_cycle");
+  if (ops.length) {
+    const { error: opErr } = await supabase.from("crop_cycle_operations").insert(ops.map((o) => ({ ...o, crop_cycle_id: cycle.id, status: "pending" })));
+    if (opErr) return dbFail(opErr, "create_planned_crop_operations");
+  }
+  refreshPages("/crops", "/tasks", "/");
+  redirect(`/${lang}/account/crops/${cycle.id}?planned=${ops.length}`);
+}
+
+/** Add every suggested operation the cycle doesn't have yet. */
+export async function addSuggestedOperations(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const cycleId = id(form, "crop_cycle_id");
+  if (!cycleId) return fail("Crop cycle not found.");
+  const [{ data: c }, { data: have }] = await Promise.all([
+    supabase.from("crop_cycles").select("crop_id, variety_id, planting_date").eq("id", cycleId).maybeSingle(),
+    supabase.from("crop_cycle_operations").select("name, operation_type, scheduled_date").eq("crop_cycle_id", cycleId),
+  ]);
+  if (!c) return fail("Crop cycle not found.");
+  const plan = suggestCropPlan(c.crop_id, c.planting_date, c.variety_id);
+  const missing = missingOperations(plan.operations, have ?? [], c.planting_date < today() ? addDays(today(), -14) : undefined);
+  if (!missing.length) return ok("Your plan already has every suggested operation.");
+  const { error } = await supabase.from("crop_cycle_operations").insert(
+    missing.map((o) => ({
+      crop_cycle_id: cycleId,
+      name: o.name,
+      stage: o.stage,
+      operation_type: o.operationType,
+      scheduled_date: o.startsOn,
+      required_machinery: o.machinery,
+      notes: o.description,
+      status: "pending",
+    })),
+  );
+  if (error) return dbFail(error, "add_suggested_operations");
+  refreshPages("/crops", `/crops/${cycleId}`, "/tasks", "/");
+  return ok(`Added ${missing.length} suggested operation${missing.length === 1 ? "" : "s"}.`);
+}
+
 export async function updateCropStage(_: FormResult, form: FormData): R {
   const { supabase } = await actor(form);
   const cycleId = id(form, "crop_cycle_id");
@@ -100,7 +199,6 @@ export async function updateCropStage(_: FormResult, form: FormData): R {
   return ok("Crop stage updated.");
 }
 
-const OP_TYPES = ["land_prep", "planting", "fertiliser", "weed_control", "pest_control", "disease_control", "irrigation", "scouting", "harvest", "other"] as const;
 
 export async function addCropOperation(_: FormResult, form: FormData): R {
   const { supabase } = await actor(form);
@@ -133,8 +231,24 @@ export async function completeCropOperation(_: FormResult, form: FormData): R {
     .update({ status: "completed", completed_date: today(), ...(cost !== null ? { actual_cost_kobo: cost } : {}) })
     .eq("id", opId);
   if (error) return dbFail(error, "complete_crop_operation");
-  refreshPages("/crops", "/tasks");
+  refreshPages("/crops", "/tasks", "/");
   return ok("Marked as done.");
+}
+
+/** Start, skip or reschedule a crop operation (from the crop page or the field operations board). */
+export async function setCropOperationStatus(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const opId = id(form, "id");
+  const status = oneOf(form, "status", ["pending", "in_progress", "skipped"] as const);
+  const when = date(form, "scheduled_date");
+  if (!opId || (!status && !when)) return fail("Operation not found.");
+  const { error } = await supabase
+    .from("crop_cycle_operations")
+    .update({ ...(status ? { status } : {}), ...(when ? { scheduled_date: when } : {}) })
+    .eq("id", opId);
+  if (error) return dbFail(error, "set_crop_operation_status");
+  refreshPages("/crops", "/tasks", "/");
+  return ok(when ? "Operation rescheduled." : status === "in_progress" ? "Operation started." : status === "skipped" ? "Operation skipped." : "Operation updated.");
 }
 
 const OBS_CATEGORY = ["pest", "disease", "nutrient_deficiency", "weed_infestation", "water_stress", "general"] as const;

@@ -137,7 +137,31 @@ const account: NavGroup = {
   ],
 };
 
+const customer: NavGroup[] = [
+  {
+    id: "orders",
+    label: "My orders",
+    items: [
+      { href: "/account/marketplace/orders", label: "Orders & deliveries", icon: "receipt_long" },
+      { href: "/marketplace", label: "Shop the marketplace", icon: "storefront" },
+      { href: "/marketplace/checkout", label: "Cart & checkout", icon: "shopping_cart" },
+    ],
+  },
+  {
+    id: "account",
+    label: "Account",
+    items: [
+      { href: "/account/messages", label: "Messages", icon: "forum" },
+      { href: "/account/inbox", label: "Notifications", icon: "notifications" },
+      { href: "/account/profile", label: "Profile", icon: "person" },
+      { href: "/account/settings", label: "Settings", icon: "manage_accounts" },
+      { href: "/account/privacy", label: "Data & privacy", icon: "lock" },
+    ],
+  },
+];
+
 export function accountNav(ws: Workspace): NavGroup[] {
+  if (ws === "customer") return customer;
   const base = ws === "provider" ? provider : ws === "agent" ? agent : farmer;
   return [...base, account, ecosystem];
 }

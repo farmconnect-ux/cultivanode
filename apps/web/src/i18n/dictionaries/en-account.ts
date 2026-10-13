@@ -87,6 +87,7 @@ const enAccount = {
     field_agent: `${brand.name} field agent`,
     institutional_partner: "Institutional partner",
     investor: "Investor",
+    customer: "Customer",
   },
   roleHints: {
     crop_farmer: "Plan crops, track work and hire help",
@@ -99,6 +100,7 @@ const enAccount = {
     field_agent: "Register and support farmers in your community",
     institutional_partner: "Coming later",
     investor: "Coming later",
+    customer: "Buy produce and inputs on the marketplace",
   },
   providerTypes: {
     farm_hand: "Farm hand",

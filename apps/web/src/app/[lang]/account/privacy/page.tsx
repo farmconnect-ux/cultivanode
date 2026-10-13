@@ -17,7 +17,7 @@ const ORDER = [
 export default async function PrivacyPage({ params }: PageProps<"/[lang]/account/privacy">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const t = await getDictionary(lang);
   const p = t.acct.privacy;
   const supabase = await createClient();

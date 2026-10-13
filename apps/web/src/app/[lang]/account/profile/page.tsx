@@ -9,7 +9,7 @@ import { requireAccount } from "@/lib/account/session";
 export default async function ProfilePage({ params }: PageProps<"/[lang]/account/profile">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const t = await getDictionary(lang);
   const p = t.acct.profile;
   return (

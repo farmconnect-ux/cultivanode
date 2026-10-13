@@ -15,7 +15,7 @@ export default async function OrderDetailPage({
   const { lang, id } = await params;
   if (!hasLocale(lang)) notFound();
 
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const supabase = await createClient();
 
   const { data: order, error } = await supabase

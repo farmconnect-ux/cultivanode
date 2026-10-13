@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { addCropOperation, completeCropOperation, logObservation, recordHarvest, updateCropStage } from "@/actions/farm-ops";
+import { addCropOperation, addSuggestedOperations, completeCropOperation, logObservation, recordHarvest, setCropOperationStatus, updateCropStage } from "@/actions/farm-ops";
+import { Icon } from "@/components/ds/icon";
 import { PageHeader } from "@/components/ds/page-header";
 import { ActionButton, ActionDialog } from "@/components/live/action-form";
 import { Chip, DataTable, Facts, KpiGrid, Meter, Section, Split, Stack, Status } from "@/components/live/kit";
@@ -9,6 +10,7 @@ import { hasLocale } from "@/i18n/config";
 import { cap } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
 import { label, mass, naira, num, pct, relDays, share, nowMs } from "@/lib/format";
+import { addDays, missingOperations, stageOn, suggestCropPlan } from "@/lib/crop-plan";
 import { createClient } from "@/lib/supabase/server";
 import { formatDay } from "@/lib/text";
 
@@ -16,8 +18,9 @@ export const metadata: Metadata = { title: "Crop cycle" };
 
 const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
-export default async function Page({ params }: PageProps<"/[lang]/account/crops/[id]">) {
+export default async function Page({ params, searchParams }: PageProps<"/[lang]/account/crops/[id]">) {
   const { lang, id } = await params;
+  const sp = await searchParams;
   if (!hasLocale(lang)) notFound();
   await requireAccount(lang);
   const supabase = await createClient();
@@ -41,6 +44,11 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
   const openObs = (obs ?? []).filter((o) => !o.resolved);
   const hidden = { lang, crop_cycle_id: id };
   const title = `${cap(c.crop_id)} ${c.variety_id ?? ""}`.trim();
+  const today = new Date(nowMs()).toISOString().slice(0, 10);
+  const plan = suggestCropPlan(c.crop_id, c.planting_date, c.variety_id);
+  const suggestedOps = missingOperations(plan.operations, ops ?? [], c.planting_date < today ? addDays(today, -14) : undefined);
+  const stageNow = stageOn(plan.stages, today);
+  const planned = typeof sp.planned === "string" ? Number(sp.planned) : null;
 
   return (
     <Stack>
@@ -92,6 +100,12 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
         }
       />
 
+      {planned != null && Number.isFinite(planned) && (
+        <p role="status" className="flex items-start gap-2 rounded-xl bg-positive-soft px-4 py-3 text-body-sm text-[#065f46]">
+          <Icon name="check_circle" className="mt-0.5 text-base" />
+          Crop cycle created with {planned} planned operation{planned === 1 ? "" : "s"}. They are already on Field Operations &amp; Calendar and in your phone calendar feed.
+        </p>
+      )}
       <KpiGrid>
         <MetricCard label="Season progress" value={`${Math.round(share(elapsed, total))}%`} icon="timelapse" foot={`Day ${elapsed} of ${Math.round(total)}`} />
         <MetricCard label="Harvested" value={mass(harvested || c.actual_yield_kg)} icon="grain" foot={`Target ${mass(c.target_yield_kg)} on ${num(c.target_area_ha, 1)} ha`} />
@@ -136,7 +150,67 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
                   { label: "Status", cell: (o) => <Status value={o.status} /> },
                   {
                     label: "",
-                    cell: (o) => (o.status !== "completed" ? <ActionButton action={completeCropOperation} hidden={{ lang, id: o.id }} label="Done" /> : null),
+                    cell: (o) =>
+                      o.status === "completed" || o.status === "skipped" || o.status === "cancelled" ? null : (
+                        <div className="flex flex-wrap justify-end gap-1">
+                          {o.status === "pending" && <ActionButton action={setCropOperationStatus} hidden={{ lang, id: o.id, status: "in_progress" }} label="Start" icon="play_arrow" />}
+                          <ActionButton action={completeCropOperation} hidden={{ lang, id: o.id }} label="Done" />
+                          <ActionButton action={setCropOperationStatus} hidden={{ lang, id: o.id, status: "skipped" }} label="Skip" icon="block" confirm="Skip this operation?" />
+                        </div>
+                      ),
+                  },
+                ]}
+              />
+            </Section>
+            <Section
+              title="Suggested operations"
+              icon="tips_and_updates"
+              description={
+                plan.specific
+                  ? `From the ${cap(plan.cropId)} good agricultural practice calendar, dated from your planting day, leaving out work your plan already covers. Add the ones you'll do.`
+                  : "A general field-crop calendar (no crop-specific template yet), dated from your planting day."
+              }
+              action={
+                suggestedOps.length > 1 ? (
+                  <ActionButton action={addSuggestedOperations} hidden={hidden} label={`Add all ${suggestedOps.length}`} icon="done_all" tone="primary" />
+                ) : undefined
+              }
+            >
+              <DataTable
+                rows={suggestedOps}
+                rowKey={(o) => o.key}
+                empty="Every suggested operation is already in your plan."
+                columns={[
+                  { label: "When", cell: (o) => `${formatDay(o.startsOn, lang)} (${relDays(o.startsOn)})` },
+                  {
+                    label: "Operation",
+                    cell: (o) => (
+                      <div className="max-w-md">
+                        <p className="font-medium">{o.name}</p>
+                        <p className="text-body-sm text-on-surface-variant">{o.description}</p>
+                      </div>
+                    ),
+                  },
+                  { label: "Stage", cell: (o) => o.stage },
+                  { label: "Machinery", cell: (o) => o.machinery ?? "—" },
+                  {
+                    label: "",
+                    cell: (o) => (
+                      <ActionButton
+                        action={addCropOperation}
+                        hidden={{
+                          ...hidden,
+                          operation_type: o.operationType,
+                          name: o.name,
+                          scheduled_date: o.startsOn < today && c.status !== "planning" ? today : o.startsOn,
+                          stage: o.stage,
+                          required_machinery: o.machinery ?? "",
+                          notes: o.description,
+                        }}
+                        label="Add"
+                        icon="add"
+                      />
+                    ),
                   },
                 ]}
               />
@@ -175,6 +249,41 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
         }
         side={
           <>
+            {plan.stages.length > 0 && (
+              <Section
+                title="Growth stages"
+                icon="timeline"
+                description={stageNow ? `By the calendar, this crop should be at: ${stageNow.name}.` : "Stages start from your planting date."}
+              >
+                <ol className="flex flex-col gap-2">
+                  {plan.stages.map((st) => {
+                    const now = stageNow?.id === st.id;
+                    const past = st.endsOn < today;
+                    return (
+                      <li key={st.id} className={`rounded-lg border p-2.5 ${now ? "border-primary-container bg-secondary-container/20" : "border-outline-variant/40"}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`font-label-lg text-label-lg ${past && !now ? "text-on-surface-variant" : "text-on-surface"}`}>
+                            {past && !now ? "✓ " : ""}
+                            {st.name}
+                          </p>
+                          {now && <Status value="current" />}
+                          {c.current_stage === st.name && !now && <Status value="recorded" />}
+                        </div>
+                        <p className="text-body-sm text-on-surface-variant">
+                          {formatDay(st.startsOn, lang)} – {formatDay(st.endsOn, lang)}
+                        </p>
+                        {now && <p className="mt-1 text-body-sm text-on-surface">{st.description}</p>}
+                      </li>
+                    );
+                  })}
+                </ol>
+                {stageNow && stageNow.name !== c.current_stage && (
+                  <div className="mt-3">
+                    <ActionButton action={updateCropStage} hidden={{ ...hidden, status: c.status, current_stage: stageNow.name }} label={`Set stage to ${stageNow.name}`} icon="check" />
+                  </div>
+                )}
+              </Section>
+            )}
             <Section title="Field facts" icon="info">
               <Facts
                 className="sm:grid-cols-1"

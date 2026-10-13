@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { CustomerOnboarding } from "@/components/account/customer-onboarding";
 import { OnboardingForm, type RoleOption } from "@/components/account/onboarding-form";
 import { AuthShell } from "@/components/ds/auth-shell";
 import { Icon } from "@/components/ds/icon";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { loadAccount } from "@/lib/account/session";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +20,40 @@ const STEPS = [
   { icon: "rocket_launch", title: "Launch", body: "Your workspace is ready" },
 ] as const;
 
-export default async function OnboardingPage({ params }: PageProps<"/[lang]/onboarding">) {
+export default async function OnboardingPage({ params, searchParams }: PageProps<"/[lang]/onboarding">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
+  const sp = await searchParams;
+  const next = safeNext(sp.next, lang);
   const account = await loadAccount();
   if (!account) redirect(`/${lang}/sign-in`);
-  if (account.profile.onboarded_at) redirect(`/${lang}/account`);
+  if (account.profile.onboarded_at) redirect(next ?? `/${lang}/account`);
+
+  if (sp.as === "customer") {
+    return (
+      <AuthShell lang={lang}>
+        <div className="mx-auto flex max-w-2xl flex-col gap-6">
+          <section className="card-surface animate-fade-up p-6 sm:p-8">
+            <p className="mb-2 inline-flex items-center gap-1.5 font-label-md text-label-md uppercase tracking-wider text-secondary">
+              <Icon name="shopping_cart" className="text-base" /> Customer account
+            </p>
+            <h1 className="font-headline-xl-mobile text-headline-xl-mobile text-primary sm:text-headline-xl">One last step before checkout</h1>
+            <p className="mt-2 text-body-md text-on-surface-variant">
+              Tell us who you are and where you are. Your account shows only your orders, deliveries and messages with sellers.
+            </p>
+          </section>
+          <section className="card-surface p-6 sm:p-8">
+            <CustomerOnboarding
+              lang={lang}
+              next={next ?? ""}
+              error={typeof sp.error === "string" ? sp.error.slice(0, 160) : undefined}
+              defaults={{ full_name: account.profile.full_name ?? "", state: account.profile.state ?? "", lga: account.profile.lga ?? "" }}
+            />
+          </section>
+        </div>
+      </AuthShell>
+    );
+  }
 
   const t = await getDictionary(lang);
   const supabase = await createClient();

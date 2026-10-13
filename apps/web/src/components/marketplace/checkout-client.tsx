@@ -141,9 +141,15 @@ export function CheckoutClient({ lang, signedIn, defaults }: { lang: string; sig
             <Icon name={pending ? "progress_activity" : "lock"} className={cn("text-base", pending && "animate-spin")} /> {pending ? "Placing order…" : "Pay into escrow"}
           </button>
         ) : (
-          <Link href={`/${lang}/sign-in?next=/${lang}/marketplace/checkout`} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-container px-4 py-3 font-label-lg text-label-lg text-on-primary hover:bg-primary">
-            <Icon name="login" className="text-base" /> Sign in to check out
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link href={`/${lang}/sign-up?as=customer&next=${encodeURIComponent(`/${lang}/marketplace/checkout`)}`} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-container px-4 py-3 font-label-lg text-label-lg text-on-primary hover:bg-primary">
+              <Icon name="person_add" className="text-base" /> Create an account to check out
+            </Link>
+            <Link href={`/${lang}/sign-in?as=customer&next=${encodeURIComponent(`/${lang}/marketplace/checkout`)}`} className="text-center font-label-md text-label-md text-primary hover:underline">
+              Already have an account? Sign in
+            </Link>
+            <p className="text-body-sm text-on-surface-variant">Your cart is kept on this device while you sign up.</p>
+          </div>
         )}
         <p className="flex items-start gap-1.5 text-body-sm text-on-surface-variant">
           <Icon name="shield_lock" className="text-base text-secondary" /> Your money is held in escrow and released to the seller only after you confirm delivery.

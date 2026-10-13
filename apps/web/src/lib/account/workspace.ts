@@ -1,6 +1,6 @@
 import type { Account } from "@/lib/account/session";
 
-export type Workspace = "farmer" | "provider" | "agent";
+export type Workspace = "farmer" | "provider" | "agent" | "customer";
 
 export type WorkspaceInfo = {
   id: Workspace;
@@ -22,6 +22,12 @@ export const WORKSPACE_DETAILS: Record<Workspace, WorkspaceInfo> = {
     roleDescription: "Equipment & Service Provider",
     badge: "Provider",
   },
+  customer: {
+    id: "customer",
+    name: "My Orders",
+    roleDescription: "Marketplace purchases & deliveries",
+    badge: "Customer",
+  },
   agent: {
     id: "agent",
     name: "Field Agent",
@@ -35,10 +41,13 @@ export const WORKSPACE_DETAILS: Record<Workspace, WorkspaceInfo> = {
  */
 export function getAvailableWorkspaces(account: Account): Workspace[] {
   const list: Workspace[] = [];
+  // Marketplace-only customers get just their orders workspace.
+  if (account.isCustomerOnly) return ["customer"];
   if (account.isFarmer) list.push("farmer");
   if (account.isOwner || account.serviceTypes.length > 0) list.push("provider");
   if (account.isAgent) list.push("agent");
 
+  if (account.isCustomer) list.push("customer");
   // Fallback if no specific role held yet
   if (list.length === 0) list.push("farmer");
   return list;

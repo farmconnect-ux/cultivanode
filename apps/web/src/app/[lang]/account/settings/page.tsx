@@ -26,7 +26,7 @@ const LINKS: [string, string, IconName, string][] = [
 export default async function Page({ params }: PageProps<"/[lang]/account/settings">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const supabase = await createClient();
   const { data: tickets } = await supabase.from("support_tickets").select("*").eq("requester_id", account.userId).order("created_at", { ascending: false });
   const p = account.profile;

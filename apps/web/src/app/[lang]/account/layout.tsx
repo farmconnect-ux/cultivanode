@@ -22,6 +22,7 @@ const ROLE_LABEL: Record<string, string> = {
   input_supplier: "Input supplier",
   buyer_offtaker: "Buyer / off-taker",
   logistics_provider: "Logistics provider",
+  customer: "Customer",
 };
 
 function initials(name: string) {
@@ -32,7 +33,7 @@ function initials(name: string) {
 export default async function AccountLayout({ children, params }: LayoutProps<"/[lang]/account">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang);
+  const account = await requireAccount(lang, { customer: true });
   const t = await getDictionary(lang);
   const n = t.acct.nav;
   const supabase = await createClient();

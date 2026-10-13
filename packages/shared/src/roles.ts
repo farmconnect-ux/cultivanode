@@ -55,6 +55,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   field_agent: 'Field agent',
   institutional_partner: 'Institutional partner',
   investor: 'Investor',
+  customer: 'Customer',
 };
 
 export const PROVIDER_TYPE_LABELS: Record<ProviderType, string> = {

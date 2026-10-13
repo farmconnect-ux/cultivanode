@@ -24,6 +24,10 @@ export type Account = {
   roles: { role: string; provider_type: string | null }[];
   isFarmer: boolean;
   isAgent: boolean;
+  /** Buys on the marketplace. */
+  isCustomer: boolean;
+  /** Holds only the customer role: sees orders, messages and account settings, nothing farm-related. */
+  isCustomerOnly: boolean;
   /** Machinery owner (equipment listings). */
   isOwner: boolean;
   /** Approved service types (service listings). */
@@ -54,16 +58,26 @@ export const loadAccount = cache(async (): Promise<Account | null> => {
     roles: held,
     isFarmer: held.some((r) => r.role === "crop_farmer" || r.role === "animal_farmer"),
     isAgent: held.some((r) => r.role === "field_agent"),
+    isCustomer: held.some((r) => r.role === "customer"),
+    isCustomerOnly: held.length > 0 && held.every((r) => r.role === "customer"),
     isOwner: held.some((r) => r.role === "machinery_owner"),
     serviceTypes: held.filter((r) => r.role === "service_provider" && r.provider_type).map((r) => r.provider_type as string),
     orgIds: (orgs ?? []).map((o) => o.organization_id),
   };
 });
 
-/** For account pages: signed in and set up, or a redirect to sign-in / onboarding. */
-export async function requireAccount(lang: Locale): Promise<Account> {
+/** Where a marketplace-only customer lands in the account area. */
+export const customerHome = (lang: Locale) => `/${lang}/account/marketplace/orders`;
+
+/**
+ * For account pages: signed in and set up, or a redirect to sign-in / onboarding.
+ * Pages are closed to marketplace-only customers unless they pass `{ customer: true }`
+ * (their orders, messages, notifications and account settings).
+ */
+export async function requireAccount(lang: Locale, opts: { customer?: boolean } = {}): Promise<Account> {
   const account = await loadAccount();
   if (!account) redirect(`/${lang}/sign-in`);
   if (!account.profile.onboarded_at) redirect(`/${lang}/onboarding`);
+  if (account.isCustomerOnly && !opts.customer) redirect(customerHome(lang));
   return account;
 }

@@ -15,9 +15,29 @@ const TIERS: { icon: IconName; tone: string; tier: string; title: string; body: 
 ];
 
 /** Sign-in and sign-up share one flow: a new number gets an account, then onboarding. */
-export function AuthPage({ lang, t, mode }: { lang: Locale; t: Dictionary["auth"]; mode: "sign-in" | "sign-up" }) {
-  const title = mode === "sign-in" ? t.signInTitle : t.signUpTitle;
-  const intro = mode === "sign-in" ? t.signInIntro : t.signUpIntro;
+export function AuthPage({
+  lang,
+  t,
+  mode,
+  next = "",
+  as = "",
+}: {
+  lang: Locale;
+  t: Dictionary["auth"];
+  mode: "sign-in" | "sign-up";
+  /** Same-site path to return to after sign-in (already validated by the page). */
+  next?: string;
+  /** "customer": a marketplace shopper; onboarding then asks only for name, state and consent. */
+  as?: string;
+}) {
+  const customer = as === "customer";
+  const title = customer ? (mode === "sign-in" ? "Sign in to check out" : "Create your customer account") : mode === "sign-in" ? t.signInTitle : t.signUpTitle;
+  const intro = customer
+    ? "Use your phone number or email. We'll send a 6-digit code, then you're back at checkout. Your account only shows your orders and deliveries."
+    : mode === "sign-in"
+      ? t.signInIntro
+      : t.signUpIntro;
+  const carry = new URLSearchParams({ ...(next ? { next } : {}), ...(customer ? { as: "customer" } : {}) }).toString();
   const [before, rest] = t.termsNote.split("{terms}");
   const [middle, after] = (rest ?? "").split("{privacy}");
   const other = mode === "sign-in" ? "sign-up" : "sign-in";
@@ -40,7 +60,7 @@ export function AuthPage({ lang, t, mode }: { lang: Locale; t: Dictionary["auth"
           </section>
 
           <section className="card-surface p-6 sm:p-8">
-            <PhoneSignIn lang={lang} t={t} />
+            <PhoneSignIn lang={lang} t={t} next={next} as={as} />
             <p className="mt-6 border-t border-[#f1f5f9] pt-4 text-body-sm text-on-surface-variant">
               {before}
               <Link href={`/${lang}/terms`} className="font-semibold text-secondary underline-offset-4 hover:underline">{t.terms}</Link>
@@ -97,7 +117,7 @@ export function AuthPage({ lang, t, mode }: { lang: Locale; t: Dictionary["auth"
               ))}
             </div>
             <Button asChild variant="soft" size="lg" className="mt-5 w-full">
-              <Link href={`/${lang}/${other}`}>
+              <Link href={`/${lang}/${other}${carry ? `?${carry}` : ""}`}>
                 <Icon name={mode === "sign-in" ? "person_add" : "login"} className="text-lg" />
                 {mode === "sign-in" ? t.noAccount : t.haveAccount} {mode === "sign-in" ? t.signUpTitle : t.signInTitle}
               </Link>

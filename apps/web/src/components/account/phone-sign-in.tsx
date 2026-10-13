@@ -13,7 +13,7 @@ const RESEND_AFTER_SECONDS = 60;
 type T = Dictionary["auth"];
 
 /** Phone or email, then the 6-digit code. Works without JavaScript for the first step (plain form post). */
-export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
+export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: T; next?: string; as?: string }) {
   const [state, send, sending] = useActionState(requestCode, { step: "input", method: "phone" } as AuthState);
   const [method, setMethod] = useState<AuthMethod>(state.method ?? "phone");
 
@@ -22,7 +22,7 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
     if (state.method) setMethod(state.method);
   }, [state.method]);
 
-  if (state.step === "code") return <CodeStep key={state.sentAt} lang={lang} t={t} start={state} />;
+  if (state.step === "code") return <CodeStep key={state.sentAt} lang={lang} t={t} start={state} next={next} as={as} />;
 
   return (
     <div className="flex flex-col gap-5">
@@ -122,7 +122,7 @@ export function PhoneSignIn({ lang, t }: { lang: Locale; t: T }) {
   );
 }
 
-function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthState, { step: "code" }> }) {
+function CodeStep({ lang, t, start, next, as }: { lang: Locale; t: T; start: Extract<AuthState, { step: "code" }>; next: string; as: string }) {
   const [state, verify, checking] = useActionState(verifyCode, start as AuthState);
   const [resent, resend, resending] = useActionState(requestCode, start as AuthState);
   const sentAt = resent.step === "code" ? resent.sentAt : start.sentAt;
@@ -149,6 +149,8 @@ function CodeStep({ lang, t, start }: { lang: Locale; t: T; start: Extract<AuthS
       {error && <Alert tone="danger">{t[error]}</Alert>}
       <form action={verify} className="flex flex-col gap-4" noValidate>
         <input type="hidden" name="lang" value={lang} />
+        <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="as" value={as} />
         <Field id="code" label={t.code}>
           <Input
             id="code"

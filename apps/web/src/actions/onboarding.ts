@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DbConstants, LEGAL_VERSION, NIGERIAN_STATES } from "@cultivanode/shared";
 import { hasLocale } from "@/i18n/config";
 import { logger } from "@/lib/logger";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 export type OnboardingErrorKey =
@@ -78,4 +79,50 @@ export async function completeOnboarding(_prev: OnboardingState, form: FormData)
     return { error: "errorGeneric", values };
   }
   redirect(`/${lang}/account?welcome=1`);
+}
+
+/**
+ * Marketplace shoppers: name, state and consent only, then the "customer" role (approved automatically)
+ * and straight back to where they were (usually checkout).
+ */
+export async function completeCustomerOnboarding(form: FormData): Promise<void> {
+  const langRaw = text(form, "lang", 5);
+  const lang = hasLocale(langRaw) ? langRaw : "en";
+  const next = safeNext(form.get("next"), lang);
+  const back = (error: string) => {
+    const q = new URLSearchParams({ as: "customer", error, ...(next ? { next } : {}) });
+    redirect(`/${lang}/onboarding?${q}`);
+  };
+  const fullName = text(form, "full_name", 120);
+  const stateRaw = text(form, "state", 60);
+  const state = (NIGERIAN_STATES as readonly string[]).includes(stateRaw) ? stateRaw : "";
+  if (fullName.length < 2) back("Enter your full name.");
+  if (!state) back("Choose your state.");
+  if (form.get("consent_terms") !== "on" || form.get("consent_privacy") !== "on") back("Accept the terms of use and the privacy policy to continue.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("complete_onboarding", {
+    p_full_name: fullName,
+    p_account_type: "individual",
+    p_business_name: "",
+    p_cac_number: "",
+    p_state: state,
+    p_lga: text(form, "lga", 60),
+    p_language: lang,
+    p_roles: [{ role: "customer" }],
+    p_consents: {
+      terms_of_use: true,
+      privacy_policy: true,
+      data_processing: form.get("consent_data") === "on",
+      marketing_messages: form.get("consent_marketing") === "on",
+    },
+    p_document_version: LEGAL_VERSION,
+    p_channel: "web",
+  });
+  if (error && error.code !== "P0001") {
+    if (error.code === "42501") redirect(`/${lang}/sign-in?as=customer${next ? `&next=${encodeURIComponent(next)}` : ""}`);
+    logger.warn("customer_onboarding_failed", { code: error.code });
+    back("We couldn't save your details. Please try again.");
+  }
+  redirect(next ?? `/${lang}/account/marketplace/orders`);
 }
