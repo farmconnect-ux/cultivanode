@@ -176,7 +176,7 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
   }
 
   const orderUrl = `/${lang}/account/marketplace/orders/${order.id}`;
-  const runtime = await getPaymentRuntime();
+  const runtime = await getPaymentRuntime(order.id);
 
   let payUrl: string | null = null;
   if (runtime.provider === "flutterwave" && runtime.secretKey) {
@@ -225,7 +225,44 @@ type PaymentRuntime = {
  * Resolves the active payment gateway and decrypted secret key from Supabase Vault (Admin Integrations),
  * falling back to process.env credentials.
  */
-async function getPaymentRuntime(): Promise<PaymentRuntime> {
+async function getPaymentRuntime(orderId?: string): Promise<PaymentRuntime> {
+  // 1. Try authenticated buyer RPC (works directly with user session)
+  try {
+    const supabase = await createClient();
+    const { data: creds, error } = await supabase.rpc("get_checkout_payment_credentials", {
+      p_order_id: orderId || null,
+    });
+    if (!error && creds && typeof creds === "object") {
+      const active = (creds.provider ?? "flutterwave") as "flutterwave" | "paystack" | "direct_transfer" | "test_adapter";
+      const mode = (creds.mode ?? "live") as "test" | "live";
+      const secrets = (creds.secrets as Record<string, string> | undefined) ?? {};
+      const config = (creds.config as Record<string, string> | undefined) ?? {};
+
+      const secretKey =
+        secrets.secret_key ??
+        (active === "flutterwave"
+          ? process.env.FLUTTERWAVE_SECRET_KEY || null
+          : process.env.PAYSTACK_SECRET_KEY || null);
+
+      const baseUrl =
+        config.base_url ??
+        (active === "flutterwave" ? "https://api.flutterwave.com/v3" : "https://api.paystack.co");
+
+      if (secretKey) {
+        return {
+          provider: active,
+          mode,
+          secretKey,
+          baseUrl,
+          publicKey: config.public_key,
+        };
+      }
+    }
+  } catch (rpcErr) {
+    logger.warn("get_checkout_payment_credentials_fallback", { error: String(rpcErr) });
+  }
+
+  // 2. Try admin service client
   const admin = createServiceClient();
   if (admin) {
     try {
@@ -268,6 +305,7 @@ async function getPaymentRuntime(): Promise<PaymentRuntime> {
     }
   }
 
+  // 3. Fallback to process.env credentials
   const isFlutterwave = Boolean(process.env.FLUTTERWAVE_SECRET_KEY) || !process.env.PAYSTACK_SECRET_KEY;
   const provider = isFlutterwave ? "flutterwave" : "paystack";
   const secretKey = isFlutterwave
@@ -427,7 +465,7 @@ export async function initiateOrderPayment(orderId: string, lang = "en"): Promis
   }
 
   const orderUrl = `/${lang}/account/marketplace/orders/${order.id}`;
-  const runtime = await getPaymentRuntime();
+  const runtime = await getPaymentRuntime(order.id);
   const phone = (order.delivery_address as { phone?: string } | null)?.phone || "";
 
   let payUrl: string | null = null;

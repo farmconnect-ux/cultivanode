@@ -10,12 +10,15 @@ import { initiateOrderPayment } from "@/actions/checkout";
 
 export default async function OrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lang: string; id: string }>;
+  searchParams?: Promise<{ error?: string; payment?: string; flw?: string }>;
 }) {
   const { lang, id } = await params;
   if (!hasLocale(lang)) notFound();
 
+  const sp = searchParams ? await searchParams : {};
   const account = await requireAccount(lang, { customer: true });
   const supabase = await createClient();
 
@@ -69,6 +72,17 @@ export default async function OrderDetailPage({
 
   return (
     <Container className="py-10 sm:py-14 max-w-4xl flex flex-col gap-8">
+      {sp.error && (
+        <div role="alert" className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm font-medium">
+          ⚠️ {sp.error}
+        </div>
+      )}
+      {sp.payment === "pending" && order.payment_status === "pending" && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm">
+          ⏳ Order placed! Please complete payment below to escrow funds and dispatch delivery.
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-6">
         <div>
@@ -100,6 +114,7 @@ export default async function OrderDetailPage({
               if (res.ok && res.redirectUrl) {
                 redirect(res.redirectUrl);
               }
+              redirect(`/${lang}/account/marketplace/orders/${order.id}?error=${encodeURIComponent(res.error || "Could not connect to payment gateway")}`);
             }}>
               <Button variant="primary" type="submit" className="text-xs font-bold py-1.5 px-3">
                 Pay Now via Gateway →

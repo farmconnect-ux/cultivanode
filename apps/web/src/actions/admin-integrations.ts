@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { logger } from "@/lib/logger";
 import { supabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // Every action runs as the signed-in staff member. The database functions check integrations.manage
 // themselves, so a forged form post from anyone else fails there.
@@ -67,6 +68,34 @@ export async function saveIntegrationConfig(_prev: ActionResult | null, form: Fo
   return explain(error, `Saved the ${m} settings.`);
 }
 
+async function ensureKnownProvider(provider: string) {
+  if (provider === "nimet") {
+    const admin = createServiceClient();
+    if (admin) {
+      try {
+        await admin.from("integration_providers").upsert({
+          code: "nimet",
+          kind: "weather",
+          name: "NiMet (Nigerian Meteorological Agency)",
+          description: "Official meteorological forecasts and synoptic station observations across Nigeria from the Nigerian Meteorological Agency (NiMet). Fully licensed for commercial agro-meteorology.",
+          docs_url: "https://nimet.gov.ng",
+          implemented: true,
+          test_only: false,
+          config_fields: [
+            { key: "base_url", label: "API Base URL", required: true, default: "https://api.nimet.gov.ng/api", help: "NiMet developer API endpoint." },
+          ],
+          secret_fields: [
+            { key: "api_key", label: "NiMet API Key", required: true, help: "From your NiMet Developer Portal dashboard." },
+          ],
+          sort_order: 5,
+        }, { onConflict: "code" });
+      } catch (err) {
+        logger.warn("ensure_known_provider_failed", { provider, error: String(err) });
+      }
+    }
+  }
+}
+
 export async function setIntegrationSecret(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const provider = field(form, "provider");
   const key = field(form, "field");
@@ -75,6 +104,7 @@ export async function setIntegrationSecret(_prev: ActionResult | null, form: For
   if (!CODE.test(provider) || !CODE.test(key) || !m) return { ok: false, message: "Invalid request." };
   if (!value.trim()) return { ok: false, message: "Paste the key first." };
 
+  await ensureKnownProvider(provider);
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_set_integration_secret", {
     p_provider: provider, p_mode: m, p_field: key, p_value: value,
