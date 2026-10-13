@@ -101,7 +101,7 @@ on conflict (slug) do nothing;
 
 -- Inputs
 insert into public.marketplace_products (category_id, name, slug, description, default_unit)
-select id, 'Certified Hybrid Maize Seed (SAMMAZ 15)', 'seed-sammaz-15', 'High-yielding drought-tolerant hybrid yellow maize seed, 2kg pack', 'packet'
+select id, 'Certified Hybrid Maize Seed (SAMMAZ 15)', 'seed-sammaz-15', 'High-yielding drought-tolerant hybrid yellow maize seed, 2kg pack', 'piece'
 from public.marketplace_categories where slug = 'seeds-seedlings'
 on conflict (slug) do nothing;
 
@@ -134,91 +134,13 @@ on conflict (slug) do nothing;
 
 -- Services Products
 insert into public.marketplace_products (category_id, name, slug, description, default_unit)
-select id, 'Comprehensive Farm Soil Chemistry Testing & NPK Audit', 'service-soil-testing-audit', 'Complete NPK, pH, organic carbon, and micronutrient lab analysis per sample', 'sample'
+select id, 'Comprehensive Farm Soil Chemistry Testing & NPK Audit', 'service-soil-testing-audit', 'Complete NPK, pH, organic carbon, and micronutrient lab analysis per sample', 'job'
 from public.marketplace_categories where slug = 'services'
 on conflict (slug) do nothing;
 
 insert into public.marketplace_products (category_id, name, slug, description, default_unit)
-select id, 'On-Farm Agronomist Crop Health Scouting Visit', 'service-agronomist-scouting', 'Field diagnostic inspection, pest identification, and treatment prescription', 'visit'
+select id, 'On-Farm Agronomist Crop Health Scouting Visit', 'service-agronomist-scouting', 'Field diagnostic inspection, pest identification, and treatment prescription', 'job'
 from public.marketplace_categories where slug = 'services'
 on conflict (slug) do nothing;
 
-------------------------------------------------------------------------------------------------
--- 3. Demo Marketplace Seller Profiles (Safe Idempotent Setup)
-------------------------------------------------------------------------------------------------
-
--- Demo Seller 1: Premier Grain Hub (Agro Dealer)
-insert into public.marketplace_sellers (
-  profile_id,
-  seller_type,
-  business_name,
-  business_reg_number,
-  description,
-  verification_status,
-  is_verified,
-  rating_avg,
-  review_count,
-  contact_phone,
-  contact_email,
-  state,
-  lga,
-  address
-)
-select
-  p.id,
-  'agro_dealer',
-  'Premier Oyo Grain Hub & Storage',
-  'RC-1049281',
-  'Aggregator and licensed agro-dealer supplying cleaned quality grains, seeds, and inputs.',
-  'verified',
-  true,
-  4.9,
-  28,
-  '+2348030001001',
-  'sales@premiergrainhub.ng',
-  'Oyo',
-  'Ibadan North',
-  'Bodija Market Agricultural Depot, Ibadan'
-from public.profiles p
-where p.role in ('admin', 'farmer')
-order by p.created_at asc
-limit 1
-on conflict do nothing;
-
--- Demo Seller 2: AgroTech Tractors & Logistics
-insert into public.marketplace_sellers (
-  profile_id,
-  seller_type,
-  business_name,
-  business_reg_number,
-  description,
-  verification_status,
-  is_verified,
-  rating_avg,
-  review_count,
-  contact_phone,
-  contact_email,
-  state,
-  lga,
-  address
-)
-select
-  p.id,
-  'machinery_owner',
-  'AgroTech Farm Mechanization Fleet',
-  'BN-2940192',
-  'Tractor tillage, boom spraying, and combine harvesting services across Oyo and Ogun.',
-  'verified',
-  true,
-  4.8,
-  19,
-  '+2348030001002',
-  'bookings@agrotechfleet.ng',
-  'Oyo',
-  'Iseyin',
-  'Farm Mechanization Centre, Iseyin Road'
-from public.profiles p
-where p.role in ('admin', 'farmer')
-order by p.created_at desc
-limit 1
-on conflict do nothing;
+-- Demo sellers are created by supabase/seed_demo.sql under dedicated demo accounts, never on real profiles.

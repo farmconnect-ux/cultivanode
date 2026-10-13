@@ -15,6 +15,12 @@ export type ExecutiveDashboardSlot =
   | "heroMeta"
   | "heroActions"
   | "kpis"
+  | "weather"
+  | "attention"
+  | "crops"
+  | "livestock"
+  | "machinery"
+  | "stock"
   | "operations"
   | "statusBar";
 
@@ -42,6 +48,7 @@ export interface OperationItem {
 }
 
 export interface ExecutiveDashboardProps {
+  lang?: ScreenProps["lang"];
   slots: ScreenProps<ExecutiveDashboardSlot>["slots"];
   operations: OperationItem[];
 }
@@ -113,7 +120,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
     id: op.id,
     name: op.name,
     subtext: op.subtext || "",
-    plot: op.plot_id ? `Plot ${op.plot_id.slice(0, 8)}` : "General",
+    plot: op.crop_area?.split(" · ").at(-1) ?? "General",
     cropArea: op.crop_area || "N/A",
     timeline: op.timeline || (op.scheduled_at ? new Date(op.scheduled_at).toLocaleDateString() : "TBD"),
     timingNote: op.timing_note || "",
@@ -134,7 +141,9 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
   // Handler: Log Completion
   const handleLogCompletion = (opId: string) => {
     startTransition(() => {
-      logOperationCompletion(new FormData([[ "id", opId ]]));
+      const f = new FormData();
+      f.set("id", opId);
+      void logOperationCompletion(f);
     });
     showScreenToast("Operation status updated and recorded in offline SQLite ledger.");
   };
@@ -142,7 +151,9 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
   // Handler: Override Weather Rule
   const handleOverrideRule = (opId: string) => {
     startTransition(() => {
-      overrideWeatherHold(new FormData([[ "id", opId ]]));
+      const f = new FormData();
+      f.set("id", opId);
+      void overrideWeatherHold(f);
     });
     showScreenToast("Agronomy rule overridden with agronomist supervisor waiver #WAIV-082.");
   };
@@ -150,7 +161,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
   // Handler: Export Operations Roster
   const handleExportRoster = () => {
     const csvHeader = "Operation,Subtext,Plot,Crop & Area,Timeline,Resource,Location,Status\n";
-    const csvRows = operations
+    const csvRows = displayOps
       .map(
         (o) =>
           `"${o.name}","${o.subtext}","${o.plot}","${o.cropArea}","${o.timeline}","${o.resource}","${o.location}","${o.status}"`
@@ -512,6 +523,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </div>
               )}
             </div>
+            {slot(slots, "weather", (
             <div className="mt-space-lg pt-space-md border-t border-surface-container flex flex-col xl:flex-row xl:items-center justify-between gap-space-md bg-surface-container-low/60 -mx-space-lg -mb-space-lg px-space-lg py-space-md">
               <div className="flex flex-wrap items-center gap-space-lg">
                 <div className="flex items-center gap-space-sm">
@@ -558,8 +570,10 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </ScreenDialog>
               </div>
             </div>
+            ))}
           </div>
         </section>
+        {slot(slots, "attention", (
         <section className="mb-space-lg bg-surface-container-lowest rounded-xl p-space-lg shadow-sm border-l-4 border-l-error">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-space-sm border-b border-surface-container">
             <div className="flex items-center gap-space-xs">
@@ -642,6 +656,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
             </div>
           </div>
         </section>
+        ))}
         {slot(
           slots,
           "kpis",
@@ -763,6 +778,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
         )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
           <div className="lg:col-span-8 flex flex-col gap-space-lg">
+            {slot(slots, "crops", (
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm pb-space-md border-b border-surface-container">
                 <div>
@@ -895,6 +911,8 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </div>
               </div>
             </div>
+            ))}
+            {slot(slots, "livestock", (
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm pb-space-md border-b border-surface-container">
                 <div>
@@ -999,6 +1017,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </div>
               </div>
             </div>
+            ))}
 {slot(
               slots,
               "operations",
@@ -1135,6 +1154,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
             )}
           </div>
           <div className="lg:col-span-4 flex flex-col gap-space-lg">
+            {slot(slots, "machinery", (
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
               <div className="flex items-center justify-between pb-space-md border-b border-surface-container">
                 <div className="flex items-center gap-space-xs">
@@ -1225,6 +1245,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </button>
               </div>
             </div>
+            ))}
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
               <div className="flex items-center justify-between pb-space-md border-b border-surface-container">
                 <div className="flex items-center gap-space-xs">
@@ -1338,6 +1359,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </form>
               </div>
             </div>
+            {slot(slots, "stock", (
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
               <div className="flex items-center justify-between pb-space-md border-b border-surface-container">
                 <div className="flex items-center gap-space-xs">
@@ -1385,6 +1407,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 </button>
               </div>
             </div>
+            ))}
           </div>
         </div>
         {slot(

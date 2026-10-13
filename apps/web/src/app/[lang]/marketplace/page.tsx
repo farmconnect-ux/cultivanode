@@ -47,7 +47,7 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
 
   // marketplace_* tables are newer than the generated types, hence the loose client.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from("marketplace_listings")
     .select(`
       id, title, listing_type, base_price_kobo, unit, available_quantity, location_state, location_lga,

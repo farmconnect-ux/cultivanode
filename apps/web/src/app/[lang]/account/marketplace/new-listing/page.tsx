@@ -15,7 +15,7 @@ export default async function NewMarketplaceListingPage({
   if (!hasLocale(lang)) notFound();
 
   const account = await requireAccount(lang);
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   // Fetch categories, and any farms/harvests the user owns if they are a CultivaNode farmer
   const [{ data: categories }, { data: farms }, { data: harvests }] = await Promise.all([
@@ -86,7 +86,7 @@ export default async function NewMarketplaceListingPage({
             <div>
               <label className="text-xs font-semibold text-muted">Market Category</label>
               <select name="category_id" required className="mt-1 w-full rounded-md border border-line p-2 text-sm bg-white">
-                {categories?.map((c: any) => (
+                {categories?.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
@@ -184,7 +184,7 @@ export default async function NewMarketplaceListingPage({
                   <label className="text-xs font-semibold text-muted">Select Origin Farm</label>
                   <select name="farm_id" className="mt-1 w-full rounded-md border border-line p-2 text-sm bg-white">
                     <option value="">-- None (Independent Listing) --</option>
-                    {farms?.map((f: any) => (
+                    {farms?.map((f) => (
                       <option key={f.id} value={f.id}>{f.name} ({f.state})</option>
                     ))}
                   </select>
@@ -193,7 +193,7 @@ export default async function NewMarketplaceListingPage({
                   <label className="text-xs font-semibold text-muted">Select Harvest Batch</label>
                   <select name="harvest_id" className="mt-1 w-full rounded-md border border-line p-2 text-sm bg-white">
                     <option value="">-- None --</option>
-                    {harvests?.map((h: any) => (
+                    {harvests?.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.batch_code} ({h.quantity_kg} kg - {h.quality_grade})
                       </option>

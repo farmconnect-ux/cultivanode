@@ -1,168 +1,159 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
-import { Button } from "@/components/ui";
-import { GrantsHub } from "@/components/screens/grants-hub";
+import { applyForGrant, createGrantProgramme, reviewGrantApplication } from "@/actions/ecosystem";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, Section, Stack, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { farmOptions, loadFarmScope } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, relDays } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import { submitGrantApplication } from "@/actions/grants";
+import { formatDay } from "@/lib/text";
 
-export const metadata: Metadata = { title: "Grants, subsidies & sovereign agro-programmes" };
+export const metadata: Metadata = { title: "Grants & subsidies" };
 
 export default async function Page({ params }: PageProps<"/[lang]/account/grants">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: grants } = farmIds.length
-    ? await (supabase.from("farm_grant_applications") as any)
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const grantList = (grants ?? []) as any[];
-  const hasLiveGrants = grantList.length > 0;
-
-  const grantModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="assignment_add" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Apply for Agro-Subsidy &amp; Input Voucher
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={submitGrantApplication} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Beneficiary Farm <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} ({f.state})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">Programme Window</label>
-          <select
-            name="programme_name"
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            <option value="National Agricultural Growth Scheme (NAGS-AP)">National Agricultural Growth Scheme (NAGS-AP)</option>
-            <option value="Oyo State Cares (Oyo-AgRes) Input Subsidies">Oyo State Cares (Oyo-AgRes) Input Subsidies</option>
-            <option value="AfDB Special Agro-Industrial Processing Zone (SAPZ)">AfDB Special Agro-Industrial Processing Zone (SAPZ)</option>
-            <option value="World Bank Agro-Climatic Resilience (ACReSAL)">World Bank Agro-Climatic Resilience (ACReSAL)</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Grant / Voucher Type</label>
-            <select
-              name="grant_type"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="fertilizer_voucher">50% Subsidized Fertilizer Voucher</option>
-              <option value="certified_seed_pack">Foundation Certified Seeds Grant</option>
-              <option value="solar_irrigation_kit">Off-Grid Solar Water Pump Grant</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Requested Value (₦)</label>
-            <input
-              name="requested_value_minor"
-              type="number"
-              defaultValue="250000"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg bg-secondary-container/20 text-on-secondary-container text-xs flex items-center gap-2">
-          <Icon name="verified" className="text-base shrink-0" />
-          <span>Vouchers are tokenized with unique cryptographic codes redeemable directly at verified agro-dealer redemption centers across Oyo State. Direct settlement policy: 0% platform commission.</span>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            type="submit"
-            className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
-          >
-            Submit Application
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  const uid = account.userId;
+  const [{ data: programmes }, { data: mine }] = await Promise.all([
+    supabase.from("grant_programmes").select("*, grant_applications(id, applicant_id, amount_requested_kobo, amount_awarded_kobo, proposal, score, status, submitted_at)").order("closes_on"),
+    supabase.from("grant_applications").select("*, grant_programmes(title, funder)").eq("applicant_id", uid).order("submitted_at", { ascending: false }),
+  ]);
+  const p = programmes ?? [];
+  const open = p.filter((x) => x.status === "open" && x.closes_on >= new Date().toISOString().slice(0, 10));
+  const owned = p.filter((x) => x.owner_id === uid);
+  const applied = new Set((mine ?? []).map((a) => a.programme_id));
+  const awarded = (mine ?? []).reduce((s, a) => s + Number(a.amount_awarded_kobo ?? 0), 0);
+  const reviewQueue = owned.flatMap((x) => (x.grant_applications ?? []).map((a) => ({ ...a, programme: x.title })));
 
   return (
-    <>
-      <LiveStrip tone={hasLiveGrants ? "live" : "preview"}>
-        {hasLiveGrants
-          ? `Showing ${grantList.length} sovereign subsidy voucher${grantList.length === 1 ? "" : "s"} under NAGS-AP and Oyo-AgRes verification.`
-          : "Government and donor subsidy window displays reference allocations until you apply for input or mechanization grants."}
-      </LiveStrip>
-
-      <GrantsHub
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex items-center gap-space-sm">
-              <ScreenDialog title="Apply for Voucher" side="center" panel={grantModal}>
-                <Button
-                  className="flex items-center gap-space-xs px-space-md py-1.5 bg-primary-container text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-primary transition-all font-semibold"
-                >
-                  <Icon name="assignment_add" className="text-[18px] text-secondary-fixed" />
-                  <span>Apply for Voucher</span>
-                </Button>
-              </ScreenDialog>
-              <Link
-                href={`/${lang}/account/cooperative`}
-                className="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded-lg shadow-sm hover:bg-surface-container transition-all"
-              >
-                <Icon name="groups" className="text-[18px] text-secondary" />
-                <span>Cooperative Pooling</span>
-              </Link>
-            </div>
-          ),
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={<Chip icon="volunteer_activism">{open.length} programmes open</Chip>}
+        title="Grants & Subsidies"
+        description="Open programmes you can apply to, your applications, and — if you run a programme — the applications to score."
+        actions={
+          <ActionDialog
+            title="Publish a grant programme"
+            trigger="New programme"
+            tone="secondary"
+            action={createGrantProgramme}
+            hidden={{ lang }}
+            fields={[
+              { name: "title", label: "Title", required: true, wide: true },
+              { name: "funder", label: "Funder", required: true },
+              { name: "focus_area", label: "Focus", required: true },
+              { name: "max_award", label: "Max award (₦)", type: "number", required: true },
+              { name: "total_pool", label: "Total pool (₦)", type: "number" },
+              { name: "opens_on", label: "Opens", type: "date", required: true },
+              { name: "closes_on", label: "Closes", type: "date", required: true },
+              { name: "states", label: "States (comma separated)", placeholder: "Oyo, Ogun" },
+              { name: "eligibility", label: "Eligibility", type: "textarea" },
+              { name: "description", label: "Description", type: "textarea" },
+            ]}
+          />
+        }
       />
-    </>
+      <KpiGrid>
+        <MetricCard label="Open programmes" value={open.length} icon="volunteer_activism" foot={naira(open.reduce((s, x) => s + Number(x.total_pool_kobo ?? 0), 0)) + " in pools"} />
+        <MetricCard label="My applications" value={(mine ?? []).length} icon="assignment" foot={`${(mine ?? []).filter((a) => a.status === "shortlisted").length} shortlisted`} />
+        <MetricCard label="Awarded to me" value={naira(awarded)} icon="workspace_premium" foot={`${(mine ?? []).filter((a) => a.status === "awarded").length} awards`} />
+        <MetricCard label="Applications to review" value={reviewQueue.filter((a) => a.status === "submitted").length} icon="rule" foot={`${owned.length} programmes you run`} />
+      </KpiGrid>
+      <Section title="Open programmes" icon="campaign">
+        <div className="grid grid-cols-1 gap-space-md md:grid-cols-2 xl:grid-cols-3">
+          {open.map((x) => (
+            <div key={x.id} className="card-interactive flex flex-col gap-2 rounded-xl border border-outline-variant/40 p-space-md">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-label-lg text-label-lg text-on-surface">{x.title}</p>
+                <Chip>{x.focus_area}</Chip>
+              </div>
+              <p className="text-body-sm text-on-surface-variant">{x.funder} · up to {naira(x.max_award_kobo)} · closes {relDays(x.closes_on)}</p>
+              {x.description && <p className="text-body-sm text-on-surface">{x.description}</p>}
+              {x.eligibility && <p className="text-body-sm text-on-surface-variant">Eligible: {x.eligibility}</p>}
+              <div className="mt-auto pt-2">
+                {applied.has(x.id) ? (
+                  <Status value="submitted" />
+                ) : x.owner_id === uid ? (
+                  <Chip>Your programme</Chip>
+                ) : (
+                  <ActionDialog
+                    title={`Apply — ${x.title}`}
+                    trigger="Apply"
+                    tone="secondary"
+                    icon="send"
+                    action={applyForGrant}
+                    hidden={{ lang, programme_id: x.id }}
+                    fields={[
+                      { name: "amount_requested", label: "Amount (₦)", type: "number", required: true, max: Number(x.max_award_kobo) / 100 },
+                      { name: "farm_id", label: "Farm", type: "select", options: farmOptions(scope) },
+                      { name: "proposal", label: "Proposal", type: "textarea", required: true },
+                    ]}
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+          {!open.length && <p className="py-4 text-body-sm text-on-surface-variant">No programmes open right now.</p>}
+        </div>
+      </Section>
+      <Section title="My applications" icon="assignment">
+        <DataTable
+          rows={mine ?? []}
+          rowKey={(a) => a.id}
+          empty="You haven't applied yet."
+          columns={[
+            { label: "Programme", cell: (a) => <span className="font-medium">{a.grant_programmes?.title}</span> },
+            { label: "Funder", cell: (a) => a.grant_programmes?.funder },
+            { label: "Requested", numeric: true, cell: (a) => naira(a.amount_requested_kobo) },
+            { label: "Awarded", numeric: true, cell: (a) => (a.amount_awarded_kobo ? naira(a.amount_awarded_kobo) : "—") },
+            { label: "Score", numeric: true, cell: (a) => a.score ?? "—" },
+            { label: "Submitted", cell: (a) => (a.submitted_at ? formatDay(a.submitted_at.slice(0, 10), lang) : "—") },
+            { label: "Status", cell: (a) => <Status value={a.status} /> },
+          ]}
+        />
+      </Section>
+      {owned.length > 0 && (
+        <Section title="Applications to my programmes" icon="rule">
+          <DataTable
+            rows={reviewQueue}
+            rowKey={(a) => a.id}
+            empty="No applications yet."
+            columns={[
+              { label: "Programme", cell: (a) => a.programme },
+              { label: "Proposal", cell: (a) => <span className="line-clamp-2 max-w-sm">{a.proposal}</span> },
+              { label: "Requested", numeric: true, cell: (a) => naira(a.amount_requested_kobo) },
+              { label: "Score", numeric: true, cell: (a) => a.score ?? "—" },
+              { label: "Status", cell: (a) => <Status value={a.status} /> },
+              {
+                label: "",
+                cell: (a) =>
+                  a.status !== "awarded" && a.status !== "declined" ? (
+                    <ActionDialog
+                      title="Review application"
+                      trigger="Review"
+                      tone="ghost"
+                      icon="rule"
+                      action={reviewGrantApplication}
+                      hidden={{ lang, id: a.id }}
+                      fields={[
+                        { name: "status", label: "Decision", type: "select", required: true, options: ["shortlisted", "awarded", "declined"].map((v) => ({ value: v, label: label(v) })) },
+                        { name: "score", label: "Score (0–100)", type: "number", min: 0, max: 100 },
+                        { name: "amount_awarded", label: "Award (₦)", type: "number", defaultValue: Number(a.amount_requested_kobo) / 100 },
+                      ]}
+                    />
+                  ) : null,
+              },
+            ]}
+          />
+        </Section>
+      )}
+    </Stack>
   );
 }

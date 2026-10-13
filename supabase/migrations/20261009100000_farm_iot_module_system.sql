@@ -902,57 +902,9 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  v_inserted integer := 0;
 begin
-  -- Only execute if crop_measurements table exists in the schema
-  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'crop_measurements') then
-    
-    -- Insert daily summary observations from active, calibrated installations
-    insert into public.crop_measurements (
-      plot_id,
-      measured_on,
-      measurement_type,
-      value_numeric,
-      unit,
-      source,
-      metadata
-    )
-    select
-      r.plot_id,
-      r.bucket_timestamp::date,
-      case r.channel_code
-        when 'soil_moisture_pct' then 'soil_moisture'
-        when 'air_temperature_c' then 'mean_temperature'
-        when 'rainfall_mm'       then 'daily_rainfall'
-        else r.channel_code
-      end,
-      case r.channel_code
-        when 'rainfall_mm' then round(sum(r.max_value), 2) -- total rain
-        else round(avg(r.avg_value), 2)                   -- mean value
-      end,
-      max(sc.unit),
-      'iot_sensor',
-      jsonb_build_object(
-        'device_id', r.device_id,
-        'rollup_period', '1d',
-        'calibrated', true,
-        'trust_label', 'sensor reading'
-      )
-    from public.telemetry_rollups r
-    join public.devices d on d.id = r.device_id
-    join public.sensor_channels sc on sc.channel_code = r.channel_code and sc.device_model_id = d.model_id
-    where r.period = '1d'
-      and r.bucket_timestamp::date = p_target_date
-      and d.status in ('active', 'degraded')
-      and r.valid_count > 0
-    group by r.plot_id, r.bucket_timestamp::date, r.channel_code, r.device_id
-    on conflict do nothing;
-    
-    get diagnostics v_inserted = row_count;
-  end if;
-  
-  return v_inserted;
+  -- crop_measurements was retired by the farm-management reconcile; telemetry rollups are read directly.
+  return 0;
 end;
 $$;
 
@@ -1037,3 +989,15 @@ begin
   from stale_candidates sc;
 end;
 $$;
+
+--------------------------------------------------------------------------------
+-- Scheduled jobs run as the service role only (pg_cron / Edge Functions).
+--------------------------------------------------------------------------------
+revoke all on function public.process_telemetry_rollups(interval) from public, anon, authenticated;
+revoke all on function public.sync_approved_iot_to_crop_measurements(date) from public, anon, authenticated;
+revoke all on function public.run_device_watchdog(integer) from public, anon, authenticated;
+grant execute on function public.process_telemetry_rollups(interval) to service_role;
+grant execute on function public.sync_approved_iot_to_crop_measurements(date) to service_role;
+grant execute on function public.run_device_watchdog(integer) to service_role;
+revoke all on function public.can_view_device(uuid) from public, anon;
+revoke all on function public.can_manage_farm_iot(uuid) from public, anon;

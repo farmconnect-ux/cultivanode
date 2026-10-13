@@ -17,6 +17,7 @@ import { requireAccount } from "@/lib/account/session";
 import { resolveWorkspace } from "@/lib/account/workspace";
 import { createClient } from "@/lib/supabase/server";
 import { getFarmOperations } from "@/actions/farm-operations";
+import { loadOverviewPanels } from "@/components/live/overview-panels";
 
 /** Yorùbá greeting for the time of day in Lagos (the design greets the farmer in Yorùbá). */
 function greeting(now = new Date()) {
@@ -80,7 +81,7 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
   ]);
   const farmList = farms ?? [];
   const farmIds = farmList.map((f) => f.id);
-  const operations = await getFarmOperations(farmIds);
+  const [operations, panels] = await Promise.all([getFarmOperations(farmIds), loadOverviewPanels(lang, farmList)]);
   const bookings = ((bookingsRes ?? []) as unknown as BookingSummary[]).filter((b) => b.my_side === "farmer");
   const active = bookings.filter((b) => ACTIVE.includes(b.status));
   const upcoming = [...active].sort((x, y) => x.job_date.localeCompare(y.job_date));
@@ -101,7 +102,7 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
       {welcomeAlert}
       <LiveStrip>
         <span className="text-on-surface-variant">
-          Farms, bookings and verification are your live records. Weather, crop, livestock and stock panels show sample data until those modules are connected.
+          Farms, operations, weather, alerts and bookings on this page come from your live records.
         </span>
       </LiveStrip>
       <ExecutiveDashboard
@@ -179,6 +180,9 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
             </section>
           ),
           statusBar: null,
+          ...(panels.weather ? { weather: panels.weather } : {}),
+          ...(panels.attention ? { attention: panels.attention } : {}),
+          ...(panels.crops ? { crops: panels.crops, livestock: panels.livestock, machinery: panels.machinery, stock: panels.stock } : {}),
         }}
       />
     </>

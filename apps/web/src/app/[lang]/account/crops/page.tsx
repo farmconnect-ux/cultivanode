@@ -1,378 +1,251 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { addCropOperation, createCropCycle, createPlot } from "@/actions/farm-ops";
 import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { EmptyState } from "@/components/ds/empty-state";
-import { CropManagement } from "@/components/screens/crop-management";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, Meter, Pill, Section, Split, Stack, StartHere, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { cap, cycleOptions, farmOptions, loadFarmScope, plotOptions } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { mass, naira, num, relDays, share, nowMs } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
+import { formatDay } from "@/lib/text";
 
 export const metadata: Metadata = { title: "Crop management" };
+
+const CROPS = ["maize", "cassava", "soybean", "rice", "sorghum", "yam", "cowpea", "groundnut", "tomato", "pepper", "okra", "cucumber", "watermelon"].map((c) => ({ value: c, label: cap(c) }));
+const HEALTH_TONE = { healthy: "positive", watch: "caution", at_risk: "critical", critical: "critical" } as const;
 
 export default async function Page({ params }: PageProps<"/[lang]/account/crops">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
+  const ids = scope.farmIds;
 
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
+  const [{ data: cycles }, { data: ops }] = ids.length
+    ? await Promise.all([
+        supabase
+          .from("crop_cycles")
+          .select("id, farm_id, plot_id, crop_id, variety_id, season, status, current_stage, target_area_ha, planting_date, expected_harvest_date, target_yield_kg, actual_yield_kg, health_score, health_status, estimated_budget_kobo, actual_cost_kobo")
+          .in("farm_id", ids)
+          .order("planting_date", { ascending: false }),
+        supabase
+          .from("crop_cycle_operations")
+          .select("id, crop_cycle_id, name, operation_type, stage, status, scheduled_date")
+          .in("crop_cycle_id", scope.cycles.map((c) => c.id).concat("00000000-0000-0000-0000-000000000000"))
+          .neq("status", "completed")
+          .order("scheduled_date")
+          .limit(12),
+      ])
+    : [{ data: [] }, { data: [] }];
 
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
+  const all = cycles ?? [];
+  const active = all.filter((c) => !["completed", "abandoned"].includes(c.status));
+  const plotName = new Map(scope.plots.map((p) => [p.id, p.name]));
+  const farmName = new Map(scope.farms.map((f) => [f.id, f.name]));
+  const cycleName = new Map(all.map((c) => [c.id, `${cap(c.crop_id)} ${c.variety_id ?? ""}`.trim()]));
+  const area = active.reduce((s, c) => s + Number(c.target_area_ha), 0);
+  const projected = active.reduce((s, c) => s + Number(c.target_yield_kg ?? 0), 0);
+  const budget = active.reduce((s, c) => s + Number(c.estimated_budget_kobo), 0);
+  const spent = active.reduce((s, c) => s + Number(c.actual_cost_kobo), 0);
+  const avgHealth = active.length ? active.reduce((s, c) => s + Number(c.health_score ?? 0), 0) / active.length : 0;
+  const atRisk = active.filter((c) => c.health_status === "at_risk" || c.health_status === "critical");
+  const hidden = { lang };
 
-  const { data: plots } = farmIds.length
-    ? await supabase.from("plots").select("id, farm_id, name, area_ha").in("farm_id", farmIds)
-    : { data: [] };
-
-  const plotList = plots ?? [];
-  const plotIds = plotList.map((p) => p.id);
-  const plotMap = new Map(plotList.map((p) => [p.id, p]));
-
-  const { data: cycles } = farmIds.length
-    ? await supabase
-        .from("crop_cycles")
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const rawCycles = (cycles ?? []) as any[];
-  const cycleList = rawCycles.map((c) => {
-    let cropName = c.crop_name;
-    let variety = c.variety || c.variety_id || "";
-    let plantedAreaHa = c.planted_area_hectares ?? c.target_area_ha;
-    let startDate = c.start_date || c.planting_date;
-
-    if (!cropName && c.notes && typeof c.notes === "string" && c.notes.includes("[front_end_meta:")) {
-      const match = c.notes.match(/\[front_end_meta:\s*([^\]]+)\]/);
-      if (match && match[1]) {
-        const parts = match[1].split(",").map((s: string) => s.trim());
-        for (const part of parts) {
-          const [k, v] = part.split(":");
-          if (k === "crop_name" && v) cropName = v;
-          if (k === "variety" && v && !variety) variety = v;
-          if (k === "planted_area_hectares" && v && !plantedAreaHa) plantedAreaHa = parseFloat(v);
-          if (k === "start_date" && v && !startDate) startDate = v;
-        }
-      }
-    }
-
-    if (!cropName) {
-      cropName = c.crop_id ? c.crop_id.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Crop";
-    }
-
-    return {
-      ...c,
-      crop_name: cropName,
-      variety,
-      planted_area_hectares: Number(plantedAreaHa ?? 1),
-      start_date: startDate,
-      target_yield_kg: Number(c.target_yield_kg ?? 0),
-    };
-  });
-  const cycleIds = cycleList.map((c) => c.id);
-
-  const { data: observations } = cycleIds.length
-    ? await supabase
-        .from("crop_observations")
-        .select("*")
-        .in("crop_cycle_id", cycleIds)
-        .order("observed_at", { ascending: false })
-        .limit(6)
-    : { data: [] };
-
-  const obsList = ((observations ?? []) as any[]).map((o) => ({
-    ...o,
-    observation_type: o.observation_type || o.category || "General",
-    recommended_action: o.recommended_action || "",
-  }));
-
-  const totalPlantedHa = cycleList.reduce(
-    (sum, c) => sum + (Number(c.planted_area_hectares) || 0),
-    0
+  const startCycle = (
+    <ActionDialog
+      title="Start a crop cycle"
+      description="Plan a planting on one of your plots. Maize, cassava and soybean link to the GAP standard automatically."
+      trigger="New crop cycle"
+      action={createCropCycle}
+      hidden={hidden}
+      fields={[
+        { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+        { name: "plot_id", label: "Plot", type: "select", options: plotOptions(scope) },
+        { name: "crop_id", label: "Crop", type: "select", required: true, options: CROPS },
+        { name: "variety_id", label: "Variety", placeholder: "e.g. SAMMAZ 15" },
+        { name: "season", label: "Season", placeholder: `${new Date().getFullYear()} late season` },
+        { name: "target_area_ha", label: "Area (ha)", type: "number", required: true, min: 0.01 },
+        { name: "planting_date", label: "Planting date", type: "date", required: true },
+        { name: "expected_harvest_date", label: "Expected harvest", type: "date", required: true },
+        { name: "target_yield_kg", label: "Target yield (kg)", type: "number" },
+        { name: "estimated_budget", label: "Budget (₦)", type: "number" },
+      ]}
+    />
   );
-  const totalTargetYieldMt = (
-    cycleList.reduce((sum, c) => sum + (Number(c.target_yield_kg) || 0), 0) / 1000
-  ).toFixed(1);
-
-  const hasLiveCycles = cycleList.length > 0;
 
   return (
-    <>
-      <LiveStrip tone={hasLiveCycles ? "live" : "preview"}>
-        {hasLiveCycles
-          ? `Showing ${cycleList.length} active crop cycle${cycleList.length === 1 ? "" : "s"} across ${plotList.length} plots.`
-          : "Crop cycles, phenology and scouting logs show sample data until you start a crop cycle on one of your plots."}
-      </LiveStrip>
-      <CropManagement
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex items-center gap-space-sm flex-wrap self-start md:self-center">
-              <Link
-                href={`/${lang}/account/crops/new`}
-                className="flex items-center gap-space-xs px-space-md py-2.5 bg-primary-container hover:bg-primary text-on-primary rounded-lg font-label-lg text-label-lg transition-all shadow-sm font-semibold"
-              >
-                <Icon name="add" className="text-lg" />
-                <span>Start New Crop Cycle</span>
-              </Link>
-              <Link
-                href={`/${lang}/account/crops/scouting`}
-                className="flex items-center gap-space-xs px-space-md py-2.5 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg font-label-lg text-label-lg transition-all font-semibold"
-              >
-                <Icon name="add_a_photo" className="text-lg text-secondary" />
-                <span>Field Scouting Log</span>
-              </Link>
-            </div>
-          ),
-          kpis: hasLiveCycles ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
-              <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                    Active Planted Area
-                  </span>
-                  <div className="p-2 rounded-lg bg-surface-container text-secondary">
-                    <Icon name="fence" className="text-xl" />
-                  </div>
-                </div>
-                <div className="my-space-md">
-                  <div className="flex items-baseline gap-space-xs">
-                    <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">
-                      {totalPlantedHa.toFixed(1)}
-                    </span>
-                    <span className="font-label-lg text-label-lg text-on-surface-variant font-semibold">
-                      Ha
-                    </span>
-                  </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                    {plotList.length} operational field plot{plotList.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-space-xs text-secondary font-label-sm text-label-sm font-semibold">
-                  <Icon name="check_circle" className="text-sm" />
-                  <span>{cycleList.length} Active Cycles (Igba Ewe)</span>
-                </div>
-              </div>
-              <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                    Projected Season Yield
-                  </span>
-                  <div className="p-2 rounded-lg bg-surface-container text-secondary">
-                    <Icon name="grain" className="text-xl" />
-                  </div>
-                </div>
-                <div className="my-space-md">
-                  <div className="flex items-baseline gap-space-xs">
-                    <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">
-                      {totalTargetYieldMt}
-                    </span>
-                    <span className="font-label-lg text-label-lg text-on-surface-variant font-semibold">
-                      MT
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-secondary font-label-md text-label-md font-bold mt-1">
-                    <Icon name="trending_up" className="text-sm" />
-                    <span>Target Production Output</span>
-                  </div>
-                </div>
-                <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-secondary h-1.5 rounded-full" style={{ width: "85%" }} />
-                </div>
-              </div>
-              <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                    Scouting Records
-                  </span>
-                  <div className="p-2 rounded-lg bg-surface-container text-secondary">
-                    <Icon name="fact_check" className="text-xl" />
-                  </div>
-                </div>
-                <div className="my-space-md">
-                  <div className="flex items-baseline gap-space-xs">
-                    <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">
-                      {obsList.length}
-                    </span>
-                    <span className="font-label-lg text-label-lg text-on-surface-variant font-semibold">
-                      Logs
-                    </span>
-                  </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                    Field diagnostics &amp; scouting sweeps
-                  </p>
-                </div>
-                <div className="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-                  <span>Epidemiology status</span>
-                  <span className="text-secondary font-semibold">Synchronized</span>
-                </div>
-              </div>
-              <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                    Field Plots Registered
-                  </span>
-                  <div className="p-2 rounded-lg bg-secondary-container text-on-secondary-container">
-                    <Icon name="verified" className="text-xl" />
-                  </div>
-                </div>
-                <div className="my-space-md">
-                  <div className="flex items-baseline gap-space-xs">
-                    <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-secondary font-bold">
-                      {plotList.length}
-                    </span>
-                    <span className="font-label-lg text-label-lg text-on-surface-variant font-semibold">
-                      Plots
-                    </span>
-                  </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                    {farmList.length} Farm enterprise{farmList.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-space-xs text-secondary font-label-sm text-label-sm font-semibold">
-                  <Icon name="check_circle" className="text-sm" />
-                  <span>Cadastral Demarcation Active</span>
-                </div>
-              </div>
-            </div>
-          ) : undefined,
-          portfolios: hasLiveCycles ? (
-            <div className="flex flex-col space-y-space-md">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
-                <div>
-                  <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">
-                    Active Crop Portfolios &amp; Phenology Stages
-                  </h2>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Live telemetry calculated from temperature sums, canopy reflectance &amp; phenological modeling.
-                  </p>
-                </div>
-                <Link
-                  href={`/${lang}/account/crops/new`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-container text-on-primary rounded-lg font-label-sm text-label-sm font-semibold hover:bg-primary transition-all self-start sm:self-center"
-                >
-                  <Icon name="add" className="text-base" /> Start Another Cycle
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
-                {cycleList.map((cycle) => {
-                  const plot = cycle.plot_id ? plotMap.get(cycle.plot_id) : undefined;
+    <Stack>
+      <PageHeader
+        eyebrow={
+          <>
+            <Chip icon="potted_plant">{active.length} active cycles</Chip>
+            <Chip icon="landscape">{scope.plots.length} plots</Chip>
+          </>
+        }
+        title="Crop Phenology & Production"
+        description="Every crop cycle on your farms — stage, health, cost against budget and the operations coming up."
+        actions={
+          <>
+            <Link href={`/${lang}/account/crops/scouting`} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3.5 py-2 font-label-md text-label-md text-on-surface shadow-sm ring-1 ring-outline-variant/60 hover:bg-surface-container-low">
+              <Icon name="pest_control" className="text-base" /> Field scouting
+            </Link>
+            {scope.farms.length > 0 && (
+              <ActionDialog
+                title="Add a plot"
+                trigger="Add plot"
+                icon="add_location_alt"
+                tone="secondary"
+                action={createPlot}
+                hidden={hidden}
+                fields={[
+                  { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+                  { name: "name", label: "Plot name", required: true },
+                  { name: "plot_code", label: "Code", placeholder: "NB-A" },
+                  { name: "area_ha", label: "Area (ha)", type: "number" },
+                  { name: "soil_texture", label: "Soil texture", type: "select", options: ["sandy", "loamy_sand", "sandy_loam", "loam", "silt_loam", "clay_loam", "clay"].map((v) => ({ value: v, label: cap(v.replace(/_/g, " ")) })) },
+                  { name: "irrigation_type", label: "Water", type: "select", options: ["rainfed", "drip", "sprinkler", "furrow", "manual"].map((v) => ({ value: v, label: cap(v) })) },
+                ]}
+              />
+            )}
+            {scope.farms.length > 0 && startCycle}
+          </>
+        }
+      />
+
+      {!scope.farms.length && (
+        <StartHere title="Register a farm first" action={<Link className="font-label-md text-primary-container" href={`/${lang}/account/farms/new`}>Add a farm →</Link>}>
+          Crop cycles live on your farm&apos;s plots.
+        </StartHere>
+      )}
+
+      <KpiGrid>
+        <MetricCard label="Active planted area" value={num(area, 1)} unit="ha" icon="fence" foot={`${active.length} cycles across ${new Set(active.map((c) => c.farm_id)).size} farms`} />
+        <MetricCard label="Projected yield" value={mass(projected)} icon="grain" foot="Sum of target yields for active cycles" />
+        <MetricCard
+          label="Cost vs budget"
+          value={`${Math.round(share(spent, budget))}%`}
+          icon="account_balance_wallet"
+          foot={`${naira(spent)} of ${naira(budget)}`}
+        />
+        <MetricCard
+          label="Crop health index"
+          value={`${Math.round(avgHealth * 100)}`}
+          unit="/100"
+          icon="health_and_safety"
+          iconTone={atRisk.length ? "bg-critical-soft text-critical" : undefined}
+          foot={atRisk.length ? `${atRisk.length} cycle${atRisk.length > 1 ? "s" : ""} at risk` : "No cycles at risk"}
+        />
+      </KpiGrid>
+
+      <Split
+        wide={
+          <Section title="Active crop portfolio" icon="potted_plant" description="Stage progress is days since planting over the season length.">
+            {active.length ? (
+              <div className="grid grid-cols-1 gap-space-md md:grid-cols-2">
+                {active.map((c) => {
+                  const total = Math.max(1, (Date.parse(c.expected_harvest_date) - Date.parse(c.planting_date)) / 86_400_000);
+                  const done = Math.max(0, (nowMs() - Date.parse(c.planting_date)) / 86_400_000);
+                  const prog = share(done, total);
                   return (
-                    <div
-                      key={cycle.id}
-                      className="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between overflow-hidden group hover:shadow-md transition-shadow"
-                    >
-                      <div className="p-space-lg space-y-space-md">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold">
-                              {plot ? `${plot.name} · ${plot.area_ha || cycle.planted_area_hectares} Ha` : `${cycle.planted_area_hectares} Ha`}
-                            </span>
-                            <h3 className="font-headline-md text-headline-md text-on-surface mt-1">
-                              {cycle.crop_name} {cycle.variety ? `(${cycle.variety})` : ""}
-                            </h3>
-                            <p className="font-body-sm text-body-sm text-on-surface-variant">
-                              {cycle.season || "Early Rains 2026"}
-                            </p>
-                          </div>
-                          <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold uppercase">
-                            {cycle.current_stage || cycle.status}
-                          </span>
+                    <Link key={c.id} href={`/${lang}/account/crops/${c.id}`} className="card-interactive flex flex-col gap-3 rounded-xl border border-outline-variant/40 p-space-md">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-label-sm text-label-sm text-on-surface-variant">
+                            {(c.plot_id && plotName.get(c.plot_id)) || "No plot"} · {num(c.target_area_ha, 1)} ha · {farmName.get(c.farm_id)}
+                          </p>
+                          <p className="font-headline-sm text-headline-sm text-on-surface">
+                            {cap(c.crop_id)} {c.variety_id}
+                          </p>
                         </div>
-                        <div className="bg-surface-container-low p-space-md rounded-lg space-y-space-xs">
-                          <div className="flex items-center justify-between text-on-surface font-label-sm text-label-sm">
-                            <span className="font-semibold">Lifecycle Status</span>
-                            <span className="text-secondary font-bold capitalize">{cycle.status}</span>
-                          </div>
-                          <div className="w-full bg-surface-container-highest rounded-full h-2">
-                            <div
-                              className="bg-secondary h-2 rounded-full"
-                              style={{ width: cycle.status === "completed" ? "100%" : "60%" }}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-space-sm font-label-sm text-label-sm">
-                          <div className="bg-surface p-space-sm rounded">
-                            <p className="text-on-surface-variant">Planted Date</p>
-                            <p className="font-metric-num text-headline-sm text-primary font-bold">
-                              {cycle.start_date ? formatDate(cycle.start_date, lang) : "—"}
-                            </p>
-                          </div>
-                          <div className="bg-surface p-space-sm rounded">
-                            <p className="text-on-surface-variant">Target Yield</p>
-                            <p className="font-metric-num text-headline-sm text-secondary font-bold">
-                              {cycle.target_yield_kg ? `${cycle.target_yield_kg.toLocaleString()} kg` : "—"}
-                            </p>
-                          </div>
-                        </div>
+                        {c.health_status && <Pill tone={HEALTH_TONE[c.health_status as keyof typeof HEALTH_TONE] ?? "neutral"}>{c.health_status.replace("_", " ")}</Pill>}
                       </div>
-                      <div className="bg-surface-container-low px-space-lg py-space-sm flex items-center justify-between font-label-sm text-label-sm">
-                        <span className="text-on-surface-variant">Target Harvest: {cycle.expected_harvest_date ? formatDate(cycle.expected_harvest_date, lang) : "TBD"}</span>
-                        <Link
-                          className="text-secondary hover:text-primary font-semibold flex items-center gap-0.5"
-                          href={`/${lang}/account/crops/${cycle.id}`}
-                        >
-                          View Plan <Icon name="arrow_forward" className="text-sm" />
-                        </Link>
+                      <div>
+                        <div className="mb-1 flex justify-between text-body-sm">
+                          <span className="text-on-surface">{c.current_stage ?? cap(c.status.replace(/_/g, " "))}</span>
+                          <span className="text-on-surface-variant">harvest {relDays(c.expected_harvest_date)}</span>
+                        </div>
+                        <Meter value={prog} />
                       </div>
-                    </div>
+                      <div className="flex justify-between text-body-sm text-on-surface-variant">
+                        <span>Target {mass(c.target_yield_kg)}</span>
+                        <span>
+                          {naira(c.actual_cost_kobo)} / {naira(c.estimated_budget_kobo)}
+                        </span>
+                      </div>
+                    </Link>
                   );
                 })}
               </div>
-            </div>
-          ) : undefined,
-          scouting: obsList.length > 0 ? (
-            <div className="space-y-space-md">
-              {obsList.map((obs) => (
-                <div key={obs.id} className="bg-surface-container-low p-space-md rounded-xl space-y-space-sm">
-                  <div className="flex items-center justify-between flex-wrap gap-1">
-                    <div className="flex items-center gap-space-xs">
-                      <span className="font-label-lg text-label-lg font-bold text-on-surface">
-                        {obs.title}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold uppercase ${
-                          obs.severity === "high" || obs.severity === "critical"
-                            ? "bg-error-container text-on-error-container"
-                            : "bg-secondary-container text-on-secondary-container"
-                        }`}
-                      >
-                        {obs.severity} Priority
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">
-                      {obs.observed_at ? formatDate(obs.observed_at, lang) : "Recent"}
-                    </span>
+            ) : (
+              <p className="py-6 text-center text-body-sm text-on-surface-variant">No active crop cycles. Start one to track stages, inputs and costs.</p>
+            )}
+          </Section>
+        }
+        side={
+          <Section
+            title="Upcoming operations"
+            icon="event_upcoming"
+            action={
+              scope.cycles.length > 0 && (
+                <ActionDialog
+                  title="Schedule an operation"
+                  trigger="Schedule"
+                  icon="add"
+                  tone="ghost"
+                  action={addCropOperation}
+                  hidden={hidden}
+                  fields={[
+                    { name: "crop_cycle_id", label: "Crop cycle", type: "select", required: true, options: cycleOptions(scope) },
+                    { name: "operation_type", label: "Type", type: "select", required: true, options: ["land_prep", "planting", "fertiliser", "weed_control", "pest_control", "disease_control", "irrigation", "scouting", "harvest", "other"].map((v) => ({ value: v, label: cap(v.replace(/_/g, " ")) })) },
+                    { name: "name", label: "What", required: true, placeholder: "Urea top-dressing" },
+                    { name: "scheduled_date", label: "Date", type: "date", required: true },
+                    { name: "stage", label: "Crop stage", placeholder: "Vegetative" },
+                    { name: "required_machinery", label: "Machinery", placeholder: "Boom sprayer" },
+                  ]}
+                />
+              )
+            }
+          >
+            <ul className="flex flex-col divide-y divide-outline-variant/30">
+              {(ops ?? []).map((o) => (
+                <li key={o.id} className="flex items-start justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate font-label-lg text-label-lg text-on-surface">{o.name}</p>
+                    <p className="text-body-sm text-on-surface-variant">
+                      {cycleName.get(o.crop_cycle_id)} · {formatDay(o.scheduled_date, lang)}
+                    </p>
                   </div>
-                  {obs.description && (
-                    <p className="font-body-sm text-body-sm text-on-surface">{obs.description}</p>
-                  )}
-                  {obs.recommended_action && (
-                    <div className="p-space-xs bg-surface-container rounded font-label-sm text-label-sm text-on-surface space-y-0.5">
-                      <span className="font-bold text-primary flex items-center gap-1">
-                        <Icon name="recommend" className="text-sm" /> Recommended Agronomic Action:
-                      </span>
-                      <p className="text-xs text-on-surface-variant">{obs.recommended_action}</p>
-                    </div>
-                  )}
-                </div>
+                  <Status value={o.status} />
+                </li>
               ))}
-            </div>
-          ) : undefined,
-        }}
+              {!ops?.length && <li className="py-6 text-center text-body-sm text-on-surface-variant">Nothing scheduled.</li>}
+            </ul>
+          </Section>
+        }
       />
-    </>
+
+      <Section title="Season history" icon="history" description="Completed and abandoned cycles with actual yield.">
+        <DataTable
+          rows={all.filter((c) => ["completed", "abandoned"].includes(c.status))}
+          rowKey={(c) => c.id}
+          empty="No completed cycles yet."
+          columns={[
+            { label: "Crop", cell: (c) => <Link className="font-medium text-primary-container hover:underline" href={`/${lang}/account/crops/${c.id}`}>{cap(c.crop_id)} {c.variety_id}</Link> },
+            { label: "Season", cell: (c) => c.season },
+            { label: "Area", numeric: true, cell: (c) => `${num(c.target_area_ha, 1)} ha` },
+            { label: "Yield", numeric: true, cell: (c) => mass(c.actual_yield_kg) },
+            { label: "Yield / ha", numeric: true, cell: (c) => `${num(Number(c.actual_yield_kg) / Number(c.target_area_ha))} kg` },
+            { label: "Cost", numeric: true, cell: (c) => naira(c.actual_cost_kobo) },
+            { label: "Status", cell: (c) => <Status value={c.status} /> },
+          ]}
+        />
+      </Section>
+    </Stack>
   );
 }

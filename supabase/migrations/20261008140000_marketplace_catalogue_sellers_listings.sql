@@ -210,7 +210,6 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_sync_marketplace_listing_qty on public.marketplace_inventory_lots;
 create trigger trg_sync_marketplace_listing_qty
 after insert or update or delete on public.marketplace_inventory_lots
 for each row execute function public.sync_marketplace_listing_available_qty();

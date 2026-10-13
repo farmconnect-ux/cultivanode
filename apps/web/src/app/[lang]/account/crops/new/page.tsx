@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui";
 import { Icon } from "@/components/ds/icon";
+import { nowMs } from "@/lib/format";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
-import { createCropCycle } from "@/actions/crop-plans";
+import { createCropCycle } from "@/actions/farm-ops";
 
 export const metadata: Metadata = { title: "Start New Crop Cycle" };
 
@@ -29,9 +30,9 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
   if (!hasLocale(lang)) notFound();
   const sp = searchParams ? await searchParams : {};
 
-  // Compute default harvest date once to avoid impure Date.now() in render
+  // Compute default harvest date once to avoid impure nowMs() in render
   // eslint-disable-next-line react-hooks/purity -- Server Component: default date computed once per request
-  const defaultHarvestDate = new Date(Date.now() + 110 * 24 * 60 * 60 * 1000)
+  const defaultHarvestDate = new Date(nowMs() + 110 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
   const errorMessage = sp?.error ? decodeURIComponent(sp.error) : null;
@@ -59,10 +60,22 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
 
   async function handleCreate(formData: FormData) {
     "use server";
-    const res = await createCropCycle(formData);
-    if (res && "error" in res && res.error) {
-      redirect(`/${lang}/account/crops/new?error=${encodeURIComponent(res.error)}`);
-    }
+    // Translate this form's field names to the crop-cycle action's.
+    const f = new FormData();
+    const g = (k: string) => String(formData.get(k) ?? "").trim();
+    f.set("lang", lang);
+    f.set("farm_id", g("farm_id"));
+    f.set("plot_id", g("plot_id"));
+    f.set("crop_id", g("crop_name").split(/[\s(]/)[0].toLowerCase());
+    f.set("variety_id", g("variety"));
+    f.set("season", g("season"));
+    f.set("target_area_ha", g("planted_area_hectares"));
+    f.set("planting_date", g("start_date"));
+    f.set("expected_harvest_date", g("target_harvest_date"));
+    f.set("target_yield_kg", g("target_yield_kg"));
+    f.set("estimated_budget", g("budget_naira"));
+    const res = await createCropCycle(null, f);
+    if (!res?.ok) redirect(`/${lang}/account/crops/new?error=${encodeURIComponent(res?.message ?? "Couldn't start the crop cycle.")}`);
     redirect(`/${lang}/account/crops`);
   }
 
@@ -312,13 +325,13 @@ export default async function NewCropCyclePage({ params, searchParams }: Props) 
 
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-1">
-                  Budget Cap (Kobo / Minor Units)
+                  Budget (₦)
                 </label>
                 <input
                   type="number"
-                  name="budget_cap_minor"
-                  placeholder="e.g. 85000000 (for ₦850,000)"
-                  defaultValue="85000000"
+                  name="budget_naira"
+                  placeholder="e.g. 850000"
+                  defaultValue="850000"
                   className="w-full h-11 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>

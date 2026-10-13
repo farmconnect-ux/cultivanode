@@ -36,6 +36,7 @@ export interface BookingJobData {
 }
 
 export interface OperatorDispatchProps {
+  lang?: ScreenProps["lang"];
   slots: ScreenProps<OperatorDispatchSlot>["slots"];
   activeJob?: BookingJobData | null;
 }

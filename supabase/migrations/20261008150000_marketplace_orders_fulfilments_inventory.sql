@@ -110,6 +110,9 @@ begin
   if not found then
     raise exception 'Order with ID % not found.', p_order_id;
   end if;
+  if v_order.buyer_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'Only the buyer can reserve stock for this order.' using errcode = '42501';
+  end if;
 
   if v_order.status not in ('draft', 'placed') then
     raise exception 'Order % is in status % and cannot reserve inventory.', v_order.order_number, v_order.status;
@@ -187,6 +190,9 @@ declare
   v_qty_to_release numeric(12, 2);
   v_released_from_lot numeric(12, 2);
 begin
+  if not exists (select 1 from public.marketplace_orders o where o.id = p_order_id and (o.buyer_id = auth.uid() or public.is_admin())) then
+    raise exception 'Only the buyer can cancel this order.' using errcode = '42501';
+  end if;
   for v_item in
     select id, listing_id, quantity
       from public.marketplace_order_items
@@ -303,3 +309,8 @@ create policy "marketplace_fulfilments_seller_update" on public.marketplace_fulf
       where s.id = seller_id and (s.profile_id = auth.uid() or public.is_admin())
     )
   );
+
+revoke all on function public.reserve_inventory_for_order(uuid) from public, anon;
+grant execute on function public.reserve_inventory_for_order(uuid) to authenticated;
+revoke all on function public.release_order_inventory(uuid) from public, anon;
+grant execute on function public.release_order_inventory(uuid) to authenticated;

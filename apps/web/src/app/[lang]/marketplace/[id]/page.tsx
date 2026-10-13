@@ -14,7 +14,7 @@ export default async function ListingDetailPage({
   const { lang, id } = await params;
   if (!hasLocale(lang)) notFound();
 
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: listing, error } = await supabase
     .from("marketplace_listings")

@@ -1,5 +1,6 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
 /**
@@ -16,8 +17,8 @@ export async function POST(req: Request) {
     const configuredSecret = process.env.FLUTTERWAVE_WEBHOOK_HASH || process.env.FLUTTERWAVE_SECRET_KEY;
 
     // Verify secret hash if configured in environment
-    if (configuredSecret && signature && signature !== configuredSecret) {
-      logger.warn("flutterwave_webhook_invalid_signature", { signature });
+    if (!configuredSecret || !signature || signature.length !== configuredSecret.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(configuredSecret))) {
+      logger.warn("flutterwave_webhook_invalid_signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
@@ -31,7 +32,11 @@ export async function POST(req: Request) {
       const flwRef: string = String(data.id || data.flw_ref || txRef);
       const amountKobo: number = Math.round(Number(data.amount || data.charged_amount || 0) * 100);
 
-      const supabase = await createClient();
+      const supabase = createServiceClient();
+      if (!supabase) {
+        logger.error("flutterwave_webhook_no_service_key");
+        return NextResponse.json({ error: "Not configured" }, { status: 503 });
+      }
 
       // Find the order: either from tx_ref pattern (FLW_<orderId>_<timestamp>) or lookup in marketplace_payments
       let orderId: string | null = null;
@@ -44,7 +49,7 @@ export async function POST(req: Request) {
       }
 
       if (!orderId && txRef) {
-        const { data: pRec } = await (supabase as any)
+        const { data: pRec } = await supabase
           .from("marketplace_payments")
           .select("order_id")
           .eq("payment_reference", txRef)
@@ -57,7 +62,7 @@ export async function POST(req: Request) {
 
       if (orderId && amountKobo > 0) {
         // Trigger double-entry cryptographic ledger and escrow state machine
-        const { error: rpcErr } = await (supabase as any).rpc("process_payment_webhook", {
+        const { error: rpcErr } = await supabase.rpc("process_payment_webhook", {
           p_reference: flwRef,
           p_provider: "flutterwave",
           p_amount_kobo: amountKobo,
@@ -66,7 +71,7 @@ export async function POST(req: Request) {
         });
 
         if (rpcErr) {
-          logger.error("flutterwave_webhook_rpc_failed", rpcErr);
+          logger.error("flutterwave_webhook_rpc_failed", { code: rpcErr.code });
         } else {
           logger.info("flutterwave_payment_cleared", { orderId, amountKobo, flwRef });
         }

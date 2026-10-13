@@ -1,523 +1,179 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/ds/icon";
-import { Button } from "@/components/ui";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog } from "@/components/ds/screen-dialog";
-import { FieldOperationsCalendar } from "@/components/screens/field-operations-calendar";
-import {
-  ScheduleTaskModal,
-  WorkerRegisterModal,
-  AssignStaffModal,
-  type CycleOpOption,
-} from "@/components/screens/task-dialogs";
+import { clockAttendance, createTask, createWorker, setTaskStatus } from "@/actions/farm-ops";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionButton, ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, Section, Split, Stack, StartHere, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { cycleLabel, farmOptions, loadFarmScope, plotOptions } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, num, relDays, nowMs } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import { getLivePilotWeather } from "@/lib/weather";
-import { updateTaskStatus, syncCropCycleOperationsToTasks } from "@/actions/farm-tasks";
+import { formatDay } from "@/lib/text";
 
 export const metadata: Metadata = { title: "Field operations & calendar" };
+
+const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
 export default async function Page({ params }: PageProps<"/[lang]/account/tasks">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-  const weatherData = await getLivePilotWeather();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: plots } = farmIds.length
-    ? await supabase.from("plots").select("id, farm_id, name, area_ha").in("farm_id", farmIds)
-    : { data: [] };
-  const plotList = plots ?? [];
-  const plotMap = new Map(plotList.map((p) => [p.id, p]));
-
-  const { data: workers } = farmIds.length
-    ? await supabase
-        .from("farm_workers")
-        .select("id, farm_id, full_name, role, status, daily_rate_minor")
-        .in("farm_id", farmIds)
-    : { data: [] };
-  const workerList = workers ?? [];
-  const workerMap = new Map(workerList.map((w) => [w.id, w]));
-
-  // Active crop cycles
-  const { data: rawCycles } = farmIds.length
-    ? await supabase
-        .from("crop_cycles")
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const cycleList = (rawCycles ?? []) as any[];
-  const cycleIds = cycleList.map((c) => c.id);
-  const cycleMap = new Map(cycleList.map((c) => [c.id, c]));
-
-  // Operations defined on user's active crop cycles
-  const { data: rawCycleOps } = cycleIds.length
-    ? await supabase
-        .from("crop_cycle_operations")
-        .select("*")
-        .in("crop_cycle_id", cycleIds)
-        .order("scheduled_date", { ascending: true })
-    : { data: [] };
-
-  const cycleOpsList = (rawCycleOps ?? []) as any[];
-
-  // Operational tasks in farm_operational_tasks
-  const { data: tasks } = farmIds.length
-    ? await supabase
-        .from("farm_operational_tasks")
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const taskList = tasks ?? [];
-
-  // Prepare CycleOpOptions for auto-populating modal
-  const cycleOpOptions: CycleOpOption[] = cycleOpsList.map((op: any) => {
-    const cycle = cycleMap.get(op.crop_cycle_id);
-    const plot = cycle?.plot_id ? plotMap.get(cycle.plot_id) : undefined;
-    return {
-      id: op.id,
-      crop_cycle_id: op.crop_cycle_id,
-      name: op.name,
-      operation_type: op.operation_type,
-      stage: op.stage,
-      scheduled_date: op.scheduled_date,
-      required_inputs: op.required_inputs,
-      crop_name: cycle?.crop_name || cycle?.crop_id || "Crop",
-      variety: cycle?.variety || cycle?.variety_id || "",
-      farm_id: cycle?.farm_id,
-      plot_id: cycle?.plot_id,
-      plot_name: plot?.name || "General Plot",
-    };
-  });
-
-  // Calculate un-synced cycle operations for ledger display
-  const existingTaskKeySet = new Set(taskList.map((t) => `${t.crop_cycle_id}::${String(t.title || "").toLowerCase()}`));
-  const pendingCycleOps = cycleOpsList.filter(
-    (cop) => !existingTaskKeySet.has(`${cop.crop_cycle_id}::${String(cop.name || "").toLowerCase()}`)
-  );
-
-  const totalOperationsCount = taskList.length + pendingCycleOps.length;
-  const hasLiveOperations = totalOperationsCount > 0;
-  const urgentCount = taskList.filter((t) => t.priority === "urgent" || t.priority === "high").length;
-  const completedCount = taskList.filter((t) => t.status === "completed").length;
+  const ids = scope.farmIds.length ? scope.farmIds : ["00000000-0000-0000-0000-000000000000"];
+  const week = new Date(nowMs() - 7 * 86_400_000).toISOString();
+  const cycleIds = scope.cycles.map((c) => c.id).concat("00000000-0000-0000-0000-000000000000");
+  const [{ data: tasks }, { data: workers }, { data: attendance }, { data: ops }] = await Promise.all([
+    supabase.from("farm_operational_tasks").select("*").in("farm_id", ids).order("due_date", { ascending: true, nullsFirst: false }),
+    supabase.from("farm_workers").select("*").in("farm_id", ids).order("full_name"),
+    supabase.from("farm_attendance_records").select("worker_id, status, hours_worked, daily_pay_kobo, clock_in_at").in("farm_id", ids).gte("clock_in_at", week),
+    supabase.from("crop_cycle_operations").select("id, crop_cycle_id, name, scheduled_date, status").in("crop_cycle_id", cycleIds).neq("status", "completed").gte("scheduled_date", new Date().toISOString().slice(0, 10)).order("scheduled_date").limit(10),
+  ]);
+  const t = tasks ?? [];
+  const w = workers ?? [];
+  const wName = new Map(w.map((x) => [x.id, x.full_name]));
+  const farmName = new Map(scope.farms.map((f) => [f.id, f.name]));
+  const cycles = new Map(scope.cycles.map((c) => [c.id, c]));
+  const open = t.filter((x) => !["completed", "cancelled"].includes(x.status));
+  const overdue = open.filter((x) => x.status === "overdue" || (x.due_date && x.due_date < new Date().toISOString().slice(0, 10)));
+  const wage = (attendance ?? []).reduce((s, a) => s + Number(a.daily_pay_kobo ?? 0), 0);
+  const hours = (attendance ?? []).reduce((s, a) => s + Number(a.hours_worked ?? 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const clocked = new Set((attendance ?? []).filter((a) => (a.clock_in_at ?? "").startsWith(today)).map((a) => a.worker_id));
+  const hidden = { lang };
+  const workerOpts = w.filter((x) => x.status === "active").map((x) => ({ value: x.id, label: `${x.full_name} · ${label(x.role)}` }));
 
   return (
-    <>
-      <LiveStrip tone={hasLiveOperations ? "live" : "preview"}>
-        {hasLiveOperations
-          ? `Showing ${totalOperationsCount} field operation${totalOperationsCount === 1 ? "" : "s"} (${taskList.length} scheduled tasks + ${pendingCycleOps.length} planting cycle operations) across ${workerList.length} registered farm worker${workerList.length === 1 ? "" : "s"}.`
-          : "The calendar shows sample operations; your booked machinery jobs are listed under My Bookings."}
-      </LiveStrip>
-
-      <FieldOperationsCalendar
-        lang={lang}
-        weatherData={weatherData}
-        liveTasks={taskList}
-        livePlots={plotList}
-        liveWorkers={workerList}
-        liveFarms={farmList}
-        cropCycles={cycleList}
-        cycleOperations={cycleOpsList}
-        slots={{
-          actions: (
-            <div className="flex flex-wrap items-center gap-space-sm">
-              <ScreenDialog
-                title="Register Farm Worker"
-                side="center"
-                panel={<WorkerRegisterModal farms={farmList} />}
-              >
-                <Button
-                  className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors font-medium"
-                  type="button"
-                >
-                  <Icon name="person_add" className="text-base text-secondary" />
-                  <span>Register Worker</span>
-                </Button>
-              </ScreenDialog>
-
-              <ScreenDialog
-                title="Schedule Field Operation"
-                side="center"
-                panel={
-                  <ScheduleTaskModal
-                    farms={farmList}
-                    plots={plotList}
-                    workers={workerList}
-                    cycleOperations={cycleOpOptions}
-                  />
-                }
-              >
-                <Button
-                  className="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors font-semibold"
-                  type="button"
-                >
-                  <Icon name="add_circle" className="text-base" />
-                  <span>Schedule New Operation</span>
-                </Button>
-              </ScreenDialog>
-            </div>
-          ),
-          kpis: hasLiveOperations ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
-              <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-space-xs">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      Total Operations
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold">
-                        {totalOperationsCount}
-                      </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Ops</span>
-                    </div>
-                  </div>
-                  <span className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="assignment" />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">Completed: {completedCount}</span>
-                  <span className="text-secondary font-semibold">Live Ledger</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-space-xs">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      Farm Workers
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-secondary font-bold">
-                        {workerList.length}
-                      </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Crew</span>
-                    </div>
-                  </div>
-                  <span className="p-2 rounded-lg bg-surface-container-low text-secondary">
-                    <Icon name="group" />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">Active workforce</span>
-                  <span className="text-secondary font-semibold">Multi-Crew Enabled</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-space-xs">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      High Priority Tasks
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-error font-bold">
-                        {urgentCount}
-                      </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Urgent</span>
-                    </div>
-                  </div>
-                  <span className="p-2 rounded-lg bg-error-container text-on-error-container">
-                    <Icon name="warning" />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">Time-sensitive execution</span>
-                  <span className="text-error font-semibold">{urgentCount > 0 ? "Attention" : "On schedule"}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-between p-space-md bg-surface-container-lowest rounded-xl shadow-sm space-y-space-md">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-space-xs">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                      Planting Cycles
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface font-bold">
-                        {cycleList.length}
-                      </span>
-                      <span className="font-label-md text-label-md text-on-surface-variant font-medium">Cycles</span>
-                    </div>
-                  </div>
-                  <span className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="psychology" />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">{plotList.length} Active Plots</span>
-                  <span className="text-secondary font-semibold">Auto-Synced</span>
-                </div>
-              </div>
-            </div>
-          ) : undefined,
-
-          operations: hasLiveOperations ? (
-            <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
-              <div className="px-space-lg py-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-lowest border-b border-outline-variant/30">
-                <div className="space-y-0.5">
-                  <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                    Scheduled Operations Ledger ({totalOperationsCount})
-                  </h2>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Live farm operational tasks dispatched across your workers, plots, and active crop cycles
-                  </p>
-                </div>
-
-                {pendingCycleOps.length > 0 && (
-                  <form action={syncCropCycleOperationsToTasks} className="inline">
-                    <Button
-                      type="submit"
-                      className="px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Icon name="sync" className="text-sm" />
-                      <span>Sync All Planting Operations ({pendingCycleOps.length})</span>
-                    </Button>
-                  </form>
-                )}
-              </div>
-
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left font-body-sm text-body-sm">
-                  <thead className="bg-surface-container-high text-on-surface-variant uppercase tracking-wider font-label-sm text-label-sm">
-                    <tr>
-                      <th className="py-space-sm px-space-md">Task &amp; Plot</th>
-                      <th className="py-space-sm px-space-md">Assigned Staff</th>
-                      <th className="py-space-sm px-space-md">Priority</th>
-                      <th className="py-space-sm px-space-md">Due Date</th>
-                      <th className="py-space-sm px-space-md">Status</th>
-                      <th className="py-space-sm px-space-md text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/30">
-                    {/* 1. Farm Operational Tasks */}
-                    {taskList.map((task) => {
-                      const plot = task.plot_id ? plotMap.get(task.plot_id) : undefined;
-                      const cycle = task.crop_cycle_id ? cycleMap.get(task.crop_cycle_id) : undefined;
-                      const isComplete = task.status === "completed";
-
-                      // Extract multiple assigned worker IDs if present
-                      const workerNames: string[] = [];
-                      const workerIds: string[] = [];
-                      if (task.description && typeof task.description === "string" && task.description.includes("[assigned_workers:")) {
-                        const match = task.description.match(/\[assigned_workers:\s*([^\]]+)\]/);
-                        if (match && match[1]) {
-                          const ids = match[1].split(",").map((s: string) => s.trim());
-                          for (const wid of ids) {
-                            workerIds.push(wid);
-                            const w = workerMap.get(wid);
-                            if (w) workerNames.push(w.full_name);
-                          }
-                        }
-                      }
-                      if (workerNames.length === 0 && task.assigned_worker_id) {
-                        workerIds.push(task.assigned_worker_id);
-                        const w = workerMap.get(task.assigned_worker_id);
-                        if (w) workerNames.push(w.full_name);
-                      }
-
-                      return (
-                        <tr key={task.id} className="hover:bg-surface-container-low transition-colors">
-                          <td className="py-space-md px-space-md">
-                            <div className="flex flex-col">
-                              <span className="font-headline-sm text-body-lg font-bold text-on-surface">
-                                {task.title}
-                              </span>
-                              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
-                                <span>{plot ? plot.name : "Whole Farm"}</span>
-                                {cycle && (
-                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-[10px]">
-                                    {cycle.crop_name || cycle.crop_id} ({cycle.variety || cycle.season || "Active"})
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <div className="flex items-center gap-1.5 text-on-surface font-medium">
-                              <Icon name="group" className="text-sm text-secondary" />
-                              <span className="truncate max-w-[200px]">
-                                {workerNames.length > 0
-                                  ? workerNames.length > 1
-                                    ? `${workerNames.join(", ")} (${workerNames.length} Crew)`
-                                    : workerNames[0]
-                                  : "Unassigned"}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span
-                              className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold uppercase ${
-                                task.priority === "urgent" || task.priority === "high"
-                                  ? "bg-error-container text-on-error-container"
-                                  : "bg-surface-container text-on-surface"
-                              }`}
-                            >
-                              {task.priority}
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span className="text-on-surface">
-                              {task.due_date ? formatDate(task.due_date, lang) : "—"}
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-sm text-label-sm font-semibold capitalize ${
-                                isComplete
-                                  ? "bg-secondary-container text-on-secondary-container"
-                                  : "bg-primary-container text-on-primary-container"
-                              }`}
-                            >
-                              {task.status}
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <ScreenDialog
-                                title="Assign Staff"
-                                side="center"
-                                panel={
-                                  <AssignStaffModal
-                                    taskId={task.id}
-                                    taskTitle={task.title}
-                                    currentWorkerIds={workerIds}
-                                    workers={workerList}
-                                  />
-                                }
-                              >
-                                <Button
-                                  type="button"
-                                  className="px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-all"
-                                >
-                                  <Icon name="person_add" className="text-xs text-secondary" />
-                                  <span>Assign Staff</span>
-                                </Button>
-                              </ScreenDialog>
-
-                              {!isComplete && (
-                                <form action={updateTaskStatus} className="inline">
-                                  <input type="hidden" name="task_id" value={task.id} />
-                                  <input type="hidden" name="status" value="completed" />
-                                  <Button
-                                    type="submit"
-                                    className="px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary transition-all shadow-sm"
-                                  >
-                                    Complete
-                                  </Button>
-                                </form>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* 2. Un-synced Planting Cycle Operations */}
-                    {pendingCycleOps.map((op) => {
-                      const cycle = cycleMap.get(op.crop_cycle_id);
-                      const plot = cycle?.plot_id ? plotMap.get(cycle.plot_id) : undefined;
-                      const cropName = cycle?.crop_name || cycle?.crop_id || "Crop";
-
-                      return (
-                        <tr key={`cycle-op-${op.id}`} className="hover:bg-primary/5 transition-colors bg-primary/[0.02]">
-                          <td className="py-space-md px-space-md">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="font-headline-sm text-body-lg font-bold text-on-surface">
-                                  {op.name}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-wider">
-                                  Plant Cycle Operation
-                                </span>
-                              </div>
-                              <span className="text-xs text-on-surface-variant mt-0.5">
-                                {plot ? plot.name : "Planting Plot"} • {cropName} ({cycle?.variety || op.stage || "Active"})
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span className="text-xs text-on-surface-variant italic">Unassigned (Plant Cycle)</span>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm font-semibold bg-surface-container text-on-surface">
-                              Standard
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span className="text-on-surface">
-                              {op.scheduled_date ? formatDate(op.scheduled_date, lang) : "Planned"}
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label-sm text-label-sm font-semibold bg-primary-container/60 text-on-primary-container capitalize">
-                              Cycle Plan
-                            </span>
-                          </td>
-
-                          <td className="py-space-md px-space-md text-right">
-                            <ScreenDialog
-                              title="Schedule & Assign Operation"
-                              side="center"
-                              panel={
-                                <ScheduleTaskModal
-                                  farms={farmList}
-                                  plots={plotList}
-                                  workers={workerList}
-                                  cycleOperations={cycleOpOptions}
-                                />
-                              }
-                            >
-                              <Button
-                                type="button"
-                                className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-all shadow-sm"
-                              >
-                                <Icon name="person_add" className="text-xs" />
-                                <span>Assign Staff</span>
-                              </Button>
-                            </ScreenDialog>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : undefined,
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={
+          <>
+            <Chip icon="task_alt">{open.length} open tasks</Chip>
+            <Chip icon="badge">{w.filter((x) => x.status === "active").length} active workers</Chip>
+          </>
+        }
+        title="Field Operations & Calendar"
+        description="Tasks, crew and attendance across your farms, with crop operations due next."
+        actions={
+          scope.farms.length > 0 && (
+            <>
+              <ActionDialog
+                title="Add a worker"
+                trigger="Add worker"
+                icon="person_add"
+                tone="secondary"
+                action={createWorker}
+                hidden={hidden}
+                fields={[
+                  { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+                  { name: "full_name", label: "Full name", required: true },
+                  { name: "phone", label: "Phone", type: "tel" },
+                  { name: "role", label: "Role", type: "select", required: true, options: opt(["farm_manager", "tractor_operator", "field_worker", "scout", "harvester", "livestock_keeper", "security", "casual"]) },
+                  { name: "employment_type", label: "Employment", type: "select", defaultValue: "seasonal", options: opt(["permanent", "seasonal", "daily_casual"]) },
+                  { name: "daily_wage", label: "Daily wage (₦)", type: "number" },
+                ]}
+              />
+              <ActionDialog
+                title="Create a task"
+                trigger="New task"
+                action={createTask}
+                hidden={hidden}
+                fields={[
+                  { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+                  { name: "plot_id", label: "Plot", type: "select", options: plotOptions(scope) },
+                  { name: "title", label: "Task", required: true, wide: true },
+                  { name: "category", label: "Category", type: "select", options: opt(["scouting", "weed_control", "irrigation", "machinery", "maintenance", "livestock", "land_prep", "harvest", "storage", "admin"]) },
+                  { name: "priority", label: "Priority", type: "select", defaultValue: "medium", options: opt(["low", "medium", "high", "urgent"]) },
+                  { name: "assigned_worker_id", label: "Assign to", type: "select", options: workerOpts },
+                  { name: "due_date", label: "Due", type: "date" },
+                  { name: "estimated_duration_hours", label: "Hours (est.)", type: "number" },
+                  { name: "description", label: "Details", type: "textarea" },
+                ]}
+              />
+            </>
+          )
+        }
       />
-    </>
+      {!scope.farms.length && <StartHere title="Register a farm to plan field work" />}
+      <KpiGrid>
+        <MetricCard label="Open tasks" value={open.length} icon="pending_actions" foot={`${t.filter((x) => x.status === "in_progress").length} in progress`} />
+        <MetricCard label="Overdue" value={overdue.length} icon="alarm" iconTone={overdue.length ? "bg-critical-soft text-critical" : undefined} foot="Past due date and not done" />
+        <MetricCard label="Labour hours, 7 days" value={num(hours)} unit="h" icon="schedule" foot={`${(attendance ?? []).length} attendance records`} />
+        <MetricCard label="Wages, 7 days" value={naira(wage)} icon="payments" foot="From attendance" />
+      </KpiGrid>
+      <Split
+        wide={
+          <Section title="Task board" icon="view_kanban">
+            <DataTable
+              rows={t}
+              rowKey={(x) => x.id}
+              empty="No tasks yet."
+              columns={[
+                { label: "Task", cell: (x) => <span className="font-medium">{x.title}</span> },
+                { label: "Farm", cell: (x) => farmName.get(x.farm_id) },
+                { label: "Assignee", cell: (x) => (x.assigned_worker_id ? wName.get(x.assigned_worker_id) : "—") },
+                { label: "Due", cell: (x) => (x.due_date ? `${formatDay(x.due_date, lang)} (${relDays(x.due_date)})` : "—") },
+                { label: "Priority", cell: (x) => <Status value={x.priority} /> },
+                { label: "Status", cell: (x) => <Status value={x.status} /> },
+                {
+                  label: "",
+                  cell: (x) =>
+                    x.status === "completed" || x.status === "cancelled" ? null : x.status === "in_progress" ? (
+                      <ActionButton action={setTaskStatus} hidden={{ lang, id: x.id, status: "completed" }} label="Done" />
+                    ) : (
+                      <ActionButton action={setTaskStatus} hidden={{ lang, id: x.id, status: "in_progress" }} label="Start" icon="play_arrow" />
+                    ),
+                },
+              ]}
+            />
+          </Section>
+        }
+        side={
+          <>
+            <Section title="Crew today" icon="badge" description="Clock in workers as they arrive.">
+              <ul className="flex flex-col divide-y divide-outline-variant/30">
+                {w.map((x) => (
+                  <li key={x.id} className="flex items-center justify-between gap-2 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-label-lg text-label-lg text-on-surface">{x.full_name}</p>
+                      <p className="text-body-sm text-on-surface-variant">
+                        {label(x.role)} · {naira(x.daily_wage_kobo)}/day
+                      </p>
+                    </div>
+                    {x.status !== "active" ? (
+                      <Status value={x.status} />
+                    ) : clocked.has(x.id) ? (
+                      <Status value="present" />
+                    ) : (
+                      <ActionButton action={clockAttendance} hidden={{ lang, worker_id: x.id }} label="Clock in" icon="login" />
+                    )}
+                  </li>
+                ))}
+                {!w.length && <li className="py-4 text-center text-body-sm text-on-surface-variant">No workers yet.</li>}
+              </ul>
+            </Section>
+            <Section title="Crop operations due" icon="event_upcoming">
+              <ul className="flex flex-col gap-2">
+                {(ops ?? []).map((o) => {
+                  const c = cycles.get(o.crop_cycle_id);
+                  return (
+                    <li key={o.id} className="text-body-sm">
+                      <span className="font-medium text-on-surface">{o.name}</span>
+                      <span className="text-on-surface-variant">
+                        {" "}
+                        · {c ? cycleLabel(c) : ""} · {relDays(o.scheduled_date)}
+                      </span>
+                    </li>
+                  );
+                })}
+                {!ops?.length && <li className="text-body-sm text-on-surface-variant">Nothing due.</li>}
+              </ul>
+            </Section>
+          </>
+        }
+      />
+    </Stack>
   );
 }

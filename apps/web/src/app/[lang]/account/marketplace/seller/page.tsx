@@ -15,7 +15,7 @@ export default async function SellerHubPage({
   if (!hasLocale(lang)) notFound();
 
   const account = await requireAccount(lang);
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   // Fetch or find seller profile
   const { data: seller } = await supabase
@@ -58,8 +58,8 @@ export default async function SellerHubPage({
       : Promise.resolve({ data: [] }),
   ]);
 
-  const totalEarningsKobo = (settlements ?? []).reduce((acc: number, s: any) => acc + Number(s.net_payout_kobo || 0), 0);
-  const pendingFulfilmentsCount = (fulfilments ?? []).filter((f: any) => f.status === "placed" || f.status === "confirmed").length;
+  const totalEarningsKobo = (settlements ?? []).reduce((acc: number, s) => acc + Number(s.net_payout_kobo || 0), 0);
+  const pendingFulfilmentsCount = (fulfilments ?? []).filter((f) => f.status === "placed" || f.status === "confirmed").length;
 
   return (
     <Container className="py-10 sm:py-14 flex flex-col gap-8">
@@ -101,7 +101,7 @@ export default async function SellerHubPage({
         <Card className="p-5 bg-white border border-line">
           <span className="text-xs font-semibold text-muted">Active Listings</span>
           <div className="text-2xl font-extrabold text-ink mt-1">
-            {(listings ?? []).filter((l: any) => l.status === "active").length}
+            {(listings ?? []).filter((l) => l.status === "active").length}
           </div>
           <span className="text-[11px] text-muted">In public catalogue</span>
         </Card>
@@ -132,7 +132,7 @@ export default async function SellerHubPage({
           </Card>
         ) : (
           <div className="flex flex-col gap-3">
-            {fulfilments.map((f: any) => (
+            {fulfilments.map((f) => (
               <Card key={f.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-line bg-white">
                 <div>
                   <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default async function SellerHubPage({
                   </div>
                   <h3 className="font-bold text-ink mt-0.5">Order ref: {f.marketplace_orders?.order_number}</h3>
                   <p className="text-xs text-muted">
-                    Destination: {f.marketplace_orders?.delivery_address?.address || "Delivery requested"} · Net: {formatNaira(f.subtotal_kobo)}
+                    Destination: {(() => { const a = f.marketplace_orders?.delivery_address as { line?: string; address?: string; state?: string } | null | undefined; return [a?.line ?? a?.address, a?.state].filter(Boolean).join(", ") || "Delivery requested"; })()} · Net: {formatNaira(f.subtotal_kobo)}
                   </p>
                 </div>
 
@@ -166,7 +166,7 @@ export default async function SellerHubPage({
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((l: any) => (
+            {listings.map((l) => (
               <Card key={l.id} className="p-4 flex flex-col justify-between gap-3 border border-line bg-white">
                 <div>
                   <div className="flex items-center justify-between">

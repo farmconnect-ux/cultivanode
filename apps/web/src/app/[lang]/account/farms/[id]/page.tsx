@@ -1,324 +1,178 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Button, Card, Badge } from "@/components/ui";
-import { hasLocale, type Locale } from "@/i18n/config";
+import { notFound } from "next/navigation";
+import { createCropCycle, createPlot } from "@/actions/farm-ops";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, Facts, KpiGrid, PointMap, Section, Split, Stack, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
+import { hasLocale } from "@/i18n/config";
+import { cap } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, num } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { createFarmPlot, deleteFarmPlot } from "@/actions/farm-plots";
+import { formatDay } from "@/lib/text";
 
-interface Props {
-  params: Promise<{ lang: string; id: string }>;
-}
+export const metadata: Metadata = { title: "Farm profile" };
 
-export default async function FarmDetailPage({ params }: Props) {
+const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
+
+export default async function Page({ params }: PageProps<"/[lang]/account/farms/[id]">) {
   const { lang, id } = await params;
   if (!hasLocale(lang)) notFound();
-  const account = await requireAccount(lang as Locale);
+  await requireAccount(lang);
   const supabase = await createClient();
-
-  const { data: farm } = await supabase
-    .from("farms")
-    .select("*, organizations(name)")
-    .eq("id", id)
-    .single();
-
+  const { data: farm } = await supabase.from("farms").select("*").eq("id", id).maybeSingle();
   if (!farm) notFound();
-
-  // Fetch plots for this farm
-  const { data: plots } = await supabase
-    .from("plots")
-    .select("*")
-    .eq("farm_id", id)
-    .order("name");
-
-  const totalPlotArea = (plots || []).reduce(
-    (acc, p) => acc + (Number(p.area_ha ?? (p as any).size_hectares ?? 0)),
-    0,
-  );
+  const [{ data: pt }, { data: plots }, { data: cycles }, { data: tx }, { data: groups }, { data: machines }] = await Promise.all([
+    supabase.from("farm_points").select("lat, lng").eq("id", id).maybeSingle(),
+    supabase.from("plots").select("*").eq("farm_id", id).order("name"),
+    supabase.from("crop_cycles").select("id, plot_id, crop_id, variety_id, status, current_stage, health_status, expected_harvest_date").eq("farm_id", id).order("planting_date", { ascending: false }),
+    supabase.from("farm_financial_transactions").select("type, amount_kobo").eq("farm_id", id),
+    supabase.from("farm_livestock_groups").select("id, population").eq("farm_id", id),
+    supabase.from("farm_machinery_assets").select("id").eq("farm_id", id),
+  ]);
+  const p = plots ?? [];
+  const { data: soilRows } = p.length ? await supabase.from("soil_records").select("*").in("plot_id", p.map((x) => x.id)).order("tested_on", { ascending: false }) : { data: [] };
+  const plotName = new Map(p.map((x) => [x.id, x.name]));
+  const active = (cycles ?? []).filter((c) => !["completed", "abandoned"].includes(c.status));
+  const plotHa = p.reduce((s, x) => s + Number(x.area_ha ?? 0), 0);
+  const income = (tx ?? []).filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount_kobo), 0);
+  const expense = (tx ?? []).filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount_kobo), 0);
+  const hidden = { lang, farm_id: id };
 
   return (
-    <div className="space-y-6">
-      {/* Top Breadcrumb & Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <Link href={`/${lang}/account/farms`} className="hover:underline">
-              ← Back to Farms
-            </Link>
-            <span>/</span>
-            <span className="font-semibold text-ink">{farm.name}</span>
-          </div>
-          <h1 className="mt-1 text-2xl font-black text-leaf-900 sm:text-3xl">{farm.name}</h1>
-          <p className="text-xs text-muted">
-            {[farm.lga, farm.state].filter(Boolean).join(", ")} &bull;{" "}
-            {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} ha total land` : "Unspecified land size"}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/${lang}/account/crops?farm_id=${farm.id}`}
-            className="rounded-lg bg-leaf-700 px-3 py-2 text-xs font-bold text-white hover:bg-leaf-800 transition-colors"
-          >
-            🌽 View Crop Cycles
-          </Link>
-          <Link
-            href={`/${lang}/account/find?farm=${farm.id}`}
-            className="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink hover:bg-neutral-50 transition-colors"
-          >
-            🚜 Hire Machinery
-          </Link>
-        </div>
-      </div>
-
-      {/* Farm Land Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="p-4 border-l-4 border-l-leaf-600">
-          <p className="text-xs font-medium text-muted">Total Farm Size</p>
-          <p className="text-lg font-black text-leaf-900 mt-1">
-            {farm.area_ha ? `${Number(farm.area_ha).toFixed(1)} ha` : "N/A"}
-          </p>
-        </Card>
-        <Card className="p-4 border-l-4 border-l-harvest-600">
-          <p className="text-xs font-medium text-muted">Delineated Plots</p>
-          <p className="text-lg font-black text-harvest-900 mt-1">{plots?.length || 0} Plots</p>
-        </Card>
-        <Card className="p-4 border-l-4 border-l-sky-600">
-          <p className="text-xs font-medium text-muted">Mapped Cultivated Area</p>
-          <p className="text-lg font-black text-sky-900 mt-1">{totalPlotArea.toFixed(1)} ha</p>
-        </Card>
-        <Card className="p-4 border-l-4 border-l-indigo-600">
-          <p className="text-xs font-medium text-muted">Agro-Ecological Zone</p>
-          <p className="text-sm font-bold text-indigo-900 mt-1">
-            {farm.state === "Oyo" ? "Derived Savannah" : farm.state === "Osun" ? "Guinea Savannah" : "Humid Forest"}
-          </p>
-        </Card>
-      </div>
-
-      {/* Main Plots Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left: Plots Listing */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-ink">Field Plots & Parcels</h2>
-            <Badge tone="leaf">{plots?.length || 0} Registered</Badge>
-          </div>
-
-          {(!plots || plots.length === 0) ? (
-            <Card className="p-8 text-center border-dashed">
-              <span className="text-3xl">🗺️</span>
-              <p className="mt-2 text-sm font-bold text-ink">No field plots registered yet</p>
-              <p className="text-xs text-muted mt-1">
-                Sub-divide your farm into distinct plots to manage crop cycles, soil tests, and operations.
-              </p>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {plots.map((plot) => {
-                const plotArea = Number(plot.area_ha ?? (plot as any).size_hectares ?? 0);
-                let plotCode = (plot as any).plot_code || (plot as any).code;
-                let soil = (plot as any).soil_texture || (plot as any).soil_type;
-                let slope = (plot as any).slope;
-                let irrigation = (plot as any).irrigation_type || (plot as any).irrigation_status;
-                let access = (plot as any).accessibility;
-
-                if (plot.notes && typeof plot.notes === "string" && plot.notes.includes("[front_end_meta:")) {
-                  const match = plot.notes.match(/\[front_end_meta:\s*([^\]]+)\]/);
-                  if (match && match[1]) {
-                    const parts = match[1].split(",").map((s: string) => s.trim());
-                    for (const part of parts) {
-                      const [k, v] = part.split(":");
-                      if (k === "plot_code" && v && !plotCode) plotCode = v;
-                      if (k === "soil_texture" && v && !soil) soil = v;
-                      if (k === "slope" && v && !slope) slope = v;
-                      if (k === "irrigation_type" && v && !irrigation) irrigation = v;
-                      if (k === "accessibility" && v && !access) access = v;
-                    }
-                  }
-                }
-
-                const cleanNotes = plot.notes
-                  ? plot.notes.replace(/\s*\|\s*\[front_end_meta:.*?\]/g, "").replace(/\[front_end_meta:.*?\]/g, "").trim()
-                  : "";
-
-                return (
-                  <Card key={plot.id} className="p-4 border border-line flex flex-col justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-bold text-ink">{plot.name}</h3>
-                          {plotCode && (
-                            <span className="inline-block text-[11px] font-mono text-neutral-500 font-semibold">
-                              ID: {plotCode}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs font-bold text-leaf-800 bg-leaf-50 px-2 py-0.5 rounded border border-leaf-200">
-                          {plotArea.toFixed(2)} Ha
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1 text-[11px]">
-                        {soil && (
-                          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">
-                            🌱 {soil}
-                          </span>
-                        )}
-                        {slope && (
-                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium capitalize">
-                            📐 {slope}
-                          </span>
-                        )}
-                        {irrigation && (
-                          <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200 font-medium capitalize">
-                            💧 {irrigation}
-                          </span>
-                        )}
-                        {access && (
-                          <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200 font-medium">
-                            🚶 {access}
-                          </span>
-                        )}
-                      </div>
-
-                      {cleanNotes && (
-                        <p className="text-[11px] text-muted pt-1 leading-relaxed border-t border-line/60">
-                          {cleanNotes}
-                        </p>
-                      )}
-                    </div>
-
-                  <div className="border-t border-line pt-2 flex items-center justify-between">
-                    <Link
-                      href={`/${lang}/account/crops?farm_id=${farm.id}&plot_id=${plot.id}`}
-                      className="text-xs font-bold text-leaf-700 hover:underline"
-                    >
-                      🌽 Start Crop Cycle
-                    </Link>
-                    <form action={deleteFarmPlot}>
-                      <input type="hidden" name="plot_id" value={plot.id} />
-                      <input type="hidden" name="farm_id" value={farm.id} />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        className="h-auto p-0 text-xs text-danger-600 hover:text-danger-800 transition-colors"
-                      >
-                        Delete
-                      </Button>
-                    </form>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-          )}
-        </div>
-
-        {/* Right: Add Plot Form */}
-        <div>
-          <Card className="p-5 border border-line shadow-sm space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-ink">Register Field Plot</h2>
-              <p className="text-xs text-muted mt-0.5">Define a distinct cultivation plot or parcel.</p>
-            </div>
-
-            <form action={createFarmPlot} className="space-y-3">
-              <input type="hidden" name="farm_id" value={farm.id} />
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Plot Name *</label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  placeholder="e.g. Block A - North Field"
-                  className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Code / Identifier</label>
-                  <input
-                    type="text"
-                    name="code"
-                    placeholder="e.g. PL-01"
-                    className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Size (Hectares) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="size_hectares"
-                    required
-                    placeholder="e.g. 2.5"
-                    className="w-full rounded-md border border-line px-3 py-2 text-xs focus:outline-leaf-600"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Soil Type</label>
-                  <select
-                    name="soil_type"
-                    className="w-full rounded-md border border-line px-2 py-2 text-xs focus:outline-leaf-600 bg-surface"
-                  >
-                    <option value="Sandy Loam">Sandy Loam</option>
-                    <option value="Clay Loam">Clay Loam</option>
-                    <option value="Loamy">Loamy</option>
-                    <option value="Silt Loam">Silt Loam</option>
-                    <option value="Sandy">Sandy</option>
-                    <option value="Clay">Clay</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Slope Profile</label>
-                  <select
-                    name="slope"
-                    className="w-full rounded-md border border-line px-2 py-2 text-xs focus:outline-leaf-600 bg-surface"
-                  >
-                    <option value="flat">Flat (0-2%)</option>
-                    <option value="gentle">Gentle (2-5%)</option>
-                    <option value="moderate">Moderate (5-10%)</option>
-                    <option value="steep">Steep (&gt;10%)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Irrigation Availability</label>
-                <select
-                  name="irrigation_status"
-                  className="w-full rounded-md border border-line px-2 py-2 text-xs focus:outline-leaf-600 bg-surface"
-                >
-                  <option value="rainfed">Rainfed Only</option>
-                  <option value="drip">Drip Irrigation</option>
-                  <option value="sprinkler">Sprinkler System</option>
-                  <option value="furrow">Furrow / Flood</option>
-                  <option value="borehole_access">Nearby Borehole / River</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Plot Notes</label>
-                <textarea
-                  name="notes"
-                  rows={2}
-                  placeholder="Notes on previous crop, weed pressure, or drainage..."
-                  className="w-full rounded-md border border-line px-3 py-1.5 text-xs focus:outline-leaf-600"
-                />
-              </div>
-
-              <Button type="submit" className="w-full bg-leaf-700 hover:bg-leaf-800 text-white font-bold text-xs py-2">
-                ➕ Save Field Plot
-              </Button>
-            </form>
-          </Card>
-        </div>
-      </div>
-    </div>
+    <Stack>
+      <PageHeader
+        back={{ href: `/${lang}/account/farms`, label: "My farms" }}
+        eyebrow={
+          <>
+            {farm.farm_code && <Chip icon="tag">{farm.farm_code}</Chip>}
+            <Status value={farm.status} />
+            {farm.ownership_type && <Chip>{label(farm.ownership_type)}</Chip>}
+          </>
+        }
+        title={farm.name}
+        description={`${[farm.lga, farm.state].filter(Boolean).join(", ")}${farm.address_hint ? ` · ${farm.address_hint}` : ""}`}
+        actions={
+          <>
+            <ActionDialog
+              title="Add a plot"
+              trigger="Add plot"
+              icon="add_location_alt"
+              tone="secondary"
+              action={createPlot}
+              hidden={hidden}
+              fields={[
+                { name: "name", label: "Plot name", required: true },
+                { name: "plot_code", label: "Code" },
+                { name: "area_ha", label: "Area (ha)", type: "number" },
+                { name: "current_crop", label: "Current crop" },
+                { name: "soil_texture", label: "Soil texture", type: "select", options: opt(["sandy", "loamy_sand", "sandy_loam", "loam", "silt_loam", "clay_loam", "clay"]) },
+                { name: "irrigation_type", label: "Water", type: "select", options: opt(["rainfed", "drip", "sprinkler", "furrow", "manual"]) },
+                { name: "notes", label: "Notes", type: "textarea" },
+              ]}
+            />
+            {p.length > 0 && (
+              <ActionDialog
+                title="Start a crop cycle"
+                trigger="New crop cycle"
+                action={createCropCycle}
+                hidden={hidden}
+                fields={[
+                  { name: "plot_id", label: "Plot", type: "select", options: p.map((x) => ({ value: x.id, label: x.name })) },
+                  { name: "crop_id", label: "Crop", required: true, placeholder: "maize" },
+                  { name: "variety_id", label: "Variety" },
+                  { name: "target_area_ha", label: "Area (ha)", type: "number", required: true },
+                  { name: "planting_date", label: "Planting", type: "date", required: true },
+                  { name: "expected_harvest_date", label: "Harvest", type: "date", required: true },
+                  { name: "target_yield_kg", label: "Target yield (kg)", type: "number" },
+                  { name: "estimated_budget", label: "Budget (₦)", type: "number" },
+                ]}
+              />
+            )}
+          </>
+        }
+      />
+      <KpiGrid>
+        <MetricCard label="Farm area" value={num(farm.area_ha, 1)} unit="ha" icon="landscape" foot={`${num(plotHa, 1)} ha mapped into ${p.length} plots`} />
+        <MetricCard label="Active crop cycles" value={active.length} icon="potted_plant" href={`/${lang}/account/crops`} foot={`${(cycles ?? []).length} cycles recorded`} />
+        <MetricCard label="Livestock & machines" value={(groups ?? []).reduce((s, g) => s + g.population, 0)} unit="head" icon="pets" foot={`${(machines ?? []).length} machines on this farm`} />
+        <MetricCard label="Net on the books" value={naira(income - expense)} icon="account_balance_wallet" href={`/${lang}/account/finance`} foot={`${naira(income)} in · ${naira(expense)} out`} />
+      </KpiGrid>
+      <Split
+        wide={
+          <>
+            <Section title="Plots" icon="grid_on">
+              <DataTable
+                rows={p}
+                rowKey={(x) => x.id}
+                empty="No plots yet."
+                columns={[
+                  { label: "Plot", cell: (x) => <span className="font-medium">{x.name}{x.plot_code ? ` (${x.plot_code})` : ""}</span> },
+                  { label: "Area", numeric: true, cell: (x) => (x.area_ha ? `${num(x.area_ha, 1)} ha` : "—") },
+                  { label: "Soil", cell: (x) => label(x.soil_texture) },
+                  { label: "pH", numeric: true, cell: (x) => x.soil_ph ?? "—" },
+                  { label: "Water", cell: (x) => label(x.irrigation_type) },
+                  { label: "Current crop", cell: (x) => (x.current_crop ? cap(x.current_crop) : "Fallow") },
+                ]}
+              />
+            </Section>
+            <Section title="Crop cycles" icon="potted_plant">
+              <DataTable
+                rows={cycles ?? []}
+                rowKey={(c) => c.id}
+                empty="No crop cycles yet."
+                columns={[
+                  { label: "Crop", cell: (c) => <Link className="font-medium text-primary-container hover:underline" href={`/${lang}/account/crops/${c.id}`}>{cap(c.crop_id)} {c.variety_id}</Link> },
+                  { label: "Plot", cell: (c) => (c.plot_id ? plotName.get(c.plot_id) : "—") },
+                  { label: "Stage", cell: (c) => c.current_stage ?? "—" },
+                  { label: "Harvest", cell: (c) => formatDay(c.expected_harvest_date, lang) },
+                  { label: "Health", cell: (c) => <Status value={c.health_status} /> },
+                  { label: "Status", cell: (c) => <Status value={c.status} /> },
+                ]}
+              />
+            </Section>
+            <Section title="Soil tests" icon="science">
+              <DataTable
+                rows={soilRows ?? []}
+                rowKey={(s) => s.id}
+                empty="No soil tests recorded."
+                columns={[
+                  { label: "Plot", cell: (s) => plotName.get(s.plot_id) },
+                  { label: "Tested", cell: (s) => (s.tested_on ? formatDay(s.tested_on, lang) : "—") },
+                  { label: "pH", numeric: true, cell: (s) => s.ph ?? "—" },
+                  { label: "OM %", numeric: true, cell: (s) => s.organic_matter_pct ?? "—" },
+                  { label: "N %", numeric: true, cell: (s) => s.nitrogen_pct ?? "—" },
+                  { label: "P ppm", numeric: true, cell: (s) => s.phosphorus_ppm ?? "—" },
+                  { label: "Recommendation", cell: (s) => s.recommendations ?? "—" },
+                ]}
+              />
+            </Section>
+          </>
+        }
+        side={
+          <>
+            <Section title="Location" icon="location_on">
+              {pt?.lat != null && pt.lng != null ? <PointMap height={200} points={[{ lat: Number(pt.lat), lng: Number(pt.lng), label: farm.name }]} /> : <p className="text-body-sm text-on-surface-variant">No GPS point.</p>}
+            </Section>
+            <Section title="Site profile" icon="info">
+              <Facts
+                className="sm:grid-cols-1"
+                items={[
+                  ["Zone", label(farm.zone)],
+                  ["Slope", label(farm.slope_type)],
+                  ["Access", label(farm.accessibility_level)],
+                  ["Water sources", (farm.water_sources ?? []).map(label).join(", ") || "—"],
+                  ["Irrigation", (farm.irrigation_systems ?? []).map(label).join(", ") || "—"],
+                  ["Boundary", farm.area_is_measured ? "Measured" : "Estimated"],
+                  ["Registered", formatDay(farm.created_at.slice(0, 10), lang)],
+                ]}
+              />
+            </Section>
+          </>
+        }
+      />
+    </Stack>
   );
 }

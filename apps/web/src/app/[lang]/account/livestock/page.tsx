@@ -1,567 +1,203 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/ds/icon";
-import { Button } from "@/components/ui";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
-import { LivestockManagement } from "@/components/screens/livestock-management";
+import { createLivestockGroup, logFeeding, logHealthEvent, logProduction } from "@/actions/farm-ops";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, LineChart, Section, Split, Stack, StartHere, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { farmOptions, loadFarmScope } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, num, relDays, nowMs } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import {
-  createLivestockAnimal,
-  logLivestockFeeding,
-  logLivestockHealthTreatment,
-} from "@/actions/livestock";
+import { formatDay } from "@/lib/text";
 
 export const metadata: Metadata = { title: "Livestock & aquaculture" };
+
+const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
 export default async function Page({ params }: PageProps<"/[lang]/account/livestock">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: animals } = farmIds.length
-    ? await supabase
-        .from("farm_livestock_animals")
-        .select("id, farm_id, species, breed, tag_number, sex, current_weight_kg, status, birth_date, created_at")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const animalList = animals ?? [];
-  const hasLiveAnimals = animalList.length > 0;
-
-  const totalHead = animalList.length;
-  const totalWeightKg = animalList.reduce((sum, a) => sum + (Number(a.current_weight_kg) || 0), 0);
-  const totalWeightMt = (totalWeightKg / 1000).toFixed(2);
-
-  // Group animals by species
-  const bySpecies = new Map<string, number>();
-  for (const a of animalList) {
-    const s = a.species || "other";
-    bySpecies.set(s, (bySpecies.get(s) || 0) + 1);
-  }
-
-  const registerModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="pets" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Register Livestock Batch / Animal
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={createLivestockAnimal} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Target Farm <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} ({[f.lga, f.state].filter(Boolean).join(", ") || "Oyo"})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Species / Enterprise <span className="text-error">*</span>
-            </label>
-            <select
-              name="species"
-              defaultValue="poultry"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="poultry">Poultry (Broilers / Layers / Kuroiler)</option>
-              <option value="fish">Aquaculture (Catfish / Tilapia)</option>
-              <option value="cattle">Cattle (White Fulani / Bunaji / Sokoto Gudali)</option>
-              <option value="goat">Goat (Red Sokoto / West African Dwarf)</option>
-              <option value="sheep">Sheep (Yankasa / Ouda / Balami)</option>
-              <option value="pig">Swine / Pigs</option>
-              <option value="other">Other Livestock</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Tag / Batch Identifier <span className="text-error">*</span>
-            </label>
-            <input
-              name="tag_number"
-              type="text"
-              placeholder="e.g. BATCH-POULTRY-B4 or TAG-102"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Breed Name</label>
-            <input
-              name="breed"
-              type="text"
-              placeholder="e.g. Cobb 500, Clarias Gariepinus, Red Sokoto"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Sex</label>
-            <select
-              name="sex"
-              defaultValue="female"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-              <option value="mixed">Mixed (Flock / Pond Batch)</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Current Weight (kg)</label>
-            <input
-              name="current_weight_kg"
-              type="number"
-              step="0.05"
-              min="0"
-              placeholder="e.g. 1.35"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Stocking / Birth Date</label>
-            <input
-              name="birth_date"
-              type="date"
-              defaultValue={new Date().toISOString().split("T")[0]}
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            className="px-5 py-2 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
-            type="submit"
-            disabled={farmList.length === 0}
-          >
-            Register Batch
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-
-  const feedingModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="water_drop" className="text-secondary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Log Feeding &amp; Nutrition
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={logLivestockFeeding} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Target Farm <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Feed Formulation / Type <span className="text-error">*</span>
-            </label>
-            <input
-              name="feed_type"
-              type="text"
-              placeholder="e.g. Broiler Finisher Pellets, 2mm Extruded Feed"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Quantity Fed (kg) <span className="text-error">*</span>
-            </label>
-            <input
-              name="quantity_kg"
-              type="number"
-              step="0.5"
-              min="0.5"
-              defaultValue="50"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">Cost (Kobo / Minor Units)</label>
-          <input
-            name="cost_minor"
-            type="number"
-            placeholder="e.g. 3400000 (₦34,000)"
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            className="px-5 py-2 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-primary font-semibold shadow-sm"
-            type="submit"
-            disabled={farmList.length === 0}
-          >
-            Record Feeding
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-
-  const vetModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="vaccines" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Record Veterinary Health &amp; Vaccination
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={logLivestockHealthTreatment} className="space-y-4 text-left">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Treatment / Event Type
-            </label>
-            <select
-              name="treatment_type"
-              defaultValue="vaccination"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="vaccination">Vaccination Protocol</option>
-              <option value="deworming">Deworming</option>
-              <option value="antibiotic">Therapeutic Antibiotic</option>
-              <option value="supplement">Vitamin / Mineral Supplement</option>
-              <option value="quarantine">Biosecurity Quarantine</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Treatment Protocol Name <span className="text-error">*</span>
-            </label>
-            <input
-              name="treatment_name"
-              type="text"
-              placeholder="e.g. NDV Lasota Booster"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Medication / Vaccine Name</label>
-            <input
-              name="medication_name"
-              type="text"
-              placeholder="e.g. Lasota Live Vial"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Drug Withdrawal Period (Days)</label>
-            <input
-              name="withdrawal_days"
-              type="number"
-              defaultValue="0"
-              min="0"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-on-surface-variant">Mandatory days before meat/egg sale</p>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">Veterinary Notes &amp; Cold-Chain Log</label>
-          <textarea
-            name="notes"
-            rows={2}
-            placeholder="Attending veterinarian, vial batch #, temperature validation..."
-            className="w-full p-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <ScreenDialogClose className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-label-md text-label-md">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            className="px-5 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container font-semibold shadow-sm"
-            type="submit"
-          >
-            Record Treatment
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  const ids = scope.farmIds.length ? scope.farmIds : ["00000000-0000-0000-0000-000000000000"];
+  const since = new Date(nowMs() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const [{ data: groups }, { data: health }, { data: feed }, { data: prod }, { data: animals }] = await Promise.all([
+    supabase.from("farm_livestock_groups").select("*").in("farm_id", ids).order("created_at"),
+    supabase.from("farm_livestock_health_events").select("*").in("farm_id", ids).order("administered_on", { ascending: false }).limit(30),
+    supabase.from("farm_livestock_feedings").select("group_id, quantity_kg, cost_kobo, feeding_date").in("farm_id", ids).gte("feeding_date", since),
+    supabase.from("farm_livestock_production_logs").select("*").in("farm_id", ids).gte("log_date", since).order("log_date"),
+    supabase.from("farm_livestock_animals").select("id, tag_number, species, breed, sex, current_weight_kg, health_status, group_id").in("farm_id", ids).order("tag_number"),
+  ]);
+  const g = groups ?? [];
+  const gName = new Map(g.map((x) => [x.id, x.group_name]));
+  const head = g.reduce((s, x) => s + x.population, 0);
+  const feedCost = (feed ?? []).reduce((s, f) => s + Number(f.cost_kobo), 0);
+  const revenue = (prod ?? []).reduce((s, p) => s + Number(p.revenue_kobo), 0);
+  const withdrawals = (health ?? []).filter((h) => h.withdrawal_end_date && h.withdrawal_end_date >= new Date().toISOString().slice(0, 10));
+  const eggDays = new Map<string, number>();
+  for (const p of prod ?? []) if (p.product_type === "eggs") eggDays.set(p.log_date ?? "", (eggDays.get(p.log_date ?? "") ?? 0) + Number(p.quantity));
+  const eggSeries = [...eggDays.entries()].sort().map(([d, v]) => ({ x: d.slice(5), y: v }));
+  const groupOpts = g.map((x) => ({ value: x.id, label: x.group_name }));
+  const hidden = { lang };
 
   return (
-    <>
-      <LiveStrip tone={hasLiveAnimals ? "live" : "preview"}>
-        {hasLiveAnimals
-          ? `Showing ${animalList.length} registered animal batch${animalList.length === 1 ? "" : "es"} across your farm holding.`
-          : "Herd, flock and pond records show sample data until you register animals or ponds."}
-      </LiveStrip>
-      <LivestockManagement
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex flex-wrap items-center gap-space-sm">
-              <ScreenDialog title="Register New Batch" side="center" panel={registerModal}>
-                <Button
-                  className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
-                  type="button"
-                >
-                  <Icon name="add_circle" className="text-base text-primary" />
-                  <span>Register New Batch</span>
-                </Button>
-              </ScreenDialog>
-              <ScreenDialog title="Log Feed & Water" side="center" panel={feedingModal}>
-                <Button
-                  className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
-                  type="button"
-                >
-                  <Icon name="water_drop" className="text-base text-secondary" />
-                  <span>Log Feed &amp; Water</span>
-                </Button>
-              </ScreenDialog>
-              <ScreenDialog title="Veterinary Health" side="center" panel={vetModal}>
-                <Button
-                  className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition-colors shadow-sm font-semibold"
-                  type="button"
-                >
-                  <Icon name="vaccines" className="text-base" />
-                  <span>Schedule Vet Visit</span>
-                </Button>
-              </ScreenDialog>
-            </div>
-          ),
-          kpis: hasLiveAnimals ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-lg">
-              <div className="flex flex-col justify-between bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">
-                      Animal Inventory &amp; Biomass
-                    </span>
-                    <div className="mt-space-xs font-metric-num text-metric-num text-on-surface">
-                      {totalHead}{" "}
-                      <span className="font-label-md text-label-md text-on-surface-variant font-normal">
-                        Head
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="pets" />
-                  </div>
-                </div>
-                <div className="mt-space-md space-y-space-xs">
-                  <div className="flex items-center justify-between font-label-md text-label-md">
-                    <span className="text-on-surface">Estimated Biomass</span>
-                    <span className="font-bold text-primary">{totalWeightMt} MT</span>
-                  </div>
-                  <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-primary h-full rounded-full" style={{ width: "85%" }} />
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col justify-between bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">
-                      Enterprises Active
-                    </span>
-                    <div className="mt-space-xs font-metric-num text-metric-num text-secondary">
-                      {bySpecies.size}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low text-secondary">
-                    <Icon name="category" />
-                  </div>
-                </div>
-                <div className="mt-space-md space-y-space-xs">
-                  <div className="flex items-center justify-between font-label-md text-label-md">
-                    <span className="text-on-surface">Species Diversity</span>
-                    <span className="font-bold text-secondary">
-                      {Array.from(bySpecies.keys()).join(" · ") || "None"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col justify-between bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">
-                      Biosecurity Status
-                    </span>
-                    <div className="mt-space-xs font-metric-num text-metric-num text-primary">100%</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="shield_with_heart" />
-                  </div>
-                </div>
-                <div className="mt-space-md space-y-space-xs">
-                  <span className="font-label-sm text-label-sm text-secondary font-semibold">
-                    Biosecurity Level 1 Synchronized
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-col justify-between bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">
-                      Registered Farms
-                    </span>
-                    <div className="mt-space-xs font-metric-num text-metric-num text-on-surface">
-                      {farmList.length}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low text-primary">
-                    <Icon name="terrain" />
-                  </div>
-                </div>
-                <div className="mt-space-md space-y-space-xs">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">
-                    All holding facilities validated
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : undefined,
-          batches: hasLiveAnimals ? (
-            <div className="space-y-space-md">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-space-sm">
-                  <Icon name="dataset" className="text-primary text-xl" />
-                  <span className="font-headline-md text-headline-md text-on-surface font-bold">
-                    Active Production Batches ({animalList.length})
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
-                {animalList.map((animal) => (
-                  <div
-                    key={animal.id}
-                    className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col justify-between border border-outline-variant"
-                  >
-                    <div className="space-y-space-sm">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold uppercase">
-                            {animal.species}
-                          </span>
-                          <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1 font-bold">
-                            {animal.tag_number}
-                          </h3>
-                          <p className="font-body-sm text-body-sm text-on-surface-variant">
-                            {animal.breed || "Standard Variety"} · {animal.sex}
-                          </p>
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold capitalize">
-                          {animal.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-3 rounded-lg text-xs">
-                        <div>
-                          <span className="text-on-surface-variant block">Weight:</span>
-                          <span className="font-bold text-on-surface">
-                            {animal.current_weight_kg ? `${animal.current_weight_kg} kg` : "—"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-on-surface-variant block">Stocked Date:</span>
-                          <span className="font-bold text-on-surface">
-                            {animal.birth_date ? formatDate(animal.birth_date, lang) : "—"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : undefined,
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={
+          <>
+            <Chip icon="pets">{g.length} groups</Chip>
+            {withdrawals.length > 0 && <Chip icon="medication">{withdrawals.length} in drug withdrawal</Chip>}
+          </>
+        }
+        title="Livestock & Aquaculture"
+        description="Flocks, herds and ponds — head count, health events, feed and what they produce."
+        actions={
+          scope.farms.length > 0 && (
+            <>
+              {g.length > 0 && (
+                <>
+                  <ActionDialog
+                    title="Log feeding"
+                    trigger="Feeding"
+                    icon="restaurant"
+                    tone="secondary"
+                    action={logFeeding}
+                    hidden={hidden}
+                    fields={[
+                      { name: "group_id", label: "Group", type: "select", required: true, options: groupOpts },
+                      { name: "feed_type", label: "Feed", required: true, placeholder: "Broiler finisher" },
+                      { name: "quantity_kg", label: "Quantity (kg)", type: "number", required: true },
+                      { name: "cost", label: "Cost (₦)", type: "number" },
+                      { name: "feeding_date", label: "Date", type: "date" },
+                    ]}
+                  />
+                  <ActionDialog
+                    title="Health event"
+                    trigger="Health"
+                    icon="vaccines"
+                    tone="secondary"
+                    action={logHealthEvent}
+                    hidden={hidden}
+                    fields={[
+                      { name: "group_id", label: "Group", type: "select", required: true, options: groupOpts },
+                      { name: "event_type", label: "Event", type: "select", required: true, options: opt(["vaccination", "treatment", "disease_diagnosis", "vet_visit", "routine_check", "mortality"]) },
+                      { name: "disease_or_condition", label: "Condition" },
+                      { name: "medication_name", label: "Medication" },
+                      { name: "dosage", label: "Dosage" },
+                      { name: "head_affected", label: "Head affected", type: "number" },
+                      { name: "withdrawal_period_days", label: "Withdrawal (days)", type: "number" },
+                      { name: "cost", label: "Cost (₦)", type: "number" },
+                      { name: "vet_name", label: "Vet" },
+                      { name: "administered_on", label: "Date", type: "date" },
+                    ]}
+                  />
+                  <ActionDialog
+                    title="Log production"
+                    trigger="Production"
+                    icon="egg"
+                    tone="secondary"
+                    action={logProduction}
+                    hidden={hidden}
+                    fields={[
+                      { name: "group_id", label: "Group", type: "select", required: true, options: groupOpts },
+                      { name: "product_type", label: "Product", type: "select", required: true, options: opt(["eggs", "milk", "meat", "fish", "honey", "manure", "other"]) },
+                      { name: "quantity", label: "Quantity", type: "number", required: true },
+                      { name: "unit", label: "Unit", placeholder: "crates, litres, kg" },
+                      { name: "destination", label: "Destination", type: "select", defaultValue: "inventory", options: opt(["inventory", "marketplace", "home_consumption", "spoilage"]) },
+                      { name: "revenue", label: "Revenue (₦)", type: "number" },
+                      { name: "log_date", label: "Date", type: "date" },
+                    ]}
+                  />
+                </>
+              )}
+              <ActionDialog
+                title="Add a livestock group"
+                trigger="New group"
+                action={createLivestockGroup}
+                hidden={hidden}
+                fields={[
+                  { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+                  { name: "group_name", label: "Name", required: true, placeholder: "Broiler batch B-15" },
+                  { name: "animal_type", label: "Type", type: "select", required: true, options: opt(["cattle", "goats", "sheep", "poultry", "pigs", "fish", "rabbits", "snails", "other"]) },
+                  { name: "purpose", label: "Purpose", type: "select", defaultValue: "meat", options: opt(["meat", "dairy", "eggs", "breeding", "multi"]) },
+                  { name: "breed", label: "Breed" },
+                  { name: "population", label: "Head count", type: "number", required: true },
+                  { name: "age_weeks", label: "Age (weeks)", type: "number" },
+                  { name: "housing_location", label: "Housing" },
+                ]}
+              />
+            </>
+          )
+        }
       />
-    </>
+      {!scope.farms.length && <StartHere title="Register a farm to add livestock" />}
+      <KpiGrid>
+        <MetricCard label="Total head" value={num(head)} icon="pets" foot={`${g.length} groups`} />
+        <MetricCard label="Feed cost, 30 days" value={naira(feedCost)} icon="restaurant" foot={`${num((feed ?? []).reduce((s, f) => s + Number(f.quantity_kg), 0))} kg fed`} />
+        <MetricCard label="Production revenue, 30 days" value={naira(revenue)} icon="tag" foot="Eggs, fish, milk and meat sold" />
+        <MetricCard label="Health watch" value={g.filter((x) => x.health_status !== "healthy").length} icon="health_and_safety" foot="Groups not marked healthy" />
+      </KpiGrid>
+      <Split
+        wide={
+          <>
+            <Section title="Groups" icon="groups">
+              <DataTable
+                rows={g}
+                rowKey={(x) => x.id}
+                empty="No livestock groups yet."
+                columns={[
+                  { label: "Group", cell: (x) => <span className="font-medium">{x.group_name}</span> },
+                  { label: "Type", cell: (x) => `${label(x.animal_type)}${x.breed ? ` · ${x.breed}` : ""}` },
+                  { label: "Purpose", cell: (x) => label(x.purpose) },
+                  { label: "Head", numeric: true, cell: (x) => num(x.population) },
+                  { label: "Age", numeric: true, cell: (x) => (x.age_weeks != null ? `${x.age_weeks} wk` : "—") },
+                  { label: "Housing", cell: (x) => x.housing_location ?? "—" },
+                  { label: "Health", cell: (x) => <Status value={x.health_status} /> },
+                ]}
+              />
+            </Section>
+            <Section title="Health & treatment log" icon="vaccines">
+              <DataTable
+                rows={health ?? []}
+                rowKey={(h) => h.id}
+                empty="No health events yet."
+                columns={[
+                  { label: "Date", cell: (h) => (h.administered_on ? formatDay(h.administered_on, lang) : "—") },
+                  { label: "Group", cell: (h) => (h.group_id ? gName.get(h.group_id) : "—") },
+                  { label: "Event", cell: (h) => label(h.event_type) },
+                  { label: "Condition / drug", cell: (h) => [h.disease_or_condition, h.medication_name].filter(Boolean).join(" · ") || "—" },
+                  { label: "Head", numeric: true, cell: (h) => h.head_affected ?? "—" },
+                  { label: "Withdrawal ends", cell: (h) => (h.withdrawal_end_date ? relDays(h.withdrawal_end_date) : "—") },
+                  { label: "Cost", numeric: true, cell: (h) => naira(h.cost_kobo) },
+                ]}
+              />
+            </Section>
+          </>
+        }
+        side={
+          <>
+            <Section title="Egg output, crates/day" icon="egg">
+              <LineChart points={eggSeries} />
+            </Section>
+            <Section title="Tagged animals" icon="tag">
+              <ul className="flex flex-col divide-y divide-outline-variant/30">
+                {(animals ?? []).map((a) => (
+                  <li key={a.id} className="flex items-center justify-between py-2 text-body-sm">
+                    <span>
+                      <span className="font-medium text-on-surface">{a.tag_number}</span> <span className="text-on-surface-variant">· {label(a.sex)} · {a.current_weight_kg ?? "—"} kg</span>
+                    </span>
+                    <Status value={a.health_status} />
+                  </li>
+                ))}
+                {!animals?.length && <li className="py-4 text-center text-body-sm text-on-surface-variant">No individually tagged animals.</li>}
+              </ul>
+            </Section>
+          </>
+        }
+      />
+    </Stack>
   );
 }

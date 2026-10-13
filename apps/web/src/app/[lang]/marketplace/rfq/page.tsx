@@ -10,7 +10,7 @@ export default async function RfqProcurementPage({ params }: { params: Promise<{
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
 
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const [{ data: requests }, { data: categories }] = await Promise.all([
     supabase

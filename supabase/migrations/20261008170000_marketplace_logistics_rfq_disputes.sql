@@ -134,7 +134,6 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_seller_rating_update on public.marketplace_reviews;
 create trigger trg_seller_rating_update
 after insert or update on public.marketplace_reviews
 for each row execute function public.update_seller_rating_aggregate();
@@ -189,7 +188,6 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_freeze_escrow_on_dispute on public.marketplace_disputes;
 create trigger trg_freeze_escrow_on_dispute
 after insert on public.marketplace_disputes
 for each row execute function public.freeze_escrow_on_dispute();
@@ -390,5 +388,5 @@ create policy "marketplace_disputes_insert" on public.marketplace_disputes
   );
 
 create policy "marketplace_disputes_update_admin" on public.marketplace_disputes
-  for update using (public.is_admin('support_officer'))
-  with check (public.is_admin('support_officer'));
+  for update using (public.has_permission('disputes.decide'))
+  with check (public.has_permission('disputes.decide'));

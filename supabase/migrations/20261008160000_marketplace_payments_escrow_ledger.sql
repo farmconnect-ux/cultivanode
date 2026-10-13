@@ -374,6 +374,9 @@ begin
   if not found then
     raise exception 'Escrow for fulfilment % not found.', p_fulfilment_id;
   end if;
+  if v_escrow.buyer_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'Only the buyer can confirm delivery and release escrow.' using errcode = '42501';
+  end if;
 
   if v_escrow.status <> 'held' and v_escrow.status <> 'awaiting_confirmation' then
     raise exception 'Escrow % cannot be released from status %.', v_escrow.id, v_escrow.status;
@@ -524,13 +527,13 @@ alter table public.marketplace_settlements enable row level security;
 
 -- Ledger: Admin/finance staff only
 create policy "marketplace_ledger_accounts_read" on public.marketplace_ledger_accounts
-  for select using (public.is_admin('finance_officer'));
+  for select using (public.has_permission('ledger.read'));
 
 create policy "marketplace_journal_entries_read" on public.marketplace_journal_entries
-  for select using (public.is_admin('finance_officer'));
+  for select using (public.has_permission('ledger.read'));
 
 create policy "marketplace_journal_postings_read" on public.marketplace_journal_postings
-  for select using (public.is_admin('finance_officer'));
+  for select using (public.has_permission('ledger.read'));
 
 -- Payments: Buyer, relevant seller, and admin
 create policy "marketplace_payments_select" on public.marketplace_payments
@@ -561,3 +564,12 @@ create policy "marketplace_settlements_select" on public.marketplace_settlements
     )
     or public.is_admin()
   );
+
+-- Money movement is server-side only: the payment webhook and the journal are callable by the
+-- service role (Edge Functions) alone; buyers confirm delivery through release_fulfilment_escrow.
+revoke all on function public.record_marketplace_journal_entry(text, text, text, jsonb) from public, anon, authenticated;
+revoke all on function public.process_payment_webhook(text, text, bigint, uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.record_marketplace_journal_entry(text, text, text, jsonb) to service_role;
+grant execute on function public.process_payment_webhook(text, text, bigint, uuid, jsonb) to service_role;
+revoke all on function public.release_fulfilment_escrow(uuid) from public, anon;
+grant execute on function public.release_fulfilment_escrow(uuid) to authenticated;

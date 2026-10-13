@@ -16,7 +16,7 @@ export default async function OrderDetailPage({
   if (!hasLocale(lang)) notFound();
 
   const account = await requireAccount(lang);
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: order, error } = await supabase
     .from("marketplace_orders")
@@ -63,8 +63,8 @@ export default async function OrderDetailPage({
     notFound();
   }
 
-  const items = order.marketplace_order_items as any[];
-  const fulfilments = order.marketplace_fulfilments as any[];
+  const items = order.marketplace_order_items ?? [];
+  const fulfilments = order.marketplace_fulfilments ?? [];
 
   return (
     <Container className="py-10 sm:py-14 max-w-4xl flex flex-col gap-8">

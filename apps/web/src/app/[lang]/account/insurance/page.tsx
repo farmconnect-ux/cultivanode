@@ -1,178 +1,152 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
-import { Button } from "@/components/ui";
-import { InsuranceHub } from "@/components/screens/insurance-hub";
+import { decideClaim, requestPolicyQuote, submitClaim } from "@/actions/ecosystem";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, Section, Stack, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { farmOptions, loadFarmScope } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, relDays } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import {
-  purchaseInsurancePolicy,
-  fileInsuranceClaim,
-} from "@/actions/insurance";
+import { formatDay } from "@/lib/text";
 
-export const metadata: Metadata = { title: "Insurance & risk underwriting" };
+export const metadata: Metadata = { title: "Insurance & underwriting" };
 
 export default async function Page({ params }: PageProps<"/[lang]/account/insurance">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga, area_ha")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: policies } = farmIds.length
-    ? await (supabase.from("farm_insurance_policies") as any)
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const policyList = (policies ?? []) as any[];
-  const hasLivePolicies = policyList.length > 0;
-
-  const totalSumInsuredMinor = policyList.reduce(
-    (sum, p) => sum + (Number(p.sum_insured_minor) || 0),
-    0
-  );
-
-  const newPolicyModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="add_moderator" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Underwrite Multi-Peril / Parametric Policy
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={purchaseInsurancePolicy} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Insured Farm Enterprise <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} ({f.state})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Coverage Type</label>
-            <select
-              name="coverage_type"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            >
-              <option value="drought_parametric">Satellite Parametric Drought</option>
-              <option value="flood_excess_rainfall">Excess Rainfall &amp; Inundation</option>
-              <option value="multi_peril_yield">Multi-Peril Crop Yield Guarantee</option>
-              <option value="biological_pest_shield">Fall Armyworm &amp; Blight Outbreak</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Insured Area (Ha)</label>
-            <input
-              name="insured_area_ha"
-              type="number"
-              step="0.1"
-              defaultValue="5.0"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Total Sum Insured (₦) <span className="text-error">*</span>
-          </label>
-          <input
-            name="sum_insured_minor"
-            type="number"
-            required
-            placeholder="e.g. 2500000"
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          />
-        </div>
-
-        <div className="p-3 rounded-lg bg-secondary-container/20 text-on-secondary-container text-xs flex items-center gap-2">
-          <Icon name="verified_user" className="text-base shrink-0" />
-          <span>Parametric claims disburse automatically via Leadway Assurance smart contracts when Sentinel-2 NDVI falls 25% below the 10-year mean. Direct settlement policy: 0% commission.</span>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            type="submit"
-            className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
-          >
-            Activate Policy
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  const uid = account.userId;
+  const [{ data: policies }, { data: claims }, { data: underwriting }] = await Promise.all([
+    supabase.from("insurance_policies").select("*").eq("holder_id", uid).order("end_date", { ascending: false }),
+    supabase.from("insurance_claims").select("*").eq("holder_id", uid).order("created_at", { ascending: false }),
+    supabase.from("insurance_claims").select("*, insurance_policies!inner(policy_number, product, insurer_id)").eq("insurance_policies.insurer_id", uid).order("created_at", { ascending: false }),
+  ]);
+  const p = policies ?? [];
+  const active = p.filter((x) => x.status === "active");
+  const policyName = new Map(p.map((x) => [x.id, `${x.policy_number} · ${x.product}`]));
+  const paid = (claims ?? []).reduce((s, c) => s + Number(c.amount_paid_kobo ?? 0), 0);
 
   return (
-    <>
-      <LiveStrip tone={hasLivePolicies ? "live" : "preview"}>
-        {hasLivePolicies
-          ? `Showing ${policyList.length} active insurance polic${policyList.length === 1 ? "y" : "ies"} (₦${(totalSumInsuredMinor / 100).toLocaleString("en-NG")} total sum insured) backed by Leadway & NAIC.`
-          : "Insurance and risk underwriting displays reference actuarial indices until you underwrite a crop policy for your farm."}
-      </LiveStrip>
-
-      <InsuranceHub
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex flex-wrap items-center gap-space-sm">
-              <ScreenDialog title="Underwrite New Policy" side="center" panel={newPolicyModal}>
-                <Button
-                  className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-primary-container text-on-primary hover:bg-primary transition-colors font-label-lg shadow-sm font-semibold"
-                >
-                  <Icon name="add_moderator" className="text-[18px]" />
-                  <span>+ Underwrite New Policy</span>
-                </Button>
-              </ScreenDialog>
-              <Link
-                href={`/${lang}/account/crops`}
-                className="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-lg"
-              >
-                <Icon name="eco" className="text-[18px] text-primary" />
-                <span>Crop Parity</span>
-              </Link>
-            </div>
-          ),
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={<Chip icon="health_and_safety">{active.length} active policies</Chip>}
+        title="Insurance & Underwriting"
+        description="Weather-index, multi-peril, livestock and equipment cover — policies, premiums and claims in one place."
+        actions={
+          <>
+            {active.length > 0 && (
+              <ActionDialog
+                title="Submit a claim"
+                trigger="Claim"
+                icon="report"
+                tone="secondary"
+                action={submitClaim}
+                hidden={{ lang }}
+                fields={[
+                  { name: "policy_id", label: "Policy", type: "select", required: true, options: active.map((x) => ({ value: x.id, label: `${x.policy_number} · ${x.product}` })), wide: true },
+                  { name: "incident_date", label: "Incident date", type: "date", required: true },
+                  { name: "cause", label: "Cause", required: true },
+                  { name: "amount_claimed", label: "Amount (₦)", type: "number", required: true },
+                  { name: "description", label: "What happened", type: "textarea" },
+                ]}
+              />
+            )}
+            <ActionDialog
+              title="Get a quote"
+              description="An indicative premium is calculated now; the insurer confirms it."
+              trigger="Get a quote"
+              icon="request_quote"
+              action={requestPolicyQuote}
+              hidden={{ lang }}
+              fields={[
+                { name: "cover_type", label: "Cover", type: "select", required: true, options: ["weather_index", "multi_peril", "livestock", "equipment", "area_yield"].map((v) => ({ value: v, label: label(v) })) },
+                { name: "insurer_name", label: "Insurer", required: true, placeholder: "Leadway, NAIC, AXA Mansard…" },
+                { name: "farm_id", label: "Farm", type: "select", options: farmOptions(scope) },
+                { name: "crop_or_asset", label: "Crop or asset" },
+                { name: "sum_insured", label: "Sum insured (₦)", type: "number", required: true },
+                { name: "start_date", label: "Start", type: "date", required: true },
+                { name: "end_date", label: "End", type: "date", required: true },
+              ]}
+            />
+          </>
+        }
       />
-    </>
+      <KpiGrid>
+        <MetricCard label="Sum insured" value={naira(active.reduce((s, x) => s + Number(x.sum_insured_kobo), 0))} icon="shield" foot="Active policies" />
+        <MetricCard label="Premiums" value={naira(active.reduce((s, x) => s + Number(x.premium_kobo), 0))} icon="payments" foot="On active policies" />
+        <MetricCard label="Open claims" value={(claims ?? []).filter((c) => ["submitted", "assessing", "approved"].includes(c.status ?? "")).length} icon="report" foot={`${(claims ?? []).length} claims in total`} />
+        <MetricCard label="Claims paid" value={naira(paid)} icon="savings" foot="Received to date" />
+      </KpiGrid>
+      <Section title="Policies" icon="description">
+        <DataTable
+          rows={p}
+          rowKey={(x) => x.id}
+          empty="No policies yet — request a quote."
+          columns={[
+            { label: "Policy", cell: (x) => <span className="font-medium">{x.policy_number}</span> },
+            { label: "Insurer", cell: (x) => x.insurer_name },
+            { label: "Product", cell: (x) => x.product },
+            { label: "Cover", cell: (x) => label(x.cover_type) },
+            { label: "Insured", numeric: true, cell: (x) => naira(x.sum_insured_kobo) },
+            { label: "Premium", numeric: true, cell: (x) => naira(x.premium_kobo) },
+            { label: "Ends", cell: (x) => `${formatDay(x.end_date, lang)} (${relDays(x.end_date)})` },
+            { label: "Status", cell: (x) => <Status value={x.status} /> },
+          ]}
+        />
+      </Section>
+      <Section title="My claims" icon="report">
+        <DataTable
+          rows={claims ?? []}
+          rowKey={(c) => c.id}
+          empty="No claims."
+          columns={[
+            { label: "Claim", cell: (c) => <span className="font-medium">{c.claim_number}</span> },
+            { label: "Policy", cell: (c) => policyName.get(c.policy_id) },
+            { label: "Incident", cell: (c) => formatDay(c.incident_date, lang) },
+            { label: "Cause", cell: (c) => c.cause },
+            { label: "Claimed", numeric: true, cell: (c) => naira(c.amount_claimed_kobo) },
+            { label: "Paid", numeric: true, cell: (c) => naira(c.amount_paid_kobo) },
+            { label: "Status", cell: (c) => <Status value={c.status} /> },
+          ]}
+        />
+      </Section>
+      {(underwriting ?? []).length > 0 && (
+        <Section title="Claims to assess (as insurer)" icon="gavel">
+          <DataTable
+            rows={underwriting ?? []}
+            rowKey={(c) => c.id}
+            columns={[
+              { label: "Claim", cell: (c) => c.claim_number },
+              { label: "Policy", cell: (c) => c.insurance_policies?.policy_number },
+              { label: "Cause", cell: (c) => c.cause },
+              { label: "Claimed", numeric: true, cell: (c) => naira(c.amount_claimed_kobo) },
+              { label: "Status", cell: (c) => <Status value={c.status} /> },
+              {
+                label: "",
+                cell: (c) => (
+                  <ActionDialog
+                    title={`Assess ${c.claim_number}`}
+                    trigger="Assess"
+                    tone="ghost"
+                    icon="gavel"
+                    action={decideClaim}
+                    hidden={{ lang, id: c.id }}
+                    fields={[
+                      { name: "status", label: "Decision", type: "select", required: true, options: ["assessing", "approved", "paid", "rejected"].map((v) => ({ value: v, label: label(v) })) },
+                      { name: "amount_paid", label: "Amount paid (₦)", type: "number" },
+                    ]}
+                  />
+                ),
+              },
+            ]}
+          />
+        </Section>
+      )}
+    </Stack>
   );
 }

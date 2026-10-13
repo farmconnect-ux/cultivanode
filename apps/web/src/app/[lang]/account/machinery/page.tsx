@@ -1,540 +1,201 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { completeMaintenance, createMachine, logMachineUsage, scheduleMaintenance } from "@/actions/farm-ops";
 import { Icon } from "@/components/ds/icon";
-import { Button } from "@/components/ui";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
-import { MachineryFleet } from "@/components/screens/machinery-fleet";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionButton, ActionDialog } from "@/components/live/action-form";
+import { Chip, DataTable, KpiGrid, Meter, Section, Split, Stack, StartHere, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { farmOptions, loadFarmScope, plotOptions } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { label, naira, num, share, nowMs } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import {
-  createMachineryAsset,
-  logMachineryUsage,
-} from "@/actions/machinery";
+import { formatDay } from "@/lib/text";
 
 export const metadata: Metadata = { title: "Fleet & workshop" };
+
+const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
 export default async function Page({ params }: PageProps<"/[lang]/account/machinery">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: assets } = farmIds.length
-    ? await supabase
-        .from("farm_machinery_assets")
-        .select("id, farm_id, name, category, make, model, serial_number, fuel_type, fuel_consumption_rate, total_operating_hours, next_service_hours, status, created_at")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const assetList = assets ?? [];
-  const hasLiveFleet = assetList.length > 0;
-  const assetIds = assetList.map((a) => a.id);
-
-  const { data: usageLogs } = assetIds.length
-    ? await supabase
-        .from("farm_machinery_usage_logs")
-        .select("id, machinery_id, plot_id, crop_cycle_id, activity, hours_run, fuel_litres_used, fuel_cost_minor, operator_labor_cost_minor, area_covered_ha, log_date, created_at")
-        .in("machinery_id", assetIds)
-        .order("created_at", { ascending: false })
-        .limit(20)
-    : { data: [] };
-
-  const usageList = usageLogs ?? [];
-
-  // KPIs
-  const totalOperatingHours = assetList.reduce((sum, a) => sum + (a.total_operating_hours || 0), 0);
-  const totalFuelLitres = usageList.reduce((sum, u) => sum + (u.fuel_litres_used || 0), 0);
-  const dueServiceCount = assetList.filter(
-    (a) => a.next_service_hours && a.total_operating_hours >= a.next_service_hours
-  ).length;
-
-  const modalAddAsset = (
-    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col text-left">
-      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="add_circle" className="text-primary text-2xl" />
-          <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Add Machinery Asset</h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">Register tractor, implement, or heavy machinery to fleet</p>
-          </div>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={createMachineryAsset} className="p-space-lg space-y-space-md max-h-[720px] overflow-y-auto">
-        <div className="grid grid-cols-2 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">
-              Farm Enterprise <span className="text-error">*</span>
-            </label>
-            <select
-              name="farm_id"
-              required
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            >
-              {farmList.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Asset Category</label>
-            <select
-              name="category"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            >
-              <option value="tractor">Tractor (2WD / 4WD)</option>
-              <option value="harvester">Combine Harvester</option>
-              <option value="sprayer">Boom / Orchard Sprayer</option>
-              <option value="planter">Precision Planter / Seeder</option>
-              <option value="tiller">Power Tiller / Rotary</option>
-              <option value="irrigation_pump">Solar / Diesel Irrigation Pump</option>
-              <option value="drone">Agricultural Spray Drone</option>
-              <option value="vehicle">Utility Truck / Logistics Van</option>
-              <option value="other">Other Heavy Machinery</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="space-y-space-xs">
-          <label className="font-label-md text-label-md text-on-surface font-semibold">
-            Machine Name / Asset Identifier <span className="text-error">*</span>
-          </label>
-          <input
-            name="name"
-            required
-            placeholder="e.g. John Deere 5075E 4WD Tractor"
-            type="text"
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Make / Manufacturer</label>
-            <input
-              name="make"
-              placeholder="e.g. John Deere, New Holland, Massey Ferguson"
-              type="text"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Model</label>
-            <input
-              name="model"
-              placeholder="e.g. 5075E, MF 375, TT55"
-              type="text"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Serial / Chassis Number</label>
-            <input
-              name="serial_number"
-              placeholder="e.g. JD-5075E-2025-081"
-              type="text"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Fuel / Power Type</label>
-            <select
-              name="fuel_type"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            >
-              <option value="diesel">Automotive Diesel (AGO)</option>
-              <option value="petrol">Premium Motor Spirit (PMS)</option>
-              <option value="solar">Solar PV / Electric</option>
-              <option value="hybrid">Diesel-Electric Hybrid</option>
-              <option value="manual">Manual / PTO Powered</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Fuel Rate (L/hr)</label>
-            <input
-              name="fuel_consumption_rate"
-              defaultValue="7.5"
-              step="0.1"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Initial Hours</label>
-            <input
-              name="total_operating_hours"
-              defaultValue="0"
-              step="0.5"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Next Service (Hr)</label>
-            <input
-              name="next_service_hours"
-              defaultValue="250"
-              step="50"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
-            Cancel
-          </ScreenDialogClose>
-          <Button className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
-            Register Asset to Fleet
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-
-  const modalLogUsage = (
-    <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl shadow-xl overflow-hidden flex flex-col text-left">
-      <div className="p-space-lg bg-surface-container-lowest flex items-center justify-between border-b border-surface-container-high">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="speed" className="text-secondary text-2xl" />
-          <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Log Machine Hours &amp; Fuel</h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">Update telemetry odometer and operational expenses</p>
-          </div>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={logMachineryUsage} className="p-space-lg space-y-space-md max-h-[720px] overflow-y-auto">
-        <div className="space-y-space-xs">
-          <label className="font-label-md text-label-md text-on-surface font-semibold">
-            Machinery Asset <span className="text-error">*</span>
-          </label>
-          <select
-            name="machinery_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-          >
-            {assetList.length === 0 ? (
-              <option value="">No machinery assets registered yet</option>
-            ) : (
-              assetList.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.total_operating_hours || 0} hrs logged)
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        <div className="space-y-space-xs">
-          <label className="font-label-md text-label-md text-on-surface font-semibold">
-            Operation Activity <span className="text-error">*</span>
-          </label>
-          <input
-            name="activity"
-            required
-            placeholder="e.g. Harrowing Plot A1 Maize (18.0 Ha)"
-            type="text"
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">
-              Hours Run <span className="text-error">*</span>
-            </label>
-            <input
-              name="hours_run"
-              required
-              step="0.5"
-              defaultValue="5.0"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Fuel Consumed (Litres)</label>
-            <input
-              name="fuel_litres_used"
-              step="0.5"
-              defaultValue="35.0"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-space-md">
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Fuel Cost (Minor/Kobo)</label>
-            <input
-              name="fuel_cost_minor"
-              placeholder="e.g. 4200000 (= ₦42,000)"
-              defaultValue="4200000"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-          <div className="space-y-space-xs">
-            <label className="font-label-md text-label-md text-on-surface font-semibold">Area Covered (Hectares)</label>
-            <input
-              name="area_covered_ha"
-              step="0.1"
-              defaultValue="6.0"
-              type="number"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-body-md font-body-md text-on-surface focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
-          <ScreenDialogClose className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
-            Cancel
-          </ScreenDialogClose>
-          <Button className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold" type="submit">
-            Save Operation Telemetry
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  const ids = scope.farmIds.length ? scope.farmIds : ["00000000-0000-0000-0000-000000000000"];
+  const [{ data: fleet }, { data: usage }, { data: maint }] = await Promise.all([
+    supabase.from("farm_machinery_assets").select("*").in("farm_id", ids).order("asset_code"),
+    supabase.from("farm_machinery_usage_logs").select("*").in("farm_id", ids).order("start_time", { ascending: false }).limit(20),
+    supabase.from("farm_machinery_maintenance").select("*").in("farm_id", ids).order("service_date", { ascending: false }).limit(20),
+  ]);
+  const f = fleet ?? [];
+  const mName = new Map(f.map((m) => [m.id, `${m.asset_code} · ${m.name}`]));
+  const busy = f.filter((m) => ["in_use", "hired_out", "reserved"].includes(m.current_status));
+  const down = f.filter((m) => ["under_maintenance", "out_of_service"].includes(m.current_status));
+  const dueService = f.filter((m) => m.next_service_hours && Number(m.engine_hours) >= Number(m.next_service_hours) - 50);
+  const value = f.reduce((s, m) => s + Number(m.purchase_value_kobo ?? 0), 0);
+  const hrs30 = (usage ?? []).filter((u) => nowMs() - Date.parse(u.start_time) < 30 * 86_400_000).reduce((s, u) => s + Number(u.hours_operated), 0);
+  const machineOpts = f.map((m) => ({ value: m.id, label: `${m.asset_code} · ${m.name}` }));
+  const hidden = { lang };
 
   return (
-    <>
-      {!hasLiveFleet && (
-        <LiveStrip tone="preview">
-          Viewing sample syndicate fleet telemetry. Register your first machinery asset below to link live telemetry logs.
-        </LiveStrip>
-      )}
-
-      <MachineryFleet
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex flex-wrap items-center gap-space-sm shrink-0">
-              <ScreenDialog title="Add Machinery Asset" side="center" panel={modalAddAsset}>
-                <Button
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors font-label-lg text-label-lg font-semibold shadow-sm"
-                  type="button"
-                >
-                  <Icon name="add_circle" className="text-lg" />
-                  <span>Add Machinery Asset</span>
-                </Button>
-              </ScreenDialog>
-
-              <ScreenDialog title="Log Machine Hours & Fuel" side="center" panel={modalLogUsage}>
-                <Button
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors font-label-lg text-label-lg font-semibold shadow-sm"
-                  type="button"
-                >
-                  <Icon name="speed" className="text-lg text-secondary" />
-                  <span>Log Machine Hours</span>
-                </Button>
-              </ScreenDialog>
-            </div>
-          ),
-
-          kpis: hasLiveFleet ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                      Active Fleet Assets
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="font-metric-num text-metric-num text-on-surface">{assetList.length}</span>
-                      <span className="font-label-lg text-label-lg font-bold text-primary">Units</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                    <Icon name="agriculture" className="text-2xl" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-label-sm font-label-sm">
-                    <span className="text-on-surface-variant">Across {farmList.length} Farm Enterprise(s)</span>
-                    <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-bold">Operational</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                      Cumulative Engine Hours
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="font-metric-num text-metric-num text-on-surface">{totalOperatingHours}</span>
-                      <span className="font-label-lg text-label-lg font-bold text-secondary">Hours</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary group-hover:scale-105 transition-transform">
-                    <Icon name="speed" className="text-2xl" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 flex flex-col gap-1">
-                  <span className="text-on-surface-variant font-label-sm text-label-sm">
-                    {usageList.length} verified operations logged
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                      Fuel Consumed
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="font-metric-num text-metric-num text-on-surface">{totalFuelLitres}</span>
-                      <span className="font-label-lg text-label-lg font-bold text-primary">Litres</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                    <Icon name="local_gas_station" className="text-2xl" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Automotive Diesel (AGO)</span>
-                </div>
-              </div>
-
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                      Maintenance Health
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="font-metric-num text-metric-num text-tertiary-container">
-                        {dueServiceCount > 0 ? `${dueServiceCount} Due` : "All Safe"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform">
-                    <Icon name={dueServiceCount > 0 ? "warning" : "check_circle"} className="text-2xl" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">
-                    Workshop Spec §5.3 Monitored
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : undefined,
-
-          fleet: hasLiveFleet ? (
-            <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
-              <div className="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-md bg-surface-container-lowest">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
-                    <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
-                      Fleet Asset Inventory &amp; Telemetry Registry
-                    </h2>
-                  </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-                    {assetList.length} machine asset(s) registered under active supervision.
-                  </p>
-                </div>
-              </div>
-
-              <div className="divide-y divide-surface-container-high/60">
-                {assetList.map((asset) => {
-                  const isDue = asset.next_service_hours && asset.total_operating_hours >= asset.next_service_hours;
-
-                  return (
-                    <div key={asset.id} className="p-space-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md hover:bg-surface-container-low transition-colors">
-                      <div className="flex items-start gap-space-md">
-                        <div className="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary shrink-0">
-                          <Icon name="agriculture" className="text-2xl" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-headline-sm text-headline-sm font-bold text-on-surface">{asset.name}</span>
-                            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container uppercase text-on-surface-variant">
-                              {asset.category}
-                            </span>
-                            {asset.serial_number && (
-                              <span className="font-mono text-label-sm text-label-sm text-on-surface-variant">
-                                #{asset.serial_number}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-body-sm font-body-sm text-on-surface-variant mt-1 flex-wrap">
-                            <span>Make: <strong className="text-on-surface">{asset.make || "N/A"}</strong></span>
-                            <span>•</span>
-                            <span>Model: <strong className="text-on-surface">{asset.model || "N/A"}</strong></span>
-                            <span>•</span>
-                            <span>Fuel: {asset.fuel_type} ({asset.fuel_consumption_rate || 0} L/hr)</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-space-md w-full lg:w-auto justify-between lg:justify-end shrink-0 pt-2 lg:pt-0">
-                        <div className="text-right">
-                          <div className="font-metric-num text-metric-num text-on-surface font-bold">
-                            {asset.total_operating_hours || 0} hrs
-                          </div>
-                          <span className={`font-label-sm text-label-sm ${isDue ? "text-error font-bold" : "text-on-surface-variant"}`}>
-                            Next service: {asset.next_service_hours ? `${asset.next_service_hours} hrs` : "N/A"}
-                          </span>
-                        </div>
-
-                        <ScreenDialog title="Log Machine Hours & Fuel" side="center" panel={modalLogUsage}>
-                          <Button
-                            className="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-sm text-label-sm font-semibold transition-colors"
-                            type="button"
-                          >
-                            Log Hours
-                          </Button>
-                        </ScreenDialog>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : undefined,
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={
+          <>
+            <Chip icon="agriculture">{f.length} machines</Chip>
+            <Chip icon="build">{down.length} in workshop</Chip>
+          </>
+        }
+        title="Fleet & Workshop"
+        description="Your tractors, implements, pumps and trucks — status, engine hours, usage and service history."
+        actions={
+          <>
+            <Link href={`/${lang}/account/machinery/telemetry`} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3.5 py-2 font-label-md text-label-md text-on-surface shadow-sm ring-1 ring-outline-variant/60 hover:bg-surface-container-low">
+              <Icon name="satellite_alt" className="text-base" /> Live tracking
+            </Link>
+            {f.length > 0 && (
+              <>
+                <ActionDialog
+                  title="Log machine use"
+                  trigger="Log use"
+                  icon="timer"
+                  tone="secondary"
+                  action={logMachineUsage}
+                  hidden={hidden}
+                  fields={[
+                    { name: "machinery_id", label: "Machine", type: "select", required: true, options: machineOpts },
+                    { name: "operation_name", label: "Job", required: true, placeholder: "Harrowing NB-A" },
+                    { name: "plot_id", label: "Plot", type: "select", options: plotOptions(scope) },
+                    { name: "hours_operated", label: "Hours", type: "number", required: true },
+                    { name: "area_covered_ha", label: "Area (ha)", type: "number" },
+                    { name: "fuel_litres_consumed", label: "Fuel (L)", type: "number" },
+                  ]}
+                />
+                <ActionDialog
+                  title="Workshop job"
+                  trigger="Service"
+                  icon="build"
+                  tone="secondary"
+                  action={scheduleMaintenance}
+                  hidden={hidden}
+                  fields={[
+                    { name: "machinery_id", label: "Machine", type: "select", required: true, options: machineOpts },
+                    { name: "service_type", label: "Type", type: "select", required: true, options: opt(["routine_service", "repair", "inspection", "tyre", "overhaul"]) },
+                    { name: "description", label: "Work", required: true, wide: true },
+                    { name: "service_date", label: "Date", type: "date" },
+                    { name: "cost", label: "Cost (₦)", type: "number" },
+                    { name: "vendor", label: "Workshop / vendor" },
+                  ]}
+                />
+              </>
+            )}
+            {scope.farms.length > 0 && (
+              <ActionDialog
+                title="Add a machine"
+                trigger="Add machine"
+                action={createMachine}
+                hidden={hidden}
+                fields={[
+                  { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
+                  { name: "asset_code", label: "Asset code", required: true, placeholder: "TR-02" },
+                  { name: "name", label: "Name", required: true, wide: true },
+                  { name: "category", label: "Category", type: "select", required: true, options: opt(["tractor", "plough", "harrow", "ridger", "planter", "harvester", "boom_sprayer", "water_pump", "generator", "trailer", "truck", "processor", "drone", "other"]) },
+                  { name: "fuel_type", label: "Fuel", type: "select", defaultValue: "diesel", options: opt(["diesel", "petrol", "electric", "manual", "hybrid"]) },
+                  { name: "manufacturer", label: "Make" },
+                  { name: "model", label: "Model" },
+                  { name: "year_of_manufacture", label: "Year", type: "number" },
+                  { name: "registration_number", label: "Registration" },
+                  { name: "engine_hours", label: "Engine hours", type: "number" },
+                  { name: "next_service_hours", label: "Next service at (h)", type: "number" },
+                  { name: "hourly_rate", label: "Internal rate (₦/h)", type: "number" },
+                  { name: "purchase_value", label: "Value (₦)", type: "number" },
+                ]}
+              />
+            )}
+          </>
+        }
       />
-    </>
+      {!scope.farms.length && <StartHere title="Register a farm to add machinery" />}
+      <KpiGrid>
+        <MetricCard label="Fleet utilisation" value={`${Math.round(share(busy.length, f.length))}%`} icon="speed" foot={`${busy.length} of ${f.length} working or reserved`} />
+        <MetricCard label="Hours, 30 days" value={num(hrs30, 1)} unit="h" icon="timer" foot="Logged machine hours" />
+        <MetricCard label="Service due" value={dueService.length} icon="build" iconTone={dueService.length ? "bg-caution-soft text-[#b45309]" : undefined} foot="Within 50 h of the service interval" />
+        <MetricCard label="Fleet value" value={naira(value)} icon="account_balance" foot="At purchase price" />
+      </KpiGrid>
+      <Section title="Fleet register" icon="agriculture">
+        <DataTable
+          rows={f}
+          rowKey={(m) => m.id}
+          empty="No machines yet."
+          columns={[
+            { label: "Asset", cell: (m) => <span className="font-medium">{m.asset_code}</span> },
+            { label: "Machine", cell: (m) => `${m.name}${m.year_of_manufacture ? ` (${m.year_of_manufacture})` : ""}` },
+            { label: "Category", cell: (m) => label(m.category) },
+            { label: "Engine hours", numeric: true, cell: (m) => num(m.engine_hours) },
+            {
+              label: "To service",
+              cell: (m) =>
+                m.next_service_hours ? (
+                  <div className="w-28">
+                    <Meter value={share(Number(m.engine_hours), Number(m.next_service_hours))} tone={Number(m.engine_hours) >= Number(m.next_service_hours) - 50 ? "caution" : "positive"} />
+                    <span className="text-body-sm text-on-surface-variant">{num(Number(m.next_service_hours) - Number(m.engine_hours))} h</span>
+                  </div>
+                ) : (
+                  "—"
+                ),
+            },
+            { label: "Rate", numeric: true, cell: (m) => (m.hourly_internal_rate_kobo ? `${naira(m.hourly_internal_rate_kobo)}/h` : "—") },
+            { label: "Status", cell: (m) => <Status value={m.current_status} /> },
+          ]}
+        />
+      </Section>
+      <Split
+        wide={
+          <Section title="Usage log" icon="history">
+            <DataTable
+              rows={usage ?? []}
+              rowKey={(u) => u.id}
+              empty="No usage logged."
+              columns={[
+                { label: "Date", cell: (u) => formatDay(u.start_time.slice(0, 10), lang) },
+                { label: "Machine", cell: (u) => mName.get(u.machinery_id) },
+                { label: "Job", cell: (u) => u.operation_name },
+                { label: "Hours", numeric: true, cell: (u) => num(u.hours_operated, 1) },
+                { label: "Area", numeric: true, cell: (u) => (u.area_covered_ha ? `${num(u.area_covered_ha, 1)} ha` : "—") },
+                { label: "Fuel", numeric: true, cell: (u) => (u.fuel_litres_consumed ? `${num(u.fuel_litres_consumed)} L` : "—") },
+                { label: "Cost", numeric: true, cell: (u) => naira(u.operational_cost_kobo) },
+              ]}
+            />
+          </Section>
+        }
+        side={
+          <Section title="Workshop" icon="build">
+            <ul className="flex flex-col divide-y divide-outline-variant/30">
+              {(maint ?? []).map((x) => (
+                <li key={x.id} className="flex flex-col gap-1 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-label-lg text-label-lg text-on-surface">{mName.get(x.machinery_id)}</p>
+                    <Status value={x.status} />
+                  </div>
+                  <p className="text-body-sm text-on-surface-variant">
+                    {label(x.service_type)} · {x.description}
+                  </p>
+                  <div className="flex items-center justify-between text-body-sm text-on-surface-variant">
+                    <span>
+                      {x.service_date ? formatDay(x.service_date, lang) : ""} · {naira(x.cost_kobo)}
+                    </span>
+                    {x.status !== "completed" && <ActionButton action={completeMaintenance} hidden={{ lang, id: x.id }} label="Complete" />}
+                  </div>
+                </li>
+              ))}
+              {!maint?.length && <li className="py-4 text-center text-body-sm text-on-surface-variant">No service records.</li>}
+            </ul>
+          </Section>
+        }
+      />
+    </Stack>
   );
 }

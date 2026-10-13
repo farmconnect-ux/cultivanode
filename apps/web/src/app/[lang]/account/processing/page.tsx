@@ -1,237 +1,109 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
-import { Button } from "@/components/ui";
-import { ProcessingOps } from "@/components/screens/processing-ops";
+import { advanceBatch, createProcessingBatch } from "@/actions/ecosystem";
+import { PageHeader } from "@/components/ds/page-header";
+import { ActionDialog } from "@/components/live/action-form";
+import { Bars, Chip, DataTable, KpiGrid, Section, Split, Stack, Status } from "@/components/live/kit";
+import { MetricCard } from "@/components/live/metric-card";
 import { hasLocale } from "@/i18n/config";
+import { farmOptions, loadFarmScope } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
+import { ago, label, mass, num } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/text";
-import {
-  recordProcessingIntake,
-  recordProcessingOutput,
-} from "@/actions/processing";
 
-export const metadata: Metadata = { title: "Agro-processing & value-addition operations" };
+export const metadata: Metadata = { title: "Agro-processing" };
+
+const STAGES = ["received", "cleaning", "drying", "milling", "packaging", "quality_check", "dispatched"];
 
 export default async function Page({ params }: PageProps<"/[lang]/account/processing">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const account = await requireAccount(lang);
+  const scope = await loadFarmScope(account);
   const supabase = await createClient();
-
-  const scope = [
-    `owner_id.eq.${account.userId}`,
-    ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
-  ];
-  const { data: farms } = await supabase
-    .from("farms")
-    .select("id, name, state, lga")
-    .or(scope.join(","))
-    .order("created_at");
-
-  const farmList = farms ?? [];
-  const farmIds = farmList.map((f) => f.id);
-
-  const { data: batches } = farmIds.length
-    ? await (supabase.from("farm_processing_batches") as any)
-        .select("*")
-        .in("farm_id", farmIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const batchList = (batches ?? []) as any[];
-  const hasLiveBatches = batchList.length > 0;
-
-  const intakeModal = (
-    <div className="bg-surface-container-lowest rounded-xl p-space-xl max-w-xl w-full mx-4 shadow-xl space-y-space-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-space-xs">
-          <Icon name="factory" className="text-primary text-2xl" />
-          <h3 className="font-headline-md text-headline-md text-primary font-bold">
-            Log Raw Material Intake &amp; Run
-          </h3>
-        </div>
-        <ScreenDialogClose className="p-1 text-on-surface-variant hover:text-on-surface">
-          <Icon name="close" />
-        </ScreenDialogClose>
-      </div>
-
-      <form action={recordProcessingIntake} className="space-y-4 text-left">
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-1">
-            Producing Farm / Sourcing <span className="text-error">*</span>
-          </label>
-          <select
-            name="farm_id"
-            required
-            className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-          >
-            {farmList.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} ({f.state})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Raw Commodity Intake <span className="text-error">*</span>
-            </label>
-            <input
-              name="commodity_intake"
-              required
-              placeholder="e.g. Cassava Roots (TME-419), Paddy Rice"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Intake Weight (kg) <span className="text-error">*</span>
-            </label>
-            <input
-              name="intake_weight_kg"
-              type="number"
-              step="1"
-              required
-              placeholder="e.g. 10000"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">
-              Target Value Product <span className="text-error">*</span>
-            </label>
-            <input
-              name="processed_output_product"
-              required
-              placeholder="e.g. High Quality Cassava Flour (HQCF), Parboiled Rice"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-1">Processing Facility</label>
-            <input
-              name="processing_facility"
-              defaultValue="Iseyin Agro-Industrial Milling Complex"
-              className="w-full h-10 px-3 bg-surface-container-low rounded-lg text-on-surface font-body-md text-body-md border border-outline-variant focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg bg-secondary-container/20 text-on-secondary-container text-xs flex items-center gap-2">
-          <Icon name="verified" className="text-base shrink-0" />
-          <span>Extraction yield ratios and boiler energy consumption metrics are auto-computed according to standard agro-processing benchmarks.</span>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <ScreenDialogClose className="px-4 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-sm font-medium">
-            Cancel
-          </ScreenDialogClose>
-          <Button
-            type="submit"
-            className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors text-sm font-semibold shadow-sm"
-          >
-            Start Processing Run
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+  const { data } = await supabase.from("processing_batches").select("*").eq("owner_id", account.userId).order("started_at", { ascending: false });
+  const b = data ?? [];
+  const open = b.filter((x) => x.stage !== "dispatched");
+  const done = b.filter((x) => x.output_kg != null);
+  const input = done.reduce((s, x) => s + Number(x.input_kg), 0);
+  const output = done.reduce((s, x) => s + Number(x.output_kg ?? 0), 0);
+  const byStage = STAGES.map((st) => ({ label: label(st), value: b.filter((x) => x.stage === st).length }));
 
   return (
-    <>
-      <LiveStrip tone={hasLiveBatches ? "live" : "preview"}>
-        {hasLiveBatches
-          ? `Showing ${batchList.length} active value-addition batch${batchList.length === 1 ? "" : "es"} across processing facilities.`
-          : "Agro-processing operations show reference extraction runs until you log your first material transformation batch."}
-      </LiveStrip>
-
-      <ProcessingOps
-        lang={lang}
-        slots={{
-          actions: (
-            <div className="flex flex-wrap items-center gap-space-sm">
-              <ScreenDialog title="Log Raw Material Intake" side="center" panel={intakeModal}>
-                <Button
-                  className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-all"
-                >
-                  <Icon name="input" className="text-[18px]" />
-                  <span>Log Raw Material Intake</span>
-                </Button>
-              </ScreenDialog>
-              <Link
-                href={`/${lang}/account/harvest`}
-                className="flex items-center gap-space-xs px-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg shadow-sm hover:bg-surface-container transition-all"
-              >
-                <Icon name="grain" className="text-[18px] text-primary" />
-                <span>Harvest Silo Feed</span>
-              </Link>
-            </div>
-          ),
-          batches: hasLiveBatches ? (
-            <>
-              {batchList.map((batch) => {
-                const isCompleted = batch.status === "completed";
-                const intakeMt = (Number(batch.intake_weight_kg) / 1000).toFixed(1);
-                const outputMt = (Number(batch.output_quantity_kg) / 1000).toFixed(1);
-                return (
-                  <tr key={batch.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="py-3 px-space-sm font-semibold text-on-surface">
-                      {batch.commodity_intake}
-                      <span className="block font-label-sm text-label-sm font-normal text-on-surface-variant">
-                        {batch.processed_output_product}
-                      </span>
-                    </td>
-                    <td className="py-3 px-space-sm text-on-surface font-medium">
-                      {intakeMt} MT
-                    </td>
-                    <td className="py-3 px-space-sm">
-                      <div className="font-semibold text-primary">
-                        {outputMt} MT ({batch.extraction_efficiency_rate}%)
-                      </div>
-                      <span className="text-secondary font-label-sm text-label-sm">
-                        {batch.processing_facility}
-                      </span>
-                    </td>
-                    <td className="py-3 px-space-sm text-on-surface-variant">
-                      NAFDAC / ISO Compliant
-                    </td>
-                    <td className="py-3 px-space-sm text-on-surface font-medium capitalize">
-                      {batch.status}
-                    </td>
-                    <td className="py-3 px-space-sm text-right">
-                      {!isCompleted ? (
-                        <form action={recordProcessingOutput}>
-                          <input type="hidden" name="batch_id" value={batch.id} />
-                          <Button
-                            type="submit"
-                            className="px-2 py-1 rounded bg-primary text-on-primary text-xs font-semibold hover:bg-primary-container transition-colors"
-                          >
-                            Complete Batch
-                          </Button>
-                        </form>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold font-label-sm text-label-sm">
-                          Finished
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </>
-          ) : undefined,
-        }}
+    <Stack>
+      <PageHeader
+        eyebrow={<Chip icon="factory">{open.length} batches on the floor</Chip>}
+        title="Agro-processing"
+        description="Batches from intake to dispatch — conversion yield, moisture and quality grade, traced back to the source farm."
+        actions={
+          <ActionDialog
+            title="Receive a batch"
+            trigger="New batch"
+            action={createProcessingBatch}
+            hidden={{ lang }}
+            fields={[
+              { name: "facility_name", label: "Facility", required: true },
+              { name: "batch_code", label: "Batch code", placeholder: "Generated if blank" },
+              { name: "input_commodity", label: "Input", required: true, placeholder: "Cassava roots" },
+              { name: "input_kg", label: "Input weight (kg)", type: "number", required: true },
+              { name: "output_product", label: "Output product", required: true, placeholder: "White garri" },
+              { name: "source_farm_id", label: "Source farm", type: "select", options: farmOptions(scope) },
+              { name: "moisture_pct", label: "Moisture %", type: "number" },
+              { name: "notes", label: "Notes", type: "textarea" },
+            ]}
+          />
+        }
       />
-    </>
+      <KpiGrid>
+        <MetricCard label="Throughput" value={mass(b.reduce((s, x) => s + Number(x.input_kg), 0))} icon="conveyor_belt" foot={`${b.length} batches`} />
+        <MetricCard label="Conversion yield" value={input ? `${num((output / input) * 100, 1)}%` : "—"} icon="percent" foot={`${mass(output)} out of ${mass(input)}`} />
+        <MetricCard label="On the floor" value={open.length} icon="factory" foot="Not yet dispatched" />
+        <MetricCard label="Grade A batches" value={b.filter((x) => x.quality_grade === "A").length} icon="workspace_premium" foot="Passed quality check" />
+      </KpiGrid>
+      <Split
+        wide={
+          <Section title="Batches" icon="view_timeline">
+            <DataTable
+              rows={b}
+              rowKey={(x) => x.id}
+              empty="No batches yet."
+              columns={[
+                { label: "Batch", cell: (x) => <span className="font-medium">{x.batch_code}</span> },
+                { label: "Facility", cell: (x) => x.facility_name },
+                { label: "In → out", cell: (x) => `${x.input_commodity} → ${x.output_product}` },
+                { label: "Input", numeric: true, cell: (x) => mass(x.input_kg) },
+                { label: "Output", numeric: true, cell: (x) => (x.output_kg != null ? mass(x.output_kg) : "—") },
+                { label: "Started", cell: (x) => ago(x.started_at) },
+                { label: "Stage", cell: (x) => <Status value={x.stage} /> },
+                {
+                  label: "",
+                  cell: (x) =>
+                    x.stage !== "dispatched" ? (
+                      <ActionDialog
+                        title={`Advance ${x.batch_code}`}
+                        trigger="Advance"
+                        tone="ghost"
+                        icon="arrow_forward"
+                        action={advanceBatch}
+                        hidden={{ lang, id: x.id }}
+                        fields={[
+                          { name: "stage", label: "Next stage", type: "select", required: true, defaultValue: STAGES[Math.min(STAGES.length - 1, STAGES.indexOf(x.stage ?? "received") + 1)], options: STAGES.map((s) => ({ value: s, label: label(s) })) },
+                          { name: "output_kg", label: "Output weight (kg)", type: "number" },
+                          { name: "quality_grade", label: "Quality grade", placeholder: "A" },
+                        ]}
+                      />
+                    ) : null,
+                },
+              ]}
+            />
+          </Section>
+        }
+        side={
+          <Section title="Batches by stage" icon="stacked_bar_chart">
+            <Bars items={byStage} />
+          </Section>
+        }
+      />
+    </Stack>
   );
 }

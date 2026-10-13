@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
 /**
@@ -15,13 +15,15 @@ export async function POST(req: Request) {
     const signature = req.headers.get("x-paystack-signature");
     const configuredSecret = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_WEBHOOK_SECRET;
 
-    // Verify HMAC SHA512 signature if secret is configured
-    if (configuredSecret && signature) {
-      const hash = crypto.createHmac("sha512", configuredSecret).update(rawBody).digest("hex");
-      if (hash !== signature) {
-        logger.warn("paystack_webhook_invalid_signature");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
+    // Reject anything that isn't signed with our Paystack secret (HMAC SHA512 of the raw body).
+    if (!configuredSecret || !signature) {
+      logger.warn("paystack_webhook_unsigned");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+    const hash = crypto.createHmac("sha512", configuredSecret).update(rawBody).digest("hex");
+    if (hash.length !== signature.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
+      logger.warn("paystack_webhook_invalid_signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     const payload = JSON.parse(rawBody);
@@ -32,7 +34,11 @@ export async function POST(req: Request) {
       const reference: string = data.reference || "";
       const amountKobo: number = Math.round(Number(data.amount || 0)); // Paystack amounts are already in kobo
 
-      const supabase = await createClient();
+      const supabase = createServiceClient();
+      if (!supabase) {
+        logger.error("paystack_webhook_no_service_key");
+        return NextResponse.json({ error: "Not configured" }, { status: 503 });
+      }
 
       let orderId: string | null = null;
 
@@ -46,7 +52,7 @@ export async function POST(req: Request) {
       }
 
       if (!orderId && reference) {
-        const { data: pRec } = await (supabase as any)
+        const { data: pRec } = await supabase
           .from("marketplace_payments")
           .select("order_id")
           .eq("payment_reference", reference)
@@ -58,7 +64,7 @@ export async function POST(req: Request) {
       }
 
       if (orderId && amountKobo > 0) {
-        const { error: rpcErr } = await (supabase as any).rpc("process_payment_webhook", {
+        const { error: rpcErr } = await supabase.rpc("process_payment_webhook", {
           p_reference: reference,
           p_provider: "paystack",
           p_amount_kobo: amountKobo,
@@ -67,7 +73,7 @@ export async function POST(req: Request) {
         });
 
         if (rpcErr) {
-          logger.error("paystack_webhook_rpc_failed", rpcErr);
+          logger.error("paystack_webhook_rpc_failed", { code: rpcErr.code });
         } else {
           logger.info("paystack_payment_cleared", { orderId, amountKobo, reference });
         }

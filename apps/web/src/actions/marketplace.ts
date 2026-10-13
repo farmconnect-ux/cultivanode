@@ -22,7 +22,7 @@ async function requireUser(lang = "en") {
   if (!data.user) {
     redirect(`/${lang}/sign-in`);
   }
-  return { supabase: supabase as any, user: data.user };
+  return { supabase, user: data.user };
 }
 
 /**
@@ -78,7 +78,7 @@ export async function createMarketplaceListingAction(formData: FormData) {
       .single();
 
     if (sellerError || !newSeller) {
-      logger.error("Failed to initialize seller profile", sellerError);
+      logger.error("Failed to initialize seller profile", { code: sellerError.code });
       return { ok: false, error: "Could not create seller profile." };
     }
     seller = newSeller;
@@ -109,7 +109,7 @@ export async function createMarketplaceListingAction(formData: FormData) {
     .single();
 
   if (listingError || !listing) {
-    logger.error("Failed to create marketplace listing", listingError);
+    logger.error("Failed to create marketplace listing", { code: listingError.code });
     return { ok: false, error: listingError?.message || "Failed to create listing." };
   }
 
@@ -124,7 +124,7 @@ export async function createMarketplaceListingAction(formData: FormData) {
   });
 
   if (lotError) {
-    logger.error("Failed to create inventory lot", lotError);
+    logger.error("Failed to create inventory lot", { code: lotError.code });
   }
 
   // 4. Optional: If linked to a farm harvest batch, record produce provenance
@@ -189,7 +189,7 @@ export async function placeMarketplaceOrderAction(params: {
     .single();
 
   if (orderError || !order) {
-    logger.error("Failed to place order", orderError);
+    logger.error("Failed to place order", { code: orderError.code });
     return {
       ok: false,
       error: orderError?.message
@@ -220,7 +220,7 @@ export async function placeMarketplaceOrderAction(params: {
     });
 
     if (itemError) {
-      logger.error("Failed to insert order item", itemError);
+      logger.error("Failed to insert order item", { code: itemError.code });
       return { ok: false, error: `Cannot save order item: ${itemError.message}` };
     }
 
@@ -264,7 +264,7 @@ export async function placeMarketplaceOrderAction(params: {
     });
 
     if (fError) {
-      logger.error("Fulfilment record notice", fError);
+      logger.error("Fulfilment record notice", { code: fError.code });
     }
   }
 
@@ -274,7 +274,7 @@ export async function placeMarketplaceOrderAction(params: {
   });
 
   if (rpcError) {
-    logger.error("Inventory reservation failed", rpcError);
+    logger.error("Inventory reservation failed", { code: rpcError.code });
     return { ok: false, error: rpcError.message || "Insufficient stock to complete order." };
   }
 
@@ -323,7 +323,7 @@ export async function confirmDeliveryAndReleaseEscrowAction(fulfilmentId: string
   });
 
   if (error) {
-    logger.error("Failed to release escrow", error);
+    logger.error("Failed to release escrow", { code: error.code });
     return { ok: false, error: error.message };
   }
 
@@ -368,7 +368,7 @@ export async function createBuyerRequestAction(formData: FormData) {
     .single();
 
   if (error) {
-    logger.error("Failed to create buyer request", error);
+    logger.error("Failed to create buyer request", { code: error.code });
     return { ok: false, error: error.message };
   }
 
