@@ -16,6 +16,13 @@ export function Icon({
   className,
   ...props
 }: Omit<React.ComponentProps<"span">, "children"> & { name: IconName; filled?: boolean; label?: string }) {
+  // Names can come from data (status maps, DB rows). A name outside the subset font must never
+  // crash the page: String.fromCodePoint(undefined) throws RangeError and takes the route down.
+  const codepoint = (ICON_CODEPOINTS as Record<string, number | undefined>)[name];
+  if (codepoint === undefined) {
+    if (process.env.NODE_ENV !== "production") console.warn(`Icon "${name}" is not in the icon subset font.`);
+    return <span className={cn("material-symbol", className)} data-icon={name} aria-hidden {...props} />;
+  }
   return (
     <span
       className={cn("material-symbol", className)}
@@ -26,7 +33,7 @@ export function Icon({
       aria-label={label}
       {...props}
     >
-      {String.fromCodePoint(ICON_CODEPOINTS[name])}
+      {String.fromCodePoint(codepoint)}
     </span>
   );
 }

@@ -67,7 +67,7 @@ export default async function RfqProcurementPage({ params }: { params: Promise<{
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
-              {requests.map((r: any) => (
+              {requests.map((r) => (
                 <Card key={r.id} className="flex flex-col gap-3 hover:border-leaf-400 transition">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
@@ -147,7 +147,7 @@ export default async function RfqProcurementPage({ params }: { params: Promise<{
                   required
                   className="mt-1 w-full rounded-md border border-line p-2 text-sm bg-white"
                 >
-                  {categories?.map((c: any) => (
+                  {categories?.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>

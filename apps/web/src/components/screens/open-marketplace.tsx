@@ -3,9 +3,11 @@
 // Ported from the "cultivanode_open_produce_commodities_marketplace" design.
 // Augmented with real interactive state: dynamic cart addition/removal, real-time haulage recalculation,
 // live search and category switching, RFQ requests, and seamless escrow dispatch linking.
+import { useRouter } from "next/navigation";
 import { useState, useId } from "react";
 import { Icon } from "@/components/ds/icon";
 import { showScreenToast } from "@/components/ds/screen-dialog";
+import { cart, useCart } from "@/lib/cart";
 import { slot, type ScreenProps } from "./types";
 
 export type OpenMarketplaceSlot = "lots";
@@ -17,7 +19,8 @@ interface CartItem {
   price: number;
 }
 
-export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
+export function OpenMarketplace({ slots, lang }: ScreenProps<OpenMarketplaceSlot>) {
+  const router = useRouter();
   const [activeVertical, setActiveVertical] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -26,65 +29,35 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
   const searchInputId = useId();
   const regionFilterId = useId();
   const categoryFilterId = useId();
-  const destinationSelectorId = useId();
   const sortSelectorId = useId();
   const companyNameId = useId();
   const commodityInterestId = useId();
   const monthlyTonnageId = useId();
   const workEmailId = useId();
 
-  // Cart State
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "lot-1",
-      name: "Clean Dry White Maize",
-      detail: "5 × 100kg bag (Saki West)",
-      price: 320000,
-    },
-  ]);
-
-  const [destination, setDestination] = useState<"lagos" | "ibadan" | "abeokuta" | "depot_pickup">("lagos");
-
-  // Cost calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price, 0);
-  const haulageCost =
-    cartItems.length === 0
-      ? 0
-      : destination === "lagos"
-      ? 35000
-      : destination === "ibadan"
-      ? 22000
-      : destination === "abeokuta"
-      ? 28000
-      : 0;
+  // The cart lives in the browser and is shared with the checkout page; prices are re-checked there.
+  const cartItems = useCart();
+  const subtotal = cartItems.reduce((acc, item) => acc + (item.unitPriceKobo * item.quantity) / 100, 0);
+  const sellerCount = new Set(cartItems.map((i) => i.sellerName ?? i.listingId)).size;
+  const haulageCost = sellerCount * 3000;
   const grandTotal = subtotal + haulageCost;
 
+  // Only used by the design's sample cards, which render when no live lots are passed in.
   const handleAddToCart = (item: CartItem) => {
-    setCartItems((prev) => {
-      const exists = prev.some((p) => p.id === item.id);
-      if (exists) {
-        showScreenToast(`${item.name} is already in your procurement cart.`);
-        return prev;
-      }
-      showScreenToast(`Added ${item.name} to dispatch cart.`);
-      return [...prev, item];
-    });
+    showScreenToast(`${item.name} is a sample lot. Open a live listing to add it to your cart.`);
   };
 
   const handleRemoveFromCart = (id: string, name: string) => {
-    setCartItems((prev) => prev.filter((p) => p.id !== id));
+    cart.remove(id);
     showScreenToast(`Removed ${name} from cart.`);
   };
 
   const handleLockFundsAndDispatch = () => {
     if (cartItems.length === 0) {
-      showScreenToast("Your procurement cart is empty. Add a verified lot first.");
+      showScreenToast("Your cart is empty. Add a lot first.");
       return;
     }
-    showScreenToast(`Locking ₦${grandTotal.toLocaleString()} into Providus Escrow... Redirecting to checkout.`);
-    if (typeof window !== "undefined") {
-      window.location.href = "/marketplace-checkout";
-    }
+    router.push(`/${lang}/marketplace/checkout`);
   };
 
   const handleRequestBulkRfq = () => {
@@ -804,20 +777,20 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     <div className="p-4 rounded-lg bg-surface-container-low text-center text-on-surface-variant text-body-sm">
                       <Icon name="shopping_cart" className="text-[24px] mx-auto text-outline mb-1" />
                       <p>Your procurement cart is empty.</p>
-                      <span className="text-[11px]">Click &quot;Add Lot&quot; on any available produce item to begin.</span>
+                      <span className="text-[11px]">Use &quot;Add&quot; on any live lot to begin.</span>
                     </div>
                   ) : (
                     cartItems.map((item) => (
-                      <div key={item.id} className="p-3 rounded-lg bg-surface-container-low flex flex-col gap-2">
+                      <div key={item.listingId} className="p-3 rounded-lg bg-surface-container-low flex flex-col gap-2">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h4 className="font-label-md text-label-md text-on-surface font-semibold">{item.name}</h4>
-                            <span className="font-body-sm text-body-sm text-on-surface-variant">{item.detail}</span>
+                            <h4 className="font-label-md text-label-md text-on-surface font-semibold">{item.title}</h4>
+                            <span className="font-body-sm text-body-sm text-on-surface-variant">{item.quantity} {item.unit}{item.sellerName ? ` · ${item.sellerName}` : ""}</span>
                           </div>
                           <div className="flex flex-col items-end">
-                            <span className="font-label-lg text-label-lg text-primary font-bold">₦{item.price.toLocaleString()}</span>
+                            <span className="font-label-lg text-label-lg text-primary font-bold">₦{Math.round((item.unitPriceKobo * item.quantity) / 100).toLocaleString()}</span>
                             <button
-                              onClick={() => handleRemoveFromCart(item.id, item.name)}
+                              onClick={() => handleRemoveFromCart(item.listingId, item.title)}
                               className="text-[11px] text-error hover:underline pt-0.5"
                               type="button"
                             >
@@ -836,20 +809,9 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     </span>
                     <span className="font-label-sm text-label-sm text-secondary font-semibold">GPS Telemetry Tracked</span>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="font-label-sm text-label-sm text-on-surface" htmlFor={destinationSelectorId}>Drop-off Destination:</label>
-                    <select
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value as any)}
-                      className="h-9 px-3 bg-surface-container-lowest rounded font-body-sm text-body-sm text-on-surface focus:outline-none"
-                      id={destinationSelectorId}
-                    >
-                      <option value="lagos">Lagos Mile 12 / Ikeja Hub (10h Transit) — ₦35,000</option>
-                      <option value="ibadan">Ibadan Bodija Agro Depot (6h Transit) — ₦22,000</option>
-                      <option value="abeokuta">Abeokuta Central Station (7h Transit) — ₦28,000</option>
-                      <option value="depot_pickup">Self-Arranged Haulage (Farmgate Weighbridge) — ₦0</option>
-                    </select>
-                  </div>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">
+                    Delivery is ₦3,000 per seller. You enter the drop-off address at checkout.
+                  </p>
                 </div>
                 <div className="p-3.5 rounded-lg bg-surface-container-high/60 flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-primary font-label-md text-label-md font-bold">
@@ -885,7 +847,7 @@ export function OpenMarketplace({ slots }: ScreenProps<OpenMarketplaceSlot>) {
                     type="button"
                   >
                     <Icon name="lock" className="text-[20px]" />
-                    <span>Lock Funds &amp; Dispatch Order</span>
+                    <span>Go to checkout</span>
                   </button>
                   <div className="flex items-center justify-center gap-3 pt-1 text-on-surface-variant font-label-sm text-label-sm">
                     <span className="flex items-center gap-1"><Icon name="credit_card" className="text-[14px]" /> Card</span>

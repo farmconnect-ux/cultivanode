@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatNaira } from "@cultivanode/shared";
-import { Badge, Button, Card } from "@/components/ui";
-import { placeMarketplaceOrderAction } from "@/actions/marketplace";
+import { Badge, Card } from "@/components/ui";
+import { AddToCart } from "@/components/marketplace/add-to-cart";
 import type { Locale } from "@/i18n/config";
 
 export interface FullListingDetails {
@@ -45,55 +43,7 @@ export function ListingDetailView({
   lang: Locale;
   listing: FullListingDetails;
 }) {
-  const router = useRouter();
-  const [qty, setQty] = useState<number>(listing.min_order_quantity || 1);
-  const [address, setAddress] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const subtotalKobo = Math.round(listing.base_price_kobo * qty);
-  const estDeliveryKobo = 300000; // N3,000
-  const totalKobo = subtotalKobo + estDeliveryKobo;
-
-  async function handleInstantBuy() {
-    if (!address.trim() || !contactPhone.trim()) {
-      setErrorMsg("Please enter delivery address and contact phone number.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMsg(null);
-
-    const res = await placeMarketplaceOrderAction({
-      lang,
-      items: [
-        {
-          listingId: listing.id,
-          sellerId: listing.seller_id,
-          sellerName: listing.seller_name,
-          title: listing.title,
-          unit: listing.unit as any,
-          unitPriceKobo: listing.base_price_kobo,
-          quantity: qty,
-        },
-      ],
-      deliveryAddress: {
-        address,
-        state: listing.location_state || "Oyo",
-        lga: listing.location_lga || "Ibadan",
-        contactPhone,
-      },
-    });
-
-    setIsSubmitting(false);
-
-    if (res.ok && res.orderId) {
-      router.push(`/${lang}/account/marketplace/orders/${res.orderId}`);
-    } else {
-      setErrorMsg(res.error || "Order placement failed.");
-    }
-  }
+  const outOfStock = listing.available_quantity <= 0;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
@@ -193,70 +143,32 @@ export function ListingDetailView({
         <Card className="sticky top-20 flex flex-col gap-4 border-2 border-primary-container bg-white shadow-lg p-6">
           <h3 className="text-xl font-bold text-on-surface">Purchase &amp; Escrow Order</h3>
 
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant">Order Quantity ({listing.unit})</label>
-            <input
-              type="number"
-              min={listing.min_order_quantity}
-              max={listing.available_quantity}
-              value={qty}
-              onChange={(e) => setQty(Math.max(listing.min_order_quantity, Number(e.target.value)))}
-              className="mt-1 w-full rounded-md border border-border p-2 font-bold text-lg"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant">Delivery Address</label>
-            <textarea
-              rows={2}
-              placeholder="Full delivery street address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="mt-1 w-full rounded-md border border-border p-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant">Contact Phone Number</label>
-            <input
-              type="tel"
-              placeholder="e.g. 0803 123 4567"
-              value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
-              className="mt-1 w-full rounded-md border border-border p-2 text-sm"
-            />
-          </div>
-
-          {/* Cost Summary */}
-          <div className="border-t border-border pt-3 space-y-1.5 text-sm">
+          <div className="flex flex-col gap-1 text-sm">
             <div className="flex justify-between text-on-surface-variant">
-              <span>Subtotal ({qty} {listing.unit}):</span>
-              <span className="font-semibold text-on-surface">{formatNaira(subtotalKobo)}</span>
+              <span>Price</span>
+              <span className="font-semibold text-on-surface">{formatNaira(listing.base_price_kobo)} / {listing.unit}</span>
             </div>
             <div className="flex justify-between text-on-surface-variant">
-              <span>Est. Delivery:</span>
-              <span className="font-semibold text-on-surface">{formatNaira(estDeliveryKobo)}</span>
+              <span>Minimum order</span>
+              <span className="font-semibold text-on-surface">{listing.min_order_quantity} {listing.unit}</span>
             </div>
-            <div className="flex justify-between text-base font-extrabold text-primary border-t border-border pt-2">
-              <span>Total Payable:</span>
-              <span>{formatNaira(totalKobo)}</span>
+            <div className="flex justify-between text-on-surface-variant">
+              <span>Delivery</span>
+              <span className="font-semibold text-on-surface">{formatNaira(300000)} per seller</span>
             </div>
           </div>
 
-          {errorMsg && (
-            <div className="rounded-md bg-red-50 p-2.5 text-xs text-critical font-semibold">
-              {errorMsg}
-            </div>
+          {outOfStock ? (
+            <p className="rounded-md bg-surface-container-low p-2.5 text-sm font-semibold text-on-surface-variant">Sold out for now. Check back after the next harvest.</p>
+          ) : (
+            <AddToCart
+              buyNow
+              lang={lang}
+              minQuantity={listing.min_order_quantity || 1}
+              item={{ listingId: listing.id, title: listing.title, unit: listing.unit, unitPriceKobo: listing.base_price_kobo, sellerName: listing.seller_name }}
+            />
           )}
-
-          <Button
-            variant="primary"
-            className="w-full py-3 text-base font-bold shadow-md"
-            disabled={isSubmitting || listing.available_quantity <= 0}
-            onClick={handleInstantBuy}
-          >
-            {isSubmitting ? "Processing…" : "Secure Order with Escrow"}
-          </Button>
+          <p className="text-xs text-on-surface-variant">You enter the delivery address and pay at checkout.</p>
 
           <div className="rounded-lg bg-earth-50 p-3 text-center text-xs text-on-surface-variant">
             <span className="font-bold text-primary">🛡️ CultivaNode Escrow Protection:</span>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { formatNaira } from "@cultivanode/shared";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon } from "@/components/ds/icon";
+import { AddToCart } from "@/components/marketplace/add-to-cart";
 import { OpenMarketplace } from "@/components/screens/open-marketplace";
 import { Badge } from "@/components/shadcn/badge";
 import { hasLocale } from "@/i18n/config";
@@ -24,6 +25,8 @@ type Row = {
   base_price_kobo: number;
   unit: string;
   available_quantity: number | null;
+  min_order_quantity: number | null;
+  marketplace_inventory_lots: { physical_quantity: number; reserved_quantity: number | null; allocated_quantity: number | null }[] | null;
   location_state: string | null;
   location_lga: string | null;
   marketplace_categories: { name: string; slug: string } | null;
@@ -50,7 +53,8 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
   const { data } = await supabase
     .from("marketplace_listings")
     .select(`
-      id, title, listing_type, base_price_kobo, unit, available_quantity, location_state, location_lga,
+      id, title, listing_type, base_price_kobo, unit, available_quantity, min_order_quantity, location_state, location_lga,
+      marketplace_inventory_lots ( physical_quantity, reserved_quantity, allocated_quantity ),
       marketplace_categories ( name, slug ),
       marketplace_sellers ( id, business_name, seller_type, rating_avg ),
       marketplace_produce_provenance ( id )
@@ -86,6 +90,11 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
               {listings.map((l) => {
                 const seller = l.marketplace_sellers;
                 const traced = (l.marketplace_produce_provenance ?? []).length > 0;
+                const lots = l.marketplace_inventory_lots ?? [];
+                // Stock lives in inventory lots; fall back to the listing's own count for services.
+                const available = lots.length
+                  ? lots.reduce((s, x) => s + Number(x.physical_quantity) - Number(x.reserved_quantity ?? 0) - Number(x.allocated_quantity ?? 0), 0)
+                  : l.available_quantity;
                 return (
                   <article key={l.id} className="card-interactive flex flex-col overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm">
                     <div className="relative flex h-32 items-end justify-between bg-gradient-to-br from-primary-container to-secondary p-4 text-white">
@@ -100,9 +109,9 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                           </span>
                         )}
                       </div>
-                      {l.available_quantity != null && (
+                      {available != null && (
                         <span className="rounded-lg bg-surface-container-lowest/95 px-2 py-1 font-label-sm text-label-sm text-primary">
-                          {Number(l.available_quantity).toLocaleString("en-NG")} {l.unit} available
+                          {Number(available).toLocaleString("en-NG")} {l.unit} available
                         </span>
                       )}
                     </div>
@@ -125,10 +134,17 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                           {formatNaira(l.base_price_kobo)}
                           <span className="ml-1 text-label-sm font-normal text-on-surface-variant">/ {l.unit}</span>
                         </p>
-                        <Link href={`/${lang}/marketplace/${l.id}`} className="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-md text-label-md text-white hover:bg-primary">
+                        <Link href={`/${lang}/marketplace/${l.id}`} className="inline-flex items-center gap-1 font-label-md text-label-md text-primary hover:underline">
                           View lot <Icon name="arrow_forward" className="text-base" />
                         </Link>
                       </div>
+                      <AddToCart
+                        compact
+                        lang={lang}
+                        minQuantity={Number(l.min_order_quantity ?? 1)}
+                        disabled={available != null && available <= 0}
+                        item={{ listingId: l.id, title: l.title, unit: l.unit, unitPriceKobo: Number(l.base_price_kobo), sellerName: seller?.business_name }}
+                      />
                     </div>
                   </article>
                 );
