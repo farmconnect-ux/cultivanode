@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CACHE_MS, handleWeather } from '../handlers/weather.ts';
-import { parseOpenMeteo, parseWeatherApi, PILOT_PLACES, weatherapiKind, wmoKind } from '../providers/weather.ts';
+import { parseNiMet, parseOpenMeteo, parseWeatherApi, PILOT_PLACES, weatherapiKind, wmoKind, nimetKind } from '../providers/weather.ts';
 import type { Runtime } from '../providers/types.ts';
 import type { ServerEnv } from '../server.ts';
 
@@ -57,6 +57,9 @@ describe('weather providers', () => {
       'clear', 'partly', 'cloudy', 'fog', 'drizzle', 'rain', 'rain', 'storm', 'unknown',
     ]);
     expect([0, 2, 3, 45, 53, 63, 95].map(wmoKind)).toEqual(['clear', 'partly', 'cloudy', 'fog', 'drizzle', 'rain', 'storm']);
+    expect(['Thunderstorm', 'Heavy Rain', 'Dust Haze', 'Partly Cloudy', 'Sunny'].map(nimetKind)).toEqual([
+      'storm', 'rain', 'fog', 'partly', 'clear',
+    ]);
   });
 
   it('parses a WeatherAPI forecast and drops broken days', () => {
@@ -65,6 +68,20 @@ describe('weather providers', () => {
     expect(f.days).toHaveLength(2);
     expect(f.days[0]).toEqual({ date: '2026-09-27', kind: 'rain', maxC: 30.1, minC: 22.4, rainMm: 31.2, rainChance: 86, windKmh: 14 });
     expect(f.alerts).toEqual([{ kind: 'heavy_rain', date: '2026-09-27', value: 31.2 }]);
+  });
+
+  it('parses a NiMet forecast into the same shape', () => {
+    const f = parseNiMet({
+      current: { temp_c: 29.5, humidity: 76, wind_kph: 12, condition: 'Partly Cloudy' },
+      forecast: [
+        { date: '2026-09-27', max_temp: 32, min_temp: 23, rain_mm: 5.5, daily_chance_of_rain: 60, wind_speed_kmh: 14, condition: 'Moderate Rain' },
+        { date: '2026-09-28', max_temp: 33, min_temp: 24, rain_mm: 0, daily_chance_of_rain: 15, wind_speed_kmh: 11, condition: 'Sunny' },
+      ],
+    }, PILOT_PLACES[0]!);
+    expect(f.now?.tempC).toBe(29.5);
+    expect(f.now?.kind).toBe('partly');
+    expect(f.days).toHaveLength(2);
+    expect(f.days[0]).toMatchObject({ date: '2026-09-27', kind: 'rain', maxC: 32, minC: 23, rainMm: 5.5 });
   });
 
   it('parses an Open-Meteo forecast into the same shape', () => {

@@ -1,4 +1,4 @@
-// Point forecasts for a farm from Open-Meteo (free, no API key). Cached for 30 minutes per location.
+// Point forecasts for a farm from NiMet and satellite agro-meteorology. Cached for 30 minutes per location.
 // Returns null when the service is unreachable; pages fall back to on-farm sensor readings.
 import { logger } from "@/lib/logger";
 

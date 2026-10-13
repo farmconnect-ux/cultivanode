@@ -131,6 +131,25 @@ const FALLBACK_PROVIDERS: Provider[] = [
     secrets: [],
     last_event: null,
   },
+  {
+    code: "nimet",
+    kind: "weather",
+    name: "NiMet (Nigerian Meteorological Agency)",
+    description: "Official meteorological forecasts and synoptic station telemetry from the Nigerian Meteorological Agency (FCT, Oyo, Ogun, Ondo, Osun, Ekiti, Lagos). Commercial live API.",
+    docs_url: "https://nimet.gov.ng",
+    implemented: true,
+    test_only: false,
+    config_fields: [
+      { key: "base_url", label: "API Base URL", required: true, default: "https://api.nimet.gov.ng/api", help: "NiMet developer API endpoint." },
+    ],
+    secret_fields: [
+      { key: "api_key", label: "NiMet API Key", required: true, help: "Live key from NiMet Developer Portal." },
+    ],
+    mode: "live",
+    config: { test: {}, live: { base_url: "https://api.nimet.gov.ng/api" } },
+    secrets: [],
+    last_event: null,
+  },
 ];
 
 const dateFmt = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" });
@@ -196,6 +215,9 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
       : []),
     ...(!overview.settings?.some((s) => s.kind === "maps")
       ? [{ kind: "maps" as const, active_provider: "google_maps", updated_at: new Date().toISOString() }]
+      : []),
+    ...(!overview.settings?.some((s) => s.kind === "weather")
+      ? [{ kind: "weather" as const, active_provider: "nimet", updated_at: new Date().toISOString() }]
       : []),
   ];
 

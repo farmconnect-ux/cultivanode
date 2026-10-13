@@ -176,23 +176,210 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
   }
 
   const orderUrl = `/${lang}/account/marketplace/orders/${order.id}`;
-  const pay = await startPaystack(order.id, total, auth.user.email ?? null, orderUrl);
-  return { ok: true, orderId: order.id, redirectUrl: pay ?? `${orderUrl}?payment=pending` };
+  const runtime = await getPaymentRuntime();
+
+  let payUrl: string | null = null;
+  if (runtime.provider === "flutterwave" && runtime.secretKey) {
+    payUrl = await startFlutterwave({
+      orderId: order.id,
+      orderNumber,
+      amountKobo: total,
+      email: auth.user.email ?? null,
+      phone,
+      fullName: (auth.user.user_metadata?.full_name as string) || (auth.user.user_metadata?.name as string) || undefined,
+      returnPath: orderUrl,
+      secretKey: runtime.secretKey,
+      baseUrl: runtime.baseUrl || undefined,
+    });
+  } else if (runtime.provider === "paystack" && runtime.secretKey) {
+    payUrl = await startPaystack({
+      orderId: order.id,
+      amountKobo: total,
+      email: auth.user.email ?? null,
+      returnPath: orderUrl,
+      secretKey: runtime.secretKey,
+      baseUrl: runtime.baseUrl || undefined,
+    });
+  } else if (process.env.PAYSTACK_SECRET_KEY) {
+    payUrl = await startPaystack({
+      orderId: order.id,
+      amountKobo: total,
+      email: auth.user.email ?? null,
+      returnPath: orderUrl,
+      secretKey: process.env.PAYSTACK_SECRET_KEY,
+    });
+  }
+
+  return { ok: true, orderId: order.id, redirectUrl: payUrl ?? `${orderUrl}?payment=pending` };
+}
+
+type PaymentRuntime = {
+  provider: "flutterwave" | "paystack" | "direct_transfer" | "test_adapter";
+  mode: "test" | "live";
+  secretKey: string | null;
+  baseUrl: string | null;
+  publicKey?: string | null;
+};
+
+/**
+ * Resolves the active payment gateway and decrypted secret key from Supabase Vault (Admin Integrations),
+ * falling back to process.env credentials.
+ */
+async function getPaymentRuntime(): Promise<PaymentRuntime> {
+  const admin = createServiceClient();
+  if (admin) {
+    try {
+      const { data: settings } = await admin
+        .from("integration_settings")
+        .select("active_provider")
+        .eq("kind", "payment")
+        .maybeSingle();
+
+      const active = (settings?.active_provider ?? "flutterwave") as "flutterwave" | "paystack" | "direct_transfer" | "test_adapter";
+
+      const { data: rt } = await admin.rpc("integration_runtime", {
+        p_kind: "payment",
+        p_provider: active,
+      });
+
+      const mode = (rt?.mode ?? "test") as "test" | "live";
+      const secrets = (rt?.secrets as Record<string, string> | undefined) ?? {};
+      const config = (rt?.config as Record<string, string> | undefined) ?? {};
+
+      const secretKey =
+        secrets.secret_key ??
+        (active === "flutterwave"
+          ? process.env.FLUTTERWAVE_SECRET_KEY || null
+          : process.env.PAYSTACK_SECRET_KEY || null);
+
+      const baseUrl =
+        config.base_url ??
+        (active === "flutterwave" ? "https://api.flutterwave.com/v3" : "https://api.paystack.co");
+
+      return {
+        provider: active,
+        mode,
+        secretKey,
+        baseUrl,
+        publicKey: config.public_key,
+      };
+    } catch (err) {
+      logger.warn("payment_runtime_lookup_failed", { error: String(err) });
+    }
+  }
+
+  const isFlutterwave = Boolean(process.env.FLUTTERWAVE_SECRET_KEY) || !process.env.PAYSTACK_SECRET_KEY;
+  const provider = isFlutterwave ? "flutterwave" : "paystack";
+  const secretKey = isFlutterwave
+    ? process.env.FLUTTERWAVE_SECRET_KEY || null
+    : process.env.PAYSTACK_SECRET_KEY || null;
+
+  return {
+    provider,
+    mode: "live",
+    secretKey,
+    baseUrl: provider === "flutterwave" ? "https://api.flutterwave.com/v3" : "https://api.paystack.co",
+  };
+}
+
+/**
+ * Opens a Flutterwave Standard v3 transaction and returns its hosted checkout page URL,
+ * or null when Flutterwave isn't configured or errors.
+ */
+async function startFlutterwave(params: {
+  orderId: string;
+  orderNumber: string;
+  amountKobo: number;
+  email: string | null;
+  phone: string;
+  fullName?: string;
+  returnPath: string;
+  secretKey: string;
+  baseUrl?: string;
+}): Promise<string | null> {
+  const { orderId, orderNumber, amountKobo, email, phone, fullName, returnPath, secretKey, baseUrl } = params;
+  if (!secretKey) return null;
+  const reference = `FLW_${orderId}_${Date.now()}`;
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+  const amountNaira = amountKobo / 100;
+  const endpoint = `${(baseUrl || "https://api.flutterwave.com/v3").replace(/\/+$/, "")}/payments`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tx_ref: reference,
+        amount: amountNaira,
+        currency: "NGN",
+        redirect_url: site ? `${site}${returnPath}` : undefined,
+        customer: {
+          email: email || "customer@cultivanode.com",
+          phonenumber: phone || undefined,
+          name: fullName || "CultivaNode Customer",
+        },
+        customizations: {
+          title: "CultivaNode Marketplace Escrow",
+          description: `Escrow payment for order ${orderNumber}`,
+          logo: site ? `${site}/icon-192.png` : undefined,
+        },
+        meta: {
+          order_id: orderId,
+          order_number: orderNumber,
+        },
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    const body = (await res.json()) as { status?: string; message?: string; data?: { link?: string } };
+    if (!res.ok || body.status !== "success" || !body.data?.link) {
+      logger.warn("flutterwave_initialize_failed", { status: res.status, msg: body.message });
+      return null;
+    }
+
+    const admin = createServiceClient();
+    if (admin) {
+      await admin.from("marketplace_payments").insert({
+        order_id: orderId,
+        payment_reference: reference,
+        provider: "flutterwave",
+        amount_kobo: amountKobo,
+        status: "pending",
+      });
+      await admin.from("marketplace_orders").update({ status: "payment_pending" }).eq("id", orderId);
+    }
+    return body.data.link;
+  } catch (error) {
+    logger.warn("flutterwave_initialize_error", { reason: error instanceof Error ? error.name : "unknown" });
+    return null;
+  }
 }
 
 /**
  * Opens a Paystack transaction and returns its hosted payment page, or null when Paystack isn't
  * configured (the order then waits as "payment pending"). The webhook marks the order paid.
  */
-async function startPaystack(orderId: string, amountKobo: number, email: string | null, returnPath: string): Promise<string | null> {
-  const secret = process.env.PAYSTACK_SECRET_KEY;
-  if (!secret || !email) return null;
+async function startPaystack(params: {
+  orderId: string;
+  amountKobo: number;
+  email: string | null;
+  returnPath: string;
+  secretKey: string;
+  baseUrl?: string;
+}): Promise<string | null> {
+  const { orderId, amountKobo, email, returnPath, secretKey, baseUrl } = params;
+  if (!secretKey || !email) return null;
   const reference = `PSTK_${orderId}_${Date.now()}`;
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+  const endpoint = `${(baseUrl || "https://api.paystack.co").replace(/\/+$/, "")}/transaction/initialize`;
+
   try {
-    const res = await fetch("https://api.paystack.co/transaction/initialize", {
+    const res = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         email,
         amount: amountKobo,
@@ -219,3 +406,66 @@ async function startPaystack(orderId: string, amountKobo: number, email: string 
     return null;
   }
 }
+
+/**
+ * Initiates payment for an existing placed order using the active payment provider (Flutterwave or Paystack).
+ */
+export async function initiateOrderPayment(orderId: string, lang = "en"): Promise<{ ok: boolean; redirectUrl?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { ok: false, error: "Sign in to complete payment." };
+
+  const { data: order, error } = await supabase
+    .from("marketplace_orders")
+    .select("id, order_number, total_amount_kobo, status, payment_status, delivery_address")
+    .eq("id", orderId)
+    .single();
+
+  if (error || !order) return { ok: false, error: "Order not found." };
+  if (order.payment_status === "paid" || order.payment_status === "escrowed") {
+    return { ok: false, error: "Order is already paid." };
+  }
+
+  const orderUrl = `/${lang}/account/marketplace/orders/${order.id}`;
+  const runtime = await getPaymentRuntime();
+  const phone = (order.delivery_address as { phone?: string } | null)?.phone || "";
+
+  let payUrl: string | null = null;
+  if (runtime.provider === "flutterwave" && runtime.secretKey) {
+    payUrl = await startFlutterwave({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      amountKobo: Number(order.total_amount_kobo),
+      email: auth.user.email ?? null,
+      phone,
+      fullName: (auth.user.user_metadata?.full_name as string) || (auth.user.user_metadata?.name as string) || undefined,
+      returnPath: orderUrl,
+      secretKey: runtime.secretKey,
+      baseUrl: runtime.baseUrl || undefined,
+    });
+  } else if (runtime.provider === "paystack" && runtime.secretKey) {
+    payUrl = await startPaystack({
+      orderId: order.id,
+      amountKobo: Number(order.total_amount_kobo),
+      email: auth.user.email ?? null,
+      returnPath: orderUrl,
+      secretKey: runtime.secretKey,
+      baseUrl: runtime.baseUrl || undefined,
+    });
+  } else if (process.env.PAYSTACK_SECRET_KEY) {
+    payUrl = await startPaystack({
+      orderId: order.id,
+      amountKobo: Number(order.total_amount_kobo),
+      email: auth.user.email ?? null,
+      returnPath: orderUrl,
+      secretKey: process.env.PAYSTACK_SECRET_KEY,
+    });
+  }
+
+  if (!payUrl) {
+    return { ok: false, error: `Could not connect to payment gateway (${runtime.provider}). Please verify live keys in Admin Integrations.` };
+  }
+
+  return { ok: true, redirectUrl: payUrl };
+}
+

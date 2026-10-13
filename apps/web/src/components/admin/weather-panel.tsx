@@ -48,6 +48,12 @@ function alertText(a: WeatherAlert): string {
 }
 
 const PROVIDER_CREDIT: Record<string, React.ReactNode> = {
+  nimet: (
+    <>
+      Official meteorological feed by{" "}
+      <a href="https://nimet.gov.ng/" className="underline" rel="noopener noreferrer" target="_blank">Nigerian Meteorological Agency (NiMet)</a>.
+    </>
+  ),
   weatherapi: (
     <>
       Powered by{" "}

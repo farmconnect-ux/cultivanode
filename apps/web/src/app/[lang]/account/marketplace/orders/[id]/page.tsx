@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { formatNaira } from "@cultivanode/shared";
 import { Badge, Button, Card, Container } from "@/components/ui";
@@ -6,6 +6,7 @@ import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
 import { confirmDeliveryAndReleaseEscrowAction } from "@/actions/marketplace";
+import { initiateOrderPayment } from "@/actions/checkout";
 
 export default async function OrderDetailPage({
   params,
@@ -87,11 +88,24 @@ export default async function OrderDetailPage({
           </p>
         </div>
 
-        <div className="text-right">
+        <div className="text-right flex flex-col items-end gap-2">
           <span className="text-xs text-muted block">Payment Status</span>
           <Badge className={order.payment_status === "escrowed" || order.payment_status === "paid" ? "bg-node-100 text-node-800" : "bg-earth-100 text-ink"}>
             🛡️ Escrow: {order.payment_status.toUpperCase()}
           </Badge>
+          {order.payment_status !== "paid" && order.payment_status !== "escrowed" && (
+            <form action={async () => {
+              "use server";
+              const res = await initiateOrderPayment(order.id, lang);
+              if (res.ok && res.redirectUrl) {
+                redirect(res.redirectUrl);
+              }
+            }}>
+              <Button variant="primary" type="submit" className="text-xs font-bold py-1.5 px-3">
+                Pay Now via Gateway →
+              </Button>
+            </form>
+          )}
         </div>
       </div>
 
