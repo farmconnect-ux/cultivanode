@@ -368,6 +368,7 @@ export const ICON_CODEPOINTS = {
   "qr_code": 0xef6b,
   "qr_code_2": 0xe00a,
   "qr_code_scanner": 0xf206,
+  "rainy": 0xe3ea,
   "query_stats": 0xe4fc,
   "queue": 0xe03c,
   "quickreply": 0xef6c,
