@@ -9,11 +9,17 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 type Farm = { id: string; name: string; lga: string | null };
+/** Where to read the weather when no farm has a GPS point yet (the person's state, approximately). */
+type Fallback = { lat: number; lng: number; label: string } | null;
 
-export async function loadOverviewPanels(lang: Locale, farms: Farm[]) {
+const NO_ROWS = "00000000-0000-0000-0000-000000000000";
+
+// Always returns every panel, even for a brand-new account with no farms: an empty slot would make the
+// dashboard fall back to its design sample (Iseyin weather, sample alerts and stock).
+export async function loadOverviewPanels(lang: Locale, farms: Farm[], fallback: Fallback = null) {
   const supabase = await createClient();
-  const ids = farms.map((f) => f.id);
-  if (!ids.length) return { weather: null, attention: null, crops: null, livestock: null, machinery: null, stock: null };
+  const hasFarms = farms.length > 0;
+  const ids = hasFarms ? farms.map((f) => f.id) : [NO_ROWS];
   const today = new Date().toISOString().slice(0, 10);
   const [{ data: pt }, { data: plots }, { data: alerts }, { data: tasks }, { data: stock }, { data: groups }, { data: devAlerts }] = await Promise.all([
     supabase.from("farm_points").select("id, name, lat, lng, lga").in("id", ids).not("lat", "is", null).limit(1).maybeSingle(),
@@ -24,9 +30,14 @@ export async function loadOverviewPanels(lang: Locale, farms: Farm[]) {
     supabase.from("farm_livestock_groups").select("id, group_name, health_status").in("farm_id", ids).neq("health_status", "healthy"),
     supabase.from("device_alerts").select("id, observation, suggested_action, severity").in("farm_id", ids).eq("status", "open").limit(5),
   ]);
-  const plotIds = (plots ?? []).map((p) => p.id).concat("00000000-0000-0000-0000-000000000000");
+  const plotIds = (plots ?? []).map((p) => p.id).concat(NO_ROWS);
+  // The farm's own GPS point first; otherwise the person's state, marked as approximate.
+  const place =
+    pt?.lat != null && pt.lng != null
+      ? { lat: Number(pt.lat), lng: Number(pt.lng), label: `${pt.name}${pt.lga ? ` · ${pt.lga}` : ""}` }
+      : fallback;
   const [forecast, { data: moisture }] = await Promise.all([
-    pt?.lat != null && pt.lng != null ? loadForecast(Number(pt.lat), Number(pt.lng)) : Promise.resolve(null),
+    place ? loadForecast(place.lat, place.lng) : Promise.resolve(null),
     supabase.from("telemetry_readings").select("calibrated_value, source_timestamp").in("plot_id", plotIds).eq("channel_code", "soil_moisture_pct").order("source_timestamp", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
@@ -46,7 +57,7 @@ export async function loadOverviewPanels(lang: Locale, farms: Farm[]) {
               <span className="font-headline-md text-headline-md text-on-surface">{now ? `${Math.round(now.temp)}°C` : "—"}</span>
               <span className="font-label-sm text-label-sm text-on-surface-variant">{w?.text ?? "Forecast unavailable"}</span>
             </div>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">{pt ? `${pt.name}${pt.lga ? ` · ${pt.lga}` : ""}` : "Add a farm GPS point"}</span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">{place ? place.label : "Add a farm GPS point for local weather"}</span>
           </div>
         </div>
         <div className="hidden h-8 w-px bg-outline-variant/30 sm:block" />
@@ -126,7 +137,11 @@ export async function loadOverviewPanels(lang: Locale, farms: Farm[]) {
           ))}
         </div>
       ) : (
-        <p className="py-6 text-center text-body-sm text-on-surface-variant">Nothing needs your attention right now.</p>
+        <p className="py-6 text-center text-body-sm text-on-surface-variant">
+          {hasFarms
+            ? "Nothing needs your attention right now."
+            : "No alerts yet. Register a farm to get weather, crop, stock and livestock alerts for it."}
+        </p>
       )}
     </section>
   );

@@ -15,6 +15,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import type { BookingSummary } from "@/lib/account/bookings";
 import { requireAccount } from "@/lib/account/session";
 import { resolveWorkspace } from "@/lib/account/workspace";
+import { stateCentroid } from "@/lib/state-centroids";
 import { createClient } from "@/lib/supabase/server";
 import { getFarmOperations } from "@/actions/farm-operations";
 import { loadOverviewPanels } from "@/components/live/overview-panels";
@@ -81,7 +82,10 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
   ]);
   const farmList = farms ?? [];
   const farmIds = farmList.map((f) => f.id);
-  const [operations, panels] = await Promise.all([getFarmOperations(farmIds), loadOverviewPanels(lang, farmList)]);
+  // Until a farm has a GPS point, the weather is read for the person's own state (labelled approximate).
+  const home = stateCentroid(account.profile.state);
+  const fallback = home ? { ...home, label: `${account.profile.state} · approximate, from your profile` } : null;
+  const [operations, panels] = await Promise.all([getFarmOperations(farmIds), loadOverviewPanels(lang, farmList, fallback)]);
   const bookings = ((bookingsRes ?? []) as unknown as BookingSummary[]).filter((b) => b.my_side === "farmer");
   const active = bookings.filter((b) => ACTIVE.includes(b.status));
   const upcoming = [...active].sort((x, y) => x.job_date.localeCompare(y.job_date));
@@ -180,9 +184,13 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
             </section>
           ),
           statusBar: null,
-          ...(panels.weather ? { weather: panels.weather } : {}),
-          ...(panels.attention ? { attention: panels.attention } : {}),
-          ...(panels.crops ? { crops: panels.crops, livestock: panels.livestock, machinery: panels.machinery, stock: panels.stock } : {}),
+          // Always set: a missing slot makes the dashboard show its design sample instead of the person's data.
+          weather: panels.weather,
+          attention: panels.attention,
+          crops: panels.crops,
+          livestock: panels.livestock,
+          machinery: panels.machinery,
+          stock: panels.stock,
         }}
       />
     </>

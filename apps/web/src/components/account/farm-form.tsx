@@ -37,22 +37,8 @@ export function FarmForm({ lang, t, forProfile, defaultState }: { lang: Locale; 
     );
   }
 
-  function handleStateChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value;
-    const coords: Record<string, { lat: number; lng: number }> = {
-      Oyo: { lat: 7.3775, lng: 3.8967 },
-      Ogun: { lat: 7.1604, lng: 3.3484 },
-      Osun: { lat: 7.5629, lng: 4.5200 },
-      Ondo: { lat: 7.2571, lng: 5.2058 },
-      Ekiti: { lat: 7.6210, lng: 5.2215 },
-      Lagos: { lat: 6.5244, lng: 3.3792 },
-    };
-    const c = coords[val];
-    if (c && (!lat.current?.value || !lng.current?.value)) {
-      if (lat.current) lat.current.value = String(c.lat);
-      if (lng.current) lng.current.value = String(c.lng);
-    }
-  }
+  // No coordinates are filled in from the state: a typed-in state centre looked like a real GPS point, and
+  // changing the state afterwards kept the old one. Blank coordinates are filled from the state by the server.
 
   return (
     <ActionForm action={addFarm} hidden={{ lang, ...(forProfile ? { for_profile: forProfile } : {}) }}
@@ -64,7 +50,7 @@ export function FarmForm({ lang, t, forProfile, defaultState }: { lang: Locale; 
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id={`${prefix}-state`} label={t.onboarding.state}>
-              <Select id={`${prefix}-state`} name="state" defaultValue={defaultState ?? ""} onChange={handleStateChange}>
+              <Select id={`${prefix}-state`} name="state" defaultValue={defaultState ?? ""}>
                 <option value="">{t.onboarding.statePlaceholder}</option>
                 {NIGERIAN_STATES.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -94,11 +80,11 @@ export function FarmForm({ lang, t, forProfile, defaultState }: { lang: Locale; 
             </Button>
             {geoError && <p role="alert" className="text-sm font-medium text-critical">{f.locationFailed}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id={`${prefix}-lat`} label={f.latitude} optional="Auto-derived if blank">
-                <Input ref={lat} id={`${prefix}-lat`} name="latitude" inputMode="decimal" placeholder="7.3775" />
+              <Field id={`${prefix}-lat`} label={f.latitude} optional="Blank: centre of the state">
+                <Input ref={lat} id={`${prefix}-lat`} name="latitude" inputMode="decimal" />
               </Field>
-              <Field id={`${prefix}-lng`} label={f.longitude} optional="Auto-derived if blank">
-                <Input ref={lng} id={`${prefix}-lng`} name="longitude" inputMode="decimal" placeholder="3.8967" />
+              <Field id={`${prefix}-lng`} label={f.longitude} optional="Blank: centre of the state">
+                <Input ref={lng} id={`${prefix}-lng`} name="longitude" inputMode="decimal" />
               </Field>
             </div>
           </fieldset>
