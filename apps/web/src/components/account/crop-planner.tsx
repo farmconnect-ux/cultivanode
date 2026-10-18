@@ -154,6 +154,11 @@ export function CropPlanner({ lang, farms, plots, crops, today }: { lang: string
             {plan.targetYieldKgPerHa && <span className="text-body-sm text-on-surface-variant">Variety average: {plan.targetYieldKgPerHa.toLocaleString("en-NG")} kg/ha</span>}
           </label>
           <label className="flex flex-col gap-1">
+            <span className="font-label-md text-label-md text-on-surface-variant">Number of plants / stands</span>
+            <input name="plants_planted" type="number" min="0" step="1" className={input} />
+            <span className="text-body-sm text-on-surface-variant">Optional. Update it on the crop cycle page when plants die.</span>
+          </label>
+          <label className="flex flex-col gap-1">
             <span className="font-label-md text-label-md text-on-surface-variant">Budget (₦)</span>
             <input name="estimated_budget" type="number" min="0" step="any" className={input} />
           </label>

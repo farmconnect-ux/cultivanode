@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { clockAttendance, completeCropOperation, createTask, createWorker, setCropOperationStatus, setTaskStatus } from "@/actions/farm-ops";
+import { assignTask, clockAttendance, completeCropOperation, createTask, createWorker, setCropOperationStatus, setTaskStatus } from "@/actions/farm-ops";
 import { Icon } from "@/components/ds/icon";
 import { CalendarSync } from "@/components/live/calendar-sync";
 import { FieldCalendar, type CalendarItem } from "@/components/live/field-calendar";
@@ -34,7 +34,7 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
   const cycleIds = scope.cycles.map((c) => c.id).concat("00000000-0000-0000-0000-000000000000");
   const today = new Date().toISOString().slice(0, 10);
   const month = typeof sp.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.month) ? sp.month : today.slice(0, 7);
-  const [{ data: tasks }, { data: workers }, { data: attendance }, { data: ops }, { data: feed }] = await Promise.all([
+  const [{ data: tasks }, { data: workers }, { data: attendance }, { data: ops }, { data: feed }, { data: herds }] = await Promise.all([
     supabase.from("farm_operational_tasks").select("*").in("farm_id", ids).order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("farm_workers").select("*").in("farm_id", ids).order("full_name"),
     supabase.from("farm_attendance_records").select("worker_id, status, hours_worked, daily_pay_kobo, clock_in_at").in("farm_id", ids).gte("clock_in_at", week),
@@ -47,6 +47,8 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
       .order("scheduled_date")
       .limit(2000),
     supabase.from("calendar_feeds").select("token").eq("profile_id", account.userId).maybeSingle(),
+    // Livestock groups: animal work (feeding, vaccination, cleaning…) is scheduled and assigned like field work.
+    supabase.from("farm_livestock_groups").select("id, farm_id, group_name, animal_type").in("farm_id", ids).order("group_name"),
   ]);
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
@@ -89,8 +91,18 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
     })),
     ...t
       .filter((x) => x.due_date || x.start_date)
-      .map((x) => ({ id: `task-${x.id}`, date: (x.due_date ?? x.start_date)!, title: x.title, kind: "task" as const, status: x.status })),
+      .map((x) => ({
+        id: `task-${x.id}`,
+        date: (x.due_date ?? x.start_date)!,
+        title: [x.title, x.livestock_group_id ? groupName.get(x.livestock_group_id) : null, x.assigned_worker_id ? wName.get(x.assigned_worker_id) : null].filter(Boolean).join(" · "),
+        kind: x.livestock_group_id ? ("livestock" as const) : ("task" as const),
+        status: x.status,
+      })),
   ];
+  const groups = herds ?? [];
+  const groupName = new Map(groups.map((g) => [g.id, g.group_name]));
+  const groupOpts = groups.map((g) => ({ value: g.id, label: `${g.group_name} · ${label(g.animal_type)}${scope.farms.length > 1 ? ` · ${farmName.get(g.farm_id) ?? ""}` : ""}` }));
+  const livestockOpen = open.filter((x) => x.livestock_group_id);
   const workerOpts = w.filter((x) => x.status === "active").map((x) => ({ value: x.id, label: `${x.full_name} · ${label(x.role)}` }));
 
   return (
@@ -100,11 +112,12 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
           <>
             <Chip icon="task_alt">{open.length} open tasks</Chip>
             <Chip icon="agriculture">{openOps.length} crop operations planned</Chip>
+            <Chip icon="pets">{livestockOpen.length} livestock tasks open</Chip>
             <Chip icon="badge">{w.filter((x) => x.status === "active").length} active workers</Chip>
           </>
         }
         title="Field Operations & Calendar"
-        description="Your crop plans feed this calendar automatically: every operation you schedule on a crop cycle shows up here, next to field tasks, crew and attendance."
+        description="Your crop plans feed this calendar automatically. Field and livestock tasks sit alongside them: assign each one to a worker, and track crew and attendance."
         actions={
           scope.farms.length > 0 && (
             <>
@@ -131,8 +144,9 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
                 hidden={hidden}
                 fields={[
                   { name: "farm_id", label: "Farm", type: "select", required: true, options: farmOptions(scope) },
-                  { name: "plot_id", label: "Plot", type: "select", options: plotOptions(scope) },
-                  { name: "title", label: "Task", required: true, wide: true },
+                  { name: "plot_id", label: "Plot (field work)", type: "select", options: plotOptions(scope) },
+                  ...(groupOpts.length ? [{ name: "livestock_group_id", label: "Livestock group (animal work)", type: "select" as const, options: groupOpts }] : []),
+                  { name: "title", label: "Task", required: true, wide: true, placeholder: "e.g. Vaccinate broilers (Gumboro), feed fish pond 2" },
                   { name: "category", label: "Category", type: "select", options: opt(["scouting", "weed_control", "irrigation", "machinery", "maintenance", "livestock", "land_prep", "harvest", "storage", "admin"]) },
                   { name: "priority", label: "Priority", type: "select", defaultValue: "medium", options: opt(["low", "medium", "high", "urgent"]) },
                   { name: "assigned_worker_id", label: "Assign to", type: "select", options: workerOpts },
@@ -152,7 +166,7 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
         <MetricCard label="Labour hours, 7 days" value={num(hours)} unit="h" icon="schedule" foot={`${(attendance ?? []).length} attendance records`} />
         <MetricCard label="Wages, 7 days" value={naira(wage)} icon="payments" foot="From attendance" />
       </KpiGrid>
-      <Section title="Calendar" icon="calendar_month" description="Crop operations from your crop plans and field tasks, by day. Tap a crop operation to open its crop cycle.">
+      <Section title="Calendar" icon="calendar_month" description="By day: crop operations (green) from your crop plans, livestock tasks (amber) and field tasks, with who is assigned. Tap a crop operation to open its crop cycle.">
         <FieldCalendar month={month} today={today} items={calItems} monthHref={(m) => `/${lang}/account/tasks?month=${m}`} />
       </Section>
       <Split
@@ -223,7 +237,32 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
               columns={[
                 { label: "Task", cell: (x) => <span className="font-medium">{x.title}</span> },
                 { label: "Farm", cell: (x) => farmName.get(x.farm_id) },
-                { label: "Assignee", cell: (x) => (x.assigned_worker_id ? wName.get(x.assigned_worker_id) : "—") },
+                {
+                  label: "For",
+                  cell: (x) =>
+                    x.livestock_group_id ? (
+                      <span className="inline-flex items-center gap-1"><Icon name="pets" className="text-base text-[#b45309]" />{groupName.get(x.livestock_group_id) ?? "Livestock"}</span>
+                    ) : (
+                      label(x.category ?? "field")
+                    ),
+                },
+                {
+                  label: "Assignee",
+                  cell: (x) =>
+                    x.status === "completed" || x.status === "cancelled" || !workerOpts.length ? (
+                      x.assigned_worker_id ? wName.get(x.assigned_worker_id) : "—"
+                    ) : (
+                      <ActionDialog
+                        title="Assign task"
+                        trigger={x.assigned_worker_id ? (wName.get(x.assigned_worker_id) ?? "Reassign") : "Assign"}
+                        icon="person"
+                        tone="secondary"
+                        action={assignTask}
+                        hidden={{ lang, id: x.id }}
+                        fields={[{ name: "assigned_worker_id", label: "Worker", type: "select", defaultValue: x.assigned_worker_id ?? "", options: workerOpts }]}
+                      />
+                    ),
+                },
                 { label: "Due", cell: (x) => (x.due_date ? `${formatDay(x.due_date, lang)} (${relDays(x.due_date)})` : "—") },
                 { label: "Priority", cell: (x) => <Status value={x.priority} /> },
                 { label: "Status", cell: (x) => <Status value={x.status} /> },

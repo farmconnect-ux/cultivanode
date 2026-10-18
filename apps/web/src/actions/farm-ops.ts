@@ -31,7 +31,7 @@ export async function createPlot(_: FormResult, form: FormData): R {
     irrigation_type: oneOf(form, "irrigation_type", IRRIGATION),
     current_crop: optText(form, "current_crop", 60),
     notes: optText(form, "notes"),
-    created_by: uid,
+    created_by: uid, // also pinned to the signed-in user by the plots_stamp_creator trigger
   });
   if (error) return dbFail(error, "create_plot");
   refreshPages("/farms", `/farms/${farmId}`, "/crops");
@@ -41,6 +41,15 @@ export async function createPlot(_: FormResult, form: FormData): R {
 // ── Crop cycles, operations, scouting, harvest ──────────────────────────────────────────────
 
 const CYCLE_STATUS = ["planning", "land_preparation", "planting", "establishment", "maintenance", "harvesting", "completed", "abandoned"] as const;
+
+/** Optional number of plants/stands at planting. The "alive" count starts equal and is lowered later as plants die. */
+function plantCount(form: FormData, planting: string): { plants_planted?: number; plants_alive?: number; plants_counted_on?: string } | null {
+  const n = num(form, "plants_planted");
+  if (n === null) return {};
+  if (!Number.isFinite(n) || n < 0 || n > 100_000_000) return null;
+  const v = Math.round(n);
+  return { plants_planted: v, plants_alive: v, plants_counted_on: planting };
+}
 
 export async function createCropCycle(_: FormResult, form: FormData): R {
   const { supabase, uid } = await actor(form);
@@ -52,6 +61,8 @@ export async function createCropCycle(_: FormResult, form: FormData): R {
   if (!farmId || !crop) return fail("Choose a farm and a crop.");
   if (!planting || !harvest || harvest < planting) return fail("Harvest date must be on or after the planting date.");
   if (!area || area <= 0) return fail("Enter the area you will plant, in hectares.");
+  const plants = plantCount(form, planting);
+  if (!plants) return fail("Number of plants must be a whole number of zero or more.");
   const plotId = id(form, "plot_id");
   const { data: std } = await supabase
     .from("farm_agronomic_standards")
@@ -76,6 +87,7 @@ export async function createCropCycle(_: FormResult, form: FormData): R {
     estimated_budget_kobo: kobo(form, "estimated_budget") ?? 0,
     notes: optText(form, "notes"),
     created_by: uid,
+    ...plants,
   });
   if (error) return dbFail(error, "create_crop_cycle");
   refreshPages("/crops", "/");
@@ -99,6 +111,8 @@ export async function createPlannedCropCycle(_: FormResult, form: FormData): R {
   if (!farmId || !crop) return fail("Choose a farm and a crop.");
   if (!planting || !harvest || harvest < planting) return fail("Harvest date must be on or after the planting date.");
   if (!area || area <= 0) return fail("Enter the area you will plant, in hectares.");
+  const plantedCount = plantCount(form, planting);
+  if (!plantedCount) return fail("Number of plants must be a whole number of zero or more.");
 
   let planned: PlannedOp[] = [];
   try {
@@ -137,6 +151,7 @@ export async function createPlannedCropCycle(_: FormResult, form: FormData): R {
       estimated_budget_kobo: kobo(form, "estimated_budget") ?? 0,
       notes: optText(form, "notes"),
       created_by: uid,
+      ...plantedCount,
     })
     .select("id")
     .single();
@@ -197,6 +212,39 @@ export async function updateCropStage(_: FormResult, form: FormData): R {
   if (error) return dbFail(error, "update_crop_stage");
   refreshPages("/crops", `/crops/${cycleId}`);
   return ok("Crop stage updated.");
+}
+
+/**
+ * Stand count: how many plants are still alive (lower it when plants die, or correct it). The first time it is
+ * set on an older cycle, the planted number can be given too. A short note (cause) is kept in the cycle notes.
+ */
+export async function updatePlantCount(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const cycleId = id(form, "crop_cycle_id");
+  if (!cycleId) return fail("Crop cycle not found.");
+  const alive = num(form, "plants_alive");
+  const plantedIn = num(form, "plants_planted");
+  if (alive === null || !Number.isFinite(alive) || alive < 0) return fail("Enter how many plants are alive now.");
+  const { data: cycle } = await supabase.from("crop_cycles").select("plants_planted, plants_alive, notes").eq("id", cycleId).maybeSingle();
+  if (!cycle) return fail("Crop cycle not found.");
+  const planted = plantedIn !== null && Number.isFinite(plantedIn) && plantedIn >= 0 ? Math.round(plantedIn) : cycle.plants_planted;
+  const now = Math.round(alive);
+  if (planted !== null && now > planted) return fail(`Alive can't be more than the ${planted.toLocaleString("en-NG")} planted.`);
+  const cause = optText(form, "cause", 200);
+  const lost = cycle.plants_alive !== null && now < cycle.plants_alive ? cycle.plants_alive - now : 0;
+  const line = `${today()}: stand count ${now.toLocaleString("en-NG")}${lost ? ` (−${lost.toLocaleString("en-NG")})` : ""}${cause ? ` — ${cause}` : ""}`;
+  const { error } = await supabase
+    .from("crop_cycles")
+    .update({
+      plants_alive: now,
+      ...(planted !== null && planted !== cycle.plants_planted ? { plants_planted: planted } : {}),
+      plants_counted_on: today(),
+      notes: [cycle.notes, line].filter(Boolean).join("\n").slice(-4000),
+    })
+    .eq("id", cycleId);
+  if (error) return dbFail(error, "update_plant_count");
+  refreshPages("/crops", `/crops/${cycleId}`);
+  return ok(lost ? `Stand count saved: ${lost.toLocaleString("en-NG")} plants lost.` : "Stand count saved.");
 }
 
 
@@ -465,13 +513,16 @@ export async function createTask(_: FormResult, form: FormData): R {
   const title = text(form, "title", 160);
   if (!farmId || title.length < 2) return fail("Choose a farm and describe the task.");
   const worker = id(form, "assigned_worker_id");
+  const group = id(form, "livestock_group_id");
   const { error } = await supabase.from("farm_operational_tasks").insert({
     farm_id: farmId,
     plot_id: id(form, "plot_id"),
     crop_cycle_id: id(form, "crop_cycle_id"),
+    // Livestock work (feeding, vaccination, cleaning…) is a task on the group; the database checks it is on this farm.
+    livestock_group_id: group,
     title,
     description: optText(form, "description", 1000),
-    category: optText(form, "category", 40) ?? undefined,
+    category: optText(form, "category", 40) ?? (group ? "livestock" : undefined),
     priority: oneOf(form, "priority", PRIORITY, "medium")!,
     status: worker ? "assigned" : "planned",
     assigned_worker_id: worker,
@@ -496,6 +547,21 @@ export async function setTaskStatus(_: FormResult, form: FormData): R {
   if (error) return dbFail(error, "set_task_status");
   refreshPages("/tasks", "/");
   return ok("Task updated.");
+}
+
+/** Give a task to a worker (or take it back): an unstarted task becomes "assigned", or "planned" when unassigned. */
+export async function assignTask(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const taskId = id(form, "id");
+  if (!taskId) return fail("Task not found.");
+  const worker = id(form, "assigned_worker_id");
+  const { data: task } = await supabase.from("farm_operational_tasks").select("status").eq("id", taskId).maybeSingle();
+  if (!task) return fail("Task not found.");
+  const status = ["planned", "assigned"].includes(task.status) ? (worker ? "assigned" : "planned") : task.status;
+  const { error } = await supabase.from("farm_operational_tasks").update({ assigned_worker_id: worker, status }).eq("id", taskId);
+  if (error) return dbFail(error, "assign_task");
+  refreshPages("/tasks", "/");
+  return ok(worker ? "Task assigned." : "Task unassigned.");
 }
 
 export async function clockAttendance(_: FormResult, form: FormData): R {

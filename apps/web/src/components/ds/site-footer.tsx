@@ -7,25 +7,26 @@ import { Icon } from "./icon";
 
 export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["footer"]; nav: Dictionary["nav"] }) {
   const year = new Date().getFullYear();
+  const y = (en: string, yo: string) => (lang === "yo" ? yo : en);
   const cols: { title: string; links: { href: string; label: string }[] }[] = [
     {
-      title: "Solutions",
+      title: y("Solutions", "Ojútùú"),
       links: [
-        { href: `/${lang}/platform`, label: "Platform & architecture" },
-        { href: `/${lang}/whitepaper`, label: "Technical whitepaper" },
-        { href: `/${lang}/solutions`, label: "Solutions by role" },
-        { href: `/${lang}/marketplace`, label: "Escrow marketplace" },
-        { href: `/${lang}/machinery`, label: "Machinery & services" },
+        { href: `/${lang}/platform`, label: y("Platform & architecture", "Pèpéle àti ètò rẹ̀") },
+        { href: `/${lang}/whitepaper`, label: y("Technical whitepaper", "Ìwé àlàyé ìmọ̀ ẹ̀rọ") },
+        { href: `/${lang}/solutions`, label: y("Solutions by role", "Ojútùú fún iṣẹ́ kọ̀ọ̀kan") },
+        { href: `/${lang}/marketplace`, label: y("Escrow marketplace", "Ọjà owó ìdógò ààbò") },
+        { href: `/${lang}/machinery`, label: y("Machinery & services", "Ẹ̀rọ oko àti iṣẹ́") },
         { href: `/${lang}/farmers`, label: nav.farmers },
         { href: `/${lang}/service-providers`, label: nav.providers },
       ],
     },
     {
-      title: "Pilot & network",
+      title: y("Pilot & network", "Ìdánwò àkọ́kọ́ àti nẹ́tíwọ̀ọ̀kì"),
       links: [
-        { href: `/${lang}/waitlist`, label: "Join the South-West pilot" },
+        { href: `/${lang}/waitlist`, label: y("Join the South-West pilot", "Darapọ̀ mọ́ ìdánwò Gúúsù Ìwọ̀-Oòrùn") },
         { href: `/${lang}/how-it-works`, label: nav.how },
-        { href: `/${lang}/resources`, label: "Agronomy library" },
+        { href: `/${lang}/resources`, label: y("Agronomy library", "Ilé ìkàwé ìmọ̀ oko") },
         { href: `/${lang}/crops`, label: nav.crops },
         { href: `/${lang}/partners`, label: nav.partners },
       ],
@@ -41,7 +42,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
     {
       title: t.legal,
       links: [
-        { href: `/${lang}/legal`, label: "Governance & NDPA 2023" },
+        { href: `/${lang}/legal`, label: y("Governance & NDPA 2023", "Ìṣàkóso àti NDPA 2023") },
         { href: `/${lang}/privacy`, label: nav.privacy },
         { href: `/${lang}/terms`, label: nav.terms },
       ],
@@ -56,7 +57,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
             <p className="max-w-sm text-body-md text-on-surface-variant">{t.tagline} {t.madeIn}</p>
             <p className="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
               <span className="size-2 rounded-full bg-secondary" />
-              Regional operations: Ibadan, Oyo State &amp; Lagos
+              {y("Regional operations: Ibadan, Oyo State & Lagos", "Iṣẹ́ agbègbè: Ìbàdàn, Ìpínlẹ̀ Ọ̀yọ́ àti Èkó")}
             </p>
             <div className="flex flex-col gap-1 text-body-sm">
               {site.contact.phone && site.contact.phoneHref && (

@@ -8,6 +8,7 @@ import { PageViewTracker } from "@/components/site/page-view-tracker";
 import { site } from "@/config/site";
 import { hasLocale, htmlLang, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { MarketingLocale } from "@/i18n/marketing";
 
 export const dynamicParams = false;
 
@@ -44,7 +45,8 @@ export default async function LangLayout({ children, params }: LayoutProps<"/[la
           header={<SiteHeader lang={lang} t={t.nav} />}
           footer={<SiteFooter lang={lang} t={t.footer} nav={t.nav} />}
         >
-          {children}
+          {/* Public screens read the visitor's language from here to show their Yorùbá phrase books. */}
+          <MarketingLocale lang={lang}>{children}</MarketingLocale>
         </SiteChrome>
         <PageViewTracker />
       </body>

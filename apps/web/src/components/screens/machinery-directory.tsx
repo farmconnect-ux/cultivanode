@@ -8,6 +8,10 @@ import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import type { ScreenProps } from "./types";
+import { phrasebook } from "@/i18n/marketing";
+import YO from "@/i18n/yo-marketing/machinery-directory";
+
+const tYo = phrasebook(YO);
 
 interface MachineryItem {
   id: string;
@@ -200,7 +204,7 @@ export function MachineryDirectory({ lang = "en" }: ScreenProps) {
     setSelectedDate("2025-04-10");
     setSortBy("fastest");
     setCurrentPage(1);
-    showScreenToast("Filters reset to default 342 South-West fleet units.");
+    showScreenToast(tYo.now("Filters reset to default 342 South-West fleet units."));
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -220,7 +224,7 @@ export function MachineryDirectory({ lang = "en" }: ScreenProps) {
   const handleRegisterProvider = (e: React.FormEvent) => {
     e.preventDefault();
     if (!providerForm.syndicateName || !providerForm.phone) {
-      showScreenToast("Please provide syndicate name and direct phone number.");
+      showScreenToast(tYo.now("Please provide syndicate name and direct phone number."));
       return;
     }
     const appRef = "SYND-REG-" + Math.floor(1000 + Math.random() * 9000);
@@ -262,7 +266,7 @@ This handbook outlines operational governance, equipment dispatch protocols, and
 CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
 
     downloadFile("cultivanode-mechanization-operator-handbook.md", handbookContent, "text/markdown");
-    showScreenToast("Mechanization Operator Handbook downloaded successfully.");
+    showScreenToast(tYo.now("Mechanization Operator Handbook downloaded successfully."));
   };
 
   return (
@@ -273,16 +277,16 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
             <div className="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant flex-wrap">
               <Link className="hover:text-primary transition-colors flex items-center gap-1" href={`/${lang}`}>
                 <Icon name="home" className="text-[16px]" />
-                <span>Mesh Portal</span>
+                <span>{tYo("Mesh Portal")}</span>
               </Link>
               <span className="text-outline-variant">/</span>
-              <span className="text-on-surface-variant">Regional Operations</span>
+              <span className="text-on-surface-variant">{tYo("Regional Operations")}</span>
               <span className="text-outline-variant">/</span>
-              <span className="text-primary font-semibold">Machinery &amp; Services Hub</span>
+              <span className="text-primary font-semibold">{tYo("Machinery & Services Hub")}</span>
             </div>
             <div className="inline-flex items-center gap-space-xs self-start md:self-auto bg-surface-container-lowest px-space-md py-1 rounded-full shadow-sm">
               <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">South-West Pilot Mechanization Mesh · 0% Platform Commission</span>
+              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">{tYo("South-West Pilot Mechanization Mesh · 0% Platform Commission")}</span>
             </div>
           </div>
         </section>
@@ -290,16 +294,15 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
         <section className="w-full bg-surface-container-lowest shadow-sm py-space-xl">
           <div className="max-w-7xl mx-auto px-margin-desktop flex flex-col gap-space-lg">
             <div className="flex flex-col gap-space-xs max-w-4xl">
-              <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">Find Verified Farm Machinery &amp; Skilled Agricultural Services</h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">Discover, book, and deploy vetted tractor syndicates, combine harvesters, boom sprayers, and certified field operators across Oyo, Ogun, Osun, Ondo, Ekiti, and Lagos. Backed by GPS-geofenced Proof-of-Work and CBN escrow custody.</p>
+              <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">{tYo("Find Verified Farm Machinery & Skilled Agricultural Services")}</h1>
+              <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">{tYo("Discover, book, and deploy vetted tractor syndicates, combine harvesters, boom sprayers, and certified field operators across Oyo, Ogun, Osun, Ondo, Ekiti, and Lagos. Backed by GPS-geofenced Proof-of-Work and CBN escrow custody.")}</p>
             </div>
 
             <div className="w-full bg-surface-container-low p-space-md rounded-xl shadow-sm">
               <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-space-md items-end" role="search">
                 <div className="lg:col-span-4 flex flex-col gap-space-xs">
                   <label htmlFor={serviceSelectId} className="font-label-sm text-label-sm text-on-surface-variant uppercase flex items-center gap-1">
-                    <Icon name="agriculture" className="text-[14px] text-secondary" /> Service Category
-                  </label>
+                    <Icon name="agriculture" className="text-[14px] text-secondary" />{tYo(" Service Category")}</label>
                   <div className="relative bg-surface-container-lowest rounded-lg">
                     <select
                       id={serviceSelectId}
@@ -307,13 +310,13 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="w-full h-10 px-space-md font-body-sm text-body-sm text-on-surface bg-transparent appearance-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="all">All Vetted Agrarian Operations</option>
-                      <option value="tillage">Tractor Tillage &amp; Disc Ridging</option>
-                      <option value="clearing">Heavy Land Clearing &amp; Stumping</option>
-                      <option value="spraying">Calibrated Tractor Boom Spraying</option>
-                      <option value="drone">Drone Precision Spraying (DJI Agras)</option>
-                      <option value="harvesting">Combine Harvesting (Rice, Maize, Soy)</option>
-                      <option value="scouting">Soil pH &amp; Precision Agronomy Scouting</option>
+                      <option value="all">{tYo("All Vetted Agrarian Operations")}</option>
+                      <option value="tillage">{tYo("Tractor Tillage & Disc Ridging")}</option>
+                      <option value="clearing">{tYo("Heavy Land Clearing & Stumping")}</option>
+                      <option value="spraying">{tYo("Calibrated Tractor Boom Spraying")}</option>
+                      <option value="drone">{tYo("Drone Precision Spraying (DJI Agras)")}</option>
+                      <option value="harvesting">{tYo("Combine Harvesting (Rice, Maize, Soy)")}</option>
+                      <option value="scouting">{tYo("Soil pH & Precision Agronomy Scouting")}</option>
                     </select>
                     <Icon name="expand_more" className="absolute right-3 top-2.5 text-on-surface-variant pointer-events-none text-[18px]" />
                   </div>
@@ -321,8 +324,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
 
                 <div className="lg:col-span-3 flex flex-col gap-space-xs">
                   <label htmlFor={clusterSelectId} className="font-label-sm text-label-sm text-on-surface-variant uppercase flex items-center gap-1">
-                    <Icon name="distance" className="text-[14px] text-secondary" /> Agrarian Cluster / LGA
-                  </label>
+                    <Icon name="distance" className="text-[14px] text-secondary" />{tYo(" Agrarian Cluster / LGA")}</label>
                   <div className="relative bg-surface-container-lowest rounded-lg">
                     <select
                       id={clusterSelectId}
@@ -330,11 +332,11 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                       onChange={(e) => setSelectedCluster(e.target.value)}
                       className="w-full h-10 px-space-md font-body-sm text-body-sm text-on-surface bg-transparent appearance-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="all">All SW Hubs (6 States)</option>
-                      <option value="oyo-saki">Oyo — Saki West / Iseyin Belt</option>
-                      <option value="oyo-ibadan">Oyo — Ibadan Central / Ido</option>
-                      <option value="ogun-abeokuta">Ogun — Abeokuta North / Obafemi</option>
-                      <option value="ondo-akure">Ondo — Akure / Owo Grain Hub</option>
+                      <option value="all">{tYo("All SW Hubs (6 States)")}</option>
+                      <option value="oyo-saki">{tYo("Oyo — Saki West / Iseyin Belt")}</option>
+                      <option value="oyo-ibadan">{tYo("Oyo — Ibadan Central / Ido")}</option>
+                      <option value="ogun-abeokuta">{tYo("Ogun — Abeokuta North / Obafemi")}</option>
+                      <option value="ondo-akure">{tYo("Ondo — Akure / Owo Grain Hub")}</option>
                     </select>
                     <Icon name="expand_more" className="absolute right-3 top-2.5 text-on-surface-variant pointer-events-none text-[18px]" />
                   </div>
@@ -342,8 +344,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
 
                 <div className="lg:col-span-3 flex flex-col gap-space-xs">
                   <label htmlFor={dateInputId} className="font-label-sm text-label-sm text-on-surface-variant uppercase flex items-center gap-1">
-                    <Icon name="calendar_today" className="text-[14px] text-secondary" /> Mobilization Window
-                  </label>
+                    <Icon name="calendar_today" className="text-[14px] text-secondary" />{tYo(" Mobilization Window")}</label>
                   <div className="relative bg-surface-container-lowest rounded-lg">
                     <input
                       id={dateInputId}
@@ -358,22 +359,20 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                 <div className="lg:col-span-2">
                   <button className="w-full h-10 inline-flex items-center justify-center gap-space-xs font-label-lg text-label-lg font-semibold bg-primary-container text-on-primary hover:bg-primary transition-all duration-150 rounded-lg shadow-sm cursor-pointer" type="submit">
                     <Icon name="search" className="text-[18px]" />
-                    <span>Find Fleet</span>
+                    <span>{tYo("Find Fleet")}</span>
                   </button>
                 </div>
               </form>
 
               <div className="flex flex-wrap items-center gap-space-sm pt-space-md text-on-surface-variant font-label-sm text-label-sm">
-                <span className="font-semibold text-on-surface">Live Filters:</span>
+                <span className="font-semibold text-on-surface">{tYo("Live Filters:")}</span>
                 <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed">
-                  <Icon name="check" className="text-[14px]" /> In-radius &lt;35km
-                </span>
-                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">Operator Included</span>
-                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">GPS Telematics Active</span>
-                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">Fuel-included quotes</span>
+                  <Icon name="check" className="text-[14px]" />{tYo(" In-radius <35km")}</span>
+                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">{tYo("Operator Included")}</span>
+                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">{tYo("GPS Telematics Active")}</span>
+                <span className="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface">{tYo("Fuel-included quotes")}</span>
                 <button onClick={handleResetFilters} className="ml-auto text-secondary hover:underline font-semibold flex items-center gap-1 cursor-pointer" type="button">
-                  <Icon name="restart_alt" className="text-[14px]" /> Reset Filters
-                </button>
+                  <Icon name="restart_alt" className="text-[14px]" />{tYo(" Reset Filters")}</button>
               </div>
             </div>
           </div>
@@ -384,69 +383,69 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-space-md">
               <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-xs">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">Fleet Ready</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">{tYo("Fleet Ready")}</span>
                   <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="minor_crash" className="text-[18px]" />
                   </div>
                 </div>
                 <div>
                   <div className="font-metric-num text-metric-num text-primary">342</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Active Tractors &amp; Implements</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Active Tractors & Implements")}</div>
                 </div>
                 <div className="mt-space-sm flex items-center gap-1 font-label-sm text-label-sm text-secondary">
                   <Icon name="trending_up" className="text-[14px]" />
-                  <span>+28 joined this week</span>
+                  <span>{tYo("+28 joined this week")}</span>
                 </div>
               </div>
 
               <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-xs">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">Deployment SLA</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">{tYo("Deployment SLA")}</span>
                   <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
                     <Icon name="speed" className="text-[18px]" />
                   </div>
                 </div>
                 <div>
                   <div className="font-metric-num text-metric-num text-primary">&lt;48h</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Guaranteed Dispatch Window</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Guaranteed Dispatch Window")}</div>
                 </div>
                 <div className="mt-space-sm flex items-center gap-1 font-label-sm text-label-sm text-secondary">
                   <Icon name="check_circle" className="text-[14px]" />
-                  <span>Oyo &amp; Ogun Primary Corridors</span>
+                  <span>{tYo("Oyo & Ogun Primary Corridors")}</span>
                 </div>
               </div>
 
               <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-xs">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">Pilot Commission</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">{tYo("Pilot Commission")}</span>
                   <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-tertiary">
                     <Icon name="percent" className="text-[18px]" />
                   </div>
                 </div>
                 <div>
-                  <div className="font-metric-num text-metric-num text-primary">₦0 Fee</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Platform Booking Commission</div>
+                  <div className="font-metric-num text-metric-num text-primary">{tYo("₦0 Fee")}</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Platform Booking Commission")}</div>
                 </div>
                 <div className="mt-space-sm flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
                   <Icon name="verified" className="text-[14px] text-secondary" />
-                  <span>Supported by SW ADP Subsidies</span>
+                  <span>{tYo("Supported by SW ADP Subsidies")}</span>
                 </div>
               </div>
 
               <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-xs">
-                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">Escrow Protocol</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase">{tYo("Escrow Protocol")}</span>
                   <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="security" className="text-[18px]" />
                   </div>
                 </div>
                 <div>
                   <div className="font-metric-num text-metric-num text-primary">100%</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Geofenced PoW Validation</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Geofenced PoW Validation")}</div>
                 </div>
                 <div className="mt-space-sm flex items-center gap-1 font-label-sm text-label-sm text-secondary">
                   <Icon name="lock" className="text-[14px]" />
-                  <span>CBN-Regulated Escrow Vault</span>
+                  <span>{tYo("CBN-Regulated Escrow Vault")}</span>
                 </div>
               </div>
             </div>
@@ -457,17 +456,17 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
           <div className="max-w-7xl mx-auto px-margin-desktop flex flex-col gap-space-lg">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-sm">
               <div>
-                <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">Specialized Agricultural Capabilities</span>
-                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">Mechanization &amp; Agronomic Service Categories</h2>
+                <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">{tYo("Specialized Agricultural Capabilities")}</span>
+                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">{tYo("Mechanization & Agronomic Service Categories")}</h2>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">Standardized unit rates across South-West Nigeria clusters. Transparent hectare pricing with zero hidden contractor mobilization costs.</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">{tYo("Standardized unit rates across South-West Nigeria clusters. Transparent hectare pricing with zero hidden contractor mobilization costs.")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">
               <div
                 onClick={() => {
                   setSelectedCategory("tillage");
-                  showScreenToast("Filtering by Tractor Tillage & Plowing...");
+                  showScreenToast(tYo.now("Filtering by Tractor Tillage & Plowing..."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -475,19 +474,19 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="agriculture" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Tractor Tillage &amp; Plowing</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Disc plows, heavy harrows, and cassava ridgers operated by vetted tractor operators. Calibrated depth control for optimal root aeration.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Tractor Tillage & Plowing")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Disc plows, heavy harrows, and cassava ridgers operated by vetted tractor operators. Calibrated depth control for optimal root aeration.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">From ₦18,500 / Ha</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("From ₦18,500 / Ha")}</span>
                 </div>
               </div>
 
               <div
                 onClick={() => {
                   setSelectedCategory("clearing");
-                  showScreenToast("Filtering by Land Preparation & Stumping...");
+                  showScreenToast(tYo.now("Filtering by Land Preparation & Stumping..."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -495,19 +494,19 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="construction" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Land Preparation &amp; Stumping</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Bulldozers (CAT D6/D7), hydraulic excavators, and root rippers engineered for virgin agrarian bush opening and secondary forest grading.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Land Preparation & Stumping")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Bulldozers (CAT D6/D7), hydraulic excavators, and root rippers engineered for virgin agrarian bush opening and secondary forest grading.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">From ₦45,000 / Ha</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("From ₦45,000 / Ha")}</span>
                 </div>
               </div>
 
               <div
                 onClick={() => {
                   setSelectedCategory("spraying");
-                  showScreenToast("Filtering by Crop Protection & Spraying...");
+                  showScreenToast(tYo.now("Filtering by Crop Protection & Spraying..."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -515,19 +514,19 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="shower" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Crop Protection &amp; Spraying</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Calibrated 600L-800L tractor boom sprayers alongside DJI Agras T30/T40 drones for rapid, drift-minimized herbicide and insecticide passes.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Crop Protection & Spraying")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Calibrated 600L-800L tractor boom sprayers alongside DJI Agras T30/T40 drones for rapid, drift-minimized herbicide and insecticide passes.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">From ₦6,500 / Ha</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("From ₦6,500 / Ha")}</span>
                 </div>
               </div>
 
               <div
                 onClick={() => {
                   setSelectedCategory("harvesting");
-                  showScreenToast("Filtering by Grain & Tuber Harvesting...");
+                  showScreenToast(tYo.now("Filtering by Grain & Tuber Harvesting..."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -535,19 +534,19 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="grain" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Grain &amp; Tuber Harvesting</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Mechanical cassava uprooters and multi-crop combines with specialized rice track undercarriages and maize headers for minimum grain shatter.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Grain & Tuber Harvesting")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Mechanical cassava uprooters and multi-crop combines with specialized rice track undercarriages and maize headers for minimum grain shatter.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">From ₦24,000 / Ha</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("From ₦24,000 / Ha")}</span>
                 </div>
               </div>
 
               <div
                 onClick={() => {
                   setSelectedCategory("drone");
-                  showScreenToast("Filtering by Drone Precision Scouting...");
+                  showScreenToast(tYo.now("Filtering by Drone Precision Scouting..."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -555,19 +554,19 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="biotech" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Soil Testing &amp; Agronomy Scouting</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Mobile field test labs equipped with electronic pH, NPK, and electrical conductivity testing kits. Verified fertilizer optimization prescriptions.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Soil Testing & Agronomy Scouting")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Mobile field test labs equipped with electronic pH, NPK, and electrical conductivity testing kits. Verified fertilizer optimization prescriptions.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">From ₦12,000 / Field</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("From ₦12,000 / Field")}</span>
                 </div>
               </div>
 
               <div
                 onClick={() => {
                   setSelectedCluster("all");
-                  showScreenToast("Low-bed haulage trailers available across all SW clusters.");
+                  showScreenToast(tYo.now("Low-bed haulage trailers available across all SW clusters."));
                 }}
                 className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between group cursor-pointer"
               >
@@ -575,12 +574,12 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
                     <Icon name="local_shipping" className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Haulage &amp; Low-Loader Transport</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Heavy equipment low-bed mobilization trailers for point-to-point tractor and bulldozer haulage between inter-state farm clusters.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Haulage & Low-Loader Transport")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Heavy equipment low-bed mobilization trailers for point-to-point tractor and bulldozer haulage between inter-state farm clusters.")}</p>
                 </div>
                 <div className="mt-space-lg pt-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Benchmark Rate:</span>
-                  <span className="font-label-lg text-label-lg font-bold text-primary">₦1,800 / Km loaded</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Benchmark Rate:")}</span>
+                  <span className="font-label-lg text-label-lg font-bold text-primary">{tYo("₦1,800 / Km loaded")}</span>
                 </div>
               </div>
             </div>
@@ -593,20 +592,20 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               <div>
                 <div className="flex items-center gap-space-xs">
                   <span className="w-2 h-2 rounded-full bg-secondary" />
-                  <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">Certified Machinery Fleet</span>
+                  <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">{tYo("Certified Machinery Fleet")}</span>
                 </div>
-                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">Active Mobilization Directory</h2>
+                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">{tYo("Active Mobilization Directory")}</h2>
               </div>
               <div className="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
-                <span>Sort by:</span>
+                <span>{tYo("Sort by:")}</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "fastest" | "price" | "rating")}
                   className="bg-surface-container-lowest px-space-sm py-1 rounded-md text-primary font-semibold shadow-sm focus:outline-none cursor-pointer"
                 >
-                  <option value="fastest">Fastest Availability</option>
-                  <option value="price">Lowest Cost / Ha</option>
-                  <option value="rating">Highest Rating</option>
+                  <option value="fastest">{tYo("Fastest Availability")}</option>
+                  <option value="price">{tYo("Lowest Cost / Ha")}</option>
+                  <option value="rating">{tYo("Highest Rating")}</option>
                 </select>
               </div>
             </div>
@@ -617,42 +616,42 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   <div className="relative w-full h-48 bg-surface-container">
                     <img className="w-full h-full object-cover" data-alt={item.alt} src={item.image} alt="" loading="lazy" decoding="async" />
                     <div className={`absolute top-3 left-3 ${item.availabilityColor} font-label-sm text-label-sm px-space-sm py-0.5 rounded-full font-semibold flex items-center gap-1 shadow-sm`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> {item.availability}
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> {tYo(item.availability)}
                     </div>
                     <div className="absolute bottom-3 right-3 bg-surface-container-lowest/95 backdrop-blur-sm text-primary font-label-md text-label-md px-space-sm py-0.5 rounded-md font-bold shadow-sm flex items-center gap-1">
                       <Icon name="star" className="text-tertiary-container text-[16px]" />
-                      <span>{item.rating}</span>
-                      <span className="text-on-surface-variant font-normal">({item.jobsCount} jobs)</span>
+                      <span>{tYo(item.rating)}</span>
+                      <span className="text-on-surface-variant font-normal">({tYo(item.jobsCount)}{tYo(" jobs)")}</span>
                     </div>
                   </div>
                   <div className="p-space-lg flex flex-col flex-1 justify-between gap-space-md">
                     <div className="flex flex-col gap-space-xs">
                       <div className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
                         <Icon name="location_on" className="text-[16px] text-secondary" />
-                        <span>{item.location}</span>
+                        <span>{tYo(item.location)}</span>
                       </div>
-                      <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{item.name}</h3>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant font-medium">Syndicate: {item.syndicate}</p>
+                      <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{tYo(item.name)}</h3>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant font-medium">{tYo("Syndicate: ")}{tYo(item.syndicate)}</p>
                     </div>
                     <div className="bg-surface-container-low p-space-sm rounded-lg flex flex-col gap-1">
                       <div className="flex items-center justify-between text-body-sm font-body-sm">
-                        <span className="text-on-surface-variant">Operator:</span>
-                        <span className="font-semibold text-on-surface flex items-center gap-1">{item.operator} <Icon name="verified" className="text-secondary text-[14px]" /></span>
+                        <span className="text-on-surface-variant">{tYo("Operator:")}</span>
+                        <span className="font-semibold text-on-surface flex items-center gap-1">{tYo(item.operator)} <Icon name="verified" className="text-secondary text-[14px]" /></span>
                       </div>
                       <div className="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant">
-                        <span>Credentials:</span>
-                        <span className="text-secondary font-medium">{item.credentials}</span>
+                        <span>{tYo("Credentials:")}</span>
+                        <span className="text-secondary font-medium">{tYo(item.credentials)}</span>
                       </div>
                       <div className="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant pt-1 border-t border-surface-container">
-                        <span>Features:</span>
-                        <span className="text-on-surface">{item.features}</span>
+                        <span>{tYo("Features:")}</span>
+                        <span className="text-on-surface">{tYo(item.features)}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-space-xs">
                       <div>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant block">{item.rateLabel}:</span>
+                        <span className="font-label-sm text-label-sm text-on-surface-variant block">{tYo(item.rateLabel)}:</span>
                         <span className="font-headline-md text-headline-md text-primary font-bold">₦{item.rate.toLocaleString()}</span>
-                        <span className="font-label-sm text-label-sm text-on-surface-variant"> {item.rateUnit}</span>
+                        <span className="font-label-sm text-label-sm text-on-surface-variant"> {tYo(item.rateUnit)}</span>
                       </div>
                       <button
                         onClick={() => {
@@ -662,8 +661,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                         className="inline-flex items-center justify-center gap-1 bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md px-space-md py-2 rounded-lg font-semibold transition-colors shadow-sm cursor-pointer"
                         type="button"
                       >
-                        <Icon name="lock" className="text-[16px]" /> Request Booking
-                      </button>
+                        <Icon name="lock" className="text-[16px]" />{tYo(" Request Booking")}</button>
                     </div>
                   </div>
                 </article>
@@ -671,7 +669,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-space-md pt-space-md">
-              <span className="font-body-sm text-body-sm text-on-surface-variant">Showing <strong>{filteredList.length}</strong> of <strong>342</strong> verified mechanization listings across SW mesh</span>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Showing ")}<strong>{tYo(filteredList.length)}</strong>{tYo(" of ")}<strong>342</strong>{tYo(" verified mechanization listings across SW mesh")}</span>
               <div className="flex items-center gap-space-xs font-label-sm text-label-sm">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -691,7 +689,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                 <button
                   onClick={() => {
                     setCurrentPage(2);
-                    showScreenToast("Viewing page 2: Additional 6 vetted contractor fleets.");
+                    showScreenToast(tYo.now("Viewing page 2: Additional 6 vetted contractor fleets."));
                   }}
                   className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold cursor-pointer ${currentPage === 2 ? "bg-primary-container text-on-primary" : "bg-surface-container-lowest text-on-surface shadow-sm hover:bg-surface-container"}`}
                   type="button"
@@ -701,7 +699,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                 <button
                   onClick={() => {
                     setCurrentPage(3);
-                    showScreenToast("Viewing page 3: Specialized spray & harvesting units.");
+                    showScreenToast(tYo.now("Viewing page 3: Specialized spray & harvesting units."));
                   }}
                   className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold cursor-pointer ${currentPage === 3 ? "bg-primary-container text-on-primary" : "bg-surface-container-lowest text-on-surface shadow-sm hover:bg-surface-container"}`}
                   type="button"
@@ -712,7 +710,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                 <button
                   onClick={() => {
                     setCurrentPage(29);
-                    showScreenToast("Viewing page 29: Regional reserve syndicate fleets.");
+                    showScreenToast(tYo.now("Viewing page 29: Regional reserve syndicate fleets."));
                   }}
                   className="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface shadow-sm hover:bg-surface-container flex items-center justify-center cursor-pointer"
                   type="button"
@@ -734,9 +732,9 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
         <section className="w-full bg-surface-container-lowest py-space-xl">
           <div className="max-w-7xl mx-auto px-margin-desktop flex flex-col gap-space-lg">
             <div className="text-center max-w-2xl mx-auto flex flex-col gap-space-xs">
-              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">Decentralized Escrow Verification</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">How Equipment Booking Works</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant">Every field operation is protected by geospatial Proof-of-Work boundaries and CBN-compliant custodial vaults.</p>
+              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">{tYo("Decentralized Escrow Verification")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">{tYo("How Equipment Booking Works")}</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant">{tYo("Every field operation is protected by geospatial Proof-of-Work boundaries and CBN-compliant custodial vaults.")}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md pt-space-md">
               <div className="bg-surface-container-low p-space-lg rounded-xl flex flex-col justify-between gap-space-md relative">
@@ -747,12 +745,12 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   </div>
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">Define Geofenced Area</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Select your required implement and attach your PostGIS boundary polygon or farm GPS coordinates directly from your CultivaNode roster.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("Define Geofenced Area")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Select your required implement and attach your PostGIS boundary polygon or farm GPS coordinates directly from your CultivaNode roster.")}</p>
                 </div>
                 <div className="text-secondary font-label-sm text-label-sm flex items-center gap-1">
                   <Icon name="pin_drop" className="text-[14px]" />
-                  <span>Accurate Hectare Calculation</span>
+                  <span>{tYo("Accurate Hectare Calculation")}</span>
                 </div>
               </div>
 
@@ -764,12 +762,12 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   </div>
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">CBN Escrow Custody</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Deposit hiring funds into a Providus Bank escrow trust at 0% platform fee. Capital remains locked until field milestones are verified.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("CBN Escrow Custody")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Deposit hiring funds into a Providus Bank escrow trust at 0% platform fee. Capital remains locked until field milestones are verified.")}</p>
                 </div>
                 <div className="text-secondary font-label-sm text-label-sm flex items-center gap-1">
                   <Icon name="shield" className="text-[14px]" />
-                  <span>Zero Advance Risk</span>
+                  <span>{tYo("Zero Advance Risk")}</span>
                 </div>
               </div>
 
@@ -781,12 +779,12 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   </div>
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">Track GPS Tillage PoW</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Tractor operator mobilizes. The on-board CultivaNode telemetry module transmits live boundary traversal tracks and time-stamped passes.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("Track GPS Tillage PoW")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Tractor operator mobilizes. The on-board CultivaNode telemetry module transmits live boundary traversal tracks and time-stamped passes.")}</p>
                 </div>
                 <div className="text-secondary font-label-sm text-label-sm flex items-center gap-1">
                   <Icon name="timeline" className="text-[14px]" />
-                  <span>Live Telematics Dashboard</span>
+                  <span>{tYo("Live Telematics Dashboard")}</span>
                 </div>
               </div>
 
@@ -798,12 +796,12 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                   </div>
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">Inspect &amp; Release Funds</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Review completed acreage. Farmer approves release via PIN/OTP within 48h or triggers an automated agricultural ADP arbitration review.</p>
+                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("Inspect & Release Funds")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Review completed acreage. Farmer approves release via PIN/OTP within 48h or triggers an automated agricultural ADP arbitration review.")}</p>
                 </div>
                 <div className="text-secondary font-label-sm text-label-sm flex items-center gap-1">
                   <Icon name="verified" className="text-[14px]" />
-                  <span>Instant Syndicate Payout</span>
+                  <span>{tYo("Instant Syndicate Payout")}</span>
                 </div>
               </div>
             </div>
@@ -816,30 +814,30 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               <div className="w-full lg:w-1/2 flex flex-col gap-space-md">
                 <div className="inline-flex items-center gap-space-xs bg-surface-container px-space-md py-1 rounded-full self-start">
                   <Icon name="hub" className="text-[16px] text-secondary" />
-                  <span className="font-label-sm text-label-sm text-on-surface font-semibold">Active Mesh Coverage Map</span>
+                  <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Active Mesh Coverage Map")}</span>
                 </div>
-                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">South-West Tractor Syndicates Live Dispatch Map</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">CultivaNode synchronizes fleet pools across agrarian junctions in Oyo, Ogun, Ondo, and Osun to eliminate empty return journeys (deadhead transit) and maintain fuel economies of scale.</p>
+                <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight">{tYo("South-West Tractor Syndicates Live Dispatch Map")}</h2>
+                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">{tYo("CultivaNode synchronizes fleet pools across agrarian junctions in Oyo, Ogun, Ondo, and Osun to eliminate empty return journeys (deadhead transit) and maintain fuel economies of scale.")}</p>
                 <div className="grid grid-cols-2 gap-space-sm pt-space-xs">
                   <div className="p-space-sm bg-surface-container-low rounded-lg">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant block">Oke-Ogun Corridor</span>
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">142 Units</span>
-                    <span className="font-label-sm text-label-sm text-secondary block">Saki, Iseyin, Kisi</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant block">{tYo("Oke-Ogun Corridor")}</span>
+                    <span className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("142 Units")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary block">{tYo("Saki, Iseyin, Kisi")}</span>
                   </div>
                   <div className="p-space-sm bg-surface-container-low rounded-lg">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant block">Egba / Yewa Belt</span>
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">89 Units</span>
-                    <span className="font-label-sm text-label-sm text-secondary block">Abeokuta, Ilaro</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant block">{tYo("Egba / Yewa Belt")}</span>
+                    <span className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("89 Units")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary block">{tYo("Abeokuta, Ilaro")}</span>
                   </div>
                   <div className="p-space-sm bg-surface-container-low rounded-lg">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant block">Osun Agro Valley</span>
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">64 Units</span>
-                    <span className="font-label-sm text-label-sm text-secondary block">Osogbo, Ejigbo</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant block">{tYo("Osun Agro Valley")}</span>
+                    <span className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("64 Units")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary block">{tYo("Osogbo, Ejigbo")}</span>
                   </div>
                   <div className="p-space-sm bg-surface-container-low rounded-lg">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant block">Ondo Grain Basin</span>
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">47 Units</span>
-                    <span className="font-label-sm text-label-sm text-secondary block">Akure, Owo</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant block">{tYo("Ondo Grain Basin")}</span>
+                    <span className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("47 Units")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary block">{tYo("Akure, Owo")}</span>
                   </div>
                 </div>
               </div>
@@ -852,15 +850,14 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                 >
                   <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/10 transition-colors rounded-xl flex items-center justify-center">
                     <span className="bg-surface-container-lowest/90 px-3 py-1.5 rounded-lg text-primary font-label-md text-label-md font-bold shadow-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-                      <Icon name="map" className="text-[18px]" /> Click to Inspect Live Dispatch Radar
-                    </span>
+                      <Icon name="map" className="text-[18px]" />{tYo(" Click to Inspect Live Dispatch Radar")}</span>
                   </div>
                   <div className="bg-surface-container-lowest/90 backdrop-blur-md p-space-sm rounded-lg shadow-sm flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-space-xs font-label-sm text-label-sm text-primary font-semibold">
                       <span className="w-2 h-2 rounded-full bg-secondary animate-ping" />
-                      <span>Live GPS Feed: 12 Machines operating right now in Saki West</span>
+                      <span>{tYo("Live GPS Feed: 12 Machines operating right now in Saki West")}</span>
                     </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">Updated 4m ago</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Updated 4m ago")}</span>
                   </div>
                 </div>
               </div>
@@ -874,14 +871,13 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-lg">
                 <div className="flex flex-col gap-space-sm max-w-2xl">
                   <div className="inline-flex items-center gap-space-xs bg-secondary/30 text-secondary-fixed font-label-sm text-label-sm px-space-md py-1 rounded-full uppercase tracking-wider font-semibold self-start">
-                    <Icon name="electric_bolt" className="text-[14px]" /> For Fleet Owners &amp; Agrotech Coops
-                  </div>
-                  <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-primary font-bold tracking-tight">Own Tractors or Implements in South-West Nigeria? Put Idle Machines to Work.</h2>
-                  <p className="font-body-md text-body-md text-on-primary-container leading-relaxed">Guaranteed escrow payments, zero deadhead transit via demand clustering, verified operator management, and subsidized maintenance spare parts through regional agricultural development programs.</p>
+                    <Icon name="electric_bolt" className="text-[14px]" />{tYo(" For Fleet Owners & Agrotech Coops")}</div>
+                  <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-primary font-bold tracking-tight">{tYo("Own Tractors or Implements in South-West Nigeria? Put Idle Machines to Work.")}</h2>
+                  <p className="font-body-md text-body-md text-on-primary-container leading-relaxed">{tYo("Guaranteed escrow payments, zero deadhead transit via demand clustering, verified operator management, and subsidized maintenance spare parts through regional agricultural development programs.")}</p>
                   <div className="flex flex-wrap items-center gap-space-md pt-space-xs font-label-sm text-label-sm text-on-primary">
-                    <span className="flex items-center gap-1"><Icon name="verified" className="text-secondary-fixed text-[18px]" /> 0% Listing Fee</span>
-                    <span className="flex items-center gap-1"><Icon name="shield" className="text-secondary-fixed text-[18px]" /> Instant 48h Escrow Settlements</span>
-                    <span className="flex items-center gap-1"><Icon name="engineering" className="text-secondary-fixed text-[18px]" /> Operator Safety &amp; GPS Telematics Kits</span>
+                    <span className="flex items-center gap-1"><Icon name="verified" className="text-secondary-fixed text-[18px]" />{tYo(" 0% Listing Fee")}</span>
+                    <span className="flex items-center gap-1"><Icon name="shield" className="text-secondary-fixed text-[18px]" />{tYo(" Instant 48h Escrow Settlements")}</span>
+                    <span className="flex items-center gap-1"><Icon name="engineering" className="text-secondary-fixed text-[18px]" />{tYo(" Operator Safety & GPS Telematics Kits")}</span>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row lg:flex-col gap-space-sm w-full lg:w-auto shrink-0">
@@ -890,15 +886,13 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-space-xs bg-secondary text-on-secondary hover:bg-secondary-fixed hover:text-on-secondary-fixed font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg transition-colors shadow-sm cursor-pointer"
                     type="button"
                   >
-                    <Icon name="add_circle" className="text-[20px]" /> Register as Equipment Provider
-                  </button>
+                    <Icon name="add_circle" className="text-[20px]" />{tYo(" Register as Equipment Provider")}</button>
                   <button
                     onClick={handleDownloadHandbook}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-space-xs bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-lg text-label-lg font-semibold px-space-lg py-space-sm rounded-lg transition-colors shadow-sm cursor-pointer"
                     type="button"
                   >
-                    <Icon name="download" className="text-[20px]" /> Download Operator Handbook (PDF)
-                  </button>
+                    <Icon name="download" className="text-[20px]" />{tYo(" Download Operator Handbook (PDF)")}</button>
                 </div>
               </div>
             </div>
@@ -909,28 +903,28 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
       {/* Booking Modal */}
       {bookingItem && (
         <ScreenDialog
-          title="Reserve Agricultural Equipment"
+          title={tYo("Reserve Agricultural Equipment")}
           subtitle={`Deploy ${bookingItem.name} with Geofenced Escrow Protection`}
           onClose={() => setBookingItem(null)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
               <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-2">
                 <div className="flex justify-between items-center text-label-md">
-                  <span className="text-on-surface-variant">Syndicate / Provider:</span>
-                  <span className="font-bold text-on-surface">{bookingItem.syndicate}</span>
+                  <span className="text-on-surface-variant">{tYo("Syndicate / Provider:")}</span>
+                  <span className="font-bold text-on-surface">{tYo(bookingItem.syndicate)}</span>
                 </div>
                 <div className="flex justify-between items-center text-label-md">
-                  <span className="text-on-surface-variant">Lead Operator:</span>
-                  <span className="font-semibold text-secondary flex items-center gap-1">{bookingItem.operator} <Icon name="verified" className="text-[14px]" /></span>
+                  <span className="text-on-surface-variant">{tYo("Lead Operator:")}</span>
+                  <span className="font-semibold text-secondary flex items-center gap-1">{tYo(bookingItem.operator)} <Icon name="verified" className="text-[14px]" /></span>
                 </div>
                 <div className="flex justify-between items-center text-label-md">
-                  <span className="text-on-surface-variant">Unit Base Rate:</span>
-                  <span className="font-bold text-primary">₦{bookingItem.rate.toLocaleString()} {bookingItem.rateUnit}</span>
+                  <span className="text-on-surface-variant">{tYo("Unit Base Rate:")}</span>
+                  <span className="font-bold text-primary">₦{bookingItem.rate.toLocaleString()} {tYo(bookingItem.rateUnit)}</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-space-xs">
-                <label className="font-label-sm text-label-sm text-on-surface font-semibold">Total Hectares Required:</label>
+                <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Total Hectares Required:")}</label>
                 <input
                   type="number"
                   min={1}
@@ -942,38 +936,35 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               </div>
 
               <div className="flex flex-col gap-space-xs">
-                <label className="font-label-sm text-label-sm text-on-surface font-semibold">Escrow Custodian Bank:</label>
+                <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Escrow Custodian Bank:")}</label>
                 <select
                   value={bookingBank}
                   onChange={(e) => setBookingBank(e.target.value)}
                   className="w-full h-11 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-md"
                 >
-                  <option value="Zenith Bank">Zenith Bank (CBN Agrarian Custody Trust)</option>
-                  <option value="Providus Bank">Providus Bank (Instant NIBSS Virtual Escrow)</option>
-                  <option value="Paystack Vault">Paystack Multi-Currency Escrow (Cards/USSD/Transfer)</option>
-                  <option value="Flutterwave Escrow">Flutterwave NGN/USD Agritech Vault</option>
+                  <option value="Zenith Bank">{tYo("Zenith Bank (CBN Agrarian Custody Trust)")}</option>
+                  <option value="Providus Bank">{tYo("Providus Bank (Instant NIBSS Virtual Escrow)")}</option>
+                  <option value="Paystack Vault">{tYo("Paystack Multi-Currency Escrow (Cards/USSD/Transfer)")}</option>
+                  <option value="Flutterwave Escrow">{tYo("Flutterwave NGN/USD Agritech Vault")}</option>
                 </select>
               </div>
 
               <div className="p-space-md bg-secondary/10 border border-secondary/20 rounded-xl flex flex-col gap-1">
                 <div className="flex justify-between text-body-md">
-                  <span className="text-on-surface-variant">Total Escrow Deposit:</span>
+                  <span className="text-on-surface-variant">{tYo("Total Escrow Deposit:")}</span>
                   <span className="font-headline-sm text-headline-sm font-bold text-primary">₦{(bookingItem.rate * bookingHectares).toLocaleString()}</span>
                 </div>
                 <span className="text-label-sm text-secondary flex items-center gap-1">
-                  <Icon name="shield" className="text-[14px]" /> Locked until GPS Proof-of-Work completes with zero damage
-                </span>
+                  <Icon name="shield" className="text-[14px]" />{tYo(" Locked until GPS Proof-of-Work completes with zero damage")}</span>
               </div>
 
               <div className="flex justify-end gap-space-sm pt-space-xs">
-                <ScreenDialogClose onClick={() => setBookingItem(null)}>Cancel</ScreenDialogClose>
+                <ScreenDialogClose onClick={() => setBookingItem(null)}>{tYo("Cancel")}</ScreenDialogClose>
                 <button
                   onClick={handleConfirmBooking}
                   className="px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-primary-container transition-colors cursor-pointer"
                   type="button"
-                >
-                  Deposit &amp; Authorize Dispatch
-                </button>
+                >{tYo("Deposit & Authorize Dispatch")}</button>
               </div>
             </div>
           }
@@ -983,17 +974,17 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
       {/* Provider Onboarding Modal */}
       {showProviderModal && (
         <ScreenDialog
-          title="Register as Equipment Provider"
-          subtitle="Monetize idle machinery through verified South-West agrarian syndicates"
+          title={tYo("Register as Equipment Provider")}
+          subtitle={tYo("Monetize idle machinery through verified South-West agrarian syndicates")}
           onClose={() => setShowProviderModal(false)}
           panel={
             <form onSubmit={handleRegisterProvider} className="flex flex-col gap-space-md p-space-md">
               <div className="flex flex-col gap-space-xs">
-                <label className="font-label-sm text-label-sm text-on-surface font-semibold">Syndicate / Organization Name *</label>
+                <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Syndicate / Organization Name *")}</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Oke-Ogun Mechanization Cooperative"
+                  placeholder={tYo("e.g., Oke-Ogun Mechanization Cooperative")}
                   value={providerForm.syndicateName}
                   onChange={(e) => setProviderForm({ ...providerForm, syndicateName: e.target.value })}
                   className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-sm"
@@ -1002,48 +993,48 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
 
               <div className="grid grid-cols-2 gap-space-sm">
                 <div className="flex flex-col gap-space-xs">
-                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">Equipment Type</label>
+                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Equipment Type")}</label>
                   <select
                     value={providerForm.equipmentType}
                     onChange={(e) => setProviderForm({ ...providerForm, equipmentType: e.target.value })}
                     className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-sm"
                   >
-                    <option>Tractor (75+ HP)</option>
-                    <option>Combine Harvester</option>
-                    <option>CAT D6 Bulldozer</option>
-                    <option>DJI Agras Drone</option>
-                    <option>Boom Sprayer</option>
+                    <option>{tYo("Tractor (75+ HP)")}</option>
+                    <option>{tYo("Combine Harvester")}</option>
+                    <option>{tYo("CAT D6 Bulldozer")}</option>
+                    <option>{tYo("DJI Agras Drone")}</option>
+                    <option>{tYo("Boom Sprayer")}</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">Primary Base LGA</label>
+                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Primary Base LGA")}</label>
                   <select
                     value={providerForm.cluster}
                     onChange={(e) => setProviderForm({ ...providerForm, cluster: e.target.value })}
                     className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-sm"
                   >
-                    <option>Oyo — Saki West</option>
-                    <option>Oyo — Iseyin</option>
-                    <option>Ogun — Abeokuta North</option>
-                    <option>Ondo — Akure Central</option>
-                    <option>Osun — Osogbo</option>
+                    <option>{tYo("Oyo — Saki West")}</option>
+                    <option>{tYo("Oyo — Iseyin")}</option>
+                    <option>{tYo("Ogun — Abeokuta North")}</option>
+                    <option>{tYo("Ondo — Akure Central")}</option>
+                    <option>{tYo("Osun — Osogbo")}</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-space-sm">
                 <div className="flex flex-col gap-space-xs">
-                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">Registration / VIN</label>
+                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Registration / VIN")}</label>
                   <input
                     type="text"
-                    placeholder="e.g. MF-2024-9912"
+                    placeholder={tYo("e.g. MF-2024-9912")}
                     value={providerForm.vinChassis}
                     onChange={(e) => setProviderForm({ ...providerForm, vinChassis: e.target.value })}
                     className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-space-xs">
-                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">Daily Benchmark Rate (₦)</label>
+                  <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Daily Benchmark Rate (₦)")}</label>
                   <input
                     type="number"
                     value={providerForm.dailyRate}
@@ -1054,7 +1045,7 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               </div>
 
               <div className="flex flex-col gap-space-xs">
-                <label className="font-label-sm text-label-sm text-on-surface font-semibold">Direct Phone / WhatsApp *</label>
+                <label className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Direct Phone / WhatsApp *")}</label>
                 <input
                   type="tel"
                   required
@@ -1066,13 +1057,11 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
               </div>
 
               <div className="flex justify-end gap-space-sm pt-space-xs">
-                <ScreenDialogClose onClick={() => setShowProviderModal(false)}>Cancel</ScreenDialogClose>
+                <ScreenDialogClose onClick={() => setShowProviderModal(false)}>{tYo("Cancel")}</ScreenDialogClose>
                 <button
                   type="submit"
                   className="px-space-lg py-2.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:bg-secondary-fixed transition-colors cursor-pointer"
-                >
-                  Submit Equipment Dossier
-                </button>
+                >{tYo("Submit Equipment Dossier")}</button>
               </div>
             </form>
           }
@@ -1082,38 +1071,37 @@ CultivaNode Operations Bureau · Secretariat: Ibadan, Oyo State, Nigeria`;
       {/* Radar Map Modal */}
       {showMapModal && (
         <ScreenDialog
-          title="South-West Telematics Fleet Radar"
-          subtitle="Live RTK GPS Telemetry of 342 Registered Implement Units"
+          title={tYo("South-West Telematics Fleet Radar")}
+          subtitle={tYo("Live RTK GPS Telemetry of 342 Registered Implement Units")}
           onClose={() => setShowMapModal(false)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
               <div className="w-full h-72 rounded-xl bg-surface-container relative overflow-hidden flex items-center justify-center border border-surface-container-high">
-                <img src="/images/screens/442c1d15059d.webp" alt="Map Radar" className="w-full h-full object-cover" />
+                <img src="/images/screens/442c1d15059d.webp" alt={tYo("Map Radar")} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-primary/20 flex flex-col items-center justify-center p-space-md text-center">
                   <div className="p-space-md rounded-xl bg-surface-container-lowest/90 backdrop-blur-md shadow-lg flex flex-col gap-2 max-w-md">
                     <span className="font-label-lg text-label-lg font-bold text-primary flex items-center justify-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-ping" /> Active RTK Base Stations: Saki, Iseyin, Abeokuta
-                    </span>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">24 Units actively transmitting live CAN-bus velocity and cadastral pass coordinates across UTM Zone 31N.</p>
+                      <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-ping" />{tYo(" Active RTK Base Stations: Saki, Iseyin, Abeokuta")}</span>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("24 Units actively transmitting live CAN-bus velocity and cadastral pass coordinates across UTM Zone 31N.")}</p>
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-label-sm">
                 <div className="p-2 rounded-lg bg-surface-container-low">
-                  <span className="text-on-surface-variant block">Average Latency</span>
-                  <span className="font-bold text-primary text-body-md">8 seconds</span>
+                  <span className="text-on-surface-variant block">{tYo("Average Latency")}</span>
+                  <span className="font-bold text-primary text-body-md">{tYo("8 seconds")}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-surface-container-low">
-                  <span className="text-on-surface-variant block">Sub-meter RTK</span>
-                  <span className="font-bold text-secondary text-body-md">99.8% Online</span>
+                  <span className="text-on-surface-variant block">{tYo("Sub-meter RTK")}</span>
+                  <span className="font-bold text-secondary text-body-md">{tYo("99.8% Online")}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-surface-container-low">
-                  <span className="text-on-surface-variant block">PoW Settlement</span>
-                  <span className="font-bold text-tertiary text-body-md">Zero Breaches</span>
+                  <span className="text-on-surface-variant block">{tYo("PoW Settlement")}</span>
+                  <span className="font-bold text-tertiary text-body-md">{tYo("Zero Breaches")}</span>
                 </div>
               </div>
               <div className="flex justify-end pt-space-xs">
-                <ScreenDialogClose onClick={() => setShowMapModal(false)}>Close Radar</ScreenDialogClose>
+                <ScreenDialogClose onClick={() => setShowMapModal(false)}>{tYo("Close Radar")}</ScreenDialogClose>
               </div>
             </div>
           }

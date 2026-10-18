@@ -1034,7 +1034,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                       className="px-space-sm py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors cursor-pointer focus:outline-none"
                     >
                       <option value="all">All Plots & Units</option>
-                      {Array.from(new Set(displayOps.map((op) => op.plot))).map((p) => (
+                      {Array.from(new Set(displayOps.map((op) => op.plot).filter((p): p is string => Boolean(p)))).map((p) => (
                         <option key={p} value={p}>{p}</option>
                       ))}
                     </select>

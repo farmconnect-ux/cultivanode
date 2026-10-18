@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { addCropOperation, addSuggestedOperations, completeCropOperation, logObservation, recordHarvest, setCropOperationStatus, updateCropStage } from "@/actions/farm-ops";
+import { addCropOperation, addSuggestedOperations, completeCropOperation, logObservation, recordHarvest, setCropOperationStatus, updateCropStage, updatePlantCount } from "@/actions/farm-ops";
 import { Icon } from "@/components/ds/icon";
 import { PageHeader } from "@/components/ds/page-header";
 import { ActionButton, ActionDialog } from "@/components/live/action-form";
@@ -49,6 +49,10 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
   const suggestedOps = missingOperations(plan.operations, ops ?? [], c.planting_date < today ? addDays(today, -14) : undefined);
   const stageNow = stageOn(plan.stages, today);
   const planned = typeof sp.planned === "string" ? Number(sp.planned) : null;
+  // Stand count: plants established at planting and still alive at the last count.
+  const planted = c.plants_planted;
+  const alive = c.plants_alive;
+  const survival = planted ? Math.round(share(alive ?? planted, planted)) : null;
 
   return (
     <Stack>
@@ -77,6 +81,20 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
                 { name: "status", label: "Status", type: "select", required: true, defaultValue: c.status, options: opt(["planning", "land_preparation", "planting", "establishment", "maintenance", "harvesting", "completed", "abandoned"]) },
                 { name: "current_stage", label: "Growth stage", defaultValue: c.current_stage ?? "", placeholder: "Tasseling" },
                 { name: "health_status", label: "Health", type: "select", defaultValue: c.health_status ?? "", options: opt(["healthy", "watch", "at_risk", "critical"]) },
+              ]}
+            />
+            <ActionDialog
+              title="Update stand count"
+              description="How many plants are alive now? Lower it when plants die (pests, flood, drought) and say why; the history is kept in the cycle notes."
+              trigger="Stand count"
+              icon="eco"
+              tone="secondary"
+              action={updatePlantCount}
+              hidden={hidden}
+              fields={[
+                { name: "plants_alive", label: "Plants alive now", type: "number", required: true, min: 0, defaultValue: alive ?? planted ?? "" },
+                ...(planted == null ? [{ name: "plants_planted", label: "Plants established at planting", type: "number" as const, min: 0 }] : []),
+                { name: "cause", label: "Cause of loss (optional)", placeholder: "e.g. termites, flooding, replanted gaps" },
               ]}
             />
             <ActionDialog
@@ -110,6 +128,17 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
         <MetricCard label="Season progress" value={`${Math.round(share(elapsed, total))}%`} icon="timelapse" foot={`Day ${elapsed} of ${Math.round(total)}`} />
         <MetricCard label="Harvested" value={mass(harvested || c.actual_yield_kg)} icon="grain" foot={`Target ${mass(c.target_yield_kg)} on ${num(c.target_area_ha, 1)} ha`} />
         <MetricCard label="Spend vs budget" value={pct(share(Number(c.actual_cost_kobo), Number(c.estimated_budget_kobo)))} icon="payments" foot={`${naira(c.actual_cost_kobo)} of ${naira(c.estimated_budget_kobo)}`} />
+        <MetricCard
+          label="Plant stand"
+          value={alive != null ? num(alive) : planted != null ? num(planted) : "—"}
+          unit={alive != null || planted != null ? "plants" : undefined}
+          icon="eco"
+          foot={
+            planted
+              ? `${survival}% of ${num(planted)} planted${c.plants_counted_on ? ` · counted ${formatDay(c.plants_counted_on, lang)}` : ""}`
+              : "Add the number of plants with Stand count"
+          }
+        />
         <MetricCard label="Open scouting issues" value={openObs.length} icon="pest_control" foot={`Health score ${Math.round(Number(c.health_score ?? 0) * 100)}/100`} />
       </KpiGrid>
 

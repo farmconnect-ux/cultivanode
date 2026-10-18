@@ -4,6 +4,10 @@ import { Container } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { ListingDetailView, type FullListingDetails } from "@/components/marketplace/listing-detail";
+import { serverPhrasebook, setPageLocale } from "@/i18n/marketing-server";
+import YO from "@/i18n/yo-marketing/marketplace-listing-page";
+
+const tYo = serverPhrasebook(YO);
 export const dynamic = "force-dynamic";
 
 export default async function ListingDetailPage({
@@ -13,6 +17,7 @@ export default async function ListingDetailPage({
 }) {
   const { lang, id } = await params;
   if (!hasLocale(lang)) notFound();
+  setPageLocale(lang);
 
   const supabase = await createClient();
 
@@ -93,11 +98,9 @@ export default async function ListingDetailPage({
   return (
     <Container className="py-10 sm:py-14 flex flex-col gap-6">
       <div className="flex items-center gap-2 text-sm text-muted">
-        <Link href={`/${lang}/marketplace`} className="hover:text-leaf-800">
-          ← Back to Marketplace
-        </Link>
+        <Link href={`/${lang}/marketplace`} className="hover:text-leaf-800">{tYo("← Back to Marketplace")}</Link>
         <span>/</span>
-        <span className="text-ink font-semibold">{fullListing.category_name}</span>
+        <span className="text-ink font-semibold">{tYo(fullListing.category_name)}</span>
       </div>
 
       <ListingDetailView lang={lang} listing={fullListing} />

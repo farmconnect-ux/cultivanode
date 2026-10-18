@@ -1,0 +1,38 @@
+// Yorùbá phrase book for the marketplace page (marketplace-rfq-page). Machine-drafted; needs review by a fluent Yorùbá speaker.
+// Missing phrases show in English. Keys must match the English in the source exactly.
+const YO: Readonly<Record<string, string>> = {
+  "Active Buyer Demands (": "Ìbéèrè Olùrà Tó Ń Lọ Lọ́wọ́ (",
+  "Bag (50kg / 100kg)": "Àpò (50kg / 100kg)",
+  "Broadcast Bulk Demand": "Kéde Ìbéèrè Ọjà Púpọ̀",
+  "Bulk Sourcing": "Rírà Ọjà Lọ́pọ̀lọpọ̀",
+  "Buyer:": "Olùrà:",
+  "Category": "Ẹ̀ka",
+  "Crate": "Apótí",
+  "Deadline Date": "Ọjọ́ Ìparí",
+  "Delivery Deadline": "Ọjọ́ Ìparí Ìfijíṣẹ́",
+  "Delivery Destination": "Ibi Ìfijíṣẹ́",
+  "Moisture below 13%, maximum 2% broken kernels, fumigated.": "Ọ̀rinrin kò ju 13%, kóró tó fọ́ kò ju 2%, a ti fi oògùn sí i.",
+  "No active bulk requests right now. Create the first buyer demand using the form.": "Kò sí ìbéèrè ọjà púpọ̀ kankan báyìí. Lo fọ́ọ̀mù yìí láti ṣe ìbéèrè olùrà àkọ́kọ́.",
+  "Processors, institutional buyers, aggregators and offtakers sourcing bulk commodities directly from farming clusters.": "Àwọn olùṣe-ọjà, olùrà ilé-iṣẹ́, olùkójọ ọjà àti àwọn tó ń ra ọjà lọ́pọ̀lọpọ̀ tààrà láti àgbègbè àwọn àgbẹ̀.",
+  "Procurement & Request For Quotes (RFQ)": "Rírà Ọjà & Ìbéèrè Fún Iye Owó (RFQ)",
+  "Publish Bulk Request": "Gbé Ìbéèrè Ọjà Púpọ̀ Jáde",
+  "Quality Specifications / Notes": "Àlàyé Dídára / Àkíyèsí",
+  "Quantity": "Iye",
+  "Request Title": "Àkọlé Ìbéèrè",
+  "Required Volume": "Iye Tí A Nílò",
+  "Standard / Commercial": "Déédé / Ti Ìṣòwò",
+  "Submit Quote": "Fi Iye Owó Ránṣẹ́",
+  "Target Commodity": "Ọjà Tí A Fẹ́",
+  "Target Grade": "Ìpele Tí A Fẹ́",
+  "Tell agricultural clusters and commercial growers what volume and grade you require.": "Sọ fún àgbègbè àwọn àgbẹ̀ àti àwọn àgbẹ̀ oníṣòwò iye àti ìpele tí ẹ nílò.",
+  "Tonne": "Tọ́ọ̀nù",
+  "Unit": "Ìwọ̀n",
+  "Verified Offtaker": "Olùrà Ńlá Tí A Ti Fìdí Rẹ̀ Múlẹ̀",
+  "e.g. Maize": "àpẹẹrẹ: Àgbàdo",
+  "e.g. Processing Mill, Oyo, Nigeria": "àpẹẹrẹ: Ilé Ìlọ Ọjà, Oyo, Nàìjíríà",
+  "e.g. Sourcing 50 tonnes Yellow Maize": "àpẹẹrẹ: Rírà tọ́ọ̀nù 50 Àgbàdo Pupa",
+  "← Marketplace": "← Ọjà",
+  "📍 Destination:": "📍 Ibi tí ó ń lọ:",
+};
+
+export default YO;

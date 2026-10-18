@@ -6,7 +6,7 @@ export type CalendarItem = {
   id: string;
   date: string; // YYYY-MM-DD
   title: string;
-  kind: "crop_operation" | "task";
+  kind: "crop_operation" | "task" | "livestock";
   status: string;
   href?: string;
   googleUrl?: string;
@@ -90,7 +90,9 @@ export function FieldCalendar({
                       ? "bg-critical-soft text-critical"
                       : it.kind === "crop_operation"
                         ? "bg-secondary-container/60 text-on-secondary-container"
-                        : "bg-tertiary-container/20 text-on-surface",
+                        : it.kind === "livestock"
+                          ? "bg-caution-soft text-[#92400e]"
+                          : "bg-tertiary-container/20 text-on-surface",
                   );
                   return it.href ? (
                     <Link key={it.id} href={it.href} title={it.title} className={cn(chip, "hover:underline")}>

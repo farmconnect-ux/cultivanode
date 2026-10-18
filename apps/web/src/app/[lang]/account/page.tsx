@@ -29,6 +29,8 @@ function greeting(now = new Date()) {
 }
 
 const TIER = ["Unverified", "Phone verified", "ID verified", "Bank verified", "Fully verified"];
+// The pilot runs in these states; everyone else is an early-access account.
+const PILOT_STATES = new Set(["Oyo", "Ogun", "Osun", "Ondo", "Ekiti", "Lagos"]);
 
 export default async function AccountHome({ params, searchParams }: PageProps<"/[lang]/account">) {
   const { lang } = await params;
@@ -115,7 +117,9 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
         slots={{
           eyebrow: (
             <div className="mb-space-xs flex flex-wrap items-center gap-space-xs">
-              <Badge tone="mint" dot pulse>South-West pilot</Badge>
+              <Badge tone="mint" dot pulse>
+                {PILOT_STATES.has(account.profile.state ?? "") ? "South-West pilot" : "Early access"}
+              </Badge>
               <Badge tone={tier >= 2 ? "positive" : "caution"}>
                 <Icon name={tier >= 2 ? "verified" : "pending"} /> {TIER[tier] ?? "Verified"}
               </Badge>

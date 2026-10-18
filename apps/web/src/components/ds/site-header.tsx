@@ -7,13 +7,13 @@ import { SiteAuthActions, SiteMobileMenu, SiteNavLinks, type SiteLink } from "./
 
 export function siteLinks(lang: Locale, t: Dictionary["nav"]): SiteLink[] {
   return [
-    { href: `/${lang}/platform`, label: "Platform" },
-    { href: `/${lang}/solutions`, label: "Solutions" },
+    { href: `/${lang}/platform`, label: lang === "yo" ? "Pèpéle" : "Platform" },
+    { href: `/${lang}/solutions`, label: lang === "yo" ? "Ojútùú" : "Solutions" },
     { href: `/${lang}/how-it-works`, label: t.how },
     { href: `/${lang}/marketplace`, label: t.marketplace },
-    { href: `/${lang}/machinery`, label: "Machinery" },
-    { href: `/${lang}/resources`, label: "Resources" },
-    { href: `/${lang}/waitlist`, label: "Pilot" },
+    { href: `/${lang}/machinery`, label: lang === "yo" ? "Ẹ̀rọ Oko" : "Machinery" },
+    { href: `/${lang}/resources`, label: lang === "yo" ? "Ìmọ̀ Oko" : "Resources" },
+    { href: `/${lang}/waitlist`, label: lang === "yo" ? "Ìdánwò Àkọ́kọ́" : "Pilot" },
     { href: `/${lang}/about`, label: t.about },
   ];
 }
@@ -31,8 +31,8 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) 
       </a>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-[4.5rem] lg:px-8">
         <div className="flex min-w-0 items-center gap-8">
-          <Link href={`/${lang}`} aria-label="CultivaNode home" className="shrink-0 rounded-lg">
-            <BrandLockup tagline="Agri-Intelligence" />
+          <Link href={`/${lang}`} aria-label={lang === "yo" ? "Ojú-ìwé àkọ́kọ́ CultivaNode" : "CultivaNode home"} className="shrink-0 rounded-lg">
+            <BrandLockup tagline={lang === "yo" ? "Ọgbọ́n Iṣẹ́ Àgbẹ̀" : "Agri-Intelligence"} />
           </Link>
           <SiteNavLinks links={links} />
         </div>

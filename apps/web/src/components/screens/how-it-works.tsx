@@ -7,6 +7,10 @@ import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import type { ScreenProps } from "./types";
 import { showScreenToast } from "@/components/screens/screen-toast";
+import { phrasebook } from "@/i18n/marketing";
+import YO from "@/i18n/yo-marketing/how-it-works";
+
+const tYo = phrasebook(YO);
 
 export function HowItWorks({ lang }: ScreenProps) {
   const [activeTab, setActiveTab] = useState<"farmer" | "fleet" | "buyer" | "agent">("farmer");
@@ -17,62 +21,62 @@ export function HowItWorks({ lang }: ScreenProps) {
           <div className="flex flex-col gap-space-md max-w-4xl">
             <div className="flex items-center gap-space-xs font-label-sm text-label-sm uppercase tracking-wider text-secondary">
               <span className="inline-block w-2 h-2 rounded-full bg-secondary" />
-              <span>Transparency &amp; Operational Protocol · /en/how-it-works</span>
+              <span>{tYo("Transparency & Operational Protocol · /en/how-it-works")}</span>
             </div>
-            <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight md:text-[2.75rem] md:leading-[3.25rem]">How CultivaNode Powers Verifiable Agricultural Collaboration</h1>
-            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl leading-relaxed">Step-by-step operational journeys for smallholders, tractor syndicates, institutional offtakers, and field agents — backed by sub-meter PostGIS spatial bounds, CBN-compliant institutional escrow custody, and strict Nigeria Data Protection Act (NDPA 2023) governance.</p>
+            <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight md:text-[2.75rem] md:leading-[3.25rem]">{tYo("How CultivaNode Powers Verifiable Agricultural Collaboration")}</h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl leading-relaxed">{tYo("Step-by-step operational journeys for smallholders, tractor syndicates, institutional offtakers, and field agents — backed by sub-meter PostGIS spatial bounds, CBN-compliant institutional escrow custody, and strict Nigeria Data Protection Act (NDPA 2023) governance.")}</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-space-sm pt-space-md">
               <div className="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface-container-low shadow-sm">
                 <Icon name="verified_user" filled className="text-[20px] text-secondary" />
-                <span className="font-label-sm text-label-sm text-on-surface font-semibold">100% Escrow Protection</span>
+                <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("100% Escrow Protection")}</span>
               </div>
               <div className="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface-container-low shadow-sm">
                 <Icon name="pin_drop" filled className="text-[20px] text-secondary" />
-                <span className="font-label-sm text-label-sm text-on-surface font-semibold">Sub-meter PostGIS Precision</span>
+                <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Sub-meter PostGIS Precision")}</span>
               </div>
               <div className="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface-container-low shadow-sm">
                 <Icon name="timer" filled className="text-[20px] text-secondary" />
-                <span className="font-label-sm text-label-sm text-on-surface font-semibold">48h Dispute Resolution SLA</span>
+                <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("48h Dispute Resolution SLA")}</span>
               </div>
               <div className="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface-container-low shadow-sm">
                 <Icon name="gavel" filled className="text-[20px] text-secondary" />
-                <span className="font-label-sm text-label-sm text-on-surface font-semibold">Zero Fabricated Claims</span>
+                <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Zero Fabricated Claims")}</span>
               </div>
             </div>
           </div>
           <div className="mt-space-xl p-space-lg rounded-xl bg-surface-container-lowest shadow-md grid grid-cols-1 md:grid-cols-3 gap-space-lg">
             <div className="flex flex-col gap-space-xs">
               <div className="flex items-center justify-between">
-                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Validated Hectares</span>
-                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">Oyo &amp; Ogun</span>
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">{tYo("Validated Hectares")}</span>
+                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">{tYo("Oyo & Ogun")}</span>
               </div>
-              <span className="font-metric-num text-metric-num text-primary">14,820 ha</span>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Polygons walked with mobile RTK differential correction.</p>
+              <span className="font-metric-num text-metric-num text-primary">{tYo("14,820 ha")}</span>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Polygons walked with mobile RTK differential correction.")}</p>
             </div>
             <div className="flex flex-col gap-space-xs">
               <div className="flex items-center justify-between">
-                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Escrow Settled (Pilot)</span>
-                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">CBN-Compliant</span>
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">{tYo("Escrow Settled (Pilot)")}</span>
+                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">{tYo("CBN-Compliant")}</span>
               </div>
               <span className="font-metric-num text-metric-num text-primary">₦412,850,000</span>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Zero unauthorized withdrawals or unverified disbursements.</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Zero unauthorized withdrawals or unverified disbursements.")}</p>
             </div>
             <div className="flex flex-col gap-space-xs">
               <div className="flex items-center justify-between">
-                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Avg Fleet Deadhead</span>
-                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">-64% Saved</span>
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">{tYo("Avg Fleet Deadhead")}</span>
+                <span className="font-label-xs text-label-sm text-secondary bg-surface-container px-space-xs py-0.5 rounded-full font-semibold">{tYo("-64% Saved")}</span>
               </div>
-              <span className="font-metric-num text-metric-num text-primary">4.2 km</span>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Reduced tractor transit waste via localized demand clustering.</p>
+              <span className="font-metric-num text-metric-num text-primary">{tYo("4.2 km")}</span>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Reduced tractor transit waste via localized demand clustering.")}</p>
             </div>
           </div>
         </section>
         <section className="px-margin-desktop py-space-xl max-w-7xl mx-auto w-full">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
             <div className="max-w-2xl">
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">§4.11 Operational Sequences</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary mt-space-xs">Participant Lifecycle &amp; Execution Workflows</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs">Explore how the CultivaNode mesh orchestrates accountability, physical evidence checks, and financial escrow for each distinct role in the agricultural value chain.</p>
+              <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">{tYo("§4.11 Operational Sequences")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary mt-space-xs">{tYo("Participant Lifecycle & Execution Workflows")}</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs">{tYo("Explore how the CultivaNode mesh orchestrates accountability, physical evidence checks, and financial escrow for each distinct role in the agricultural value chain.")}</p>
             </div>
             <div className="inline-flex p-1 bg-surface-container rounded-lg self-start md:self-auto shadow-sm" role="tablist">
               <button
@@ -87,11 +91,9 @@ export function HowItWorks({ lang }: ScreenProps) {
                 type="button"
                 onClick={() => {
                   setActiveTab("farmer");
-                  showScreenToast("Viewing Smallholder Farmer & Farm Owner lifecycle.");
+                  showScreenToast(tYo.now("Viewing Smallholder Farmer & Farm Owner lifecycle."));
                 }}
-              >
-                The Farmer
-              </button>
+              >{tYo("The Farmer")}</button>
               <button
                 aria-selected={activeTab === "fleet"}
                 className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
@@ -104,11 +106,9 @@ export function HowItWorks({ lang }: ScreenProps) {
                 type="button"
                 onClick={() => {
                   setActiveTab("fleet");
-                  showScreenToast("Viewing Machinery Fleet Syndicates lifecycle.");
+                  showScreenToast(tYo.now("Viewing Machinery Fleet Syndicates lifecycle."));
                 }}
-              >
-                Tractor Fleet Owner
-              </button>
+              >{tYo("Tractor Fleet Owner")}</button>
               <button
                 aria-selected={activeTab === "buyer"}
                 className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
@@ -121,11 +121,9 @@ export function HowItWorks({ lang }: ScreenProps) {
                 type="button"
                 onClick={() => {
                   setActiveTab("buyer");
-                  showScreenToast("Viewing Produce Offtakers & Millers lifecycle.");
+                  showScreenToast(tYo.now("Viewing Produce Offtakers & Millers lifecycle."));
                 }}
-              >
-                Produce Offtaker
-              </button>
+              >{tYo("Produce Offtaker")}</button>
               <button
                 aria-selected={activeTab === "agent"}
                 className={`px-space-md py-space-xs rounded-lg font-label-md text-label-md transition-all ${
@@ -138,11 +136,9 @@ export function HowItWorks({ lang }: ScreenProps) {
                 type="button"
                 onClick={() => {
                   setActiveTab("agent");
-                  showScreenToast("Viewing Accredited Extension Agents lifecycle.");
+                  showScreenToast(tYo.now("Viewing Accredited Extension Agents lifecycle."));
                 }}
-              >
-                Field Extension Agent
-              </button>
+              >{tYo("Field Extension Agent")}</button>
             </div>
           </div>
           <div className={`${activeTab === "farmer" ? "flex" : "hidden"} flex-col gap-space-lg`} id="journey-farmer">
@@ -152,13 +148,13 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="agriculture" filled className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">The Smallholder &amp; Farm Owner</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Designed for individual growers managing 1 to 50 hectares in agrarian zones like Iseyin, Saki, Sagamu, and Ondo Central. Replaces informal middlemen with bank-grade mechanization orders and verified sales contracts.</p>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">{tYo("The Smallholder & Farm Owner")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Designed for individual growers managing 1 to 50 hectares in agrarian zones like Iseyin, Saki, Sagamu, and Ondo Central. Replaces informal middlemen with bank-grade mechanization orders and verified sales contracts.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low mt-space-lg flex flex-col gap-space-xs">
-                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">Core Verification Artifact</span>
-                  <span className="font-headline-sm text-headline-sm text-primary">PostGIS Cadastral Parcel ID</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Verified by Baale local signoff + satellite NDRE canopy index validation.</p>
+                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Core Verification Artifact")}</span>
+                  <span className="font-headline-sm text-headline-sm text-primary">{tYo("PostGIS Cadastral Parcel ID")}</span>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Verified by Baale local signoff + satellite NDRE canopy index validation.")}</p>
                 </div>
               </div>
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
@@ -166,50 +162,50 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">1</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Register &amp; Biometric Verify</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">NIMC Tier 1</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Register & Biometric Verify")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("NIMC Tier 1")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Zero friction SMS/OTP registration followed by an instant National Identification Number (NIN) facial match. Farmers receive a permanent cryptographic identity preventing identity fraud and syndicate blacklisting.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Zero friction SMS/OTP registration followed by an instant National Identification Number (NIN) facial match. Farmers receive a permanent cryptographic identity preventing identity fraud and syndicate blacklisting.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">2</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Delineate Farm Cadastre</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Sub-meter RTK</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Delineate Farm Cadastre")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Sub-meter RTK")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Walk your farm boundary using our offline-capable mobile app or provide coordinates through an authorized Field Agent. Boundary includes Baale or communal land allocation verification to remove boundary conflicts.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Walk your farm boundary using our offline-capable mobile app or provide coordinates through an authorized Field Agent. Boundary includes Baale or communal land allocation verification to remove boundary conflicts.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">3</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Plan Agronomic Production</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">NCRI/IITA Calibrated</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Plan Agronomic Production")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("NCRI/IITA Calibrated")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Select vetted cultivars like SAMMAZ-15 White Maize or TME-419 Cassava. CultivaNode generates a localized gdd-calibrated calendar synchronized with South-West bimodal precipitation patterns.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Select vetted cultivars like SAMMAZ-15 White Maize or TME-419 Cassava. CultivaNode generates a localized gdd-calibrated calendar synchronized with South-West bimodal precipitation patterns.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">4</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Book Mechanization via Escrow</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Providus Trust Vault</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Book Mechanization via Escrow")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Providus Trust Vault")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Request plowing, harrowing, or ridging from regional syndicates. The exact service cost is deposited into partner bank escrow. Operators only receive disbursement after geotagged proof of plowing is confirmed.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Request plowing, harrowing, or ridging from regional syndicates. The exact service cost is deposited into partner bank escrow. Operators only receive disbursement after geotagged proof of plowing is confirmed.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">5</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Harvest &amp; Direct Monetization</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">0% Middleman Cut</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Harvest & Direct Monetization")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("0% Middleman Cut")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Log certified bag counts and lab moisture tests directly to the off-taker registry. Verified buyers inspect digital certificates and lock funds prior to truck arrival at your cluster aggregation point.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Log certified bag counts and lab moisture tests directly to the off-taker registry. Verified buyers inspect digital certificates and lock funds prior to truck arrival at your cluster aggregation point.")}</p>
                   </div>
                 </div>
               </div>
@@ -222,13 +218,13 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="precision_manufacturing" filled className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">Machinery Fleet Syndicates</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">For commercial tractor owners, implement rental cooperatives, and independent mechanics servicing clusters across Oyo, Ogun, Osun, and Ondo states.</p>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">{tYo("Machinery Fleet Syndicates")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("For commercial tractor owners, implement rental cooperatives, and independent mechanics servicing clusters across Oyo, Ogun, Osun, and Ondo states.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low mt-space-lg flex flex-col gap-space-xs">
-                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">Fleet Guarantee</span>
-                  <span className="font-headline-sm text-headline-sm text-primary">Guaranteed Fuel &amp; Hectare Escrow</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Never mobilize equipment without 100% of the service fee pre-locked in trusted custody.</p>
+                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Fleet Guarantee")}</span>
+                  <span className="font-headline-sm text-headline-sm text-primary">{tYo("Guaranteed Fuel & Hectare Escrow")}</span>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Never mobilize equipment without 100% of the service fee pre-locked in trusted custody.")}</p>
                 </div>
               </div>
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
@@ -236,50 +232,50 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">1</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Register Equipment &amp; Service Radius</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Asset Telematics</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Register Equipment & Service Radius")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Asset Telematics")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Upload tractor specifications (e.g. Massey Ferguson 375, John Deere 5075E), hitched implements (disc plows, harrows, boom sprayers), and verified operator credentials with max operational distance from base depot.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Upload tractor specifications (e.g. Massey Ferguson 375, John Deere 5075E), hitched implements (disc plows, harrows, boom sprayers), and verified operator credentials with max operational distance from base depot.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">2</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Review Clustered Farm Dispatch</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Smart Routing</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Review Clustered Farm Dispatch")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Smart Routing")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Instead of single fragmented hectare calls, our dispatch engine bundles 5–15 contiguous smallholder requests into unified 50-hectare runs within an 8km perimeter to maximize diesel efficiency.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Instead of single fragmented hectare calls, our dispatch engine bundles 5–15 contiguous smallholder requests into unified 50-hectare runs within an 8km perimeter to maximize diesel efficiency.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">3</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Farmgate GPS Check-In</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Geofenced Arrival</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Farmgate GPS Check-In")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Geofenced Arrival")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Operator verifies physical arrival by tapping check-in within the parcel polygon. A mutual arrival notification is transmitted to the farm owner and local field extension officer.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Operator verifies physical arrival by tapping check-in within the parcel polygon. A mutual arrival notification is transmitted to the farm owner and local field extension officer.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">4</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Upload Geotagged Proof of Work (PoW)</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Timestamp + EXIF</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Upload Geotagged Proof of Work (PoW)")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Timestamp + EXIF")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Upon finishing the contracted operation, operator snaps high-resolution furrow photos. The app stamps latitude, longitude, elevation, bearing, and engine telemetry into an encrypted cryptographic manifest.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Upon finishing the contracted operation, operator snaps high-resolution furrow photos. The app stamps latitude, longitude, elevation, bearing, and engine telemetry into an encrypted cryptographic manifest.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">5</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Direct Escrow Payout (0% Platform Cut)</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">48h SLA</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Direct Escrow Payout (0% Platform Cut)")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("48h SLA")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">The farmer reviews and releases the funds. If the farmer does not dispute within 48 hours and boundary coordinates show completed tillage coverage, escrow releases 100% of funds directly to your verified commercial bank account.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("The farmer reviews and releases the funds. If the farmer does not dispute within 48 hours and boundary coordinates show completed tillage coverage, escrow releases 100% of funds directly to your verified commercial bank account.")}</p>
                   </div>
                 </div>
               </div>
@@ -292,13 +288,13 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="warehouse" filled className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">Produce Offtakers &amp; Industrial Millers</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Engineered for feed mills, breweries, starch processing factories, and food manufacturers seeking audited origin grain, cassava, and cocoa batches.</p>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">{tYo("Produce Offtakers & Industrial Millers")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Engineered for feed mills, breweries, starch processing factories, and food manufacturers seeking audited origin grain, cassava, and cocoa batches.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low mt-space-lg flex flex-col gap-space-xs">
-                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">Quality Safeguard</span>
-                  <span className="font-headline-sm text-headline-sm text-primary">Pre-Disbursement Lab Tests</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Moisture &lt;13% and aflatoxin &lt;10ppb certificates linked directly to the purchase invoice.</p>
+                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Quality Safeguard")}</span>
+                  <span className="font-headline-sm text-headline-sm text-primary">{tYo("Pre-Disbursement Lab Tests")}</span>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Moisture <13% and aflatoxin <10ppb certificates linked directly to the purchase invoice.")}</p>
                 </div>
               </div>
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
@@ -306,40 +302,40 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">1</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Browse Traceable Farmgate Lots</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Full Traceability</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Browse Traceable Farmgate Lots")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Full Traceability")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Filter by crop variety, harvesting date, moisture content percentage, and origin Local Government Area (LGA). Every listing links directly to the verified farm polygon.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Filter by crop variety, harvesting date, moisture content percentage, and origin Local Government Area (LGA). Every listing links directly to the verified farm polygon.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">2</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Lock Lot Funds in Providus/Wema Escrow</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">No Front-Risk</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Lock Lot Funds in Providus/Wema Escrow")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("No Front-Risk")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Your purchase capital is deposited into a segregated settlement vault. Funds remain completely safeguarded under Central Bank of Nigeria custody guidelines until physical cargo inspection.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Your purchase capital is deposited into a segregated settlement vault. Funds remain completely safeguarded under Central Bank of Nigeria custody guidelines until physical cargo inspection.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">3</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Monitored Haulage &amp; Electronic Waybill</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Live GPS Tracking</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Monitored Haulage & Electronic Waybill")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Live GPS Tracking")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Track certified logistics haulers dispatched to regional aggregation centers. Drivers scan QR-coded waybills at farmgate departure, eliminating cargo swapping or diversion en route.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Track certified logistics haulers dispatched to regional aggregation centers. Drivers scan QR-coded waybills at farmgate departure, eliminating cargo swapping or diversion en route.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">4</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Weighbridge Clearance &amp; Automated Settlement</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Direct Disbursal</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Weighbridge Clearance & Automated Settlement")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Direct Disbursal")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">The truck reaches your processing facility or aggregator weighbridge. When the weight slip is verified against moisture tolerances, the escrow smart contract instantly settles payment to the farm cooperative.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("The truck reaches your processing facility or aggregator weighbridge. When the weight slip is verified against moisture tolerances, the escrow smart contract instantly settles payment to the farm cooperative.")}</p>
                   </div>
                 </div>
               </div>
@@ -352,13 +348,13 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                     <Icon name="badge" filled className="text-[28px]" />
                   </div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">Accredited Extension Agents</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Field personnel partnered with Agricultural Development Programmes (ADPs), university agronomists, and rural cooperatives bridging the last-mile digital divide.</p>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">{tYo("Accredited Extension Agents")}</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Field personnel partnered with Agricultural Development Programmes (ADPs), university agronomists, and rural cooperatives bridging the last-mile digital divide.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low mt-space-lg flex flex-col gap-space-xs">
-                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">Stipend Rail</span>
-                  <span className="font-headline-sm text-headline-sm text-primary">Instant Task Compensation</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Earn verified boundary delineation, soil sampling, and cluster training stipends.</p>
+                  <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Stipend Rail")}</span>
+                  <span className="font-headline-sm text-headline-sm text-primary">{tYo("Instant Task Compensation")}</span>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Earn verified boundary delineation, soil sampling, and cluster training stipends.")}</p>
                 </div>
               </div>
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
@@ -366,40 +362,40 @@ export function HowItWorks({ lang }: ScreenProps) {
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">1</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Field Terminal App &amp; Offline Cache</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Zero-Connectivity Ready</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Field Terminal App & Offline Cache")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Zero-Connectivity Ready")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Log into authorized agent terminals with SQLite offline sync. Conduct full registrations in low-connectivity rural belts without losing surveyor telemetry.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Log into authorized agent terminals with SQLite offline sync. Conduct full registrations in low-connectivity rural belts without losing surveyor telemetry.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">2</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Assisted Onboarding in Local Dialects</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Yoruba &amp; Pidgin Audio</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Assisted Onboarding in Local Dialects")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Yoruba & Pidgin Audio")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Guide non-literate farmers through consent disclosures in Yoruba or Nigerian Pidgin. Collect authorized biometric stamps complying fully with NDPA 2023 mandate §17.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Guide non-literate farmers through consent disclosures in Yoruba or Nigerian Pidgin. Collect authorized biometric stamps complying fully with NDPA 2023 mandate §17.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">3</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">PostGIS Boundary Walking &amp; Cadastral Mapping</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">GPS Precision</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("PostGIS Boundary Walking & Cadastral Mapping")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("GPS Precision")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Walk the real field borders alongside the farm owner. Record vertices, mark permanent tree and stream natural bounds, and sync polygons upon returning to 3G/4G coverage.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Walk the real field borders alongside the farm owner. Record vertices, mark permanent tree and stream natural bounds, and sync polygons upon returning to 3G/4G coverage.")}</p>
                   </div>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-md text-label-md font-bold">4</div>
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-headline-sm text-headline-sm text-on-surface">Cluster Coordination &amp; Stipend Settlement</h4>
-                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">Verified Tasks</span>
+                      <h4 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Cluster Coordination & Stipend Settlement")}</h4>
+                      <span className="font-label-sm text-label-sm text-secondary bg-surface-container px-space-sm py-0.5 rounded-full font-semibold">{tYo("Verified Tasks")}</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Inspect local tractor work, monitor pest alerts, and submit cluster completion certificates. Stipends are automatically credited to your Providus wallet upon supervisor verification.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{tYo("Inspect local tractor work, monitor pest alerts, and submit cluster completion certificates. Stipends are automatically credited to your Providus wallet upon supervisor verification.")}</p>
                   </div>
                 </div>
               </div>
@@ -408,70 +404,70 @@ export function HowItWorks({ lang }: ScreenProps) {
         </section>
         <section className="px-margin-desktop py-space-xl max-w-7xl mx-auto w-full">
           <div className="flex flex-col gap-space-xs max-w-3xl mb-space-lg">
-            <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">§4.12 Master Architecture</span>
-            <h2 className="font-headline-lg text-headline-lg text-primary">Trust, Verification &amp; Safety Framework</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant">CultivaNode rejects unregulated peer-to-peer promises. Every participant tier, physical field action, and escrow settlement operates under strict statutory standards.</p>
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">{tYo("§4.12 Master Architecture")}</span>
+            <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Trust, Verification & Safety Framework")}</h2>
+            <p className="font-body-md text-body-md text-on-surface-variant">{tYo("CultivaNode rejects unregulated peer-to-peer promises. Every participant tier, physical field action, and escrow settlement operates under strict statutory standards.")}</p>
           </div>
           <div className="mb-space-xl">
             <div className="flex items-center justify-between mb-space-md">
-              <h3 className="font-headline-md text-headline-md text-on-surface">Tiered Participant Verification Matrix</h3>
-              <span className="font-label-sm text-label-sm text-on-surface-variant">Statutory Compliance · CBN &amp; NIMC</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">{tYo("Tiered Participant Verification Matrix")}</h3>
+              <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Statutory Compliance · CBN & NIMC")}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
               <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-space-sm">
-                    <span className="font-label-sm text-label-sm font-bold text-on-surface-variant">TIER 0</span>
-                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">Read Only</span>
+                    <span className="font-label-sm text-label-sm font-bold text-on-surface-variant">{tYo("TIER 0")}</span>
+                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">{tYo("Read Only")}</span>
                   </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">Phone Registered</h4>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Basic SMS OTP signup. Allows browsing public marketplace prices, weather forecasts, and crop guides.</p>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">{tYo("Phone Registered")}</h4>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Basic SMS OTP signup. Allows browsing public marketplace prices, weather forecasts, and crop guides.")}</p>
                 </div>
                 <div className="pt-space-md mt-space-md bg-surface-container-low rounded-lg p-space-sm">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Capabilities:</span>
-                  <span className="font-label-sm text-label-sm font-semibold text-primary">Browse listings; no transactions or tractor bookings permitted.</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">{tYo("Capabilities:")}</span>
+                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("Browse listings; no transactions or tractor bookings permitted.")}</span>
                 </div>
               </div>
               <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-space-sm">
-                    <span className="font-label-sm text-label-sm font-bold text-secondary">TIER 1</span>
-                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-secondary font-semibold">Active Smallholder</span>
+                    <span className="font-label-sm text-label-sm font-bold text-secondary">{tYo("TIER 1")}</span>
+                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-secondary font-semibold">{tYo("Active Smallholder")}</span>
                   </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">NIN Biometric Verified</h4>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Identity tied directly to NIMC registry via facial or fingerprint verification through field terminals.</p>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">{tYo("NIN Biometric Verified")}</h4>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Identity tied directly to NIMC registry via facial or fingerprint verification through field terminals.")}</p>
                 </div>
                 <div className="pt-space-md mt-space-md bg-surface-container-low rounded-lg p-space-sm">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Capabilities:</span>
-                  <span className="font-label-sm text-label-sm font-semibold text-primary">Map up to 10 ha, request cluster tillage, join local cooperative rosters.</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">{tYo("Capabilities:")}</span>
+                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("Map up to 10 ha, request cluster tillage, join local cooperative rosters.")}</span>
                 </div>
               </div>
               <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-space-sm">
-                    <span className="font-label-sm text-label-sm font-bold text-primary">TIER 2</span>
-                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-primary font-semibold">Settlement Ready</span>
+                    <span className="font-label-sm text-label-sm font-bold text-primary">{tYo("TIER 2")}</span>
+                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-primary font-semibold">{tYo("Settlement Ready")}</span>
                   </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">BVN &amp; Bank Verified</h4>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Bank Verification Number (BVN) cross-referenced with bank account name for audited payouts.</p>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">{tYo("BVN & Bank Verified")}</h4>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Bank Verification Number (BVN) cross-referenced with bank account name for audited payouts.")}</p>
                 </div>
                 <div className="pt-space-md mt-space-md bg-surface-container-low rounded-lg p-space-sm">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Capabilities:</span>
-                  <span className="font-label-sm text-label-sm font-semibold text-primary">Receive instant bank deposits, contract syndicates up to ₦5M.</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">{tYo("Capabilities:")}</span>
+                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("Receive instant bank deposits, contract syndicates up to ₦5M.")}</span>
                 </div>
               </div>
               <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-space-sm">
-                    <span className="font-label-sm text-label-sm font-bold text-on-tertiary-container">TIER 3</span>
-                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-tertiary-container font-semibold">Institutional</span>
+                    <span className="font-label-sm text-label-sm font-bold text-on-tertiary-container">{tYo("TIER 3")}</span>
+                    <span className="px-space-xs py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-tertiary-container font-semibold">{tYo("Institutional")}</span>
                   </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">CAC Commercial Verified</h4>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Corporate Affairs Commission (CAC) filing, TIN tax clearance, and institutional bank escrow mandate.</p>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">{tYo("CAC Commercial Verified")}</h4>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Corporate Affairs Commission (CAC) filing, TIN tax clearance, and institutional bank escrow mandate.")}</p>
                 </div>
                 <div className="pt-space-md mt-space-md bg-surface-container-low rounded-lg p-space-sm">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">Capabilities:</span>
-                  <span className="font-label-sm text-label-sm font-semibold text-primary">Unlimited volume off-take lots, fleet-scale machinery contracting.</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant block mb-1">{tYo("Capabilities:")}</span>
+                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("Unlimited volume off-take lots, fleet-scale machinery contracting.")}</span>
                 </div>
               </div>
             </div>
@@ -482,72 +478,72 @@ export function HowItWorks({ lang }: ScreenProps) {
                 <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
                   <Icon name="verified" className="text-[24px]" />
                 </div>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">What &quot;Proof of Work&quot; (PoW) Means</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">CultivaNode replaces unverified verbal claims with physical verifiable reality:</p>
+                <h3 className="font-headline-sm text-headline-sm text-on-surface">{tYo("What \"Proof of Work\" (PoW) Means")}</h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("CultivaNode replaces unverified verbal claims with physical verifiable reality:")}</p>
                 <ul className="flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface-variant mt-space-xs">
                   <li className="flex items-start gap-space-xs">
                     <Icon name="check_circle" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>Sub-meter Geofencing:</strong> Mobile device must be physically positioned inside the registered farm polygon.</span>
+                    <span><strong>{tYo("Sub-meter Geofencing:")}</strong>{tYo(" Mobile device must be physically positioned inside the registered farm polygon.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="check_circle" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>Cryptographic EXIF Stamping:</strong> Field photos embed UTC timestamps, compass direction, and satellite cluster IDs.</span>
+                    <span><strong>{tYo("Cryptographic EXIF Stamping:")}</strong>{tYo(" Field photos embed UTC timestamps, compass direction, and satellite cluster IDs.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="check_circle" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>Hectare Calculation:</strong> Implements track continuous acreage worked, verifying whether 5 hectares were truly plowed.</span>
+                    <span><strong>{tYo("Hectare Calculation:")}</strong>{tYo(" Implements track continuous acreage worked, verifying whether 5 hectares were truly plowed.")}</span>
                   </li>
                 </ul>
               </div>
-              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">Immutable spatial telemetry logs prevent fraudulent double-billing.</div>
+              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">{tYo("Immutable spatial telemetry logs prevent fraudulent double-billing.")}</div>
             </div>
             <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-md flex flex-col justify-between">
               <div className="flex flex-col gap-space-sm">
                 <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                   <Icon name="account_balance" className="text-[24px]" />
                 </div>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">Pilot Payment &amp; Escrow Rail</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Zero risky unregulated wallets. All capital is held strictly within formal Nigerian banking infrastructure:</p>
+                <h3 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Pilot Payment & Escrow Rail")}</h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Zero risky unregulated wallets. All capital is held strictly within formal Nigerian banking infrastructure:")}</p>
                 <ul className="flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface-variant mt-space-xs">
                   <li className="flex items-start gap-space-xs">
                     <Icon name="account_balance_wallet" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>0% Commission Pilot:</strong> CultivaNode levies zero service charge on tractor syndicates and farmers during the 2025 pilot phase.</span>
+                    <span><strong>{tYo("0% Commission Pilot:")}</strong>{tYo(" CultivaNode levies zero service charge on tractor syndicates and farmers during the 2025 pilot phase.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="account_balance_wallet" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>CBN Licensed Banking Custody:</strong> Pre-funded amounts rest in segregated escrow accounts at Providus Bank &amp; Wema Bank.</span>
+                    <span><strong>{tYo("CBN Licensed Banking Custody:")}</strong>{tYo(" Pre-funded amounts rest in segregated escrow accounts at Providus Bank & Wema Bank.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="account_balance_wallet" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>Automated Milestone Release:</strong> Disbursed directly to operator NUBAN accounts upon confirmed sign-off.</span>
+                    <span><strong>{tYo("Automated Milestone Release:")}</strong>{tYo(" Disbursed directly to operator NUBAN accounts upon confirmed sign-off.")}</span>
                   </li>
                 </ul>
               </div>
-              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">No third-party custody risks. Bank-grade financial safety.</div>
+              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">{tYo("No third-party custody risks. Bank-grade financial safety.")}</div>
             </div>
             <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-md flex flex-col justify-between">
               <div className="flex flex-col gap-space-sm">
                 <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-tertiary">
                   <Icon name="balance" className="text-[24px]" />
                 </div>
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">Dispute Escalation &amp; Arbitration</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Clear, transparent protocols when expectations are not met or operational breakdowns occur:</p>
+                <h3 className="font-headline-sm text-headline-sm text-on-surface">{tYo("Dispute Escalation & Arbitration")}</h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Clear, transparent protocols when expectations are not met or operational breakdowns occur:")}</p>
                 <ul className="flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface-variant mt-space-xs">
                   <li className="flex items-start gap-space-xs">
                     <Icon name="schedule" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>4-Hour Agronomist Review:</strong> Immediate ticket logging with rapid assignment to an accredited regional extension officer.</span>
+                    <span><strong>{tYo("4-Hour Agronomist Review:")}</strong>{tYo(" Immediate ticket logging with rapid assignment to an accredited regional extension officer.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="lock_clock" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>48-Hour Escrow Freezing:</strong> Automatic funds lock preventing any unilateral disbursement during physical field inspection.</span>
+                    <span><strong>{tYo("48-Hour Escrow Freezing:")}</strong>{tYo(" Automatic funds lock preventing any unilateral disbursement during physical field inspection.")}</span>
                   </li>
                   <li className="flex items-start gap-space-xs">
                     <Icon name="fact_check" className="text-secondary text-[18px] shrink-0" />
-                    <span><strong>Tripartite Resolution:</strong> Binding adjudication resulting in full release, partial pro-rata settlement, or complete refund.</span>
+                    <span><strong>{tYo("Tripartite Resolution:")}</strong>{tYo(" Binding adjudication resulting in full release, partial pro-rata settlement, or complete refund.")}</span>
                   </li>
                 </ul>
               </div>
-              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">Guaranteed 48h SLA ensures neither party is stranded indefinitely.</div>
+              <div className="mt-space-md p-space-xs bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface-variant">{tYo("Guaranteed 48h SLA ensures neither party is stranded indefinitely.")}</div>
             </div>
           </div>
           <div className="rounded-xl bg-surface-container-low p-space-lg shadow-sm">
@@ -555,58 +551,58 @@ export function HowItWorks({ lang }: ScreenProps) {
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
                 <div className="flex items-center gap-space-xs font-label-sm text-label-sm text-secondary uppercase font-semibold">
                   <Icon name="security" className="text-[18px]" />
-                  <span>Nigeria Data Protection Act (NDPA 2023) Compliance</span>
+                  <span>{tYo("Nigeria Data Protection Act (NDPA 2023) Compliance")}</span>
                 </div>
-                <h3 className="font-headline-md text-headline-md text-primary">Your Farm Data Belongs Unconditionally to You</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">CultivaNode adheres strictly to NDPA 2023 statutory mandates. Your cadastral boundaries, historical harvest yields, and personal NIN biometric tokens are encrypted end-to-end. We will never sell, lease, or distribute your farm records to commercial seed syndicates, predatory lenders, or government agencies without explicit, revocable electronic consent.</p>
+                <h3 className="font-headline-md text-headline-md text-primary">{tYo("Your Farm Data Belongs Unconditionally to You")}</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">{tYo("CultivaNode adheres strictly to NDPA 2023 statutory mandates. Your cadastral boundaries, historical harvest yields, and personal NIN biometric tokens are encrypted end-to-end. We will never sell, lease, or distribute your farm records to commercial seed syndicates, predatory lenders, or government agencies without explicit, revocable electronic consent.")}</p>
                 <div className="flex flex-wrap items-center gap-space-md pt-space-xs font-label-sm text-label-sm text-on-surface">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />Right to Data Portability</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />Granular Off-taker Permissions</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />Instant Consent Revocation</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />{tYo("Right to Data Portability")}</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />{tYo("Granular Off-taker Permissions")}</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />{tYo("Instant Consent Revocation")}</span>
                 </div>
               </div>
               <div className="lg:col-span-4 flex flex-col gap-space-xs bg-surface-container-lowest p-space-md rounded-lg shadow-sm">
-                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">Data Protection Officer</span>
-                <span className="font-headline-sm text-headline-sm text-primary">dpo@cultivanode.ng</span>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Registered with the Nigeria Data Protection Commission (NDPC). Inquiries answered within 24 business hours.</p>
+                <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">{tYo("Data Protection Officer")}</span>
+                <span className="font-headline-sm text-headline-sm text-primary">{tYo("dpo@cultivanode.ng")}</span>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Registered with the Nigeria Data Protection Commission (NDPC). Inquiries answered within 24 business hours.")}</p>
               </div>
             </div>
           </div>
         </section>
         <section className="px-margin-desktop py-space-xl max-w-7xl mx-auto w-full">
           <div className="flex flex-col gap-space-xs max-w-2xl mb-space-lg">
-            <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">Frequently Asked Questions</span>
-            <h2 className="font-headline-lg text-headline-lg text-primary">Operational Questions &amp; Edge Cases</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant">Clear, unvarnished policies addressing real-world complexities across South-West Nigerian farmland.</p>
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">{tYo("Frequently Asked Questions")}</span>
+            <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Operational Questions & Edge Cases")}</h2>
+            <p className="font-body-md text-body-md text-on-surface-variant">{tYo("Clear, unvarnished policies addressing real-world complexities across South-West Nigerian farmland.")}</p>
           </div>
           <div className="flex flex-col gap-space-sm max-w-4xl">
             <details className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden group">
               <summary className="w-full p-space-md text-left flex items-center justify-between gap-space-sm hover:bg-surface-container-low transition-colors list-none [&::-webkit-details-marker]:hidden">
-                <span className="font-headline-sm text-headline-sm text-on-surface">What happens if a tractor arrives late or breaks down in my field?</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">{tYo("What happens if a tractor arrives late or breaks down in my field?")}</span>
                 <Icon name="expand_more" className="text-primary text-[24px] transition-transform duration-200" />
               </summary>
-              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-1">If a tractor breaks down mid-operation, the operator logs a telemetry pause on their terminal. If the machinery cannot be repaired within 24 hours, CultivaNode automatically dispatches an alternate syndicate within the cluster, or recalculates the pro-rata hectares actually completed. The unworked portion of your escrow deposit is immediately released back to your bank account or transferred to the replacement tractor.</div>
+              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-1">{tYo("If a tractor breaks down mid-operation, the operator logs a telemetry pause on their terminal. If the machinery cannot be repaired within 24 hours, CultivaNode automatically dispatches an alternate syndicate within the cluster, or recalculates the pro-rata hectares actually completed. The unworked portion of your escrow deposit is immediately released back to your bank account or transferred to the replacement tractor.")}</div>
             </details>
             <details className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden group">
               <summary className="w-full p-space-md text-left flex items-center justify-between gap-space-sm hover:bg-surface-container-low transition-colors list-none [&::-webkit-details-marker]:hidden">
-                <span className="font-headline-sm text-headline-sm text-on-surface">How do I know the seed batches in the marketplace are not counterfeit?</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">{tYo("How do I know the seed batches in the marketplace are not counterfeit?")}</span>
                 <Icon name="expand_more" className="text-primary text-[24px] transition-transform duration-200" />
               </summary>
-              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-2">Every seed dealer listing on CultivaNode must be Tier 3 CAC verified and licensed by the National Agricultural Seeds Council (NASC). Every bag of certified hybrid seed (such as SAMMAZ or SC510) carries a unique NASC SEEDCODEX scratch-off authentication tag verifiable directly via the app before acceptance. Escrow payments for inputs remain held until you confirm valid authentication.</div>
+              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-2">{tYo("Every seed dealer listing on CultivaNode must be Tier 3 CAC verified and licensed by the National Agricultural Seeds Council (NASC). Every bag of certified hybrid seed (such as SAMMAZ or SC510) carries a unique NASC SEEDCODEX scratch-off authentication tag verifiable directly via the app before acceptance. Escrow payments for inputs remain held until you confirm valid authentication.")}</div>
             </details>
             <details className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden group">
               <summary className="w-full p-space-md text-left flex items-center justify-between gap-space-sm hover:bg-surface-container-low transition-colors list-none [&::-webkit-details-marker]:hidden">
-                <span className="font-headline-sm text-headline-sm text-on-surface">Can a commercial bank or government agency see my harvest records without permission?</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">{tYo("Can a commercial bank or government agency see my harvest records without permission?")}</span>
                 <Icon name="expand_more" className="text-primary text-[24px] transition-transform duration-200" />
               </summary>
-              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-3">No. Under our NDPA 2023 privacy framework, your harvest yields and boundary geometries are stored in zero-knowledge encrypted formats. Financial institutions seeking to review your yield history to evaluate loan eligibility must send a formal consent authorization request to your phone. Only when you explicitly authorize it with your SMS OTP or biometric PIN is read-only access granted.</div>
+              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-3">{tYo("No. Under our NDPA 2023 privacy framework, your harvest yields and boundary geometries are stored in zero-knowledge encrypted formats. Financial institutions seeking to review your yield history to evaluate loan eligibility must send a formal consent authorization request to your phone. Only when you explicitly authorize it with your SMS OTP or biometric PIN is read-only access granted.")}</div>
             </details>
             <details className="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden group">
               <summary className="w-full p-space-md text-left flex items-center justify-between gap-space-sm hover:bg-surface-container-low transition-colors list-none [&::-webkit-details-marker]:hidden">
-                <span className="font-headline-sm text-headline-sm text-on-surface">How are disputes resolved if produce is rejected at the buyer&apos;s weighbridge?</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">{tYo("How are disputes resolved if produce is rejected at the buyer's weighbridge?")}</span>
                 <Icon name="expand_more" className="text-primary text-[24px] transition-transform duration-200" />
               </summary>
-              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-4">All off-take contracts stipulate specific physical quality parameters (e.g. max moisture 13%, maximum broken kernels 3%). If a lot is contested at the buyer&apos;s gate, CultivaNode dispatches a certified independent quality inspector from the nearest state ADP within 4 hours. The inspector uses calibrated moisture meters to take 3 blind samples. Their determination is uploaded to the dispute arbitration engine, which then calculates an agreed price discount or approves cargo return with haulage reimbursement.</div>
+              <div className="hidden px-space-md pb-space-md pt-0 text-on-surface-variant font-body-sm text-body-sm leading-relaxed" id="faq-4">{tYo("All off-take contracts stipulate specific physical quality parameters (e.g. max moisture 13%, maximum broken kernels 3%). If a lot is contested at the buyer's gate, CultivaNode dispatches a certified independent quality inspector from the nearest state ADP within 4 hours. The inspector uses calibrated moisture meters to take 3 blind samples. Their determination is uploaded to the dispute arbitration engine, which then calculates an agreed price discount or approves cargo return with haulage reimbursement.")}</div>
             </details>
           </div>
         </section>
@@ -616,16 +612,16 @@ export function HowItWorks({ lang }: ScreenProps) {
             <div className="flex flex-col gap-space-xs max-w-2xl relative z-10">
               <div className="flex items-center gap-space-xs font-label-sm text-label-sm uppercase tracking-wider text-secondary-fixed font-semibold">
                 <span className="w-2 h-2 rounded-full bg-secondary-fixed" />
-                <span>South-West Agrarian Mesh Pilot</span>
+                <span>{tYo("South-West Agrarian Mesh Pilot")}</span>
               </div>
-              <h2 className="font-headline-lg text-headline-lg text-on-primary md:text-[2rem] md:leading-[2.5rem]">Join a Trusted Agrarian Network Engineered for Scale</h2>
-              <p className="font-body-md text-body-md text-on-primary-container leading-relaxed">Start operating with bank-grade escrow security, verified boundaries, and 0% pilot commission. Whether you manage 2 hectares or a 10-tractor fleet, CultivaNode secures your work.</p>
+              <h2 className="font-headline-lg text-headline-lg text-on-primary md:text-[2rem] md:leading-[2.5rem]">{tYo("Join a Trusted Agrarian Network Engineered for Scale")}</h2>
+              <p className="font-body-md text-body-md text-on-primary-container leading-relaxed">{tYo("Start operating with bank-grade escrow security, verified boundaries, and 0% pilot commission. Whether you manage 2 hectares or a 10-tractor fleet, CultivaNode secures your work.")}</p>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-space-sm shrink-0 relative z-10">
-              <Link className="w-full sm:w-auto inline-flex items-center justify-center font-label-lg text-label-lg font-semibold bg-secondary text-on-secondary px-space-lg py-space-sm rounded-lg hover:bg-secondary-fixed transition-colors shadow-md" href={`/${lang}/sign-up`}>Create Free Account</Link>
+              <Link className="w-full sm:w-auto inline-flex items-center justify-center font-label-lg text-label-lg font-semibold bg-secondary text-on-secondary px-space-lg py-space-sm rounded-lg hover:bg-secondary-fixed transition-colors shadow-md" href={`/${lang}/sign-up`}>{tYo("Create Free Account")}</Link>
               <a className="w-full sm:w-auto inline-flex items-center justify-center gap-space-xs font-label-lg text-label-lg font-semibold bg-surface-container-lowest text-primary px-space-md py-space-sm rounded-lg hover:bg-surface-container transition-colors shadow-sm" href="/api/documents/handbook?download=1">
                 <Icon name="download" className="text-[18px]" />
-                <span>Pilot Trust Handbook (PDF)</span>
+                <span>{tYo("Pilot Trust Handbook (PDF)")}</span>
               </a>
             </div>
           </div>

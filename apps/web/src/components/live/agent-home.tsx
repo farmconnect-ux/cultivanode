@@ -29,11 +29,13 @@ export function AgentHome({ lang, account, farmers }: { lang: Locale; account: A
   return (
     <>
       <LiveStrip>
-        <span className="text-on-surface-variant">Your farmer roster and counts are live. Clustering and offline-queue panels show sample data.</span>
+        <span className="text-on-surface-variant">Your farmer roster and counts here are live.</span>
       </LiveStrip>
       <AgentOnboardingHub
         lang={lang}
         slots={{
+          // The design's demand-clustering and offline-queue panels stay hidden until they run on live data.
+          operations: null,
           agentLine: (
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Badge tone="brand"><Icon name="badge" /> {account.profile.full_name ?? "Field agent"}</Badge>

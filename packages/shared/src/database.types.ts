@@ -1339,6 +1339,9 @@ export type Database = {
           notes: string | null
           plant_population_per_ha: number | null
           planting_date: string
+          plants_alive: number | null
+          plants_counted_on: string | null
+          plants_planted: number | null
           plot_id: string | null
           season: string
           seed_quantity_kg: number | null
@@ -1367,6 +1370,9 @@ export type Database = {
           notes?: string | null
           plant_population_per_ha?: number | null
           planting_date: string
+          plants_alive?: number | null
+          plants_counted_on?: string | null
+          plants_planted?: number | null
           plot_id?: string | null
           season: string
           seed_quantity_kg?: number | null
@@ -1395,6 +1401,9 @@ export type Database = {
           notes?: string | null
           plant_population_per_ha?: number | null
           planting_date?: string
+          plants_alive?: number | null
+          plants_counted_on?: string | null
+          plants_planted?: number | null
           plot_id?: string | null
           season?: string
           seed_quantity_kg?: number | null
@@ -3705,6 +3714,7 @@ export type Database = {
           evidence_urls: string[]
           farm_id: string
           id: string
+          livestock_group_id: string | null
           notes: string | null
           plot_id: string | null
           priority: string
@@ -3727,6 +3737,7 @@ export type Database = {
           evidence_urls?: string[]
           farm_id: string
           id?: string
+          livestock_group_id?: string | null
           notes?: string | null
           plot_id?: string | null
           priority?: string
@@ -3749,6 +3760,7 @@ export type Database = {
           evidence_urls?: string[]
           farm_id?: string
           id?: string
+          livestock_group_id?: string | null
           notes?: string | null
           plot_id?: string | null
           priority?: string
@@ -3784,6 +3796,13 @@ export type Database = {
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_operational_tasks_livestock_group_id_fkey"
+            columns: ["livestock_group_id"]
+            isOneToOne: false
+            referencedRelation: "farm_livestock_groups"
             referencedColumns: ["id"]
           },
           {
@@ -8933,6 +8952,10 @@ export type Database = {
           p_retry: boolean
         }
         Returns: undefined
+      }
+      get_checkout_payment_credentials: {
+        Args: { p_order_id?: string }
+        Returns: Json
       }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       has_role: {

@@ -10,6 +10,10 @@ import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { pageMetadata } from "@/i18n/metadata";
 import { createClient } from "@/lib/supabase/server";
+import { serverPhrasebook, setPageLocale } from "@/i18n/marketing-server";
+import YO from "@/i18n/yo-marketing/marketplace-page";
+
+const tYo = serverPhrasebook(YO);
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -46,6 +50,7 @@ export const dynamic = "force-dynamic";
 export default async function MarketplacePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
+  setPageLocale(lang);
   const supabase = await createClient();
 
   // marketplace_* tables are newer than the generated types, hence the loose client.
@@ -72,16 +77,14 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
           listings.length === 0 ? (
             <EmptyState
               icon="storefront"
-              title="No lots are live yet"
-              description="Verified farmers and suppliers are listing their first lots. Join the pilot to be notified, or list your own produce."
+              title={tYo("No lots are live yet")}
+              description={tYo("Verified farmers and suppliers are listing their first lots. Join the pilot to be notified, or list your own produce.")}
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <Link href={`/${lang}/account/marketplace/new-listing`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-container px-4 py-2.5 font-label-md text-label-md text-white hover:bg-primary">
-                    <Icon name="add_circle" className="text-base" /> Sell on CultivaNode
-                  </Link>
+                    <Icon name="add_circle" className="text-base" />{tYo(" Sell on CultivaNode")}</Link>
                   <Link href={`/${lang}/marketplace/rfq`} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-low px-4 py-2.5 font-label-md text-label-md text-primary hover:bg-surface-container-high">
-                    <Icon name="request_quote" className="text-base" /> Post a bulk request (RFQ)
-                  </Link>
+                    <Icon name="request_quote" className="text-base" />{tYo(" Post a bulk request (RFQ)")}</Link>
                 </div>
               }
             />
@@ -101,29 +104,27 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                       <Icon name={TYPE_ICON[l.listing_type] ?? "storefront"} className="absolute right-4 top-3 text-[4rem] opacity-15" />
                       <div className="flex flex-wrap gap-1.5">
                         <span className="rounded-full bg-white/15 px-2.5 py-0.5 font-label-sm text-label-sm">
-                          {l.marketplace_categories?.name ?? "General"}
+                          {tYo(l.marketplace_categories?.name ?? "General")}
                         </span>
                         {traced && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-secondary-container px-2.5 py-0.5 font-label-sm text-label-sm text-on-secondary-container">
-                            <Icon name="qr_code_2" className="text-sm" /> Traceable batch
-                          </span>
+                            <Icon name="qr_code_2" className="text-sm" />{tYo(" Traceable batch")}</span>
                         )}
                       </div>
                       {available != null && (
                         <span className="rounded-lg bg-surface-container-lowest/95 px-2 py-1 font-label-sm text-label-sm text-primary">
-                          {Number(available).toLocaleString("en-NG")} {l.unit} available
-                        </span>
+                          {Number(available).toLocaleString("en-NG")} {tYo(l.unit)}{tYo(" available")}</span>
                       )}
                     </div>
                     <div className="flex flex-1 flex-col justify-between gap-3 p-5">
                       <div>
                         <p className="flex items-center gap-1 text-label-sm font-medium text-on-surface-variant">
                           <Icon name="pin_drop" className="text-sm text-secondary" />
-                          {[l.location_lga, l.location_state].filter(Boolean).join(", ") || "South-West Nigeria"}
+                          {tYo([l.location_lga, l.location_state].filter(Boolean).join(", ") || "South-West Nigeria")}
                         </p>
-                        <h3 className="mt-1 font-headline-sm text-headline-sm text-on-surface">{l.title}</h3>
+                        <h3 className="mt-1 font-headline-sm text-headline-sm text-on-surface">{tYo(l.title)}</h3>
                         <p className="mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant">
-                          {seller?.business_name ?? "Verified seller"}
+                          {tYo(seller?.business_name ?? "Verified seller")}
                           {seller?.rating_avg != null && (
                             <Badge tone="caution" className="py-0"><Icon name="star" filled /> {Number(seller.rating_avg).toFixed(1)}</Badge>
                           )}
@@ -132,10 +133,9 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                       <div className="flex items-end justify-between gap-3 border-t border-surface-container pt-3">
                         <p className="font-metric-num text-headline-md text-primary">
                           {formatNaira(l.base_price_kobo)}
-                          <span className="ml-1 text-label-sm font-normal text-on-surface-variant">/ {l.unit}</span>
+                          <span className="ml-1 text-label-sm font-normal text-on-surface-variant">/ {tYo(l.unit)}</span>
                         </p>
-                        <Link href={`/${lang}/marketplace/${l.id}`} className="inline-flex items-center gap-1 font-label-md text-label-md text-primary hover:underline">
-                          View lot <Icon name="arrow_forward" className="text-base" />
+                        <Link href={`/${lang}/marketplace/${l.id}`} className="inline-flex items-center gap-1 font-label-md text-label-md text-primary hover:underline">{tYo("View lot ")}<Icon name="arrow_forward" className="text-base" />
                         </Link>
                       </div>
                       <AddToCart

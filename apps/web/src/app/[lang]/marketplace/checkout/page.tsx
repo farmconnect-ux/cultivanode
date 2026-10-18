@@ -4,6 +4,10 @@ import { PageHeader } from "@/components/ds/page-header";
 import { CheckoutClient } from "@/components/marketplace/checkout-client";
 import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
+import { serverPhrasebook, setPageLocale } from "@/i18n/marketing-server";
+import YO from "@/i18n/yo-marketing/marketplace-checkout-page";
+
+const tYo = serverPhrasebook(YO);
 
 export const metadata: Metadata = { title: "Checkout & escrow" };
 export const dynamic = "force-dynamic";
@@ -11,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({ params }: PageProps<"/[lang]/marketplace/checkout">) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
+  setPageLocale(lang);
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -24,8 +29,8 @@ export default async function Page({ params }: PageProps<"/[lang]/marketplace/ch
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
         back={{ href: `/${lang}/marketplace`, label: "Back to the marketplace" }}
-        title="Checkout"
-        description="Prices and stock are checked again before you pay. Your payment is held in escrow until you confirm delivery."
+        title={tYo("Checkout")}
+        description={tYo("Prices and stock are checked again before you pay. Your payment is held in escrow until you confirm delivery.")}
       />
       <CheckoutClient lang={lang} signedIn={Boolean(auth.user)} defaults={defaults} />
     </div>

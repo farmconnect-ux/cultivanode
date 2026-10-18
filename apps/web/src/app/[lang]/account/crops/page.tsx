@@ -74,6 +74,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops"
         { name: "planting_date", label: "Planting date", type: "date", required: true },
         { name: "expected_harvest_date", label: "Expected harvest", type: "date", required: true },
         { name: "target_yield_kg", label: "Target yield (kg)", type: "number" },
+        { name: "plants_planted", label: "Number of plants / stands", type: "number", min: 0 },
         { name: "estimated_budget", label: "Budget (₦)", type: "number" },
       ]}
     />

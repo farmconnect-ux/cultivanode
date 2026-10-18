@@ -8,6 +8,10 @@ import { Icon } from "@/components/ds/icon";
 import { showScreenToast, ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import type { ScreenProps } from "./types";
+import { phrasebook } from "@/i18n/marketing";
+import YO from "@/i18n/yo-marketing/agronomy-library";
+
+const tYo = phrasebook(YO);
 
 type GuideItem = {
   id: string;
@@ -142,21 +146,21 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
       .map((p) => `"${p.crop}","${p.variety}","${p.window}","${p.rate}","${p.ops}","${p.yield}"`)
       .join("\n");
     downloadFile(csvHeader + rows, `CultivaNode-Agro-Ecological-Calendar-${season}.csv`, "text/csv");
-    showScreenToast("Exported agro-ecological phenology schedule to CSV.");
+    showScreenToast(tYo.now("Exported agro-ecological phenology schedule to CSV."));
   };
 
   const modalGuideDetails = activeGuide && (
     <div className="flex flex-col gap-4 p-4 max-w-xl max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
-          {activeGuide.badge}
+          {tYo(activeGuide.badge)}
         </span>
-        <span className="font-label-sm text-label-sm text-on-surface-variant">{activeGuide.pages}</span>
+        <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo(activeGuide.pages)}</span>
       </div>
-      <h3 className="font-headline-md text-headline-md font-bold text-on-surface">{activeGuide.title}</h3>
-      <p className="font-label-sm text-label-sm text-secondary font-medium">{activeGuide.author}</p>
+      <h3 className="font-headline-md text-headline-md font-bold text-on-surface">{tYo(activeGuide.title)}</h3>
+      <p className="font-label-sm text-label-sm text-secondary font-medium">{tYo(activeGuide.author)}</p>
       <div className="p-3 bg-surface-container-low rounded-lg font-mono text-body-sm whitespace-pre-line text-on-surface">
-        {activeGuide.fullContent || activeGuide.description}
+        {tYo(activeGuide.fullContent || activeGuide.description)}
       </div>
       <div className="flex items-center justify-between pt-2">
         <button
@@ -164,12 +168,9 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
           type="button"
           className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold flex items-center gap-1.5"
         >
-          <Icon name="download" className="text-base" /> Download Full Protocol
-        </button>
+          <Icon name="download" className="text-base" />{tYo(" Download Full Protocol")}</button>
         <ScreenDialogClose>
-          <button onClick={() => {}} type="button" className="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">
-            Close
-          </button>
+          <button onClick={() => {}} type="button" className="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md">{tYo("Close")}</button>
         </ScreenDialogClose>
       </div>
     </div>
@@ -181,37 +182,27 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
         <section className="relative w-full bg-surface-container-low px-margin md:px-margin-tablet lg:px-margin-desktop py-space-xl">
           <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
             <div className="flex flex-wrap items-center justify-between gap-space-sm text-on-surface-variant font-label-sm text-label-sm">
-              <nav aria-label="Breadcrumb" className="flex items-center gap-space-xs">
-                <Link className="hover:text-primary transition-colors" href={`/${lang}/resources`}>
-                  Agro-Registry
-                </Link>
+              <nav aria-label={tYo("Breadcrumb")} className="flex items-center gap-space-xs">
+                <Link className="hover:text-primary transition-colors" href={`/${lang}/resources`}>{tYo("Agro-Registry")}</Link>
                 <span className="text-outline">/</span>
-                <Link className="hover:text-primary transition-colors" href={`/${lang}/resources`}>
-                  Technical Repositories
-                </Link>
+                <Link className="hover:text-primary transition-colors" href={`/${lang}/resources`}>{tYo("Technical Repositories")}</Link>
                 <span className="text-outline">/</span>
-                <span aria-current="page" className="text-on-surface font-semibold">
-                  Agronomy Knowledge Center
-                </span>
+                <span aria-current="page" className="text-on-surface font-semibold">{tYo("Agronomy Knowledge Center")}</span>
               </nav>
               <div className="inline-flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-lowest rounded-full shadow-sm text-secondary">
                 <span className="w-2 h-2 rounded-full bg-secondary" />
-                <span className="uppercase tracking-wider font-semibold">IITA &amp; NCRI Calibrated Standards</span>
+                <span className="uppercase tracking-wider font-semibold">{tYo("IITA & NCRI Calibrated Standards")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-space-sm max-w-4xl">
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">
-                Agro-Ecological Extension Series · Document 2 §4.13
-              </span>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Agro-Ecological Extension Series · Document 2 §4.13")}</span>
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight">
-                {selectedLanguage === "yo"
+                {tYo(selectedLanguage === "yo"
                   ? "Àwọn Ìwé Ìtọ́sọ́nà Iṣẹ́ Àgbẹ̀, Ètò Àkókò àti Ìmọ̀ Ẹ̀kọ́"
-                  : "Agricultural Resources, Field Guides & Operational Knowledge"}
+                  : "Agricultural Resources, Field Guides & Operational Knowledge")}
               </h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant">
-                Production protocols, phenological calendars, crop protection spray schedules, and official CultivaNode platform guidelines calibrated for South-West Nigeria agro-ecological zones (Oyo, Ogun, Ondo, and Osun).
-              </p>
+              <p className="font-body-lg text-body-lg text-on-surface-variant">{tYo("Production protocols, phenological calendars, crop protection spray schedules, and official CultivaNode platform guidelines calibrated for South-West Nigeria agro-ecological zones (Oyo, Ogun, Ondo, and Osun).")}</p>
             </div>
 
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
@@ -223,7 +214,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full h-11 pl-10 pr-4 bg-surface-container-low text-on-surface placeholder:text-on-surface-variant/70 rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20"
                     id="resourceSearchInput"
-                    placeholder="Search 85+ guides, crop standards, or operational FAQs (e.g., SAMMAZ-15, Escrow, PostGIS)..."
+                    placeholder={tYo("Search 85+ guides, crop standards, or operational FAQs (e.g., SAMMAZ-15, Escrow, PostGIS)...")}
                     type="text"
                   />
                 </div>
@@ -231,29 +222,25 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   <button
                     onClick={() => {
                       setSelectedLanguage("en");
-                      showScreenToast("Library language set to English.");
+                      showScreenToast(tYo.now("Library language set to English."));
                     }}
                     className={`px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all font-semibold ${
                       selectedLanguage === "en" ? "bg-primary-container text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                     id="langEnBtn"
                     type="button"
-                  >
-                    English (Universal)
-                  </button>
+                  >{tYo("English (Universal)")}</button>
                   <button
                     onClick={() => {
                       setSelectedLanguage("yo");
-                      showScreenToast("Àkójọ ìmọ̀ ti di èdè Yorùbá.");
+                      showScreenToast(tYo.now("Àkójọ ìmọ̀ ti di èdè Yorùbá."));
                     }}
                     className={`px-space-md py-1.5 rounded-lg font-label-md text-label-md transition-all font-semibold ${
                       selectedLanguage === "yo" ? "bg-primary-container text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                     }`}
                     id="langYoBtn"
                     type="button"
-                  >
-                    Èdè Yorùbá
-                  </button>
+                  >{tYo("Èdè Yorùbá")}</button>
                 </div>
               </div>
 
@@ -277,7 +264,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     data-category={item.key}
                     type="button"
                   >
-                    {item.label}
+                    {tYo(item.label)}
                   </button>
                 ))}
               </div>
@@ -290,12 +277,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
           <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-sm">
               <div>
-                <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">Document 2 §4.13 Repository</span>
-                <h2 className="font-headline-lg text-headline-lg text-primary">Featured Extension Master Protocols</h2>
+                <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Document 2 §4.13 Repository")}</span>
+                <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Featured Extension Master Protocols")}</h2>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">
-                Peer-reviewed field standards deployed across Iseyin, Saki, Sagamu, and Akure commercial agronomy clusters.
-              </p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">{tYo("Peer-reviewed field standards deployed across Iseyin, Saki, Sagamu, and Akure commercial agronomy clusters.")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md" id="featuredGuidesGrid">
@@ -316,37 +301,36 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                         decoding="async"
                       />
                       <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full bg-surface-container-lowest font-label-sm text-label-sm font-semibold shadow-sm ${guide.badgeColor}`}>
-                        {guide.badge}
+                        {tYo(guide.badge)}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-label-sm text-label-sm text-secondary">{guide.author}</span>
+                      <span className="font-label-sm text-label-sm text-secondary">{tYo(guide.author)}</span>
                       <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors">
-                        {guide.title}
+                        {tYo(guide.title)}
                       </h3>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-3">{guide.description}</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-3">{tYo(guide.description)}</p>
                     <div className="bg-surface-container-low rounded-lg p-2 flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
                       <span>
-                        {guide.statLabel}: {guide.statValue}
+                        {tYo(guide.statLabel)}: {tYo(guide.statValue)}
                       </span>
-                      <span className="font-semibold text-secondary">{guide.pages}</span>
+                      <span className="font-semibold text-secondary">{tYo(guide.pages)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-space-xs pt-space-md mt-auto">
-                    <ScreenDialog title={guide.title} side="center" panel={modalGuideDetails}>
+                    <ScreenDialog title={tYo(guide.title)} side="center" panel={modalGuideDetails}>
                       <button
                         onClick={() => setActiveGuide(guide)}
                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-space-sm rounded-lg bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary transition-colors"
                         type="button"
                       >
-                        <Icon name="visibility" className="text-[16px]" /> View Guide
-                      </button>
+                        <Icon name="visibility" className="text-[16px]" />{tYo(" View Guide")}</button>
                     </ScreenDialog>
                     <button
                       onClick={() => handleDownloadGuide(guide)}
                       className="inline-flex items-center justify-center p-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
-                      title="Download PDF"
+                      title={tYo("Download PDF")}
                       type="button"
                     >
                       <Icon name="download" className="text-[18px]" />
@@ -365,40 +349,34 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div>
                 <div className="flex items-center gap-space-xs">
                   <Icon name="calendar_month" className="text-secondary text-[20px]" />
-                  <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">Agro-Ecological Telemetry Calendar</span>
+                  <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Agro-Ecological Telemetry Calendar")}</span>
                 </div>
-                <h2 className="font-headline-lg text-headline-lg text-primary">Seasonal Phenology &amp; Seeding Matrix</h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  Calibrated for derived savanna and rainforest transition zones in Oyo, Ogun, Osun &amp; Ondo.
-                </p>
+                <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Seasonal Phenology & Seeding Matrix")}</h2>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Calibrated for derived savanna and rainforest transition zones in Oyo, Ogun, Osun & Ondo.")}</p>
               </div>
               <div className="flex items-center bg-surface-container-lowest p-1 rounded-xl shadow-sm border border-outline-variant/30">
                 <button
                   onClick={() => {
                     setSeason("early");
-                    showScreenToast("Viewing Early Season (March – July) phenological calendar.");
+                    showScreenToast(tYo.now("Viewing Early Season (March – July) phenological calendar."));
                   }}
                   className={`px-space-md py-2 rounded-lg font-label-md text-label-md transition-all font-semibold ${
                     season === "early" ? "bg-primary-container text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                   }`}
                   id="seasonEarlyBtn"
                   type="button"
-                >
-                  Early Season (March – July)
-                </button>
+                >{tYo("Early Season (March – July)")}</button>
                 <button
                   onClick={() => {
                     setSeason("late");
-                    showScreenToast("Viewing Late Season (August – October) phenological calendar.");
+                    showScreenToast(tYo.now("Viewing Late Season (August – October) phenological calendar."));
                   }}
                   className={`px-space-md py-2 rounded-lg font-label-md text-label-md transition-all font-semibold ${
                     season === "late" ? "bg-primary-container text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                   }`}
                   id="seasonLateBtn"
                   type="button"
-                >
-                  Late Season (August – October)
-                </button>
+                >{tYo("Late Season (August – October)")}</button>
               </div>
             </div>
 
@@ -407,29 +385,29 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
-                      <th className="py-space-sm px-space-md">Crop &amp; Taxon</th>
-                      <th className="py-space-sm px-space-md">Recommended Variety</th>
-                      <th className="py-space-sm px-space-md">Planting Window</th>
-                      <th className="py-space-sm px-space-md">Seeding Rate / Ha</th>
-                      <th className="py-space-sm px-space-md">Critical Operations Window</th>
-                      <th className="py-space-sm px-space-md text-right">Expected Yield</th>
+                      <th className="py-space-sm px-space-md">{tYo("Crop & Taxon")}</th>
+                      <th className="py-space-sm px-space-md">{tYo("Recommended Variety")}</th>
+                      <th className="py-space-sm px-space-md">{tYo("Planting Window")}</th>
+                      <th className="py-space-sm px-space-md">{tYo("Seeding Rate / Ha")}</th>
+                      <th className="py-space-sm px-space-md">{tYo("Critical Operations Window")}</th>
+                      <th className="py-space-sm px-space-md text-right">{tYo("Expected Yield")}</th>
                     </tr>
                   </thead>
                   <tbody className="font-body-sm text-body-sm divide-y divide-surface-container-low" id="phenologyTableBody">
                     {currentPhenology.map((p, idx) => (
                       <tr key={idx} className="hover:bg-surface-container-low/50 transition-colors">
                         <td className="py-space-md px-space-md font-semibold text-on-surface flex items-center gap-space-xs">
-                          <span className="w-2 h-2 rounded-full bg-secondary" /> {p.crop}
+                          <span className="w-2 h-2 rounded-full bg-secondary" /> {tYo(p.crop)}
                         </td>
-                        <td className="py-space-md px-space-md text-on-surface-variant">{p.variety}</td>
-                        <td className="py-space-md px-space-md font-semibold text-primary">{p.window}</td>
-                        <td className="py-space-md px-space-md text-on-surface-variant">{p.rate}</td>
+                        <td className="py-space-md px-space-md text-on-surface-variant">{tYo(p.variety)}</td>
+                        <td className="py-space-md px-space-md font-semibold text-primary">{tYo(p.window)}</td>
+                        <td className="py-space-md px-space-md text-on-surface-variant">{tYo(p.rate)}</td>
                         <td className="py-space-md px-space-md">
                           <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
-                            {p.ops}
+                            {tYo(p.ops)}
                           </span>
                         </td>
-                        <td className="py-space-md px-space-md text-right font-metric-num font-semibold text-primary">{p.yield}</td>
+                        <td className="py-space-md px-space-md text-right font-metric-num font-semibold text-primary">{tYo(p.yield)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -438,14 +416,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="p-space-md bg-surface-container-low flex flex-col md:flex-row items-center justify-between gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
                 <div className="flex items-center gap-space-xs">
                   <Icon name="verified" className="text-[16px] text-secondary" />
-                  <span>Rainfall distribution telemetry cross-referenced with NIMET 2025 Seasonal Climate Prediction for Oyo, Ogun, Ondo, and Osun.</span>
+                  <span>{tYo("Rainfall distribution telemetry cross-referenced with NIMET 2025 Seasonal Climate Prediction for Oyo, Ogun, Ondo, and Osun.")}</span>
                 </div>
                 <button
                   onClick={handleDownloadPhenologySchedule}
                   className="text-primary font-semibold hover:underline flex items-center gap-1"
                   type="button"
-                >
-                  Download Complete Agro-Ecological Schedule (CSV) <Icon name="arrow_outward" className="text-[14px]" />
+                >{tYo("Download Complete Agro-Ecological Schedule (CSV) ")}<Icon name="arrow_outward" className="text-[14px]" />
                 </button>
               </div>
             </div>
@@ -456,11 +433,9 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
         <section className="w-full px-margin md:px-margin-tablet lg:px-margin-desktop py-space-xl">
           <div className="max-w-7xl mx-auto flex flex-col gap-space-xl">
             <div className="flex flex-col gap-space-xs">
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">Document 2 §4.15 Inquiries &amp; Protocols</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary">Frequently Addressed Field &amp; Platform Inquiries</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-                Detailed operational resolutions regarding boundary walking, offline sync in remote bushland, Providus escrow settlements, and seed certification verification.
-              </p>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Document 2 §4.15 Inquiries & Protocols")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Frequently Addressed Field & Platform Inquiries")}</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">{tYo("Detailed operational resolutions regarding boundary walking, offline sync in remote bushland, Providus escrow settlements, and seed certification verification.")}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
@@ -468,7 +443,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="polyline" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">Pillar A: Boundary Delineation &amp; Field Connectivity</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar A: Boundary Delineation & Field Connectivity")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupA">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -477,17 +452,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>How does CultivaNode measure farm boundaries without a licensed surveyor?</span>
+                      <span>{tYo("How does CultivaNode measure farm boundaries without a licensed surveyor?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.a1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.a1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>
-                          CultivaNode utilizes the <strong>PostGIS GeoDjango spatial extension engine</strong>. Extension officers walk the perimeter with mobile GNSS devices utilizing multi-constellation RTK correction where available, generating an enclosed polygon centroid with sub-meter spatial accuracy.
-                        </p>
-                        <p>
-                          To secure community validity in agrarian nodes like Saki and Ibarapa, boundary walks are counter-signed via digital signature or thumbprint by the cluster&apos;s traditional Baale or Land Holding Committee, fully aligned with the Oyo &amp; Ogun Agricultural Land Administration guidelines.
-                        </p>
+                        <p>{tYo("CultivaNode utilizes the ")}<strong>{tYo("PostGIS GeoDjango spatial extension engine")}</strong>{tYo(". Extension officers walk the perimeter with mobile GNSS devices utilizing multi-constellation RTK correction where available, generating an enclosed polygon centroid with sub-meter spatial accuracy.")}</p>
+                        <p>{tYo("To secure community validity in agrarian nodes like Saki and Ibarapa, boundary walks are counter-signed via digital signature or thumbprint by the cluster's traditional Baale or Land Holding Committee, fully aligned with the Oyo & Ogun Agricultural Land Administration guidelines.")}</p>
                       </div>
                     )}
                   </div>
@@ -498,17 +469,14 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>Do I need internet on my farm to record daily operations?</span>
+                      <span>{tYo("Do I need internet on my farm to record daily operations?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.a2 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.a2 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
                         <p>
-                          <strong>No.</strong> CultivaNode mobile field units operate on an asynchronous <strong>Local SQLite Queue Architecture</strong>. Spray records, fuel fill logs, yield tallies, and worker attendance can be entered without cellular coverage.
-                        </p>
-                        <p>
-                          Once the supervisor or farmer returns to 2G/3G coverage at a market town, the device automatically synchronizes transactional diffs via encrypted REST payloads with automated conflict resolution.
-                        </p>
+                          <strong>{tYo("No.")}</strong>{tYo(" CultivaNode mobile field units operate on an asynchronous ")}<strong>{tYo("Local SQLite Queue Architecture")}</strong>{tYo(". Spray records, fuel fill logs, yield tallies, and worker attendance can be entered without cellular coverage.")}</p>
+                        <p>{tYo("Once the supervisor or farmer returns to 2G/3G coverage at a market town, the device automatically synchronizes transactional diffs via encrypted REST payloads with automated conflict resolution.")}</p>
                       </div>
                     )}
                   </div>
@@ -519,7 +487,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="payments" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">Pillar B: Machinery Escrow &amp; Operator Settlement</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar B: Machinery Escrow & Operator Settlement")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupB">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -528,17 +496,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>How does the 0% pilot commission escrow mechanism work?</span>
+                      <span>{tYo("How does the 0% pilot commission escrow mechanism work?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.b1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.b1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>
-                          When you book tractor plowing or harrowing, 100% of the calculated cost is deposited into an institutional escrow vault hosted at <strong>Providus Bank PLC</strong> under CBN oversight. The tractor operator receives a mobilization token guaranteeing payment upon successful delivery.
-                        </p>
-                        <p>
-                          Upon work completion, the farmer inspects the hectares and enters their PIN, or the system auto-settles after 48 hours in the absence of a dispute. During the current South-West pilot rollout, CultivaNode charges 0% platform intermediary commission.
-                        </p>
+                        <p>{tYo("When you book tractor plowing or harrowing, 100% of the calculated cost is deposited into an institutional escrow vault hosted at ")}<strong>{tYo("Providus Bank PLC")}</strong>{tYo(" under CBN oversight. The tractor operator receives a mobilization token guaranteeing payment upon successful delivery.")}</p>
+                        <p>{tYo("Upon work completion, the farmer inspects the hectares and enters their PIN, or the system auto-settles after 48 hours in the absence of a dispute. During the current South-West pilot rollout, CultivaNode charges 0% platform intermediary commission.")}</p>
                       </div>
                     )}
                   </div>
@@ -549,17 +513,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>What happens if a tractor breaks down midway through plowing?</span>
+                      <span>{tYo("What happens if a tractor breaks down midway through plowing?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.b2 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.b2 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>
-                          CultivaNode calculates the exact completed acreage utilizing the tractor operator&apos;s onboard GPS telemetry or phone polygon tracker. The completed fraction is logged.
-                        </p>
-                        <p>
-                          The system then offers two immediate escrow remedies: (1) Relief tractor dispatch from the nearest Syndicate cluster within 24 hours, or (2) Instant pro-rata escrow balance refund credited back to the farmer&apos;s mobile wallet or bank account.
-                        </p>
+                        <p>{tYo("CultivaNode calculates the exact completed acreage utilizing the tractor operator's onboard GPS telemetry or phone polygon tracker. The completed fraction is logged.")}</p>
+                        <p>{tYo("The system then offers two immediate escrow remedies: (1) Relief tractor dispatch from the nearest Syndicate cluster within 24 hours, or (2) Instant pro-rata escrow balance refund credited back to the farmer's mobile wallet or bank account.")}</p>
                       </div>
                     )}
                   </div>
@@ -570,7 +530,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="verified_user" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">Pillar C: Quality Verification &amp; Seed Integrity</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar C: Quality Verification & Seed Integrity")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupC">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -579,17 +539,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>How are certified seeds differentiated from counterfeit grain?</span>
+                      <span>{tYo("How are certified seeds differentiated from counterfeit grain?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.c1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.c1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>
-                          All inputs cataloged on CultivaNode are authenticated with the <strong>National Agricultural Seeds Council (NASC) SEEDCODEX verification tags</strong>. Each bag features a tamper-proof scratch-off QR code verified directly against the NASC national database.
-                        </p>
-                        <p>
-                          Furthermore, agro-dealers listed on our directory are physically audited and verified by IITA/NCRI accredited field officers across Ibadan, Abeokuta, and Akure.
-                        </p>
+                        <p>{tYo("All inputs cataloged on CultivaNode are authenticated with the ")}<strong>{tYo("National Agricultural Seeds Council (NASC) SEEDCODEX verification tags")}</strong>{tYo(". Each bag features a tamper-proof scratch-off QR code verified directly against the NASC national database.")}</p>
+                        <p>{tYo("Furthermore, agro-dealers listed on our directory are physically audited and verified by IITA/NCRI accredited field officers across Ibadan, Abeokuta, and Akure.")}</p>
                       </div>
                     )}
                   </div>
@@ -600,7 +556,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="gavel" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">Pillar D: Statutory Compliance &amp; NDPA 2023</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar D: Statutory Compliance & NDPA 2023")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupD">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -609,17 +565,14 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>Can commercial banks or tax authorities view my yield records?</span>
+                      <span>{tYo("Can commercial banks or tax authorities view my yield records?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.d1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.d1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
                         <p>
-                          <strong>Absolutely not without your explicit, auditable opt-in consent.</strong> CultivaNode operates strictly under the <strong>Nigeria Data Protection Act (NDPA 2023)</strong> and NITDA statutory guidelines.
-                        </p>
-                        <p>
-                          Your farm telemetry, financial volumes, and harvest yields are encrypted. When applying for agricultural credit, you explicitly generate a revocable 30-day &quot;Lender Token&quot; that shares only the specific data fields required for credit scoring.
-                        </p>
+                          <strong>{tYo("Absolutely not without your explicit, auditable opt-in consent.")}</strong>{tYo(" CultivaNode operates strictly under the ")}<strong>{tYo("Nigeria Data Protection Act (NDPA 2023)")}</strong>{tYo(" and NITDA statutory guidelines.")}</p>
+                        <p>{tYo("Your farm telemetry, financial volumes, and harvest yields are encrypted. When applying for agricultural credit, you explicitly generate a revocable 30-day \"Lender Token\" that shares only the specific data fields required for credit scoring.")}</p>
                       </div>
                     )}
                   </div>
@@ -633,8 +586,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
         <section className="w-full px-margin md:px-margin-tablet lg:px-margin-desktop py-space-xl bg-surface-container-low">
           <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
             <div>
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">Offline Extension Toolkits</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary">Official Field Operational Manuals &amp; Printables</h2>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Offline Extension Toolkits")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Official Field Operational Manuals & Printables")}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -643,14 +596,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="menu_book" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">PDF Document · 68 Pages · 14.2 MB</span>
-                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">
-                      Pilot Farm Operations Handbook (Oyo &amp; Ogun Edition)
-                    </h3>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("PDF Document · 68 Pages · 14.2 MB")}</span>
+                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Pilot Farm Operations Handbook (Oyo & Ogun Edition)")}</h3>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Comprehensive reference guide covering cooperative formation, cluster delineation standards, dispute management protocols, and multi-crop spraying schedules.
-                  </p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Comprehensive reference guide covering cooperative formation, cluster delineation standards, dispute management protocols, and multi-crop spraying schedules.")}</p>
                 </div>
                 <div className="pt-space-md mt-auto">
                   <button
@@ -660,13 +609,12 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                         "CultivaNode-Pilot-Farm-Operations-Handbook.txt",
                         "text/plain"
                       );
-                      showScreenToast("Pilot Farm Operations Handbook downloaded.");
+                      showScreenToast(tYo.now("Pilot Farm Operations Handbook downloaded."));
                     }}
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors"
                     type="button"
                   >
-                    <Icon name="download" className="text-[18px]" /> Download Master Handbook
-                  </button>
+                    <Icon name="download" className="text-[18px]" />{tYo(" Download Master Handbook")}</button>
                 </div>
               </div>
 
@@ -676,14 +624,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="file_open" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">Wall Poster PDF · High-Res Print · 8.4 MB</span>
-                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">
-                      South-West Agrochemical Safety &amp; Waiting Times Chart
-                    </h3>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Wall Poster PDF · High-Res Print · 8.4 MB")}</span>
+                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("South-West Agrochemical Safety & Waiting Times Chart")}</h3>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Laminated field-office poster detailing active ingredient safety classes, PPE standards, and Pre-Harvest Intervals (PHI) for common pesticides and fungicides.
-                  </p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Laminated field-office poster detailing active ingredient safety classes, PPE standards, and Pre-Harvest Intervals (PHI) for common pesticides and fungicides.")}</p>
                 </div>
                 <div className="pt-space-md mt-auto">
                   <button
@@ -693,13 +637,12 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                         "South-West-Agrochemical-Safety-Chart.txt",
                         "text/plain"
                       );
-                      showScreenToast("Agrochemical safety poster downloaded.");
+                      showScreenToast(tYo.now("Agrochemical safety poster downloaded."));
                     }}
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors"
                     type="button"
                   >
-                    <Icon name="download" className="text-[18px]" /> Download Wall Poster
-                  </button>
+                    <Icon name="download" className="text-[18px]" />{tYo(" Download Wall Poster")}</button>
                 </div>
               </div>
 
@@ -709,14 +652,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="agriculture" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">Printable Template (A4) · 2.1 MB</span>
-                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">
-                      Tractor Syndicate Operator Daily Logbook
-                    </h3>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Printable Template (A4) · 2.1 MB")}</span>
+                    <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Tractor Syndicate Operator Daily Logbook")}</h3>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Field-ready daily log sheets for equipment operators: recording hour-meter reads, diesel consumption, implement wear, hectare counters, and farm manager sign-offs.
-                  </p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Field-ready daily log sheets for equipment operators: recording hour-meter reads, diesel consumption, implement wear, hectare counters, and farm manager sign-offs.")}</p>
                 </div>
                 <div className="pt-space-md mt-auto">
                   <button
@@ -726,13 +665,12 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                         "Tractor-Operator-Daily-Logbook-Template.txt",
                         "text/plain"
                       );
-                      showScreenToast("Tractor operator logbook template downloaded.");
+                      showScreenToast(tYo.now("Tractor operator logbook template downloaded."));
                     }}
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors"
                     type="button"
                   >
-                    <Icon name="download" className="text-[18px]" /> Download Operator Logbook
-                  </button>
+                    <Icon name="download" className="text-[18px]" />{tYo(" Download Operator Logbook")}</button>
                 </div>
               </div>
             </div>
@@ -746,36 +684,28 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
             <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-lg">
               <div className="flex flex-col gap-space-xs max-w-2xl">
                 <div className="inline-flex items-center gap-space-xs text-secondary-container font-label-sm text-label-sm uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" /> Live Agronomy Desk &amp; Field Support
-                </div>
-                <h2 className="font-headline-lg text-headline-lg font-bold text-on-primary">
-                  Have an unidentified crop symptom or need an on-farm extension consultation?
-                </h2>
-                <p className="font-body-md text-body-md text-on-primary/80">
-                  Connect immediately with CultivaNode AI Agronomist, or route your geo-tagged farm photos directly to state ADP extension specialists in Ibadan, Abeokuta, Akure, or Osogbo.
-                </p>
+                  <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" />{tYo(" Live Agronomy Desk & Field Support")}</div>
+                <h2 className="font-headline-lg text-headline-lg font-bold text-on-primary">{tYo("Have an unidentified crop symptom or need an on-farm extension consultation?")}</h2>
+                <p className="font-body-md text-body-md text-on-primary/80">{tYo("Connect immediately with CultivaNode AI Agronomist, or route your geo-tagged farm photos directly to state ADP extension specialists in Ibadan, Abeokuta, Akure, or Osogbo.")}</p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm shrink-0 w-full lg:w-auto">
                 <Link
                   className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-secondary-container text-on-secondary-container font-label-md text-label-md font-semibold hover:bg-secondary-fixed transition-colors shadow-sm"
                   href={`/${lang}/account/assistant`}
                 >
-                  <Icon name="smart_toy" className="text-[20px]" /> Consult AI Farm Assistant
-                </Link>
+                  <Icon name="smart_toy" className="text-[20px]" />{tYo(" Consult AI Farm Assistant")}</Link>
                 <a
                   className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md font-semibold hover:bg-surface transition-colors shadow-sm"
                   href="https://wa.me/2348000000000"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Icon name="chat" className="text-[20px]" /> ADP WhatsApp Desk
-                </a>
+                  <Icon name="chat" className="text-[20px]" />{tYo(" ADP WhatsApp Desk")}</a>
                 <Link
                   className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-secondary transition-colors border border-outline-variant/20"
                   href={`/${lang}/contact`}
                 >
-                  <Icon name="contact_support" className="text-[20px]" /> Submit Query
-                </Link>
+                  <Icon name="contact_support" className="text-[20px]" />{tYo(" Submit Query")}</Link>
               </div>
             </div>
           </div>

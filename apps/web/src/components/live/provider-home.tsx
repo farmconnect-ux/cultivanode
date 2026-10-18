@@ -57,7 +57,7 @@ export function ProviderHome({
     <>
       <LiveStrip>
         <span className="text-on-surface-variant">
-          Job requests, bookings, earnings and listings are live for {name}. Telemetry and proof-of-work panels show sample data until your fleet is connected.
+          Job requests, bookings, earnings and listings here are live for {name}. Machine telemetry appears once your fleet is connected; job photos are taken on each booking page.
         </span>
       </LiveStrip>
       <section className="mb-space-lg grid grid-cols-1 gap-space-md sm:grid-cols-2 xl:grid-cols-4">
@@ -70,6 +70,10 @@ export function ProviderHome({
         lang={lang}
         activeJob={activeJob}
         slots={{
+          // Design sample panels (engine telemetry, GPS swath, proof-of-work photos) stay hidden until real fleet data exists.
+          telemetry: null,
+          fieldPanels: null,
+          proof: null,
           job: (
             <div className="mb-space-lg">
               <BookingTable
