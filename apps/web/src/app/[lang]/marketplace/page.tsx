@@ -30,6 +30,7 @@ type Row = {
   unit: string;
   available_quantity: number | null;
   min_order_quantity: number | null;
+  images: string[] | null;
   marketplace_inventory_lots: { physical_quantity: number; reserved_quantity: number | null; allocated_quantity: number | null }[] | null;
   location_state: string | null;
   location_lga: string | null;
@@ -58,7 +59,7 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
   const { data } = await supabase
     .from("marketplace_listings")
     .select(`
-      id, title, listing_type, base_price_kobo, unit, available_quantity, min_order_quantity, location_state, location_lga,
+      id, title, listing_type, base_price_kobo, unit, available_quantity, min_order_quantity, location_state, location_lga, images,
       marketplace_inventory_lots ( physical_quantity, reserved_quantity, allocated_quantity ),
       marketplace_categories ( name, slug ),
       marketplace_sellers ( id, business_name, seller_type, rating_avg ),
@@ -100,9 +101,17 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                   : l.available_quantity;
                 return (
                   <article key={l.id} className="card-interactive flex flex-col overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm">
-                    <div className="relative flex h-32 items-end justify-between bg-gradient-to-br from-primary-container to-secondary p-4 text-white">
-                      <Icon name={TYPE_ICON[l.listing_type] ?? "storefront"} className="absolute right-4 top-3 text-[4rem] opacity-15" />
-                      <div className="flex flex-wrap gap-1.5">
+                    <div className={`relative flex items-end justify-between bg-gradient-to-br from-primary-container to-secondary p-4 text-white ${l.images?.[0] ? "h-44" : "h-32"}`}>
+                      {l.images?.[0] ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- seller photo from Supabase Storage */}
+                          <img src={l.images[0]} alt={l.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                          <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0b1c30]/70 via-[#0b1c30]/10 to-transparent" />
+                        </>
+                      ) : (
+                        <Icon name={TYPE_ICON[l.listing_type] ?? "storefront"} className="absolute right-4 top-3 text-[4rem] opacity-15" />
+                      )}
+                      <div className="relative flex flex-wrap gap-1.5">
                         <span className="rounded-full bg-white/15 px-2.5 py-0.5 font-label-sm text-label-sm">
                           {tYo(l.marketplace_categories?.name ?? "General")}
                         </span>
@@ -112,7 +121,7 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                         )}
                       </div>
                       {available != null && (
-                        <span className="rounded-lg bg-surface-container-lowest/95 px-2 py-1 font-label-sm text-label-sm text-primary">
+                        <span className="relative rounded-lg bg-surface-container-lowest/95 px-2 py-1 font-label-sm text-label-sm text-primary">
                           {Number(available).toLocaleString("en-NG")} {tYo(l.unit)}{tYo(" available")}</span>
                       )}
                     </div>

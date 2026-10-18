@@ -13,6 +13,8 @@ import {
 } from "@cultivanode/shared/engines/marketplace";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { checkPhotos, deletePhotos, photoFiles, uploadPhotos } from "@/lib/listing-photos";
+import { stateCentroid } from "@/lib/state-centroids";
 
 const text = (form: FormData, key: string, max = 500) => String(form.get(key) ?? "").trim().slice(0, max);
 
@@ -43,9 +45,13 @@ export async function createMarketplaceListingAction(formData: FormData) {
   const quantityStr = text(formData, "available_quantity", 30);
   const minOrderStr = text(formData, "min_order_quantity", 30) || "1";
   const state = text(formData, "state", 60) || "Oyo";
-  const lga = text(formData, "lga", 60) || "Ibadan";
-  const lat = Number(text(formData, "latitude", 30) || "7.3775");
-  const lng = Number(text(formData, "longitude", 30) || "3.9470");
+  const lga = text(formData, "lga", 60) || null;
+  const photoError = checkPhotos(photoFiles(formData));
+  if (photoError) return { ok: false, error: photoError };
+  // No GPS on the form: place the listing at the centre of its state (not a fixed Ibadan point).
+  const centre = stateCentroid(state) ?? stateCentroid("Oyo")!;
+  const lat = Number(text(formData, "latitude", 30)) || centre.lat;
+  const lng = Number(text(formData, "longitude", 30)) || centre.lng;
 
   const basePriceKobo = nairaToKobo(priceNaira);
   if (!basePriceKobo || basePriceKobo <= 0) {
@@ -72,7 +78,8 @@ export async function createMarketplaceListingAction(formData: FormData) {
         profile_id: user.id,
         seller_type: listingType === "produce" ? "farmer" : "agro_dealer",
         business_name: businessName,
-        verification_status: "verified",
+        // New shops start unverified; the database enforces this too (marketplace_sellers_guard).
+        verification_status: "pending",
       })
       .select("id")
       .single();
@@ -111,6 +118,16 @@ export async function createMarketplaceListingAction(formData: FormData) {
   if (listingError || !listing) {
     logger.error("Failed to create marketplace listing", { code: listingError.code });
     return { ok: false, error: listingError?.message || "Failed to create listing." };
+  }
+
+  // Photos (optional): stored under the new listing's id; a failed upload doesn't undo the listing.
+  const photos = photoFiles(formData);
+  if (photos.length) {
+    const up = await uploadPhotos(supabase, user.id, listing.id, photos);
+    if ("urls" in up) {
+      const { error: imgErr } = await supabase.from("marketplace_listings").update({ images: up.urls }).eq("id", listing.id);
+      if (imgErr) await deletePhotos(supabase, user.id, up.urls);
+    }
   }
 
   // 3. Create initial inventory lot for concurrency protection

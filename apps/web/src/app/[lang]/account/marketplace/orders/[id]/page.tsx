@@ -55,6 +55,8 @@ export default async function OrderDetailPage({
         status,
         subtotal_kobo,
         delivery_method,
+        tracking_number,
+        notes,
         dispatched_at,
         delivered_at,
         marketplace_sellers ( business_name )
@@ -205,17 +207,28 @@ export default async function OrderDetailPage({
               </div>
               <h3 className="font-bold text-ink mt-1">Seller: {f.marketplace_sellers?.business_name}</h3>
               <p className="text-xs text-muted">Method: {f.delivery_method} · Amount: {formatNaira(f.subtotal_kobo)}</p>
+              {f.tracking_number && <p className="text-xs text-ink">Tracking / vehicle: <strong>{f.tracking_number}</strong></p>}
+              {f.notes && <p className="mt-1 whitespace-pre-line text-xs text-muted">Seller notes: {f.notes}</p>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <form action={async () => {
-                "use server";
-                await confirmDeliveryAndReleaseEscrowAction(f.id, lang);
-              }}>
-                <Button variant="primary" type="submit" className="text-xs font-bold py-2">
-                  Confirm Delivery &amp; Release Escrow
-                </Button>
-              </form>
+              {/* Release only once the goods are on their way or handed over, and only money that is actually held. */}
+              {["ready_for_pickup", "dispatched", "in_transit", "delivered"].includes(f.status) && ["escrowed", "paid"].includes(order.payment_status) ? (
+                <form action={async () => {
+                  "use server";
+                  await confirmDeliveryAndReleaseEscrowAction(f.id, lang);
+                }}>
+                  <Button variant="primary" type="submit" className="text-xs font-bold py-2">
+                    I received it — release payment
+                  </Button>
+                </form>
+              ) : f.status === "rejected" ? (
+                <span className="text-xs font-semibold text-danger">The seller couldn&apos;t fulfil this part of your order.</span>
+              ) : f.status === "accepted" ? (
+                <span className="text-xs font-semibold text-leaf-800">Received · payment released</span>
+              ) : (
+                <span className="text-xs text-muted">Waiting for the seller to {f.status === "placed" ? "confirm" : "send"} your order.</span>
+              )}
               <Link
                 href={`/${lang}/account/support?dispute_order=${order.id}&fulfilment=${f.id}`}
                 className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-danger hover:bg-red-100 transition"

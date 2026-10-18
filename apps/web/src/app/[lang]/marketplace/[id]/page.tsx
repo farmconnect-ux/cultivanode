@@ -37,6 +37,7 @@ export default async function ListingDetailPage({
       location_lga,
       delivery_options,
       delivery_radius_km,
+      images,
       marketplace_inventory_lots ( physical_quantity, reserved_quantity, allocated_quantity ),
       marketplace_categories ( name ),
       marketplace_sellers ( id, business_name, seller_type, rating_avg, verification_status ),
@@ -82,6 +83,7 @@ export default async function ListingDetailPage({
     location_lga: listing.location_lga,
     delivery_options: listing.delivery_options ?? ["pickup"],
     delivery_radius_km: Number(listing.delivery_radius_km ?? 30),
+    images: listing.images ?? [],
     provenance: provenanceRecord
       ? {
           farm_id: provenanceRecord.farms?.id,

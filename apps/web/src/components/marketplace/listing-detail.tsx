@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { formatNaira } from "@cultivanode/shared";
 import { Badge, Card } from "@/components/ui";
 import { AddToCart } from "@/components/marketplace/add-to-cart";
@@ -29,6 +30,8 @@ export interface FullListingDetails {
   location_lga: string | null;
   delivery_options: string[];
   delivery_radius_km: number;
+  /** Seller photos (public Storage URLs), first is the cover. */
+  images?: string[];
   provenance?: {
     farm_id?: string | null;
     farm_name?: string | null;
@@ -38,6 +41,35 @@ export interface FullListingDetails {
     moisture_pct?: number | null;
     is_organic?: boolean | null;
   } | null;
+}
+
+/** Cover photo with thumbnails to switch between the seller's photos. */
+function Gallery({ images, title }: { images: string[]; title: string }) {
+  const [i, setI] = React.useState(0);
+  if (!images.length) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element -- seller photo from Supabase Storage */}
+      <img src={images[i]} alt={title} className="aspect-[4/3] w-full rounded-xl bg-surface-container-low object-cover shadow-sm" />
+      {images.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {images.map((u, n) => (
+            <button
+              key={u}
+              type="button"
+              onClick={() => setI(n)}
+              aria-label={`Photo ${n + 1}`}
+              aria-pressed={n === i}
+              className={`overflow-hidden rounded-lg ring-2 ${n === i ? "ring-primary" : "ring-transparent hover:ring-outline-variant"}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- thumbnail */}
+              <img src={u} alt="" loading="lazy" className="h-16 w-16 object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ListingDetailView({
@@ -69,6 +101,8 @@ export function ListingDetailView({
             {listing.seller_verified && " · (Identity & Bank Verified)"}
           </p>
         </div>
+
+        <Gallery images={listing.images ?? []} title={listing.title} />
 
         {/* Pricing Card */}
         <Card className="flex flex-wrap items-baseline justify-between gap-4 bg-surface-container-low/50 border-secondary/30">

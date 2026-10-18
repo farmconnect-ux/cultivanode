@@ -51,6 +51,8 @@ const farmer: NavGroup[] = [
     id: "commerce",
     label: "Commerce & finance",
     items: [
+      { href: "/account/marketplace/seller", label: "My Shop: Listings & Orders", icon: "store" },
+      { href: "/account/marketplace/orders", label: "My Purchases", icon: "receipt_long" },
       { href: "/account/harvest", label: "Produce & Harvest Commerce", icon: "storefront" },
       { href: "/account/contracts", label: "Off-take Contracts", icon: "handshake" },
       { href: "/account/finance", label: "Farm Books & Accounting (₦)", icon: "account_balance_wallet" },
@@ -75,6 +77,7 @@ const provider: NavGroup[] = [
       { href: "/account", label: "Operator Dispatch & PoW", icon: "grid_view", exact: true },
       { href: "/account/bookings", label: "Job Requests & Bookings", icon: "assignment" },
       { href: "/account/listings", label: "My Listings", icon: "list_alt" },
+      { href: "/account/marketplace/seller", label: "Marketplace Shop & Orders", icon: "store" },
       { href: "/account/machinery/dispatch", label: "Proof-of-Work Log", icon: "fact_check" },
     ],
   },

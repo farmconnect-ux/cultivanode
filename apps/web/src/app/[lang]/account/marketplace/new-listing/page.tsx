@@ -1,17 +1,22 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Badge, Button, Card, Container } from "@/components/ui";
 import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { createClient } from "@/lib/supabase/server";
 import { createMarketplaceListingAction } from "@/actions/marketplace";
+import { PhotoField } from "@/components/live/action-form";
 
 export default async function NewMarketplaceListingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { lang } = await params;
+  const sp = await searchParams;
+  const formError = typeof sp.error === "string" ? sp.error.slice(0, 200) : null;
   if (!hasLocale(lang)) notFound();
 
   const account = await requireAccount(lang);
@@ -54,8 +59,19 @@ export default async function NewMarketplaceListingPage({
         </p>
       </div>
 
+      {formError && (
+        <p role="alert" className="mb-4 rounded-md border-l-4 border-danger bg-red-50 p-3 text-sm text-danger">{formError}</p>
+      )}
       <Card className="p-6 sm:p-8 bg-white border border-line shadow-sm">
-        <form action={async (formData: FormData) => { "use server"; await createMarketplaceListingAction(formData); }} className="flex flex-col gap-5">
+        <form
+          action={async (formData: FormData) => {
+            "use server";
+            const res = await createMarketplaceListingAction(formData);
+            // Back to the shop, where the new listing (or what went wrong) is shown.
+            redirect(res.ok ? `/${lang}/account/marketplace/seller?listed=1` : `/${lang}/account/marketplace/new-listing?error=${encodeURIComponent(res.error ?? "Couldn't save the listing.")}`);
+          }}
+          className="flex flex-col gap-5"
+        >
           <input type="hidden" name="lang" value={lang} />
 
           {/* Seller Profile Name */}
@@ -237,6 +253,13 @@ export default async function NewMarketplaceListingPage({
               placeholder="State any specific qualities, storage conditions, packaging details, and pickup/delivery options."
               className="mt-1 w-full rounded-md border border-line p-2 text-sm"
             />
+          </div>
+
+          {/* Photos — shrunk in the browser before upload */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="f-photos" className="text-xs font-semibold text-muted">Photos of your produce (up to 4)</label>
+            <PhotoField id="f-photos" f={{ name: "photos", label: "Photos", type: "photos", maxFiles: 4 }} />
+            <span className="text-xs text-muted">Clear, daylight photos sell faster. You can add more later from My Shop.</span>
           </div>
 
           <Button variant="primary" type="submit" className="w-full py-3 text-base font-bold shadow-md">

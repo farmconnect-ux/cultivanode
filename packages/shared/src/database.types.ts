@@ -9292,6 +9292,15 @@ export type Database = {
           unit: string
         }[]
       }
+      seller_update_fulfilment: {
+        Args: {
+          p_fulfilment: string
+          p_note?: string
+          p_status: string
+          p_tracking?: string
+        }
+        Returns: Json
+      }
       send_contact_message: {
         Args: {
           p_email?: string

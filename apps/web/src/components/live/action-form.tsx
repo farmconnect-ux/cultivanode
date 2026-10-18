@@ -12,7 +12,7 @@ export type FormAction = (prev: FormResult, form: FormData) => Promise<FormResul
 export type FieldSpec = {
   name: string;
   label: string;
-  type?: "text" | "number" | "date" | "datetime-local" | "textarea" | "select" | "email" | "tel";
+  type?: "text" | "number" | "date" | "datetime-local" | "textarea" | "select" | "email" | "tel" | "photos";
   options?: { value: string; label: string }[];
   required?: boolean;
   placeholder?: string;
@@ -23,7 +23,90 @@ export type FieldSpec = {
   hint?: string;
   /** Spans both columns of the form grid. */
   wide?: boolean;
+  /** type "photos": most photos per submit (default 4). */
+  maxFiles?: number;
 };
+
+/**
+ * Shrinks a photo in the browser before upload (longest side 1600 px, JPEG), so phone pictures of several MB
+ * upload quickly on mobile data and stay well under the server limit. Files it can't decode are left as they are
+ * (the server checks them).
+ */
+async function shrinkPhoto(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) return file;
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  if (scale === 1 && file.size <= 900_000 && file.type === "image/jpeg") {
+    bmp.close();
+    return file;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.fillStyle = "#fff"; // transparent PNGs get a white background, not black
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  bmp.close();
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.82));
+  if (!blob || blob.size >= file.size) return file;
+  return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg", lastModified: Date.now() });
+}
+
+/** Photo picker with previews. Holds the form (custom validity) while photos are being shrunk. */
+export function PhotoField({ f, id }: { f: FieldSpec; id: string }) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  const [previews, setPreviews] = React.useState<string[]>([]);
+  const [note, setNote] = React.useState<string | null>(null);
+  const max = f.maxFiles ?? 4;
+  React.useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+  const onChange = async () => {
+    const el = ref.current;
+    if (!el?.files) return;
+    let picked = Array.from(el.files);
+    setNote(null);
+    if (picked.length > max) {
+      setNote(`Only the first ${max} photos will be added.`);
+      picked = picked.slice(0, max);
+    }
+    el.setCustomValidity("Photos are still being prepared — one moment.");
+    try {
+      const small = await Promise.all(picked.map(shrinkPhoto));
+      const dt = new DataTransfer();
+      small.forEach((x) => dt.items.add(x));
+      el.files = dt.files;
+      setPreviews(small.map((x) => URL.createObjectURL(x)));
+    } finally {
+      el.setCustomValidity("");
+    }
+  };
+  return (
+    <>
+      <input
+        ref={ref}
+        id={id}
+        name={f.name}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/*"
+        multiple={max > 1}
+        required={f.required}
+        onChange={onChange}
+        className="block w-full text-body-sm text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-primary-container file:px-3 file:py-2 file:font-label-md file:text-on-primary hover:file:bg-primary"
+      />
+      {previews.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {previews.map((u) => (
+            // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+            <img key={u} src={u} alt="" className="h-16 w-16 rounded-lg object-cover ring-1 ring-outline-variant/60" />
+          ))}
+        </div>
+      )}
+      {note && <span className="text-body-sm text-[#92400e]">{note}</span>}
+    </>
+  );
+}
 
 const input =
   "h-10 w-full rounded-lg border border-outline-variant/60 bg-surface-container-low px-3 text-body-md text-on-surface outline-none transition-colors focus:border-primary-container focus:bg-surface-container-lowest";
@@ -31,12 +114,14 @@ const input =
 function Field({ f }: { f: FieldSpec }) {
   const id = `f-${f.name}`;
   return (
-    <label htmlFor={id} className={cn("flex flex-col gap-1", (f.wide || f.type === "textarea") && "sm:col-span-2")}>
+    <label htmlFor={id} className={cn("flex flex-col gap-1", (f.wide || f.type === "textarea" || f.type === "photos") && "sm:col-span-2")}>
       <span className="font-label-md text-label-md text-on-surface-variant">
         {f.label}
         {f.required && <span className="text-critical"> *</span>}
       </span>
-      {f.type === "textarea" ? (
+      {f.type === "photos" ? (
+        <PhotoField f={f} id={id} />
+      ) : f.type === "textarea" ? (
         <textarea id={id} name={f.name} required={f.required} placeholder={f.placeholder} defaultValue={f.defaultValue} rows={3} className={cn(input, "h-auto py-2")} />
       ) : f.type === "select" ? (
         <select id={id} name={f.name} required={f.required} defaultValue={f.defaultValue ?? ""} className={input}>
