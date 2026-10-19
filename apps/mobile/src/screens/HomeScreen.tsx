@@ -7,6 +7,7 @@ import type { Account } from '../lib/account';
 import { signOut } from '../lib/auth';
 import { siteLink } from '../lib/site';
 import { Button, Card, Notice, Screen, Text } from '../ui';
+import type { MobileFarmSummary } from '../lib/data';
 
 type NavDestination = 'marketplace' | 'operations' | 'scouting' | 'sell';
 
@@ -15,6 +16,8 @@ type Props = {
   justJoined: boolean;
   onSignedOut: () => void;
   onNavigate?: (destination: NavDestination, filter?: string) => void;
+  farmData?: MobileFarmSummary | null;
+  pendingSyncCount?: number;
 };
 
 const GREEN = brand.logo.background;
@@ -25,7 +28,14 @@ function initials(name: string | null): string {
   return (parts.length > 1 ? parts[0]![0]! + parts[parts.length - 1]![0]! : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
 }
 
-export function HomeScreen({ account, justJoined, onSignedOut, onNavigate }: Props) {
+export function HomeScreen({
+  account,
+  justJoined,
+  onSignedOut,
+  onNavigate,
+  farmData,
+  pendingSyncCount = 0,
+}: Props) {
   const { t, lang, setLang } = useI18n();
   const [busy, setBusy] = useState<'local' | 'global' | null>(null);
   const [offline, setOffline] = useState(false);
@@ -71,6 +81,15 @@ export function HomeScreen({ account, justJoined, onSignedOut, onNavigate }: Pro
         </View>
       </View>
 
+      {/* Offline Sync Banner */}
+      {pendingSyncCount > 0 && (
+        <View style={styles.syncBanner}>
+          <Text variant="caption" color={colors.leaf[900]} style={styles.syncText}>
+            🔄 {pendingSyncCount} observation(s) queued for offline sync
+          </Text>
+        </View>
+      )}
+
       {justJoined ? <Notice tone="info">{`${fill(a.welcome, { name: p.full_name ?? '' })} ${a.welcomeNew}`}</Notice> : null}
 
       <View style={styles.hero}>
@@ -78,6 +97,44 @@ export function HomeScreen({ account, justJoined, onSignedOut, onNavigate }: Pro
         <Text variant="heading" color="#FAF7F0">{a.tiers[tier]}</Text>
         <Text variant="caption" color="#C9D8CF">{a.tierHint}</Text>
       </View>
+
+      {/* Live Farm & Synoptic Weather Card */}
+      <Card style={styles.farmCard}>
+        <View style={styles.farmHeader}>
+          <View>
+            <Text variant="caption" muted>ACTIVE FARM</Text>
+            <Text variant="heading" color={colors.leaf[900]}>
+              {farmData?.farmName ?? 'CultivaNode Agro Hub'}
+            </Text>
+          </View>
+          <View style={styles.weatherBadge}>
+            <Text variant="caption" color={colors.harvest[700]} style={styles.bold}>
+              ⛅ 29°C · NiMet
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.farmDetailsRow}>
+          <View style={styles.statBox}>
+            <Text variant="caption" muted>Crop Cycle</Text>
+            <Text variant="label" color={colors.leaf[800]}>
+              {farmData?.activeCrop ?? 'Cassava & Maize'}
+            </Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text variant="caption" muted>Plot Name</Text>
+            <Text variant="label" color={colors.leaf[800]}>
+              {farmData?.plotName ?? 'Plot A (Main)'}
+            </Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text variant="caption" muted>Open Tasks</Text>
+            <Text variant="label" color={colors.harvest[700]}>
+              {farmData?.tasks ? farmData.tasks.filter((t) => t.status === 'pending').length : 2} Due
+            </Text>
+          </View>
+        </View>
+      </Card>
 
       <View style={styles.quick}>
         {a.quick.map((label, i) => (
@@ -209,6 +266,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hero: { backgroundColor: GREEN, borderRadius: radius.lg + 8, padding: space[5], gap: space[2] },
+  syncBanner: {
+    backgroundColor: '#E0F2FE',
+    borderColor: '#7DD3FC',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: space[2],
+    paddingHorizontal: space[3],
+  },
+  syncText: {
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  farmCard: {
+    padding: space[4],
+    gap: space[3],
+    backgroundColor: colors.white,
+    borderColor: colors.line,
+  },
+  farmHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  weatherBadge: {
+    backgroundColor: colors.harvest[50],
+    borderColor: colors.harvest[200],
+    borderWidth: 1,
+    paddingHorizontal: space[2],
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  bold: {
+    fontWeight: 'bold',
+  },
+  farmDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: colors.soil[100],
+    paddingTop: space[3],
+    gap: space[2],
+  },
+  statBox: {
+    flex: 1,
+    gap: 2,
+  },
   quick: { flexDirection: 'row', gap: space[2] },
   tile: {
     flex: 1,

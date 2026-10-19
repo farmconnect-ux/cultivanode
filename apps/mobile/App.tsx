@@ -40,6 +40,7 @@ function Root() {
   const [marketFilter, setMarketFilter] = useState<string>('all');
   const [listings, setListings] = useState<MobileListingItem[]>([]);
   const [farmData, setFarmData] = useState<MobileFarmSummary | null>(null);
+  const [pendingSync, setPendingSync] = useState(0);
 
   const userId = session?.user.id;
 
@@ -56,14 +57,16 @@ function Root() {
     if (!userId) return;
     setAccount({ status: 'loading' });
     try {
-      const [acc, mkListings, fData] = await Promise.all([
+      const [acc, mkListings, fData, q] = await Promise.all([
         loadAccount(userId),
         loadMarketplaceListings(),
         loadFarmerWorkspaceData(userId),
+        syncQueue.getQueue(),
       ]);
       setAccount({ status: 'ready', account: acc });
       setListings(mkListings);
       setFarmData(fData);
+      setPendingSync(q.length);
     } catch (error) {
       reportError('account_load_failed', error);
       setAccount({ status: 'error' });
@@ -183,6 +186,8 @@ function Root() {
       account={acct}
       justJoined={justJoined}
       onSignedOut={signedOut}
+      farmData={farmData}
+      pendingSyncCount={pendingSync}
       onNavigate={(dest, filter) => {
         if (filter) setMarketFilter(filter);
         setView(dest);
