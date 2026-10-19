@@ -13,6 +13,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { MarketplaceBrowseScreen, type MobileListingItem } from './src/screens/MarketplaceBrowseScreen';
 import { CropOperationsScreen } from './src/screens/CropOperationsScreen';
 import { CropScoutingScreen } from './src/screens/CropScoutingScreen';
+import { FarmBoundaryWalkScreen } from './src/screens/FarmBoundaryWalkScreen';
 import { MobileNewListingScreen } from './src/screens/MobileNewListingScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { PhoneSignInScreen } from './src/screens/PhoneSignInScreen';
@@ -28,7 +29,7 @@ const syncQueue = new OfflineSyncQueue(sessionStorage as any);
 
 type Guest = 'welcome' | 'signIn' | 'signUp';
 type AccountState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; account: Account | null };
-type ActiveView = 'home' | 'marketplace' | 'operations' | 'scouting' | 'sell';
+type ActiveView = 'home' | 'marketplace' | 'operations' | 'scouting' | 'sell' | 'boundary_walk';
 
 function Root() {
   const { t } = useI18n();
@@ -177,6 +178,19 @@ function Root() {
           setView('marketplace');
         }}
         onBack={() => setView('home')}
+      />
+    );
+  }
+
+  if (view === 'boundary_walk') {
+    return (
+      <FarmBoundaryWalkScreen
+        initialFarmName={farmData?.farmName}
+        onBack={() => setView('home')}
+        onSaved={(_farmId) => {
+          void refreshAccount();
+          setView('home');
+        }}
       />
     );
   }

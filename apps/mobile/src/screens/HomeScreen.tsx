@@ -9,7 +9,7 @@ import { siteLink } from '../lib/site';
 import { Button, Card, Notice, Screen, Text } from '../ui';
 import type { MobileFarmSummary } from '../lib/data';
 
-type NavDestination = 'marketplace' | 'operations' | 'scouting' | 'sell';
+type NavDestination = 'marketplace' | 'operations' | 'scouting' | 'sell' | 'boundary_walk';
 
 type Props = {
   account: Account;
@@ -90,7 +90,24 @@ export function HomeScreen({
         </View>
       )}
 
-      {justJoined ? <Notice tone="info">{`${fill(a.welcome, { name: p.full_name ?? '' })} ${a.welcomeNew}`}</Notice> : null}
+      {justJoined ? (
+        <>
+          <Notice tone="info">{`${fill(a.welcome, { name: p.full_name ?? '' })} ${a.welcomeNew}`}</Notice>
+          <Card style={styles.onboardingActionCard}>
+            <Text variant="label" color="#123D27">
+              🛰️ Recommended Next Step: Map Farm Boundary
+            </Text>
+            <Text variant="caption" color={colors.soil[700]}>
+              Map your farm perimeter using your phone's built-in GPS and compass for precise hectare calculations, tractor bookings, and weather insights.
+            </Text>
+            <Button
+              title="Start GPS Boundary Walk"
+              variant="primary"
+              onPress={() => onNavigate?.('boundary_walk')}
+            />
+          </Card>
+        </>
+      ) : null}
 
       <View style={styles.hero}>
         <Text variant="caption" color="#A9C7B5">{a.tierTitle}</Text>
@@ -134,6 +151,24 @@ export function HomeScreen({
             </Text>
           </View>
         </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.mapBoundaryBtn,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+          ]}
+          onPress={() => onNavigate?.('boundary_walk')}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Measure Farm Boundary with phone GPS and sensors"
+        >
+          <Text variant="label" color="#123D27" style={styles.mapBoundaryText}>
+            🛰️ Measure Farm Boundary (Walk Perimeter)
+          </Text>
+          <Text variant="caption" color={colors.leaf[700]}>
+            High-precision GPS & compass tracking →
+          </Text>
+        </Pressable>
       </Card>
 
       <View style={styles.quick}>
@@ -266,6 +301,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hero: { backgroundColor: GREEN, borderRadius: radius.lg + 8, padding: space[5], gap: space[2] },
+  onboardingActionCard: {
+    backgroundColor: '#FAF7F0',
+    borderColor: '#123D27',
+    borderWidth: 1.5,
+    borderRadius: radius.lg,
+    padding: space[4],
+    gap: space[2],
+  },
   syncBanner: {
     backgroundColor: '#E0F2FE',
     borderColor: '#7DD3FC',
@@ -311,6 +354,20 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     gap: 2,
+  },
+  mapBoundaryBtn: {
+    marginTop: space[3],
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    padding: space[3],
+    alignItems: 'center',
+    gap: 2,
+  },
+  mapBoundaryText: {
+    fontWeight: '700',
+    textAlign: 'center',
   },
   quick: { flexDirection: 'row', gap: space[2] },
   tile: {
