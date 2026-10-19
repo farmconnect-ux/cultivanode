@@ -9,7 +9,13 @@ import { siteLink } from '../lib/site';
 import { Button, Card, Notice, Screen, Text } from '../ui';
 import type { MobileFarmSummary } from '../lib/data';
 
-type NavDestination = 'marketplace' | 'operations' | 'scouting' | 'sell' | 'boundary_walk';
+type NavDestination =
+  | 'marketplace'
+  | 'operations'
+  | 'scouting'
+  | 'sell'
+  | 'boundary_walk'
+  | 'provider_workspace';
 
 type Props = {
   account: Account;
@@ -46,7 +52,7 @@ export function HomeScreen({
   const handleTilePress = (index: number) => {
     if (!onNavigate) return;
     if (index === 0) onNavigate('marketplace', 'labour');
-    else if (index === 1) onNavigate('marketplace', 'machinery');
+    else if (index === 1) onNavigate('provider_workspace');
     else if (index === 2) onNavigate('marketplace', 'input');
     else if (index === 3) onNavigate('operations');
   };
@@ -76,6 +82,17 @@ export function HomeScreen({
             {p.full_name ?? ''}
           </Text>
         </View>
+        <Pressable
+          style={styles.providerPill}
+          onPress={() => onNavigate?.('provider_workspace')}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Switch to Machinery and Provider Workspace"
+        >
+          <Text variant="caption" color="#123D27" style={styles.bold}>
+            🚜 Provider Mode
+          </Text>
+        </Pressable>
         <View style={styles.avatar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Text variant="label" color={GREEN}>{initials(p.full_name)}</Text>
         </View>
@@ -199,14 +216,19 @@ export function HomeScreen({
       {/* Field Actions Hub */}
       <View style={styles.actionHubRow}>
         <Button
-          title="🌾 Field Ops & Tasks"
+          title="🌾 Field Tasks"
           variant="primary"
           onPress={() => onNavigate?.('operations')}
         />
         <Button
-          title="📸 Log Scouting"
+          title="📸 Scouting"
           variant="secondary"
           onPress={() => onNavigate?.('scouting')}
+        />
+        <Button
+          title="🚜 Dispatch Hub"
+          variant="secondary"
+          onPress={() => onNavigate?.('provider_workspace')}
         />
       </View>
 
@@ -299,6 +321,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.harvest[300],
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  providerPill: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+    borderWidth: 1.5,
+    borderRadius: radius.full,
+    paddingHorizontal: space[3],
+    paddingVertical: 4,
   },
   hero: { backgroundColor: GREEN, borderRadius: radius.lg + 8, padding: space[5], gap: space[2] },
   onboardingActionCard: {

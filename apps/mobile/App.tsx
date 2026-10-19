@@ -17,11 +17,14 @@ import { FarmBoundaryWalkScreen } from './src/screens/FarmBoundaryWalkScreen';
 import { MobileNewListingScreen } from './src/screens/MobileNewListingScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { PhoneSignInScreen } from './src/screens/PhoneSignInScreen';
+import { ProviderWorkspaceScreen } from './src/screens/ProviderWorkspaceScreen';
+import { WorkEvidenceScreen } from './src/screens/WorkEvidenceScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { Button, Logo, Notice, Screen } from './src/ui';
 import { OfflineSyncQueue } from './src/lib/offline-sync';
 import { sessionStorage } from './src/lib/supabase';
 import { loadMarketplaceListings, loadFarmerWorkspaceData, type MobileFarmSummary } from './src/lib/data';
+import type { ProviderJob } from './src/lib/provider-dispatch';
 
 initMonitoring();
 
@@ -29,7 +32,15 @@ const syncQueue = new OfflineSyncQueue(sessionStorage as any);
 
 type Guest = 'welcome' | 'signIn' | 'signUp';
 type AccountState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; account: Account | null };
-type ActiveView = 'home' | 'marketplace' | 'operations' | 'scouting' | 'sell' | 'boundary_walk';
+type ActiveView =
+  | 'home'
+  | 'marketplace'
+  | 'operations'
+  | 'scouting'
+  | 'sell'
+  | 'boundary_walk'
+  | 'provider_workspace'
+  | 'work_evidence';
 
 function Root() {
   const { t } = useI18n();
@@ -38,6 +49,7 @@ function Root() {
   const [account, setAccount] = useState<AccountState>({ status: 'loading' });
   const [justJoined, setJustJoined] = useState(false);
   const [view, setView] = useState<ActiveView>('home');
+  const [activeJob, setActiveJob] = useState<ProviderJob | null>(null);
   const [marketFilter, setMarketFilter] = useState<string>('all');
   const [listings, setListings] = useState<MobileListingItem[]>([]);
   const [farmData, setFarmData] = useState<MobileFarmSummary | null>(null);
@@ -190,6 +202,31 @@ function Root() {
         onSaved={(_farmId) => {
           void refreshAccount();
           setView('home');
+        }}
+      />
+    );
+  }
+
+  if (view === 'provider_workspace') {
+    return (
+      <ProviderWorkspaceScreen
+        userId={userId}
+        onSwitchToFarmer={() => setView('home')}
+        onOpenWorkEvidence={(job) => {
+          setActiveJob(job);
+          setView('work_evidence');
+        }}
+      />
+    );
+  }
+
+  if (view === 'work_evidence' && activeJob) {
+    return (
+      <WorkEvidenceScreen
+        job={activeJob}
+        onBack={() => setView('provider_workspace')}
+        onJobUpdated={() => {
+          void refreshAccount();
         }}
       />
     );
