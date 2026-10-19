@@ -10,15 +10,25 @@ import { signOut } from './src/lib/auth';
 import { initMonitoring, reportError, withMonitoring } from './src/lib/monitoring';
 import { supabase, supabaseConfigured } from './src/lib/supabase';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { MarketplaceBrowseScreen, type MobileListingItem } from './src/screens/MarketplaceBrowseScreen';
+import { CropOperationsScreen } from './src/screens/CropOperationsScreen';
+import { CropScoutingScreen } from './src/screens/CropScoutingScreen';
+import { MobileNewListingScreen } from './src/screens/MobileNewListingScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { PhoneSignInScreen } from './src/screens/PhoneSignInScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { Button, Logo, Notice, Screen } from './src/ui';
+import { OfflineSyncQueue } from './src/lib/offline-sync';
+import { sessionStorage } from './src/lib/supabase';
+import { loadMarketplaceListings, loadFarmerWorkspaceData, type MobileFarmSummary } from './src/lib/data';
 
 initMonitoring();
 
+const syncQueue = new OfflineSyncQueue(sessionStorage as any);
+
 type Guest = 'welcome' | 'signIn' | 'signUp';
 type AccountState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; account: Account | null };
+type ActiveView = 'home' | 'marketplace' | 'operations' | 'scouting' | 'sell';
 
 function Root() {
   const { t } = useI18n();
@@ -26,6 +36,11 @@ function Root() {
   const [guest, setGuest] = useState<Guest>('welcome');
   const [account, setAccount] = useState<AccountState>({ status: 'loading' });
   const [justJoined, setJustJoined] = useState(false);
+  const [view, setView] = useState<ActiveView>('home');
+  const [marketFilter, setMarketFilter] = useState<string>('all');
+  const [listings, setListings] = useState<MobileListingItem[]>([]);
+  const [farmData, setFarmData] = useState<MobileFarmSummary | null>(null);
+
   const userId = session?.user.id;
 
   useEffect(() => {
@@ -41,7 +56,14 @@ function Root() {
     if (!userId) return;
     setAccount({ status: 'loading' });
     try {
-      setAccount({ status: 'ready', account: await loadAccount(userId) });
+      const [acc, mkListings, fData] = await Promise.all([
+        loadAccount(userId),
+        loadMarketplaceListings(),
+        loadFarmerWorkspaceData(userId),
+      ]);
+      setAccount({ status: 'ready', account: acc });
+      setListings(mkListings);
+      setFarmData(fData);
     } catch (error) {
       reportError('account_load_failed', error);
       setAccount({ status: 'error' });
@@ -54,6 +76,7 @@ function Root() {
       setAccount({ status: 'loading' });
       setJustJoined(false);
       setGuest('welcome');
+      setView('home');
     }
   }, [userId, refreshAccount]);
 
@@ -101,7 +124,71 @@ function Root() {
     );
   }
 
-  return <HomeScreen account={acct} justJoined={justJoined} onSignedOut={signedOut} />;
+  // Active sub-views router
+  if (view === 'marketplace') {
+    return (
+      <MarketplaceBrowseScreen
+        listings={listings}
+        initialCategory={marketFilter}
+        onSelectListing={(item) => {
+          // Open direct inquiry via Web account or details
+          setView('marketplace');
+        }}
+        onOpenCreateListing={() => setView('sell')}
+        onBack={() => setView('home')}
+      />
+    );
+  }
+
+  if (view === 'operations') {
+    return (
+      <CropOperationsScreen
+        cycleId={farmData?.tasks[0]?.cycleId || 'crop_cycle_live'}
+        cropName={farmData?.activeCrop || 'Crop Cycle'}
+        plotName={farmData?.plotName || 'Primary Plot'}
+        tasks={farmData?.tasks || []}
+        syncQueue={syncQueue}
+        onBack={() => setView('home')}
+      />
+    );
+  }
+
+  if (view === 'scouting') {
+    return (
+      <CropScoutingScreen
+        cycleId={farmData?.tasks[0]?.cycleId || 'crop_cycle_live'}
+        cropName={farmData?.activeCrop || 'Cassava & Maize'}
+        plotName={farmData?.plotName || 'Main Plot'}
+        syncQueue={syncQueue}
+        onBack={() => setView('home')}
+      />
+    );
+  }
+
+  if (view === 'sell') {
+    return (
+      <MobileNewListingScreen
+        syncQueue={syncQueue}
+        onListingCreated={() => {
+          void refreshAccount();
+          setView('marketplace');
+        }}
+        onBack={() => setView('home')}
+      />
+    );
+  }
+
+  return (
+    <HomeScreen
+      account={acct}
+      justJoined={justJoined}
+      onSignedOut={signedOut}
+      onNavigate={(dest, filter) => {
+        if (filter) setMarketFilter(filter);
+        setView(dest);
+      }}
+    />
+  );
 }
 
 function Splash({ label }: { label: string }) {

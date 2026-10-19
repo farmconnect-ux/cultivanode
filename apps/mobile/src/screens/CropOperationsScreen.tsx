@@ -1,6 +1,6 @@
 import { colors, radius, space, formatNaira } from '@cultivanode/shared';
 import { useState } from 'react';
-import { Alert, FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Button, Card, Notice, Screen, Text } from '../ui';
 import { OfflineSyncQueue } from '../lib/offline-sync';
 
@@ -55,6 +55,11 @@ export function CropOperationsScreen({
   return (
     <Screen>
       <View style={styles.header}>
+        <View style={styles.topRow}>
+          <Pressable onPress={onBack} hitSlop={12}>
+            <Text variant="caption" color={colors.leaf[700]}>← Back</Text>
+          </Pressable>
+        </View>
         <Text variant="caption" muted>
           Field Operations • {cropName} ({plotName})
         </Text>
@@ -108,6 +113,9 @@ export function CropOperationsScreen({
 const styles = StyleSheet.create({
   header: {
     marginBottom: space[4],
+  },
+  topRow: {
+    marginBottom: space[2],
   },
   list: {
     gap: space[3],

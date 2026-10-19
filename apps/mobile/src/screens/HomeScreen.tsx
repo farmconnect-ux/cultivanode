@@ -8,7 +8,14 @@ import { signOut } from '../lib/auth';
 import { siteLink } from '../lib/site';
 import { Button, Card, Notice, Screen, Text } from '../ui';
 
-type Props = { account: Account; justJoined: boolean; onSignedOut: () => void };
+type NavDestination = 'marketplace' | 'operations' | 'scouting' | 'sell';
+
+type Props = {
+  account: Account;
+  justJoined: boolean;
+  onSignedOut: () => void;
+  onNavigate?: (destination: NavDestination, filter?: string) => void;
+};
 
 const GREEN = brand.logo.background;
 const QUICK_ICONS = ['👷🏾', '🚜', '🧪', '📒'];
@@ -18,13 +25,21 @@ function initials(name: string | null): string {
   return (parts.length > 1 ? parts[0]![0]! + parts[parts.length - 1]![0]! : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
 }
 
-export function HomeScreen({ account, justJoined, onSignedOut }: Props) {
+export function HomeScreen({ account, justJoined, onSignedOut, onNavigate }: Props) {
   const { t, lang, setLang } = useI18n();
   const [busy, setBusy] = useState<'local' | 'global' | null>(null);
   const [offline, setOffline] = useState(false);
   const a = t.account;
   const p = account.profile;
   const tier = Math.min(Math.max(p.verification_tier, 0), a.tiers.length - 1);
+
+  const handleTilePress = (index: number) => {
+    if (!onNavigate) return;
+    if (index === 0) onNavigate('marketplace', 'labour');
+    else if (index === 1) onNavigate('marketplace', 'machinery');
+    else if (index === 2) onNavigate('marketplace', 'input');
+    else if (index === 3) onNavigate('operations');
+  };
 
   async function doSignOut(scope: 'local' | 'global') {
     setBusy(scope);
@@ -66,14 +81,42 @@ export function HomeScreen({ account, justJoined, onSignedOut }: Props) {
 
       <View style={styles.quick}>
         {a.quick.map((label, i) => (
-          <View key={label} style={styles.tile} accessible accessibilityLabel={`${label}. ${a.comingSoon}`}>
+          <Pressable
+            key={label}
+            onPress={() => handleTilePress(i)}
+            style={({ pressed }) => [
+              styles.tile,
+              pressed && { opacity: 0.8, backgroundColor: colors.harvest[50] },
+            ]}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`${label}. Tap to open.`}
+          >
             <Text style={styles.icon}>{QUICK_ICONS[i]}</Text>
             <Text variant="caption" style={styles.center}>{label}</Text>
-            <Text variant="caption" muted style={styles.soon}>{a.comingSoon}</Text>
-          </View>
+            <View style={styles.liveBadge}>
+              <Text variant="caption" color={colors.leaf[700]} style={styles.liveBadgeText}>
+                {a.comingSoon}
+              </Text>
+            </View>
+          </Pressable>
         ))}
       </View>
       <Text variant="caption" muted>{a.comingSoonTools}</Text>
+
+      {/* Field Actions Hub */}
+      <View style={styles.actionHubRow}>
+        <Button
+          title="🌾 Field Ops & Tasks"
+          variant="primary"
+          onPress={() => onNavigate?.('operations')}
+        />
+        <Button
+          title="📸 Log Scouting"
+          variant="secondary"
+          onPress={() => onNavigate?.('scouting')}
+        />
+      </View>
 
       <Card>
         <Text variant="label">{a.yourRoles}</Text>
@@ -181,6 +224,22 @@ const styles = StyleSheet.create({
   icon: { fontSize: 24, lineHeight: 30 },
   center: { textAlign: 'center' },
   soon: { fontSize: 11, textAlign: 'center' },
+  liveBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+    marginTop: 2,
+  },
+  liveBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  actionHubRow: {
+    flexDirection: 'row',
+    gap: space[3],
+    marginVertical: space[1],
+  },
   row: {
     minHeight: 44,
     flexDirection: 'row',

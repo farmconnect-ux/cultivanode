@@ -21,6 +21,7 @@ interface Props {
   onSelectListing: (listing: MobileListingItem) => void;
   onOpenCreateListing: () => void;
   onBack: () => void;
+  initialCategory?: string;
 }
 
 export function MarketplaceBrowseScreen({
@@ -28,9 +29,10 @@ export function MarketplaceBrowseScreen({
   onSelectListing,
   onOpenCreateListing,
   onBack,
+  initialCategory = 'all',
 }: Props) {
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
 
   const categories = [
     { key: 'all', label: 'All Items' },

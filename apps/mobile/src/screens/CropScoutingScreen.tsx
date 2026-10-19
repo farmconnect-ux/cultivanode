@@ -1,6 +1,6 @@
 import { colors, radius, space } from '@cultivanode/shared';
 import { useState } from 'react';
-import { Alert, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Button, Card, Notice, Screen, Text } from '../ui';
 import { OfflineSyncQueue } from '../lib/offline-sync';
 
@@ -47,6 +47,11 @@ export function CropScoutingScreen({ cycleId, cropName, plotName, onBack, syncQu
   return (
     <Screen>
       <View style={styles.header}>
+        <View style={styles.topRow}>
+          <Pressable onPress={onBack} hitSlop={12}>
+            <Text variant="caption" color={colors.leaf[700]}>← Back</Text>
+          </Pressable>
+        </View>
         <Text variant="caption" muted>
           Field Scouting • {cropName} ({plotName})
         </Text>
@@ -115,6 +120,9 @@ export function CropScoutingScreen({ cycleId, cropName, plotName, onBack, syncQu
 const styles = StyleSheet.create({
   header: {
     marginBottom: space[4],
+  },
+  topRow: {
+    marginBottom: space[2],
   },
   card: {
     padding: space[4],
