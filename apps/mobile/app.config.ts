@@ -35,6 +35,7 @@ const config: ExpoConfig = {
       : undefined,
   },
   plugins: [
+    'expo-router',
     // Keeps keystore entries out of Android cloud backups (a restored phone signs in again).
     ['expo-secure-store', { configureAndroidBackup: true, faceIDPermission: false }],
     // Source-map upload only when a Sentry project is configured for the build (EAS secrets).

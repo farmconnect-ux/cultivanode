@@ -15,7 +15,10 @@ type NavDestination =
   | 'scouting'
   | 'sell'
   | 'boundary_walk'
-  | 'provider_workspace';
+  | 'provider_workspace'
+  | 'buy_inputs'
+  | 'farm_books'
+  | 'ai_assistant';
 
 type Props = {
   account: Account;
@@ -53,8 +56,8 @@ export function HomeScreen({
     if (!onNavigate) return;
     if (index === 0) onNavigate('marketplace', 'labour');
     else if (index === 1) onNavigate('provider_workspace');
-    else if (index === 2) onNavigate('marketplace', 'input');
-    else if (index === 3) onNavigate('operations');
+    else if (index === 2) onNavigate('buy_inputs');
+    else if (index === 3) onNavigate('farm_books');
   };
 
   async function doSignOut(scope: 'local' | 'global') {
@@ -226,9 +229,9 @@ export function HomeScreen({
           onPress={() => onNavigate?.('scouting')}
         />
         <Button
-          title="🚜 Dispatch Hub"
-          variant="secondary"
-          onPress={() => onNavigate?.('provider_workspace')}
+          title="🤖 Ask AI"
+          variant="gold"
+          onPress={() => onNavigate?.('ai_assistant')}
         />
       </View>
 
@@ -241,35 +244,6 @@ export function HomeScreen({
         {account.pending.map((r) => (
           <RoleRow key={`p:${r.role}:${r.provider_type ?? ''}`} name={roleName(t, r)} status={a.pending} />
         ))}
-      </Card>
-
-      <Card>
-        <Text muted>{a.moreOnWeb}</Text>
-        <Button
-          title={a.openWebsite}
-          variant="secondary"
-          onPress={() => Linking.openURL(siteLink(lang, 'account'))}
-          accessibilityRole="link"
-        />
-      </Card>
-
-      <Card>
-        <Text variant="label">{a.settings}</Text>
-        {p.phone ? <Row label={a.phone} value={displayPhone(p.phone)} /> : null}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setLang(lang === 'en' ? 'yo' : 'en')}
-          style={styles.row}
-        >
-          <Text>{a.appLanguage}</Text>
-          <Text variant="label" color={colors.leaf[700]}>
-            {t.common.languageName} → {t.common.switchLanguage}
-          </Text>
-        </Pressable>
-        {offline ? <Notice>{t.common.offline}</Notice> : null}
-        <Button title={a.signOut} variant="secondary" onPress={() => doSignOut('local')} loading={busy === 'local'} />
-        <Button title={a.signOutAll} variant="secondary" onPress={confirmSignOutAll} loading={busy === 'global'} />
-        <Text variant="caption" muted>{a.signOutAllHint}</Text>
       </Card>
     </Screen>
   );

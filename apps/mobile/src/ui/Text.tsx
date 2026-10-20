@@ -4,11 +4,11 @@ import { Text as RNText, type TextProps } from 'react-native';
 type Variant = 'title' | 'heading' | 'body' | 'label' | 'caption';
 
 const styles = {
-  title: { fontSize: fontSize['3xl'], fontWeight: fontWeight.extrabold, lineHeight: fontSize['3xl'] * lineHeight.tight },
-  heading: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, lineHeight: fontSize.xl * lineHeight.snug },
-  body: { fontSize: fontSize.base, fontWeight: fontWeight.regular, lineHeight: fontSize.base * lineHeight.normal },
-  label: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, lineHeight: fontSize.base * lineHeight.snug },
-  caption: { fontSize: fontSize.sm, fontWeight: fontWeight.regular, lineHeight: fontSize.sm * lineHeight.normal },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: fontSize['3xl'], lineHeight: fontSize['3xl'] * lineHeight.tight },
+  heading: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: fontSize.xl, lineHeight: fontSize.xl * lineHeight.snug },
+  body: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: fontSize.base, lineHeight: fontSize.base * lineHeight.normal },
+  label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: fontSize.base, lineHeight: fontSize.base * lineHeight.snug },
+  caption: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: fontSize.sm, lineHeight: fontSize.sm * lineHeight.normal },
 } as const;
 
 type Props = TextProps & { variant?: Variant; muted?: boolean; color?: string };

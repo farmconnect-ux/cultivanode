@@ -49,6 +49,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: radius.md,
     paddingHorizontal: space[4],
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: fontSize.base,
     color: colors.ink,
     backgroundColor: colors.white,

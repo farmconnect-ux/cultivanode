@@ -27,6 +27,6 @@ export function Screen({ children, footer, background = colors.cream }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: space[6], paddingBottom: space[8], gap: space[5] },
-  footer: { paddingHorizontal: space[6], paddingTop: space[3], gap: space[3] },
+  content: { paddingHorizontal: space[6], paddingBottom: space[8], gap: space[6] },
+  footer: { paddingHorizontal: space[6], paddingTop: space[4], gap: space[4] },
 });

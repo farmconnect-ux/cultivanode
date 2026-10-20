@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface MobileListingItem {
   id: string;
@@ -36,6 +37,24 @@ export interface MobileFarmSummary {
   tasks: MobileFarmTask[];
 }
 
+export interface MobileInventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  status: 'ok' | 'low';
+}
+
+export interface MobileTransaction {
+  id: string;
+  date: string;
+  type: 'income' | 'expense';
+  category: string;
+  description: string;
+  amountKobo: number;
+}
+
 /**
  * Loads real marketplace listings from public.marketplace_listings
  */
@@ -56,9 +75,10 @@ export async function loadMarketplaceListings(categoryFilter?: string): Promise<
     }
 
     const { data, error } = await query;
-    if (error || !data) return [];
 
-    return data.map((row: any) => {
+    if (error || !data) throw error || new Error('No data');
+
+    const result = data.map((row: any) => {
       const seller = row.marketplace_sellers;
       const state = row.location_state || 'Nigeria';
       const lga = row.location_lga ? `, ${row.location_lga}` : '';
@@ -76,7 +96,12 @@ export async function loadMarketplaceListings(categoryFilter?: string): Promise<
         imageUrl: Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null,
       };
     });
+
+    await AsyncStorage.setItem(`cache_listings_${categoryFilter || 'all'}`, JSON.stringify(result));
+    return result;
   } catch {
+    const cached = await AsyncStorage.getItem(`cache_listings_${categoryFilter || 'all'}`);
+    if (cached) return JSON.parse(cached);
     return [];
   }
 }
@@ -165,7 +190,7 @@ export async function loadFarmerWorkspaceData(userId: string): Promise<MobileFar
       ];
     }
 
-    return {
+    const summary = {
       farmId: farm.id,
       farmName: farm.name || 'CultivaNode Farm',
       cropCyclesCount: cycles ? cycles.length : 1,
@@ -173,7 +198,75 @@ export async function loadFarmerWorkspaceData(userId: string): Promise<MobileFar
       plotName,
       tasks,
     };
+
+    await AsyncStorage.setItem(`cache_farm_summary_${userId}`, JSON.stringify(summary));
+    return summary;
   } catch {
+    const cached = await AsyncStorage.getItem(`cache_farm_summary_${userId}`);
+    if (cached) return JSON.parse(cached);
     return null;
+  }
+}
+
+/**
+ * Loads farm inventory items.
+ */
+export async function loadInventory(farmId: string): Promise<MobileInventoryItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('farm_inventory')
+      .select('id, item_name, category, quantity, unit, reorder_threshold')
+      .eq('farm_id', farmId)
+      .order('item_name', { ascending: true });
+
+    if (error || !data) throw error || new Error('No data');
+
+    const result: MobileInventoryItem[] = data.map((item: any) => ({
+      id: item.id,
+      name: item.item_name,
+      category: item.category,
+      quantity: Number(item.quantity) || 0,
+      unit: item.unit,
+      status: (item.reorder_threshold !== null && Number(item.quantity) <= Number(item.reorder_threshold)) ? 'low' : 'ok',
+    }));
+
+    await AsyncStorage.setItem(`cache_inventory_${farmId}`, JSON.stringify(result));
+    return result;
+  } catch {
+    const cached = await AsyncStorage.getItem(`cache_inventory_${farmId}`);
+    if (cached) return JSON.parse(cached);
+    return [];
+  }
+}
+
+/**
+ * Loads recent financial transactions.
+ */
+export async function loadTransactions(farmId: string): Promise<MobileTransaction[]> {
+  try {
+    const { data, error } = await supabase
+      .from('farm_financial_transactions')
+      .select('id, transaction_date, type, category, description, amount_kobo')
+      .eq('farm_id', farmId)
+      .order('transaction_date', { ascending: false })
+      .limit(50);
+
+    if (error || !data) throw error || new Error('No data');
+
+    const result: MobileTransaction[] = data.map((t: any) => ({
+      id: t.id,
+      date: t.transaction_date ? new Date(t.transaction_date).toLocaleDateString() : '',
+      type: t.type === 'income' ? 'income' : 'expense',
+      category: t.category,
+      description: t.description || 'Unknown Transaction',
+      amountKobo: Number(t.amount_kobo) || 0,
+    }));
+
+    await AsyncStorage.setItem(`cache_txs_${farmId}`, JSON.stringify(result));
+    return result;
+  } catch {
+    const cached = await AsyncStorage.getItem(`cache_txs_${farmId}`);
+    if (cached) return JSON.parse(cached);
+    return [];
   }
 }
