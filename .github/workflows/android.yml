@@ -26,6 +26,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://vqbtnftnxyfaembwgfrk.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_hUmIPBSPHChcDJIfkOYc7w__-l-QfQD
       ANDROID_VERSION_CODE: ${{ github.run_number }}
+      RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -127,7 +128,6 @@ jobs:
         if: ${{ env.RELEASES_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
-          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
           TAG="v0.1.0-build.${{ github.run_number }}"
           echo "Publishing release $TAG to farmconnect-ux/cultivanode-android..."
