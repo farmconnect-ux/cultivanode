@@ -10,7 +10,7 @@ export default function HomeRoute() {
       onGo={(target) => {
         switch (target.to) {
           case 'hire':
-            return router.navigate({ pathname: '/(tabs)/hire', params: { kind: target.kind } });
+            return router.push({ pathname: '/hire/new', params: { mode: target.kind } });
           case 'sell':
             return router.push('/marketplace/sell');
           case 'buy':

@@ -1,12 +1,16 @@
-import { useI18n } from '../../i18n';
-import { Empty, Screen } from '../../ui';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { HireScreen } from '../../screens/HireScreen';
 
-// Replaced by the hire flow in the next stage.
 export default function HireRoute() {
-  const { t } = useI18n();
+  const router = useRouter();
+  const { toast } = useLocalSearchParams<{ toast?: string }>();
   return (
-    <Screen inTabs>
-      <Empty icon="truck" title={t.home.hireTractor} body={t.home.soon} />
-    </Screen>
+    <HireScreen
+      toast={toast}
+      onStart={(mode) => router.push({ pathname: '/hire/new', params: { mode } })}
+      onOpen={(id) => router.push({ pathname: '/hire/[id]', params: { id } })}
+      onProviderTools={() => router.push('/(provider)/inbox')}
+      onAddFarm={() => router.push('/setup/farm')}
+    />
   );
 }
