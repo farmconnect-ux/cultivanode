@@ -50,7 +50,6 @@ jobs:
           npx expo prebuild -p android --no-install
 
       - name: Configure release signing keystore
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -58,27 +57,38 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         working-directory: apps/mobile/android
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > app/release.keystore
 
-          # Patch app/build.gradle to attach release signing config
-          node -e '
-            const fs = require("fs");
-            const file = "app/build.gradle";
-            let content = fs.readFileSync(file, "utf8");
+            # Test keystore access with keytool before running long Gradle build
+            CLEAN_STORE_PASS=$(echo -n "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')
+            CLEAN_KEY_ALIAS=$(echo -n "$ANDROID_KEY_ALIAS" | tr -d '\r\n')
+            echo "Verifying keystore credentials with keytool..."
+            keytool -list -v -keystore app/release.keystore -storepass "$CLEAN_STORE_PASS" -alias "$CLEAN_KEY_ALIAS" || {
+              echo "::error::Keystore verification failed! Please check that ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS match the keystore."
+              exit 1
+            }
 
-            const signingBlock = `
-                    release {
-                        storeFile file("release.keystore")
-                        storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                        keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                        keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-                    }
-            `;
+            # Patch app/build.gradle to configure release signing via project properties
+            node -e '
+              const fs = require("fs");
+              const file = "app/build.gradle";
+              let content = fs.readFileSync(file, "utf8");
 
-            content = content.replace("signingConfigs {", "signingConfigs {" + signingBlock);
-            content = content.replace(/signingConfig signingConfigs\.debug/g, "signingConfig signingConfigs.release");
-            fs.writeFileSync(file, content);
-          '
+              const signingBlock = `
+                      release {
+                          storeFile file("release.keystore")
+                          storePassword project.findProperty("MY_STORE_PASS") ?: ""
+                          keyAlias project.findProperty("MY_KEY_ALIAS") ?: ""
+                          keyPassword project.findProperty("MY_KEY_PASS") ?: ""
+                      }
+              `;
+
+              content = content.replace("signingConfigs {", "signingConfigs {" + signingBlock);
+              content = content.replace(/signingConfig signingConfigs\.debug/g, "signingConfig signingConfigs.release");
+              fs.writeFileSync(file, content);
+            '
+          fi
 
       - name: Build release APK
         working-directory: apps/mobile/android
@@ -86,8 +96,16 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        # Real phones only (arm64-v8a, armeabi-v7a) to keep the APK small and the build fast.
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+        run: |
+          CLEAN_STORE_PASS=$(echo -n "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')
+          CLEAN_KEY_ALIAS=$(echo -n "$ANDROID_KEY_ALIAS" | tr -d '\r\n')
+          CLEAN_KEY_PASS=$(echo -n "$ANDROID_KEY_PASSWORD" | tr -d '\r\n')
+
+          ./gradlew assembleRelease --no-daemon \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
+            -PMY_STORE_PASS="$CLEAN_STORE_PASS" \
+            -PMY_KEY_ALIAS="$CLEAN_KEY_ALIAS" \
+            -PMY_KEY_PASS="$CLEAN_KEY_PASS"
 
       - name: Package and verify the APK
         run: |
