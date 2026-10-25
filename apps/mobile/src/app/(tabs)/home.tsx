@@ -12,7 +12,7 @@ export default function HomeRoute() {
           case 'hire':
             return router.push({ pathname: '/hire/new', params: { mode: target.kind } });
           case 'sell':
-            return router.push('/marketplace/sell');
+            return router.push('/market/sell');
           case 'buy':
             return router.navigate({ pathname: '/(tabs)/market', params: { type: 'input' } });
           case 'market':

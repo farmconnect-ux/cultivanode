@@ -137,7 +137,8 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
       delivery_fee_kobo: delivery,
       platform_fee_kobo: 0,
       total_amount_kobo: total,
-      status: escrow ? "placed" : "payment_pending",
+      // "placed" for both modes: reserve_inventory_for_order() only accepts placed orders and moves them to payment_pending.
+      status: "placed",
       payment_status: "pending",
       delivery_address: { line: address, state, lga, phone },
       buyer_notes: input.notes ? String(input.notes).slice(0, 1000) : null,
