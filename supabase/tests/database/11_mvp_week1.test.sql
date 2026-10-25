@@ -33,9 +33,9 @@ insert into public.user_roles (profile_id, role) values
 update public.profiles set verification_tier = 2 where id = 'b1000000-0000-0000-0000-000000000005';
 insert into public.farms (id, owner_id, name, location, state) values
   ('b1000000-0000-0000-0000-0000000000f1', 'b1000000-0000-0000-0000-000000000004', 'Kemi maize', 'SRID=4326;POINT(3.8967 7.3775)', 'Oyo');
-insert into auth.sessions (user_id) values
-  ('b1000000-0000-0000-0000-000000000005'), ('b1000000-0000-0000-0000-000000000005'),
-  ('b1000000-0000-0000-0000-000000000004');
+insert into auth.sessions (id, user_id) values
+  (gen_random_uuid(), 'b1000000-0000-0000-0000-000000000005'), (gen_random_uuid(), 'b1000000-0000-0000-0000-000000000005'),
+  (gen_random_uuid(), 'b1000000-0000-0000-0000-000000000004');
 
 ---------------------------------------------------------------- 1. one claimant per ID
 select is((public.record_identity_verification('b1000000-0000-0000-0000-000000000004', 'nin', true, 'mock', 'r1', '*******1234',
