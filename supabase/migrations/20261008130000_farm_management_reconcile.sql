@@ -823,6 +823,18 @@ create policy farm_standards_manage on public.farm_agronomic_standards
   with check ((select public.has_permission('standards.publish')));
 
 -- Tables with their own farm_id.
+-- Public wrappers for the farm access checks (the real ones live in the private schema), so policies
+-- can call them. Production already has these; this makes a fresh database match it.
+create or replace function public.can_view_farm(p_farm uuid)
+returns boolean language sql stable security definer set search_path = ''
+as $$ select private.can_view_farm(p_farm); $$;
+
+create or replace function public.can_edit_farm(p_farm uuid)
+returns boolean language sql stable security definer set search_path = ''
+as $$ select private.can_edit_farm(p_farm); $$;
+
+grant execute on function public.can_view_farm(uuid), public.can_edit_farm(uuid) to authenticated;
+
 do $$
 declare
   t text;
