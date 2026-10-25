@@ -50,6 +50,16 @@ grant execute on function public.feature_on(text) to anon, authenticated;
 -- 2. Direct payment
 ------------------------------------------------------------------------------------------------
 
+-- New columns first: the payout-account policy below reads payment_mode.
+alter table public.marketplace_orders
+  add column if not exists payment_mode text not null default 'escrow' check (payment_mode in ('escrow', 'direct'));
+
+alter table public.marketplace_fulfilments
+  add column if not exists direct_payment_status text check (direct_payment_status in ('awaiting_payment', 'buyer_reported', 'confirmed')),
+  add column if not exists buyer_payment_reference text check (buyer_payment_reference is null or char_length(buyer_payment_reference) <= 120),
+  add column if not exists buyer_reported_paid_at timestamptz,
+  add column if not exists seller_confirmed_paid_at timestamptz;
+
 -- The account a seller wants buyers to pay into. Shown only to buyers who have a direct-payment
 -- order with that seller (and to staff). Separate from bank_accounts, which keeps only the last four
 -- digits for verified payouts.
@@ -82,15 +92,6 @@ create policy "payout_accounts: buyers of direct orders read" on public.marketpl
   ) or public.is_admin());
 
 grant select, insert, update, delete on public.marketplace_seller_payout_accounts to authenticated;
-
-alter table public.marketplace_orders
-  add column if not exists payment_mode text not null default 'escrow' check (payment_mode in ('escrow', 'direct'));
-
-alter table public.marketplace_fulfilments
-  add column if not exists direct_payment_status text check (direct_payment_status in ('awaiting_payment', 'buyer_reported', 'confirmed')),
-  add column if not exists buyer_payment_reference text check (buyer_payment_reference is null or char_length(buyer_payment_reference) <= 120),
-  add column if not exists buyer_reported_paid_at timestamptz,
-  add column if not exists seller_confirmed_paid_at timestamptz;
 
 -- Which of these sellers can take a direct payment (have a payout account)? Used at checkout.
 create or replace function public.sellers_with_payout_account(p_seller_ids uuid[])
@@ -260,3 +261,9 @@ begin
 end $$;
 revoke execute on function public.seller_update_fulfilment(uuid, text, text, text) from public, anon;
 grant execute on function public.seller_update_fulfilment(uuid, text, text, text) to authenticated;
+
+-- Signed-in people only (the functions check the caller, but nobody signed out needs them).
+revoke execute on function public.sellers_with_payout_account(uuid[]) from public, anon;
+revoke execute on function public.buyer_report_direct_payment(uuid, text) from public, anon;
+revoke execute on function public.seller_confirm_direct_payment(uuid) from public, anon;
+revoke execute on function public.buyer_confirm_direct_delivery(uuid) from public, anon;

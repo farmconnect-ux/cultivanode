@@ -8,7 +8,7 @@
 --   * marketplace lots of demo sellers (marketplace_sellers.is_demo, or a profile with is_demo,
 --     or one of the seed accounts de000000-0000-4000-8000-…)
 --   * machinery/service listings (public.listings) owned by demo profiles or by an account
---     whose name is "TEST" (the test tractor shown as "By TEST, Oyo")
+--     whose name is "TEST", starts with "TEST " or says "delete before launch" (the test tractor shown as "By TEST, Oyo")
 -- What it cleans:
 --   * the internal "[front_end_meta: …]" text that leaked into crop-cycle notes
 -- Nothing is deleted. To remove demo accounts for good later, use scripts/purge_demo_data.sql.
@@ -38,7 +38,9 @@ begin
   from public.profiles
   where is_demo
      or id::text like 'de000000-0000-4000-8000-%'
-     or upper(trim(coalesce(full_name, ''))) = 'TEST';
+     or upper(trim(coalesce(full_name, ''))) = 'TEST'
+     or full_name ilike 'TEST %'
+     or full_name ilike '%delete before launch%';
 
   -- Marketplace lots of demo sellers.
   with hit as (
