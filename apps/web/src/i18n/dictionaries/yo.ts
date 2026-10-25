@@ -195,7 +195,11 @@ const yo: Dictionary = {
         q: `Kí ni ${brand.name}?`,
         a: `${brand.name} jẹ́ áàpù fóònù àti ojú-òpó wẹ́ẹ̀bù fún ìṣàkóso oko àti gbígba òṣìṣẹ́. O lè ṣètò ọ̀gbìn rẹ, kọ iṣẹ́ oko rẹ sílẹ̀, tọpinpin ìṣúra àti owó rẹ, kí o sì gba tírákítọ̀ tàbí òṣìṣẹ́ oko nítòsí rẹ.`,
       },
-      {
+            {
+        q: "Báwo ni mo ṣe lè gba àpù alágbèéká Android (APK)?",
+        a: "Ẹ lè gba àpù CultivaNode tààrà láti ojú-ìwé ìgbàsílẹ̀ wa (/yo/download). Ẹ tẹ 'Gba Àpù Náà', tí foonu bá bi yín léèrè ẹ tẹ 'Download anyway', ẹ ṣí i kí ẹ sì fi sí foonu (Install). Ẹ lè lò ó láìsí intanẹẹti lórí oko.",
+      },
+{
         q: "Ta ló lè lò ó?",
         a: "Àwọn àgbẹ̀ ohun ọ̀gbìn, àwọn onímọ́tò ẹ̀rọ oko, àwọn òṣìṣẹ́ oko, àwọn awakọ̀ ẹ̀rọ, àwọn afín-oògùn, àwọn mẹkáníìkì àti àwọn òṣìṣẹ́ ìgbaniníyànjú àgbẹ̀. Àwọn tí ń sin ẹran lè forúkọsílẹ̀ báyìí; irinṣẹ́ fún ẹran ọ̀sìn yóò dé lẹ́yìn náà.",
       },

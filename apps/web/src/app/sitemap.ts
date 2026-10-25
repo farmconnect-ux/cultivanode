@@ -4,7 +4,7 @@ import { htmlLang, locales } from "@/i18n/config";
 
 export const publicPaths = [
   "", "/how-it-works", "/farmers", "/machinery", "/service-providers", "/crops", "/marketplace", "/waitlist",
-  "/about", "/partners", "/faq", "/contact", "/privacy", "/terms",
+  "/about", "/partners", "/faq", "/contact", "/privacy", "/terms", "/download",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

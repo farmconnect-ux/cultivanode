@@ -24,6 +24,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
     {
       title: y("Pilot & network", "Ìdánwò àkọ́kọ́ àti nẹ́tíwọ̀ọ̀kì"),
       links: [
+        { href: `/${lang}/download`, label: y("Download Android APK", "Gba Àpù Android (APK)") },
         { href: `/${lang}/waitlist`, label: y("Join the South-West pilot", "Darapọ̀ mọ́ ìdánwò Gúúsù Ìwọ̀-Oòrùn") },
         { href: `/${lang}/how-it-works`, label: nav.how },
         { href: `/${lang}/resources`, label: y("Agronomy library", "Ilé ìkàwé ìmọ̀ oko") },

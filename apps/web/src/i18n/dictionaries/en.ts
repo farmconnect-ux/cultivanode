@@ -194,7 +194,10 @@ const en = {
         a: `${brand.name} is a mobile app and website for farm management and hiring. You can plan your crops, record your farm work, track your store and money, and hire tractors or farm hands near you.`,
       },
       {
-        q: "Who can use it?",
+              {
+        q: "How do I download and install the Android app?",
+        a: "You can download the official Android APK directly from our Download page (/en/download). Tap Download APK, tap Download anyway if prompted by Chrome, open the file, and tap Install. Sign in with your phone number to use offline field sync and AI crop diagnosis.",
+      },q: "Who can use it?",
         a: "Crop farmers, machinery owners, farm hands, machine operators, sprayers, mechanics and extension agents. Animal farmers can register now; livestock tools come in a later phase.",
       },
       {

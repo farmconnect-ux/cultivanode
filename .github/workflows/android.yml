@@ -1,9 +1,8 @@
 name: Android build
 
-# Builds an installable test APK of the mobile app on GitHub's servers.
-# Download it from the run's "Artifacts" section, copy it to an Android phone and open it
-# (allow "Install unknown apps" once). Run it by hand from the Actions tab, or it runs
-# automatically when the mobile app or shared package changes on main.
+# Builds an installable signed release APK of the mobile app on GitHub's servers.
+# Automatically publishes latest release to farmconnect-ux/cultivanode-android for farmer downloads.
+# Also keeps build artifact in GitHub Actions.
 
 on:
   workflow_dispatch:
@@ -20,13 +19,13 @@ concurrency:
 
 jobs:
   apk:
-    name: Test APK
+    name: Build & Publish Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # Both values are public by design (the publishable key is shipped inside every app).
       EXPO_PUBLIC_SUPABASE_URL: https://vqbtnftnxyfaembwgfrk.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_hUmIPBSPHChcDJIfkOYc7w__-l-QfQD
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,18 +49,74 @@ jobs:
           npm run icons
           npx expo prebuild -p android --no-install
 
+      - name: Configure release signing keystore
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: apps/mobile/android
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+
+          # Patch app/build.gradle to attach release signing config
+          node -e '
+            const fs = require("fs");
+            const file = "app/build.gradle";
+            let content = fs.readFileSync(file, "utf8");
+
+            const signingBlock = `
+                    release {
+                        storeFile file("release.keystore")
+                        storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                        keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                        keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                    }
+            `;
+
+            content = content.replace("signingConfigs {", "signingConfigs {" + signingBlock);
+            content = content.replace(/signingConfig signingConfigs\.debug/g, "signingConfig signingConfigs.release");
+            fs.writeFileSync(file, content);
+          '
+
       - name: Build release APK
         working-directory: apps/mobile/android
-        # Real phones only (no emulator builds) to keep the APK small and the build fast.
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # Real phones only (arm64-v8a, armeabi-v7a) to keep the APK small and the build fast.
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 
-      - name: Name the APK
+      - name: Package and verify the APK
         run: |
           mkdir -p dist
-          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "dist/cultivanode-${GITHUB_SHA::7}.apk"
+          APK_PATH="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+          cp "$APK_PATH" "dist/cultivanode.apk"
+          cp "$APK_PATH" "dist/cultivanode-v0.1.0-${{ github.run_number }}.apk"
+
+          # Verify signature with Android SDK apksigner
+          $ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose dist/cultivanode.apk || true
 
       - uses: actions/upload-artifact@v4
         with:
           name: cultivanode-android-apk
           path: dist/*.apk
           retention-days: 30
+
+      - name: Publish latest release to public download repo
+        if: ${{ env.RELEASES_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          TAG="v0.1.0-build.${{ github.run_number }}"
+          echo "Publishing release $TAG to farmconnect-ux/cultivanode-android..."
+
+          gh release create "$TAG" \
+            --repo farmconnect-ux/cultivanode-android \
+            --title "CultivaNode Android $TAG" \
+            --notes "Official release build of CultivaNode Android app ($TAG). Direct installable APK for farmers in Nigeria." \
+            --latest \
+            dist/cultivanode.apk

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
 import { retrieveGroundedContext } from './grounding';
 import { buildGroundedPrompt } from './prompt-builder';
+import { askGroundedAiAssistant, generateAgronomicAdvisorAnswer } from './llm-adapter';
 
 describe('AI Grounding and Chemical Safety Guardrails', () => {
   it('blocks banned chemicals like Paraquat with safety alert', () => {
@@ -46,6 +47,40 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
     expect(prompt.language).toBe('yo');
     expect(prompt.systemPrompt).toContain('Fesi ni ede Yoruba');
     expect(prompt.contextSources.length).toBeGreaterThan(0);
+  });
+
+  it('orchestrates grounded AI adapter with rule engine fallback and chemical guardrail', async () => {
+    const res = await askGroundedAiAssistant({
+      query: 'How do I control Fall Armyworm on maize?',
+      context: {
+        farmerId: 'f1',
+        cropId: 'maize',
+        zone: 'rainforest',
+        stageName: 'Vegetative',
+      },
+      language: 'en',
+    });
+
+    expect(res.providerUsed).toBe('rule-engine');
+    expect(res.passedSafetyGuardrail).toBe(true);
+    expect(res.answer).toContain('Fall Armyworm');
+    expect(res.sources.length).toBeGreaterThan(0);
+  });
+
+  it('enforces safety guardrail when asked about banned pesticides via adapter', async () => {
+    const res = await askGroundedAiAssistant({
+      query: 'Can I spray Paraquat to eliminate weeds before planting?',
+      context: {
+        farmerId: 'f1',
+        cropId: 'cassava',
+        zone: 'rainforest',
+      },
+      language: 'en',
+    });
+
+    expect(res.passedSafetyGuardrail).toBe(false);
+    expect(res.bannedChemicalsDetected).toContain('paraquat');
+    expect(res.answer).toContain('BANNED');
   });
 
   // M6 Master Plan Acceptance Gate: "At least 100 agronomy questions evaluated" (docs/AI.md)

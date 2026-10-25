@@ -29,11 +29,15 @@ export default async function FarmersPage({ params }: PageProps<"/[lang]/farmers
       </Section>
       <Section tone="white" title={p.helpTitle} intro={p.helpBody} />
       <CtaBox
-        title={t.home.pilotTitle}
-        body={t.home.pilotBody}
-        href={`/${lang}/sign-up`}
-        label={t.home.pilotCta}
-        secondary={{ href: `/${lang}/contact`, label: t.home.pilotSecondary }}
+        title={lang === "yo" ? "Ṣe Ìgbàsílẹ̀ Àpù Alágbèéká fún Oko Rẹ" : "Get the Offline Field App for Your Farm"}
+        body={
+          lang === "yo"
+            ? "Ṣiṣẹ́ lórí oko láìsí intanẹẹti. Ṣe àkọsílẹ̀, ya ààlà oko pẹ̀lú GPS, kí o sì lo AI fún àyẹ̀wò àrùn ohun ọ̀gbìn."
+            : "Operate in remote fields without cellular connectivity. Log operations, map boundary polygons with hardware GPS, and get instant AI pest diagnosis."
+        }
+        href={`/${lang}/download`}
+        label={lang === "yo" ? "Gba Àpù Android (APK)" : "Download Android APK"}
+        secondary={{ href: `/${lang}/sign-up`, label: t.home.pilotCta }}
       />
     </>
   );

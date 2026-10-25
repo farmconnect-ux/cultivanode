@@ -27,8 +27,8 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.cultivanode.app',
-    // Bump by 1 for every build uploaded to the Play Store.
-    versionCode: 1,
+    // Bump by 1 for every build uploaded to the Play Store / CI release.
+    versionCode: process.env.ANDROID_VERSION_CODE ? parseInt(process.env.ANDROID_VERSION_CODE, 10) : 1,
     predictiveBackGestureEnabled: false,
     adaptiveIcon: generated('adaptive-foreground.png')
       ? { foregroundImage: generated('adaptive-foreground.png'), backgroundColor: markBackground }

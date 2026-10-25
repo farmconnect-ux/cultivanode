@@ -55,24 +55,32 @@ export function SiteAuthActions({
   t: { signIn: string; signUp: string; myAccount: string };
 }) {
   const signedIn = useSignedIn();
-  if (signedIn) {
-    return (
-      <Button asChild size="md" className="hidden sm:inline-flex">
-        <Link href={`/${lang}/account`}>
-          <Icon name="space_dashboard" className="text-lg" />
-          {t.myAccount}
-        </Link>
-      </Button>
-    );
-  }
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Button asChild variant="ghost">
-        <Link href={`/${lang}/sign-in`}>{t.signIn}</Link>
+      <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex border-primary/20 text-primary hover:bg-primary/5">
+        <Link href={`/${lang}/download`}>
+          <Icon name="phone_android" className="text-base" />
+          {lang === "yo" ? "Gba Àpù (APK)" : "Get App"}
+        </Link>
       </Button>
-      <Button asChild>
-        <Link href={`/${lang}/sign-up`}>{t.signUp}</Link>
-      </Button>
+
+      {signedIn ? (
+        <Button asChild size="md">
+          <Link href={`/${lang}/account`}>
+            <Icon name="space_dashboard" className="text-lg" />
+            {t.myAccount}
+          </Link>
+        </Button>
+      ) : (
+        <>
+          <Button asChild variant="ghost">
+            <Link href={`/${lang}/sign-in`}>{t.signIn}</Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/${lang}/sign-up`}>{t.signUp}</Link>
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -121,9 +129,16 @@ export function SiteMobileMenu({
           })}
         </nav>
         <div className="flex flex-col gap-2 border-t border-border p-4">
-          <LocaleSwitch current={lang} className="self-start" />
+          <Button asChild size="lg" className="bg-primary text-white hover:bg-primary/90 font-bold mb-1">
+            <Link href={`/${lang}/download`} onClick={() => setOpen(false)}>
+              <Icon name="phone_android" className="text-lg" />
+              {lang === "yo" ? "Gba Àpù Android (APK)" : "Download Android App"}
+            </Link>
+          </Button>
+
+          <LocaleSwitch current={lang} className="self-start my-1" />
           {signedIn ? (
-            <Button asChild size="lg">
+            <Button asChild size="lg" variant="secondary">
               <Link href={`/${lang}/account`} onClick={() => setOpen(false)}>{t.myAccount}</Link>
             </Button>
           ) : (

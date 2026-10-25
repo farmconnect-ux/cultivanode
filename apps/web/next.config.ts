@@ -8,9 +8,9 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https://*.supabase.co",
+  "img-src 'self' blob: data: https://*.supabase.co https://github.com https://avatars.githubusercontent.com",
   "font-src 'self'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://api.github.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -41,6 +41,15 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "6mb" },
     cpus: 1,
     optimizePackageImports: ["lucide-react"],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/download/android",
+        destination: "https://github.com/farmconnect-ux/cultivanode-android/releases/latest/download/cultivanode.apk",
+        permanent: false,
+      },
+    ];
   },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
