@@ -6,7 +6,10 @@
 import type { FormResult } from "@/components/live/action-form";
 import { redirect } from "next/navigation";
 import { OP_TYPES, addDays, missingOperations, suggestCropPlan } from "@/lib/crop-plan";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { actor, date, dbFail, fail, id, kobo, num, ok, oneOf, optText, refreshPages, text, today } from "@/lib/account/act";
+import { photoFiles } from "@/lib/listing-photos";
+import { ANALYSE_MESSAGE, analyseObservation, checkScoutPhotos, uploadScoutPhotos } from "@/lib/scouting-photos";
 
 type R = Promise<FormResult>;
 
@@ -309,18 +312,50 @@ export async function logObservation(_: FormResult, form: FormData): R {
   const title = text(form, "title", 140);
   const description = text(form, "description", 2000);
   if (!cycleId || !category || !title || !description) return fail("Choose the crop, a category, and describe what you saw.");
-  const { error } = await supabase.from("crop_observations").insert({
-    crop_cycle_id: cycleId,
-    category,
-    severity: oneOf(form, "severity", SEVERITY, "medium")!,
-    title,
-    description,
-    recommended_action: optText(form, "recommended_action", 1000),
-    created_by: uid,
-  });
-  if (error) return dbFail(error, "log_observation");
+  const photos = photoFiles(form);
+  const photoErr = checkScoutPhotos(photos);
+  if (photoErr) return fail(photoErr);
+  const { data: obs, error } = await supabase
+    .from("crop_observations")
+    .insert({
+      crop_cycle_id: cycleId,
+      category,
+      severity: oneOf(form, "severity", SEVERITY, "medium")!,
+      title,
+      description,
+      recommended_action: optText(form, "recommended_action", 1000),
+      created_by: uid,
+    })
+    .select("id")
+    .single();
+  if (error || !obs) return dbFail(error, "log_observation");
+
+  let note = "";
+  if (photos.length) {
+    // The bucket and AI columns are newer than the generated types, hence the untyped client.
+    const db = supabase as unknown as SupabaseClient;
+    const up = await uploadScoutPhotos(db, uid, obs.id, photos);
+    if ("error" in up) {
+      note = ` ${up.error} The observation was saved without them.`;
+    } else {
+      await db.from("crop_observations").update({ photo_urls: up.paths }).eq("id", obs.id);
+      const outcome = await analyseObservation(db, obs.id, text(form, "lang", 5) === "yo" ? "yo" : "en", up.images);
+      note = ANALYSE_MESSAGE[outcome] ? ` ${ANALYSE_MESSAGE[outcome]}` : "";
+    }
+  }
   refreshPages("/crops/scouting", "/crops", "/risk");
-  return ok("Scouting observation logged.");
+  return ok(`Scouting observation logged.${note}`);
+}
+
+/** Ask the AI about an observation's photos again (or for the first time, once the switch is on). */
+export async function analyseObservationPhotos(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const obsId = id(form, "id");
+  if (!obsId) return fail("Observation not found.");
+  const outcome = await analyseObservation(supabase as unknown as SupabaseClient, obsId, text(form, "lang", 5) === "yo" ? "yo" : "en");
+  refreshPages("/crops/scouting");
+  if (outcome === "done") return ok(ANALYSE_MESSAGE.done);
+  return fail(ANALYSE_MESSAGE[outcome] || "Photo analysis is switched off.");
 }
 
 export async function resolveObservation(_: FormResult, form: FormData): R {

@@ -1,20 +1,8 @@
-import { useRouter } from 'expo-router';
-import { CropScoutingScreen } from '../../screens/CropScoutingScreen';
-import { OfflineSyncQueue } from '../../lib/offline-sync';
-import { sessionStorage } from '../../lib/supabase';
-
-const syncQueue = new OfflineSyncQueue(sessionStorage as any);
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ScoutScreen } from '../../screens/ScoutScreen';
 
 export default function ScoutingRoute() {
   const router = useRouter();
-
-  return (
-    <CropScoutingScreen
-      cycleId="crop_cycle_live"
-      cropName="Cassava & Maize"
-      plotName="Main Plot"
-      syncQueue={syncQueue}
-      onBack={() => router.back()}
-    />
-  );
+  const { cropId } = useLocalSearchParams<{ cropId?: string }>();
+  return <ScoutScreen initialCropId={cropId} onBack={() => router.back()} />;
 }

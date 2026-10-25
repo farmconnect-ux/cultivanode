@@ -6,6 +6,11 @@ import { PageHeader } from "@/components/ds/page-header";
 import { ActionButton, ActionDialog } from "@/components/live/action-form";
 import { Bars, Chip, KpiGrid, Section, Split, Stack, StartHere, Status } from "@/components/live/kit";
 import { MetricCard } from "@/components/live/metric-card";
+import { SCOUT_PHOTO_FIELD, ScoutResult } from "@/components/live/scout-result";
+import type { Diagnosis } from "@/lib/ai-vision";
+import { isOn } from "@/lib/flags";
+import { signedPhotoUrls } from "@/lib/scouting-photos";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasLocale } from "@/i18n/config";
 import { cycleLabel, cycleOptions, loadFarmScope } from "@/lib/account/scope";
 import { requireAccount } from "@/lib/account/session";
@@ -13,6 +18,8 @@ import { ago, label, nowMs } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Field scouting" };
+// Saving an observation with photos can wait for the AI to look at them.
+export const maxDuration = 60;
 
 const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
@@ -26,7 +33,10 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
   const { data } = cycleIds.length
     ? await supabase.from("crop_observations").select("*").in("crop_cycle_id", cycleIds).order("observed_at", { ascending: false }).limit(100)
     : { data: [] };
-  const obs = data ?? [];
+  // Photo and AI columns are newer than the generated types.
+  type Obs = NonNullable<typeof data>[number] & { ai_diagnosis?: Diagnosis | null; ai_analysed_at?: string | null };
+  const obs = (data ?? []) as Obs[];
+  const [aiOn, signed] = await Promise.all([isOn("ai_photo_diagnosis"), signedPhotoUrls(supabase as unknown as SupabaseClient, obs.flatMap((o) => o.photo_urls ?? []))]);
   const cycles = new Map(scope.cycles.map((c) => [c.id, c]));
   const open = obs.filter((o) => !o.resolved);
   const high = open.filter((o) => o.severity === "high" || o.severity === "critical");
@@ -40,7 +50,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
       <PageHeader
         eyebrow={<Chip icon="pest_control">Iroyin Aaye · field reports</Chip>}
         title="Field Scouting"
-        description="Pest, disease, nutrient and water observations from your crop walks, with the action taken."
+        description="Pest, disease, nutrient and water observations from your crop walks, with photos and the action taken."
         actions={
           scope.cycles.length > 0 && (
             <ActionDialog
@@ -56,6 +66,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
                 { name: "title", label: "Title", required: true, wide: true, placeholder: "Fall armyworm in west rows" },
                 { name: "description", label: "Symptoms and extent", type: "textarea", required: true },
                 { name: "recommended_action", label: "Recommended action", type: "textarea" },
+                SCOUT_PHOTO_FIELD,
               ]}
             />
           )
@@ -90,6 +101,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops/
                     </p>
                     <p className="text-body-sm text-on-surface">{o.description}</p>
                     {o.recommended_action && <p className="rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface">Action: {o.recommended_action}</p>}
+                    <ScoutResult id={o.id} lang={lang} photos={o.photo_urls ?? []} signed={signed} diagnosis={o.ai_diagnosis ?? null} analysedAt={o.ai_analysed_at ?? null} aiOn={aiOn} />
                   </li>
                 );
               })}

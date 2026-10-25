@@ -12,9 +12,16 @@ import { requireAccount } from "@/lib/account/session";
 import { label, mass, naira, num, pct, relDays, share, nowMs } from "@/lib/format";
 import { addDays, missingOperations, stageOn, suggestCropPlan } from "@/lib/crop-plan";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { SCOUT_PHOTO_FIELD, ScoutResult } from "@/components/live/scout-result";
+import type { Diagnosis } from "@/lib/ai-vision";
+import { isOn } from "@/lib/flags";
+import { signedPhotoUrls } from "@/lib/scouting-photos";
 import { formatDay } from "@/lib/text";
 
 export const metadata: Metadata = { title: "Crop cycle" };
+// Saving a scouting observation with photos can wait for the AI to look at them.
+export const maxDuration = 60;
 
 const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: label(v) }));
 
@@ -42,6 +49,8 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
   const harvested = (harvests ?? []).reduce((s, h) => s + Number(h.quantity_kg), 0);
   const opsCost = (ops ?? []).reduce((s, o) => s + Number(o.actual_cost_kobo), 0);
   const openObs = (obs ?? []).filter((o) => !o.resolved);
+  type Obs = NonNullable<typeof obs>[number] & { ai_diagnosis?: Diagnosis | null; ai_analysed_at?: string | null };
+  const [aiOn, signed] = await Promise.all([isOn("ai_photo_diagnosis"), signedPhotoUrls(supabase as unknown as SupabaseClient, (obs ?? []).flatMap((o) => o.photo_urls ?? []))]);
   const hidden = { lang, crop_cycle_id: id };
   const title = `${cap(c.crop_id)} ${c.variety_id ?? ""}`.trim();
   const today = new Date(nowMs()).toISOString().slice(0, 10);
@@ -348,6 +357,7 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
                     { name: "title", label: "Title", required: true, wide: true },
                     { name: "description", label: "What you saw", type: "textarea", required: true },
                     { name: "recommended_action", label: "Recommended action", type: "textarea" },
+                    SCOUT_PHOTO_FIELD,
                   ]}
                 />
               }
@@ -361,6 +371,9 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
                     </div>
                     <p className="mt-1 text-body-sm text-on-surface-variant">{o.description}</p>
                     {o.recommended_action && <p className="mt-1 text-body-sm text-on-surface">→ {o.recommended_action}</p>}
+                    <div className="mt-2">
+                      <ScoutResult id={o.id} lang={lang} photos={o.photo_urls ?? []} signed={signed} diagnosis={(o as Obs).ai_diagnosis ?? null} analysedAt={(o as Obs).ai_analysed_at ?? null} aiOn={aiOn} />
+                    </div>
                   </li>
                 ))}
                 {!obs?.length && <li className="py-4 text-center text-body-sm text-on-surface-variant">No observations yet.</li>}
