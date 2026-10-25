@@ -39,12 +39,8 @@ export function HowItWorks({ audiences }: { audiences: Audience[] }) {
           </button>
         ))}
       </div>
-      <ol
-        id={`${base}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${base}-tab-${active}`}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-      >
+      <div id={`${base}-panel`} role="tabpanel" aria-labelledby={`${base}-tab-${active}`}>
+      <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {current.steps.map((step, i) => (
           <li key={step} className="flex flex-col gap-3 rounded-lg border border-border bg-white p-5">
             <span className="flex size-10 items-center justify-center rounded-full bg-tertiary-fixed-dim text-lg font-extrabold text-on-surface" aria-hidden="true">
@@ -54,6 +50,7 @@ export function HowItWorks({ audiences }: { audiences: Audience[] }) {
           </li>
         ))}
       </ol>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { htmlLang, locales, type Locale } from "./config";
 export function pageMetadata(lang: Locale, path: string, title: string | undefined, description: string): Metadata {
   const languages = Object.fromEntries(locales.map((l) => [htmlLang[l], `/${l}${path}`]));
   return {
-    title,
+    // Leave the key out for the home page: an explicit `title: undefined` wipes the layout's default title.
+    ...(title ? { title } : {}),
     description,
     alternates: { canonical: `/${lang}${path}`, languages: { ...languages, "x-default": `/en${path}` } },
     openGraph: {

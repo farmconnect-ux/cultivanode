@@ -133,7 +133,7 @@ export function OnboardingForm({ lang, roles, t }: Props) {
                     <span className="block font-semibold">{t.roleNames[key]}</span>
                     <span className="block text-sm text-on-surface-variant">{t.roleHints[key]}</span>
                     <span className={cx("mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold",
-                      r.auto_approve ? "bg-secondary-container/40 text-primary" : "bg-tertiary-fixed/60 text-[#b45309]")}>
+                      r.auto_approve ? "bg-secondary-container/40 text-primary" : "bg-tertiary-fixed/60 text-[#92400e]")}>
                       {r.auto_approve ? o.autoApproved : o.needsReview}
                     </span>
                   </span>

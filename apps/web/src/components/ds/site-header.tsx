@@ -32,8 +32,10 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary["nav"] }) 
       </a>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-[4.5rem] lg:px-8">
         <div className="flex min-w-0 items-center gap-8">
-          <Link href={`/${lang}`} aria-label={lang === "yo" ? "Ojú-ìwé àkọ́kọ́ CultivaNode" : "CultivaNode home"} className="shrink-0 rounded-lg">
+          {/* The visible name and tagline are the link's name (no aria-label, so speech users can say what they see). */}
+          <Link href={`/${lang}`} className="shrink-0 rounded-lg">
             <BrandLockup tagline={lang === "yo" ? "Ọgbọ́n Iṣẹ́ Àgbẹ̀" : "Agri-Intelligence"} />
+            <span className="sr-only">{lang === "yo" ? " (ojú-ìwé àkọ́kọ́)" : " (home)"}</span>
           </Link>
           <SiteNavLinks links={links} />
         </div>

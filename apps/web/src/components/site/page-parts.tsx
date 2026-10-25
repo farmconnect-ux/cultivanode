@@ -27,7 +27,7 @@ export function BenefitGrid({ items, columns = 3, soonLabel }: {
             <h3 className="text-lg font-bold text-primary-container">{b.title}</h3>
             <p className="mt-2 text-on-surface-variant">{b.body}</p>
             {b.soon && soonLabel && (
-              <span className="mt-3 inline-block rounded-full bg-tertiary-fixed/60 px-3 py-1 text-sm font-semibold text-[#b45309]">{soonLabel}</span>
+              <span className="mt-3 inline-block rounded-full bg-tertiary-fixed/60 px-3 py-1 text-sm font-semibold text-[#92400e]">{soonLabel}</span>
             )}
           </Card>
         </li>

@@ -24,7 +24,8 @@ export async function generateMetadata({ params }: PageProps<"/[lang]">) {
   const { lang } = await params;
   if (!hasLocale(lang)) return {};
   const t = await getDictionary(lang);
-  return pageMetadata(lang, "", undefined, t.meta.description);
+  // The home page names itself: the layout's default title was not applied to it.
+  return { ...pageMetadata(lang, "", undefined, t.meta.description), title: { absolute: t.meta.title } };
 }
 
 const featureIcons = [
