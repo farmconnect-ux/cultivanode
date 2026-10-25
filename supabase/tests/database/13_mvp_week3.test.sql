@@ -281,8 +281,8 @@ select throws_ok($$ select public.check_in_booking(pg_temp.r('r1'), 7.3775, 3.89
 select throws_ok($$ select public.rate_booking(pg_temp.r('r1'), 5, '{}', null) $$, '42501', null, 'or rate');
 select throws_ok($$ select * from public.ratings $$, '42501', null, 'or read ratings');
 reset role;
-select ok((select kind = 'payment' and not implemented and not test_only from public.integration_providers where code = 'paystack'),
-  'Paystack is registered as the payment provider, not yet built');
+select ok((select kind = 'payment' and implemented and not test_only from public.integration_providers where code = 'paystack'),
+  'Paystack is registered as a live payment provider');
 
 select * from finish();
 rollback;

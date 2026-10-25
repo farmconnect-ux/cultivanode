@@ -22,9 +22,10 @@ select ok(not has_function_privilege('authenticated', 'public.compute_area_from_
   'compute_area_from_boundary() is not exposed');
 select ok(not has_function_privilege('anon', 'public.approve_role_request(uuid, text)', 'execute'),
   'anonymous visitors cannot call approve_role_request()');
+-- Visitors may evaluate it too (20261013020200): policies on public pages call it for anon requests.
 select ok(has_function_privilege('authenticated', 'public.has_permission(text)', 'execute')
-          and not has_function_privilege('anon', 'public.has_permission(text)', 'execute'),
-  'has_permission() is callable by signed-in users only');
+          and has_function_privilege('anon', 'public.has_permission(text)', 'execute'),
+  'has_permission() can be evaluated by policies for signed-in users and visitors');
 select ok(not has_function_privilege('authenticated', 'private.record_admin_action(text, text, text, uuid, text)', 'execute'),
   'signed-in users cannot forge admin actions');
 select ok(not has_function_privilege('authenticated', 'private.recompute_verification_tier(uuid)', 'execute'),
@@ -53,8 +54,10 @@ select ok(not has_function_privilege('authenticated', 'private.end_sessions(uuid
   'signed-in users cannot end other people''s sessions');
 
 -- RLS helpers live in the private schema, which the Data API does not expose.
-select ok(to_regprocedure('public.plot_farm_id(uuid)') is null and to_regprocedure('private.plot_farm_id(uuid)') is not null,
-  'plot_farm_id() moved out of the API schema');
+-- The real helper is private; production keeps a thin public wrapper that farm policies call.
+select ok(to_regprocedure('private.plot_farm_id(uuid)') is not null
+          and pg_get_functiondef('public.plot_farm_id(uuid)'::regprocedure) ilike '%public.plots%',
+  'plot_farm_id() lives in the private schema, with a public wrapper for policies');
 select ok(to_regprocedure('public.is_farmer_profile(uuid)') is null and to_regprocedure('private.is_farmer_profile(uuid)') is not null,
   'is_farmer_profile() moved out of the API schema');
 

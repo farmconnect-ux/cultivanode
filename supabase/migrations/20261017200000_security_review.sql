@@ -103,6 +103,20 @@ alter policy "devices: installers register or update assigned" on public.devices
 --    plots RLS still requires can_edit_farm) may now set the site-profile fields; created_by is pinned to the
 --    signed-in user. Checked against every insert/update in actions/farm-ops.ts and actions/ecosystem.ts: plots
 --    was the only table with missing column grants.
+-- The site-profile columns already exist in production; created here for a fresh database (same checks).
+alter table public.plots
+  add column if not exists soil_texture text check (soil_texture is null or soil_texture in ('sandy','loamy_sand','sandy_loam','loam','silt_loam','clay_loam','clay')),
+  add column if not exists drainage text check (drainage is null or drainage in ('well_drained','moderate','poor','waterlogged')),
+  add column if not exists slope_pct numeric check (slope_pct is null or (slope_pct >= 0 and slope_pct <= 100)),
+  add column if not exists irrigation_type text default 'rainfed' check (irrigation_type is null or irrigation_type in ('rainfed','drip','sprinkler','furrow','manual')),
+  add column if not exists water_source text check (water_source is null or char_length(water_source) <= 120),
+  add column if not exists plot_code text,
+  add column if not exists soil_ph numeric,
+  add column if not exists organic_matter_pct numeric,
+  add column if not exists accessibility text,
+  add column if not exists current_crop text,
+  add column if not exists previous_crop text;
+
 grant insert (plot_code, soil_texture, drainage, slope_pct, irrigation_type, water_source, soil_ph, organic_matter_pct,
               accessibility, current_crop, previous_crop, created_by) on public.plots to authenticated;
 grant update (plot_code, soil_texture, drainage, slope_pct, irrigation_type, water_source, soil_ph, organic_matter_pct,

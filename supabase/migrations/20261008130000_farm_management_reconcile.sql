@@ -833,7 +833,11 @@ create or replace function public.can_edit_farm(p_farm uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$ select private.can_edit_farm(p_farm); $$;
 
-grant execute on function public.can_view_farm(uuid), public.can_edit_farm(uuid) to authenticated;
+create or replace function public.plot_farm_id(p_plot uuid)
+returns uuid language sql stable security definer set search_path = ''
+as $$ select p.farm_id from public.plots p where p.id = p_plot; $$;
+
+grant execute on function public.can_view_farm(uuid), public.can_edit_farm(uuid), public.plot_farm_id(uuid) to authenticated;
 
 do $$
 declare
