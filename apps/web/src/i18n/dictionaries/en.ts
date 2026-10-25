@@ -54,13 +54,13 @@ const en = {
       { title: "Clear prices", body: "Rates shown before you hire" },
     ],
     heroBody:
-      "Find verified tractors and farm hands near your farm. Crop plans, weather and farm books come next. Built with farmers in South-West Nigeria.",
+      "Find verified tractors and farm hands near your farm, plan your crops, check the weather for your farm and keep your farm books. Built with farmers in South-West Nigeria.",
     heroPrimary: "Join the pilot",
     heroSecondary: "See how it works",
     slides: [
       {
         title: "Know what to do, and when",
-        body: "Coming soon: a season plan for your crop, from land preparation to harvest, with reminders.",
+        body: "A season plan for your crop, from land preparation to harvest, with reminders.",
       },
       {
         title: "Hire a tractor near you",
@@ -68,7 +68,7 @@ const en = {
       },
       {
         title: "See your profit, season by season",
-        body: "Coming soon: every cost and sale in one place, so you know what each planting really earned.",
+        body: "Every cost and sale in one place, so you know what each planting really earned.",
       },
     ],
     carouselLabel: `What ${brand.name} does`,
@@ -79,15 +79,15 @@ const en = {
     slideOf: "Slide {n} of {total}",
     featuresEyebrow: "One app for the whole season",
     featuresTitle: "What we are building with farmers",
-    featuresNote: "Hiring opens first, in the pilot. The other tools follow in stages; each one is marked until it is ready.",
+    featuresNote: "Tools that are still being built are marked until they are ready.",
     features: [
-      { soon: true, title: "Crop calendar", body: "Step-by-step plans for 15 common South-West crops, for both rainy seasons and dry-season vegetables." },
+      { soon: false, title: "Crop calendar", body: "Step-by-step plans for 15 common South-West crops, for both rainy seasons and dry-season vegetables." },
       { soon: true, title: "Fertiliser and spray planner", body: "How much to apply, when, and which product, based on recommendations from agricultural experts." },
       { soon: false, title: "Hire with confidence", body: "Verified machinery owners and farm hands near your farm. In the pilot you pay the provider directly." },
-      { soon: true, title: "Weather for your farm", body: "A 14-day forecast for your farm's location, with warnings for heavy rain, dry spells and strong wind." },
-      { soon: true, title: "Store and inventory", body: "Track seeds, fertiliser and chemicals. Get a warning before you run short or a product expires." },
-      { soon: true, title: "Farm books", body: "Costs and sales for each farm and each planting, with simple reports you can download." },
-      { soon: true, title: "Farm assistant", body: "Ask questions or send a photo of a sick plant, in English, Pidgin or Yorùbá." },
+      { soon: false, title: "Weather for your farm", body: "A 10-day forecast for your farm's location, with warnings for heavy rain, dry spells and strong wind." },
+      { soon: false, title: "Store and inventory", body: "Track seeds, fertiliser and chemicals. Get a warning before you run short or a product expires." },
+      { soon: false, title: "Farm books", body: "Costs and sales for each farm and each planting, with simple reports you can download." },
+      { soon: false, title: "Farm assistant", body: "Ask farming questions in English, Pidgin or Yorùbá. Photo diagnosis of a sick plant is coming." },
       { soon: true, title: "Works with poor network", body: "Record your work offline. It saves to your account when you are back in signal." },
     ],
     howEyebrow: "How it works",
@@ -100,7 +100,7 @@ const en = {
         steps: [
           "Sign up with your phone number. No email needed.",
           "Add your farm by dropping a pin with your phone. Walking the boundary comes later.",
-          `Choose your crops. ${brand.name} will build your season plan and remind you (coming soon).`,
+          `Choose your crops. ${brand.name} builds your season plan and reminds you of each job.`,
           "Find a tractor or farm hands near your farm. In the pilot you pay the provider directly.",
         ],
       },
@@ -149,11 +149,14 @@ const en = {
     trustTitle: "Built on trust",
     trust: [
       { title: "Verified people", body: "Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account." },
-      { title: "No hidden money handling", body: "During the pilot we do not hold or move your money. You pay the provider directly; protected payments come only after legal review." },
+      { title: "Pay the provider directly", body: "When you hire in the pilot, you pay the tractor owner or farm hand directly. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed." },
       { title: "Proof of work", body: "Coming next: providers check in at your farm and upload photos with location and time." },
       { title: "Honest ratings", body: "Coming next: only completed jobs can be rated, by both sides." },
     ],
     partnersTitle: "Our partners",
+    marketTitle: "On the market now",
+    marketIntro: "Produce, seed and farm inputs listed by farms and suppliers in the pilot.",
+    marketCta: "See all lots",
     pilotTitle: "Farming in Oyo, Ogun, Osun, Ondo, Ekiti or Lagos?",
     pilotBody:
       "We are starting with a pilot in selected farming communities. Join early to shape the app and get support from our field agents.",

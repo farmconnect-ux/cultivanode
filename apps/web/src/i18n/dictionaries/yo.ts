@@ -55,13 +55,13 @@ const yo: Dictionary = {
       { title: "Iye owó tó ṣe kedere", body: "A ń fi iye owó hàn kí o tó gba ẹnikẹ́ni" },
     ],
     heroBody:
-      "Rí tírákítọ̀ àti òṣìṣẹ́ oko tí a ti ṣàyẹ̀wò nítòsí oko rẹ. Ètò ọ̀gbìn, ojú ọjọ́ àti ìwé owó oko ń bọ̀ lẹ́yìn náà. A ń kọ́ ọ pẹ̀lú àwọn àgbẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà.",
+      "Rí tírákítọ̀ àti òṣìṣẹ́ oko tí a ti ṣàyẹ̀wò nítòsí oko rẹ, ṣètò ọ̀gbìn rẹ, wo ojú ọjọ́ fún oko rẹ, kí o sì kọ ìwé owó oko rẹ. A ń kọ́ ọ pẹ̀lú àwọn àgbẹ̀ ní Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà.",
     heroPrimary: "Darapọ̀ mọ́ ìdánwò",
     heroSecondary: "Wo bí ó ṣe ń ṣiṣẹ́",
     slides: [
       {
         title: "Mọ ohun tí o máa ṣe, àti ìgbà tí o máa ṣe é",
-        body: "Ó ń bọ̀ láìpẹ́: ètò àsìkò fún ohun ọ̀gbìn rẹ, láti ìmúra ilẹ̀ títí dé ìkórè, pẹ̀lú ìránnilétí.",
+        body: "Ètò àsìkò fún ohun ọ̀gbìn rẹ, láti ìmúra ilẹ̀ títí dé ìkórè, pẹ̀lú ìránnilétí.",
       },
       {
         title: "Gba tírákítọ̀ nítòsí rẹ",
@@ -69,7 +69,7 @@ const yo: Dictionary = {
       },
       {
         title: "Rí èrè rẹ, àsìkò dé àsìkò",
-        body: "Ó ń bọ̀ láìpẹ́: gbogbo ìnáwó àti owó títà ní ibì kan, kí o lè mọ iye tí ọ̀gbìn kọ̀ọ̀kan mú wọlé ní tòótọ́.",
+        body: "Gbogbo ìnáwó àti owó títà ní ibì kan, kí o lè mọ iye tí ọ̀gbìn kọ̀ọ̀kan mú wọlé ní tòótọ́.",
       },
     ],
     carouselLabel: `Ohun tí ${brand.name} ń ṣe`,
@@ -80,15 +80,15 @@ const yo: Dictionary = {
     slideOf: "Àwòrán {n} nínú {total}",
     featuresEyebrow: "Áàpù kan fún gbogbo àsìkò",
     featuresTitle: "Ohun tí a ń kọ́ pẹ̀lú àwọn àgbẹ̀",
-    featuresNote: "Gbígba iṣẹ́ ni yóò kọ́kọ́ ṣí, nínú ìdánwò. Àwọn irinṣẹ́ yòókù yóò tẹ̀lé díẹ̀díẹ̀; a ó sàmì sí ọ̀kọ̀ọ̀kan títí yóò fi ṣetán.",
+    featuresNote: "A ó sàmì sí àwọn irinṣẹ́ tí a ṣì ń kọ́ títí wọn yóò fi ṣetán.",
     features: [
-      { soon: true, title: "Kàlẹ́ńdà ọ̀gbìn", body: "Ètò ìgbésẹ̀-sí-ìgbésẹ̀ fún ohun ọ̀gbìn mẹ́ẹ̀ẹ́dógún tí a sábà máa ń gbìn ní Gúúsù-Ìwọ̀ Oòrùn, fún àsìkò òjò méjèèjì àti ẹ̀fọ́ ìgbà ẹ̀rùn." },
+      { soon: false, title: "Kàlẹ́ńdà ọ̀gbìn", body: "Ètò ìgbésẹ̀-sí-ìgbésẹ̀ fún ohun ọ̀gbìn mẹ́ẹ̀ẹ́dógún tí a sábà máa ń gbìn ní Gúúsù-Ìwọ̀ Oòrùn, fún àsìkò òjò méjèèjì àti ẹ̀fọ́ ìgbà ẹ̀rùn." },
       { soon: true, title: "Ètò ajílẹ̀ àti oògùn", body: "Iye tí o máa lò, ìgbà tí o máa lò ó, àti irú ọjà wo, gẹ́gẹ́ bí ìmọ̀ràn àwọn amòye iṣẹ́ àgbẹ̀." },
       { soon: false, title: "Gba òṣìṣẹ́ láìbẹ̀rù", body: "Àwọn onímọ́tò ẹ̀rọ oko àti òṣìṣẹ́ tí a ti ṣàyẹ̀wò nítòsí oko rẹ. Nínú ìdánwò, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà." },
-      { soon: true, title: "Ojú ọjọ́ fún oko rẹ", body: "Àsọtẹ́lẹ̀ ọjọ́ mẹ́rìnlá fún ibi tí oko rẹ wà, pẹ̀lú ìkìlọ̀ fún òjò ńlá, ọ̀gbẹlẹ̀ àti afẹ́fẹ́ líle." },
-      { soon: true, title: "Ìṣúra àti ohun èlò", body: "Tọpinpin irúgbìn, ajílẹ̀ àti oògùn oko. Gba ìkìlọ̀ kí ọjà tó tán tàbí kí ó tó bàjẹ́." },
-      { soon: true, title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún oko kọ̀ọ̀kan àti ọ̀gbìn kọ̀ọ̀kan, pẹ̀lú ìròyìn tó rọrùn tí o lè gbà sílẹ̀." },
-      { soon: true, title: "Olùrànlọ́wọ́ oko", body: "Béèrè ìbéèrè tàbí fi àwòrán ewéko tó ń ṣàìsàn ránṣẹ́, ní èdè Gẹ̀ẹ́sì, Pidgin tàbí Yorùbá." },
+      { soon: false, title: "Ojú ọjọ́ fún oko rẹ", body: "Àsọtẹ́lẹ̀ ọjọ́ mẹ́wàá fún ibi tí oko rẹ wà, pẹ̀lú ìkìlọ̀ fún òjò ńlá, ọ̀gbẹlẹ̀ àti afẹ́fẹ́ líle." },
+      { soon: false, title: "Ìṣúra àti ohun èlò", body: "Tọpinpin irúgbìn, ajílẹ̀ àti oògùn oko. Gba ìkìlọ̀ kí ọjà tó tán tàbí kí ó tó bàjẹ́." },
+      { soon: false, title: "Ìwé owó oko", body: "Ìnáwó àti owó títà fún oko kọ̀ọ̀kan àti ọ̀gbìn kọ̀ọ̀kan, pẹ̀lú ìròyìn tó rọrùn tí o lè gbà sílẹ̀." },
+      { soon: false, title: "Olùrànlọ́wọ́ oko", body: "Béèrè ìbéèrè nípa iṣẹ́ oko ní èdè Gẹ̀ẹ́sì, Pidgin tàbí Yorùbá. Àyẹ̀wò àwòrán ewéko tó ń ṣàìsàn ń bọ̀." },
       { soon: true, title: "Ó ń ṣiṣẹ́ níbi tí nẹ́tíwọ́ọ̀kì kò ti dára", body: "Kọ iṣẹ́ rẹ sílẹ̀ láìsí íńtánẹ́ẹ̀tì. Yóò wọ inú àkọọ́lẹ̀ rẹ nígbà tí nẹ́tíwọ́ọ̀kì bá padà." },
     ],
     howEyebrow: "Bí ó ṣe ń ṣiṣẹ́",
@@ -101,7 +101,7 @@ const yo: Dictionary = {
         steps: [
           "Forúkọsílẹ̀ pẹ̀lú nọ́ńbà fóònù rẹ. O kò nílò ímeèlì.",
           "Fi oko rẹ kún un nípa sísàmì sí ibi tí ó wà pẹ̀lú fóònù rẹ. Rírìn yí ààlà rẹ̀ ká yóò dé lẹ́yìn náà.",
-          `Yan ohun ọ̀gbìn rẹ. ${brand.name} yóò ṣe ètò àsìkò rẹ, yóò sì máa rán ọ létí (ó ń bọ̀ láìpẹ́).`,
+          `Yan ohun ọ̀gbìn rẹ. ${brand.name} yóò ṣe ètò àsìkò rẹ, yóò sì máa rán ọ létí iṣẹ́ kọ̀ọ̀kan.`,
           "Rí tírákítọ̀ tàbí àwọn òṣìṣẹ́ oko nítòsí oko rẹ. Nínú ìdánwò, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà.",
         ],
       },
@@ -150,11 +150,15 @@ const yo: Dictionary = {
     trustTitle: "A kọ́ ọ lórí ìgbẹ́kẹ̀lé",
     trust: [
       { title: "Àwọn ènìyàn tí a ti ṣàyẹ̀wò", body: "A ń ṣàyẹ̀wò NIN, BVN àti àkọọ́lẹ̀ báńkì gbogbo ẹni tí ó bá ń ṣe àkọsílẹ̀ ẹ̀rọ tàbí tí ó ń gba owó." },
-      { title: "A kò fọwọ́ kan owó rẹ", body: "Nígbà ìdánwò, a kò ní mú tàbí gbé owó rẹ. Ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà; ìsanwó tó ní ààbò yóò dé lẹ́yìn àyẹ̀wò òfin nìkan." },
+      { title: "San owó fún olùpèsè iṣẹ́ ní tààràtà", body: "Nígbà ìdánwò, tí o bá gba ẹnikẹ́ni ṣiṣẹ́, ìwọ yóò san owó fún onítírákítọ̀ tàbí òṣìṣẹ́ oko ní tààràtà. Ìsanwó tí a ó mú dúró títí o fi fìdí iṣẹ́ múlẹ̀ ń bọ̀, lẹ́yìn tí a bá ti fọwọ́ sí àdéhùn pẹ̀lú alábàáṣiṣẹ́ ìsanwó tó ní ìwé-àṣẹ." },
       { title: "Ẹ̀rí iṣẹ́", body: "Ó ń bọ̀ láìpẹ́: olùpèsè iṣẹ́ yóò forúkọ wọlé ní oko rẹ, yóò sì fi àwòrán tí ó ní ibi àti àkókò ránṣẹ́." },
       { title: "Ìdíyelé òtítọ́", body: "Ó ń bọ̀ láìpẹ́: iṣẹ́ tí a ti parí nìkan ni a lè fún ní ìdíyelé, láti ẹ̀gbẹ́ méjèèjì." },
     ],
     partnersTitle: "Àwọn alábàáṣiṣẹ́ wa",
+    // Machine-drafted (Phase 0); needs review.
+    marketTitle: "Ohun tó wà lọ́jà báyìí",
+    marketIntro: "Irè oko, irúgbìn àti ohun èlò oko tí àwọn oko àti olùpèsè nínú ìdánwò fi sílẹ̀ fún títà.",
+    marketCta: "Wo gbogbo ìpín ọjà",
     pilotTitle: "Ṣé o ń dáko ní Ọ̀yọ́, Ògùn, Ọ̀ṣun, Oǹdó, Èkìtì tàbí Èkó?",
     pilotBody:
       "A ń bẹ̀rẹ̀ pẹ̀lú ìdánwò ní àwọn agbègbè àgbẹ̀ kan. Darapọ̀ mọ́ wa ní kùtùkùtù láti ràn wá lọ́wọ́ láti ṣe áàpù náà, kí o sì gba ìrànlọ́wọ́ látọ̀dọ̀ àwọn aṣojú wa.",

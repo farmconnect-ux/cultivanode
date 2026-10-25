@@ -41,6 +41,8 @@ const yoPages: PagesDictionary = {
     badge: "Fún àwọn tó ní ẹ̀rọ oko",
     title: "Jẹ́ kí ẹ̀rọ rẹ máa ṣiṣẹ́",
     intro: "Fi tírákítọ̀ àti àwọn ohun èlò rẹ sórí áàpù pẹ̀lú iye owó rẹ, kí àwọn oko nítòsí rẹ lè rí ọ.",
+    // TODO(yoruba-review): new string, not yet checked by the Yorùbá reviewer.
+    findCta: "Ṣé o nílò tírákítọ̀? Wá ọ̀kan nítòsí oko rẹ",
     typesTitle: "Ẹ̀rọ tí o lè fi sórí áàpù",
     types: [
       "Tírákítọ̀", "Ẹ̀rọ ìtúlẹ̀ (plough)", "Harrow", "Ẹ̀rọ ìgbìn (planter)", "Ẹ̀rọ ìkórè (harvester)", "Ẹ̀rọ ìfọ́n oògùn (sprayer)",

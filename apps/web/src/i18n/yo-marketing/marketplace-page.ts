@@ -12,6 +12,10 @@ const YO: Readonly<Record<string, string>> = {
   "Verified seller": "Olùtà tí a ti fìdí rẹ̀ múlẹ̀",
   "View lot": "Wo ọjà",
   "available": "ló wà",
+  // Added with the marketplace clean-up (Phase 0). Machine-drafted; needs review.
+  "No lots match your search": "Kò sí ìpín ọjà tó bá ìwádìí rẹ mu",
+  "Try another word or clear the filters. You can also post a bulk request and let sellers come to you.":
+    "Gbìyànjú ọ̀rọ̀ mìíràn tàbí pa àṣàyàn rẹ́. O tún lè fi ìbéèrè ọjà púpọ̀ ránṣẹ́ kí àwọn olùtà wá bá ọ.",
 };
 
 export default YO;

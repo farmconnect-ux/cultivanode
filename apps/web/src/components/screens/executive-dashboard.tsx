@@ -3,6 +3,7 @@
 // Ported from the "executive_farm_operations_dashboard" design (New screen).
 // Now uses real data from the database via server actions.
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
@@ -82,7 +83,8 @@ function getActionLabel(status: OperationItem["status"], dbActionLabel: string |
     case "weather_hold":
       return "Override Rule";
     case "in_progress":
-      return "Live GPS Telemetry";
+      // There is no live tracking yet; an operation under way can be marked done.
+      return "Log Completion";
     case "completed":
       return "Completed ✓";
     default:
@@ -107,17 +109,15 @@ function getStatusDisplay(status: OperationItem["status"]): string {
   }
 }
 
-export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProps) {
+export function ExecutiveDashboard({ lang = "en", slots, operations }: ExecutiveDashboardProps) {
   const [plotFilter, setPlotFilter] = useState<string>("all");
   const [powConfirmed, setPowConfirmed] = useState(false);
-  const [aiLang, setAiLang] = useState<"EN" | "YORUBA">("EN");
-  const [aiQuery, setAiQuery] = useState("");
-  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "bot"; text: string }>>([]);
   const [, startTransition] = useTransition();
 
   // Map database operations to display format
   const displayOps = operations.map((op) => ({
     id: op.id,
+    cropCycleId: op.crop_cycle_id,
     name: op.name,
     subtext: op.subtext || "",
     plot: op.crop_area?.split(" · ").at(-1) ?? "General",
@@ -145,7 +145,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
       f.set("id", opId);
       void logOperationCompletion(f);
     });
-    showScreenToast("Operation status updated and recorded in offline SQLite ledger.");
+    showScreenToast("Marked as done.");
   };
 
   // Handler: Override Weather Rule
@@ -155,7 +155,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
       f.set("id", opId);
       void overrideWeatherHold(f);
     });
-    showScreenToast("Agronomy rule overridden with agronomist supervisor waiver #WAIV-082.");
+    showScreenToast("Weather hold lifted for this operation.");
   };
 
   // Handler: Export Operations Roster
@@ -175,25 +175,6 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
   const handleConfirmPoW = () => {
     setPowConfirmed(true);
     showScreenToast("Proof of Work verified! Escrow payment ₦95,000 scheduled for Alhaji Kazeem Syndicate.");
-  };
-
-  // Handler: AI Query Submit
-  const handleAiSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!aiQuery.trim()) return;
-    const q = aiQuery.trim();
-    setAiQuery("");
-    setAiMessages((prev) => [
-      ...prev,
-      { role: "user", text: q },
-      {
-        role: "bot",
-        text:
-          aiLang === "YORUBA"
-            ? `Àyẹ̀wò Agronomist: Fún àrùn lórí ${q}, pèsè oògùn Copper Hydroxide (2.5g/L) lẹ́yìn tí òjò bá dá. Ma fi oògùn kankan sí koríko ní àkókò òjò ńlá.`
-            : `AI Agronomist Diagnosis: For "${q}", ensure soil drainage furrows are unblocked. Recommended intervention is 2.5g/L Copper Hydroxide 48h following the heavy rain event.`,
-      },
-    ]);
   };
 
   // Modals content definition
@@ -1025,7 +1006,7 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm pb-space-md border-b border-surface-container">
                   <div>
                     <h2 className="font-headline-md text-headline-md text-on-surface">Scheduled Farm Operations</h2>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">Governed by: <span className="font-medium text-on-surface">Savanna Maize Standard v2.1 (Oyo-Derived Protocol)</span></p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">From the crop plans on your farms</p>
                   </div>
                   <div className="flex items-center gap-space-xs">
                     <select
@@ -1114,34 +1095,24 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
                                 >
                                   {op.actionLabel}
                                 </button>
-                              ) : op.actionLabel === "Live GPS Telemetry" ? (
+                              ) : op.statusTone === "completed" ? (
+                                <span className="px-space-sm py-1 font-label-sm text-label-sm font-bold text-secondary">{op.actionLabel}</span>
+                              ) : op.actionLabel === "Log Completion" ? (
                                 <button
-                                  onClick={() => showScreenToast("JD 5075E Telemetry: Lat 7.9124, Lon 3.5931 · Speed 4.2 km/h · PTO 1,420 RPM active.")}
-                                  className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
-                                  type="button"
-                                >
-                                  {op.actionLabel}
-                                </button>
-                              ) : op.actionLabel === "Scout Sheet" ? (
-                                <button
-                                  onClick={() => showScreenToast("Scout Sheet for Plot B3: Aphids count low (1.2/stalk), zero thrips infestation detected.")}
-                                  className="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
+                                  onClick={() => handleLogCompletion(op.id)}
+                                  className="px-space-sm py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-sm text-label-sm transition-colors"
                                   type="button"
                                 >
                                   {op.actionLabel}
                                 </button>
                               ) : (
-                                <button
-                                  onClick={() => handleLogCompletion(op.id)}
-                                  className={`px-space-sm py-1 rounded-lg font-label-sm text-label-sm transition-colors ${
-                                    op.statusTone === "completed"
-                                      ? "bg-surface-container text-secondary font-bold"
-                                      : "bg-primary text-on-primary hover:bg-primary-container"
-                                  }`}
-                                  type="button"
+                                // "View Details" used to mark the job done; it now opens the crop plan the job belongs to.
+                                <Link
+                                  href={op.cropCycleId ? `/${lang}/account/crops/${op.cropCycleId}` : `/${lang}/account/tasks`}
+                                  className="inline-block px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors"
                                 >
                                   {op.actionLabel}
-                                </button>
+                                </Link>
                               )}
                             </td>
                           </tr>
@@ -1246,118 +1217,21 @@ export function ExecutiveDashboard({ slots, operations }: ExecutiveDashboardProp
               </div>
             </div>
             ))}
+            {/* The design's sample diagnosis ("Dr. Funke", copper spray for any question) is gone: point to the real assistant. */}
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
-              <div className="flex items-center justify-between pb-space-md border-b border-surface-container">
-                <div className="flex items-center gap-space-xs">
-                  <Icon name="smart_toy" className="text-secondary" />
-                  <h2 className="font-headline-md text-headline-md text-on-surface">AI Field Agronomist Triage</h2>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setAiLang("EN")}
-                    className={`px-1.5 py-0.5 rounded font-label-sm text-[0.625rem] font-bold ${
-                      aiLang === "EN" ? "bg-secondary text-on-secondary" : "bg-surface-container text-on-surface"
-                    }`}
-                    type="button"
-                  >
-                    EN
-                  </button>
-                  <button
-                    onClick={() => setAiLang("YORUBA")}
-                    className={`px-1.5 py-0.5 rounded font-label-sm text-[0.625rem] font-bold ${
-                      aiLang === "YORUBA" ? "bg-secondary text-on-secondary" : "bg-surface-container text-on-surface"
-                    }`}
-                    type="button"
-                  >
-                    YORÙBÁ
-                  </button>
-                </div>
+              <div className="flex items-center gap-space-xs pb-space-sm">
+                <Icon name="smart_toy" className="text-secondary" />
+                <h2 className="font-headline-md text-headline-md text-on-surface">Farm assistant</h2>
               </div>
-              <div className="mt-space-md space-y-space-md">
-                <div className="p-space-md rounded-xl bg-surface-container-low">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-space-xs">
-                      <Icon name="coronavirus" className="text-error" />
-                      <span className="font-label-md text-label-md text-on-surface font-semibold">Plot B1: Tomato Leaf Triage</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold">94% Match</span>
-                  </div>
-                  <div className="mt-2 text-body-sm font-body-sm text-on-surface-variant">
-                    <strong className="text-on-surface">Early Blight (Alternaria solani)</strong> detected via leaf lesion scan at Node 03.
-                  </div>
-                  <div className="mt-space-sm p-space-sm rounded bg-surface-container-lowest">
-                    <div className="flex items-center justify-between">
-                      <span className="font-label-sm text-label-sm text-secondary font-bold">Verified Prescription:</span>
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">Dr. Funke A. (IITA Alum)</span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface mt-1">
-                      Apply Copper Hydroxide 50WP (2.5g/L water) 48h after the forecast rain stops. Do not apply prior to Friday downpour.
-                    </p>
-                  </div>
-                  <div className="mt-space-sm pt-space-xs flex items-center justify-between">
-                    <button
-                      onClick={() => showScreenToast("Ẹ̀rọ ń gbọ́ ohùn: 'Àkíyèsí pàtàkì: Ma fi oògùn sí i títí òjò yóò fi dá...' (0:45 playback started).")}
-                      className="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors font-medium"
-                      type="button"
-                    >
-                      <Icon name="volume_up" className="text-sm text-secondary" />
-                      <span>Gbọ́ ní Yorùbá (Voice Note)</span>
-                    </button>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">0:45 audio</span>
-                  </div>
-                </div>
-
-                {aiMessages.length > 0 && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {aiMessages.map((m, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-2.5 rounded-lg text-body-sm font-body-sm ${
-                          m.role === "user"
-                            ? "bg-primary text-on-primary ml-4"
-                            : "bg-surface-container-low text-on-surface mr-4 border border-surface-container"
-                        }`}
-                      >
-                        {m.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <form onSubmit={handleAiSubmit} className="relative">
-                  <input
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    className="w-full h-11 pl-3 pr-20 bg-surface-container-low rounded-lg text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary shadow-inner"
-                    placeholder={
-                      aiLang === "YORUBA"
-                        ? "Béèrè àrùn tàbí oògùn ní Yorùbá..."
-                        : "Ask symptom in English, Pidgin, or Yorùbá..."
-                    }
-                    type="text"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        setAiQuery("Yellow spots on maize leaves after rain");
-                        showScreenToast("Voice note transcribed: 'Yellow spots on maize leaves after rain'");
-                      }}
-                      className="p-1 text-on-surface-variant hover:text-secondary"
-                      title="Voice Input"
-                      type="button"
-                    >
-                      <Icon name="mic" className="text-lg" />
-                    </button>
-                    <button
-                      onClick={() => {}}
-                      type="submit"
-                      className="h-7 w-7 rounded bg-secondary text-on-secondary flex items-center justify-center hover:bg-primary transition-colors"
-                    >
-                      <Icon name="arrow_forward" className="text-sm" />
-                    </button>
-                  </div>
-                </form>
-              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                Ask about your crops, fertiliser or pests in English, Pidgin or Yorùbá. Answers use your own farms and crop plans.
+              </p>
+              <Link
+                href={`/${lang}/account/assistant`}
+                className="mt-space-md inline-flex items-center gap-1 rounded-lg bg-primary px-space-md py-2 font-label-md text-label-md text-on-primary hover:bg-primary-container"
+              >
+                Ask the assistant <Icon name="arrow_forward" className="text-sm" />
+              </Link>
             </div>
             {slot(slots, "stock", (
             <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">

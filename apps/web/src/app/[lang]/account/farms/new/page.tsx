@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FarmForm } from "@/components/account/farm-form";
 import { Icon } from "@/components/ds/icon";
-import { FarmRegistrationWizard } from "@/components/screens/farm-registration-wizard";
+import { PageHeader } from "@/components/ds/page-header";
 import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireAccount } from "@/lib/account/session";
@@ -15,11 +15,16 @@ export default async function NewFarmPage({ params }: PageProps<"/[lang]/account
   const account = await requireAccount(lang);
   const t = await getDictionary(lang);
 
+  // The real farm form under a plain header. The design wizard around it (components/screens/
+  // farm-registration-wizard) showed a fake 4-step progress bar and buttons that claimed to register
+  // boundaries with the state cadastre and upload land deeds; it is no longer used here.
   return (
-    <FarmRegistrationWizard
-      lang={lang}
-      slots={{
-        form: (
+    <>
+      <PageHeader
+        title="Register a farm"
+        description="Give your farm a name, choose where it is and drop a GPS point. You can add plots and the farm's boundary afterwards."
+        back={{ href: `/${lang}/account/farms`, label: "My farms" }}
+      />
           <div className="grid gap-space-lg lg:grid-cols-12">
             <section className="overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm lg:col-span-8">
               <div className="flex flex-col justify-between gap-3 bg-surface-container-low px-space-lg py-space-md md:flex-row md:items-center">
@@ -64,8 +69,6 @@ export default async function NewFarmPage({ params }: PageProps<"/[lang]/account
               </div>
             </aside>
           </div>
-        ),
-      }}
-    />
+    </>
   );
 }

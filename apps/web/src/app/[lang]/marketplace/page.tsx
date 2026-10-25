@@ -48,38 +48,73 @@ const TYPE_ICON: Record<string, "grass" | "inventory_2" | "agriculture" | "engin
 
 export const dynamic = "force-dynamic";
 
-export default async function MarketplacePage({ params }: { params: Promise<{ lang: string }> }) {
+/** One query-string value, trimmed and capped so it is safe to put in a filter. */
+function param(value: string | string[] | undefined, max = 60): string {
+  const v = Array.isArray(value) ? value[0] : value;
+  return (v ?? "").trim().slice(0, max);
+}
+
+export default async function MarketplacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   setPageLocale(lang);
   const supabase = await createClient();
+  const sp = await searchParams;
+  const filters = { q: param(sp.q), state: param(sp.state), category: param(sp.category) };
 
   // marketplace_* tables are newer than the generated types, hence the loose client.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await supabase
+  let query = supabase
     .from("marketplace_listings")
     .select(`
       id, title, listing_type, base_price_kobo, unit, available_quantity, min_order_quantity, location_state, location_lga, images,
       marketplace_inventory_lots ( physical_quantity, reserved_quantity, allocated_quantity ),
-      marketplace_categories ( name, slug ),
+      marketplace_categories${filters.category ? "!inner" : ""} ( name, slug ),
       marketplace_sellers ( id, business_name, seller_type, rating_avg ),
       marketplace_produce_provenance ( id )
     `)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(30);
+    .eq("status", "active");
+  // Search the title; strip characters that have a meaning in PostgREST filters or LIKE patterns.
+  const words = filters.q.replace(/[%_,()*\\]/g, " ").trim();
+  if (words) query = query.ilike("title", `%${words}%`);
+  if (filters.state) query = query.eq("location_state", filters.state);
+  if (filters.category) query = query.eq("marketplace_categories.slug", filters.category);
+
+  const [{ data }, { data: allActive }, { data: categoryRows }] = await Promise.all([
+    query.order("created_at", { ascending: false }).limit(30),
+    // Real numbers for the header: every active lot, how many sellers, and which states have lots.
+    supabase.from("marketplace_listings").select("seller_id, location_state").eq("status", "active").limit(5000),
+    supabase.from("marketplace_categories").select("slug, name").eq("is_active", true).order("sort_order"),
+  ]);
   const listings = (data ?? []) as Row[];
+  const active = (allActive ?? []) as { seller_id: string; location_state: string | null }[];
+  const stats = { lots: active.length, sellers: new Set(active.map((r) => r.seller_id)).size };
+  const states = [...new Set(active.map((r) => r.location_state).filter((s): s is string => Boolean(s)))].sort();
+  const categories = (categoryRows ?? []) as { slug: string; name: string }[];
 
   return (
     <OpenMarketplace
       lang={lang}
+      stats={stats}
+      filters={filters}
+      categories={categories}
+      states={states}
       slots={{
         lots:
           listings.length === 0 ? (
             <EmptyState
               icon="storefront"
-              title={tYo("No lots are live yet")}
-              description={tYo("Verified farmers and suppliers are listing their first lots. Join the pilot to be notified, or list your own produce.")}
+              title={filters.q || filters.state || filters.category ? tYo("No lots match your search") : tYo("No lots are live yet")}
+              description={
+                filters.q || filters.state || filters.category
+                  ? tYo("Try another word or clear the filters. You can also post a bulk request and let sellers come to you.")
+                  : tYo("Verified farmers and suppliers are listing their first lots. Join the pilot to be notified, or list your own produce.")
+              }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <Link href={`/${lang}/account/marketplace/new-listing`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-container px-4 py-2.5 font-label-md text-label-md text-white hover:bg-primary">
@@ -134,8 +169,10 @@ export default async function MarketplacePage({ params }: { params: Promise<{ la
                         <h3 className="mt-1 font-headline-sm text-headline-sm text-on-surface">{tYo(l.title)}</h3>
                         <p className="mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant">
                           {tYo(seller?.business_name ?? "Verified seller")}
-                          {seller?.rating_avg != null && (
+                          {seller?.rating_avg ? (
                             <Badge tone="caution" className="py-0"><Icon name="star" filled /> {Number(seller.rating_avg).toFixed(1)}</Badge>
+                          ) : (
+                            <Badge className="py-0">{tYo("New seller")}</Badge>
                           )}
                         </p>
                       </div>

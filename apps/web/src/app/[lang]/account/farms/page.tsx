@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
 import { MetricCard } from "@/components/live/metric-card";
 import { FarmRegistry } from "@/components/screens/farm-registry";
 import { Badge } from "@/components/shadcn/badge";
@@ -57,9 +56,6 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
 
   return (
     <>
-      <LiveStrip>
-        <span className="text-on-surface-variant">Farms and plots are your live registry. The map overlay, soil and tenure panels show sample data.</span>
-      </LiveStrip>
       <FarmRegistry
         lang={lang}
         slots={{
@@ -93,7 +89,7 @@ export default async function FarmsPage({ params }: PageProps<"/[lang]/account/f
             </div>
           ),
           inventory: (
-            <div className="flex flex-col overflow-hidden rounded-lg bg-surface-container-lowest shadow-sm xl:col-span-8">
+            <div className="flex flex-col overflow-hidden rounded-lg bg-surface-container-lowest shadow-sm">
               <div className="flex items-center justify-between bg-surface-container-low p-space-md">
                 <div>
                   <h3 className="font-headline-sm text-headline-sm text-on-surface">Farm & plot inventory</h3>

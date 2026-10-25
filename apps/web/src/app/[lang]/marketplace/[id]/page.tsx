@@ -41,14 +41,7 @@ export default async function ListingDetailPage({
       marketplace_inventory_lots ( physical_quantity, reserved_quantity, allocated_quantity ),
       marketplace_categories ( name ),
       marketplace_sellers ( id, business_name, seller_type, rating_avg, verification_status ),
-      marketplace_produce_provenance (
-        batch_code,
-        harvest_date,
-        grade,
-        moisture_pct,
-        is_organic,
-        farms ( id, name )
-      )
+      marketplace_produce_provenance ( batch_code, harvest_date, grade, moisture_pct, is_organic )
     `)
     .eq("id", id)
     .maybeSingle();
@@ -57,6 +50,16 @@ export default async function ListingDetailPage({
     notFound();
   }
 
+  // The farm's name comes from the farms table, which signed-out visitors may not read (and should not).
+  // Asking for it in the main query made the whole page 404 for them, so ask separately and go on without it.
+  const { data: farmRow } = await supabase
+    .from("marketplace_listings")
+    .select("marketplace_produce_provenance ( farms ( id, name ) )")
+    .eq("id", id)
+    .maybeSingle();
+  const farmLink = farmRow?.marketplace_produce_provenance;
+  const farm = (Array.isArray(farmLink) ? farmLink[0] : farmLink)?.farms ?? null;
+
   const provenanceRecord = Array.isArray(listing.marketplace_produce_provenance)
     ? listing.marketplace_produce_provenance[0]
     : listing.marketplace_produce_provenance;
@@ -64,9 +67,10 @@ export default async function ListingDetailPage({
   const fullListing: FullListingDetails = {
     id: listing.id,
     seller_id: listing.marketplace_sellers?.id ?? "",
-    seller_name: listing.marketplace_sellers?.business_name ?? "Verified Seller",
+    seller_name: listing.marketplace_sellers?.business_name ?? "Seller",
     seller_type: listing.marketplace_sellers?.seller_type ?? "farmer",
-    seller_rating: Number(listing.marketplace_sellers?.rating_avg ?? 5.0),
+    // No rating yet shows as "New seller", never an invented 5.0.
+    seller_rating: listing.marketplace_sellers?.rating_avg ? Number(listing.marketplace_sellers.rating_avg) : null,
     seller_verified: listing.marketplace_sellers?.verification_status === "verified",
     title: listing.title,
     description: listing.description,
@@ -86,8 +90,8 @@ export default async function ListingDetailPage({
     images: listing.images ?? [],
     provenance: provenanceRecord
       ? {
-          farm_id: provenanceRecord.farms?.id,
-          farm_name: provenanceRecord.farms?.name,
+          farm_id: farm?.id,
+          farm_name: farm?.name,
           batch_code: provenanceRecord.batch_code,
           harvest_date: provenanceRecord.harvest_date,
           grade: provenanceRecord.grade,

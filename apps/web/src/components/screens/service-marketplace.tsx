@@ -3,6 +3,7 @@
 // Ported from the "service_machinery_marketplace" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
 import { useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { slot, type ScreenProps } from "./types";
@@ -123,7 +124,7 @@ const LISTINGS: ServiceListing[] = [
   },
 ];
 
-export function ServiceMarketplace({ slots }: ScreenProps<ServiceMarketplaceSlot>) {
+export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMarketplaceSlot>) {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("Rotary Weeding & Disc Harrows");
   const [selectedCluster, setSelectedCluster] = useState("Iseyin Hub");
@@ -207,28 +208,19 @@ export function ServiceMarketplace({ slots }: ScreenProps<ServiceMarketplaceSlot
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md mb-space-sm shadow-sm">
                 <Icon name="verified" filled className="text-sm" />
-                <span>0% COMMISSION PILOT · DIRECT SETTLEMENT · PROOF-OF-WORK VERIFIED</span>
+                <span>0% COMMISSION IN THE PILOT · PAY THE PROVIDER DIRECTLY</span>
               </div>
-              <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-primary font-bold tracking-tight">Machinery Syndicates &amp; Agro-Services</h1>
-              <p className="font-body-md text-body-md text-on-primary-container mt-1 max-w-2xl">Zero platform custodial fees. CultivaNode provides GPS polygon auditing, automated hectare tracking, and cryptographic telemetry. Farmers settle 100% directly with verified fleet syndicates upon task completion.</p>
+              <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-primary font-bold tracking-tight">Hire machinery and farm help</h1>
+              <p className="font-body-md text-body-md text-on-primary-container mt-1 max-w-2xl">Find tractor owners, operators and farm hands who travel to your farm. In the pilot you pay the provider directly after the job. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed.</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-sm self-start lg:self-center">
-              <button
-                onClick={() => setShowPostNeedModal(true)}
-                className="px-space-md py-space-sm bg-surface-container-lowest text-primary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-colors flex items-center gap-space-xs cursor-pointer"
-                type="button"
-              >
-                <Icon name="add_circle" className="text-lg" />
-                <span>Post Machinery Need</span>
-              </button>
-              <button
-                onClick={() => setShowRegisterModal(true)}
-                className="px-space-md py-space-sm bg-secondary text-on-secondary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors flex items-center gap-space-xs cursor-pointer"
-                type="button"
+              <Link
+                href={`/${lang}/account/listings`}
+                className="px-space-md py-space-sm bg-secondary text-on-secondary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-colors flex items-center gap-space-xs"
               >
                 <Icon name="agriculture" className="text-lg" />
-                <span>Register Equipment</span>
-              </button>
+                <span>List your equipment</span>
+              </Link>
             </div>
           </div>
 
@@ -343,36 +335,6 @@ export function ServiceMarketplace({ slots }: ScreenProps<ServiceMarketplaceSlot
             </div>
           </div>
         ))}
-
-        <div className="bg-surface-container-low rounded-xl p-space-lg shadow-sm mb-space-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md">
-          <div className="flex items-start gap-space-md">
-            <div className="p-space-sm bg-tertiary-fixed rounded-lg text-tertiary flex items-center justify-center shrink-0">
-              <Icon name="share_location" className="text-3xl" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded font-label-sm text-label-sm bg-tertiary text-on-tertiary font-bold tracking-wider">CLUSTER MOBILIZATION OPPORTUNITY</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">Iseyin South Savannah Block</span>
-              </div>
-              <h2 className="font-headline-md text-headline-md text-on-surface font-bold mt-1">4 Neighboring Farms Pooled · 36.0 Hectares Harrowing</h2>
-              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-2xl mt-1">Farms within 3.2km (Afolabi Organic, Kasali Grain Hub, Alade Ridge &amp; Your Plot A) have aggregated continuous ploughing requests. Syndicate flatbed mobilization surcharge is split 4-ways, slashing transit overhead from ₦35,000 to ₦8,750 per farm.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-space-sm w-full lg:w-auto shrink-0">
-            <div className="text-right hidden xl:block pr-space-sm">
-              <div className="font-label-sm text-label-sm text-on-surface-variant">Combined Rate Lock</div>
-              <div className="font-headline-sm text-headline-sm text-primary font-bold">₦26,500 <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">/ Ha</span></div>
-            </div>
-            <button
-              onClick={() => setShowClusterModal(true)}
-              className="w-full lg:w-auto px-space-md py-space-sm bg-primary text-on-primary rounded-lg font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all flex items-center justify-center gap-2 cursor-pointer"
-              type="button"
-            >
-              <Icon name="group_work" className="text-base" />
-              <span>Join Cluster Dispatch Roster</span>
-            </button>
-          </div>
-        </div>
 
         {slot(slots, "tracker", (
           <div className="bg-surface-container-lowest rounded-xl shadow-sm mb-space-lg overflow-hidden">

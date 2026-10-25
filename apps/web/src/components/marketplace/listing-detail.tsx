@@ -15,7 +15,8 @@ export interface FullListingDetails {
   seller_id: string;
   seller_name: string;
   seller_type: string;
-  seller_rating: number;
+  /** Average rating, or null when the seller has no rated orders yet. */
+  seller_rating: number | null;
   seller_verified: boolean;
   title: string;
   description: string | null;
@@ -72,6 +73,19 @@ function Gallery({ images, title }: { images: string[]; title: string }) {
   );
 }
 
+/** The provenance fields that have a real value, in reading order. */
+function provenanceFacts(p: NonNullable<FullListingDetails["provenance"]>): { label: string; value: string }[] {
+  const facts: { label: string; value: string | null | undefined }[] = [
+    { label: "Farm", value: p.farm_name },
+    { label: "Batch code", value: p.batch_code },
+    { label: "Quality grade", value: p.grade?.replace(/_/g, " ") },
+    { label: "Harvest date", value: p.harvest_date },
+    { label: "Moisture", value: p.moisture_pct != null ? `${p.moisture_pct}%` : null },
+    { label: "Organic", value: p.is_organic ? "Yes" : null },
+  ];
+  return facts.filter((f): f is { label: string; value: string } => Boolean(f.value));
+}
+
 export function ListingDetailView({
   lang,
   listing,
@@ -90,14 +104,13 @@ export function ListingDetailView({
             <Badge className="bg-secondary-container/40 text-primary uppercase tracking-wide">
               {tYo(listing.category_name)}
             </Badge>
-            <Badge className="bg-earth-100 text-on-surface">{tYo("Type: ")}{tYo(listing.listing_type)}
-            </Badge>
             {listing.provenance?.farm_name && (
-              <Badge className="bg-node-100 text-node-800 font-bold">{tYo("✓ Verified Farm Source")}</Badge>
+              <Badge className="bg-node-100 text-node-800 font-bold">{tYo("Linked to a farm on CultivaNode")}</Badge>
             )}
           </div>
           <h1 className="text-3xl font-extrabold text-on-surface sm:text-4xl">{tYo(listing.title)}</h1>
-          <p className="mt-2 text-sm text-on-surface-variant">{tYo("Sold by ")}<span className="font-bold text-on-surface">{tYo(listing.seller_name)}</span> · ★ {listing.seller_rating.toFixed(1)}
+          <p className="mt-2 text-sm text-on-surface-variant">{tYo("Sold by ")}<span className="font-bold text-on-surface">{tYo(listing.seller_name)}</span> ·{" "}
+            {listing.seller_rating ? `★ ${listing.seller_rating.toFixed(1)}` : tYo("New seller")}
             {listing.seller_verified && " · (Identity & Bank Verified)"}
           </p>
         </div>
@@ -130,31 +143,18 @@ export function ListingDetailView({
           </p>
         </div>
 
-        {/* Produce Provenance & Seed-to-Harvest Traceability */}
-        {listing.provenance && (
+        {/* Farm record behind this lot: only fields the seller actually recorded are shown. */}
+        {listing.provenance && provenanceFacts(listing.provenance).length > 0 && (
           <div className="rounded-xl border-2 border-secondary/40 bg-surface-container-low/40 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">🌱</span>
-              <h2 className="text-xl font-bold text-primary">{tYo("Farm Traceability & Batch Provenance")}</h2>
-            </div>
-            <p className="text-xs text-on-surface-variant mb-4">{tYo("This produce was grown and recorded inside the CultivaNode Farm Management network. Complete lifecycle integrity is verifiable.")}</p>
-            <div className="grid gap-3 sm:grid-cols-2 text-sm">
-              <div className="rounded-lg bg-white p-3 border border-border">
-                <span className="text-xs text-on-surface-variant">{tYo("Originating Farm")}</span>
-                <p className="font-bold text-on-surface">{tYo(listing.provenance.farm_name || "CultivaNode Pilot Farm")}</p>
-              </div>
-              <div className="rounded-lg bg-white p-3 border border-border">
-                <span className="text-xs text-on-surface-variant">{tYo("Harvest Batch Code")}</span>
-                <p className="font-bold text-primary font-mono">{tYo(listing.provenance.batch_code || "HARV-BATCH-VERIFIED")}</p>
-              </div>
-              <div className="rounded-lg bg-white p-3 border border-border">
-                <span className="text-xs text-on-surface-variant">{tYo("Quality Grade")}</span>
-                <p className="font-bold text-on-surface capitalize">{tYo(listing.provenance.grade?.replace("_", " ") || "Grade A (Prime)")}</p>
-              </div>
-              <div className="rounded-lg bg-white p-3 border border-border">
-                <span className="text-xs text-on-surface-variant">{tYo("Harvest Date")}</span>
-                <p className="font-bold text-on-surface">{tYo(listing.provenance.harvest_date || "Recent Harvest")}</p>
-              </div>
+            <h2 className="mb-1 text-xl font-bold text-primary">{tYo("Where this comes from")}</h2>
+            <p className="mb-4 text-xs text-on-surface-variant">{tYo("Recorded by the seller on CultivaNode.")}</p>
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              {provenanceFacts(listing.provenance).map((f) => (
+                <div key={f.label} className="rounded-lg border border-border bg-white p-3">
+                  <span className="text-xs text-on-surface-variant">{tYo(f.label)}</span>
+                  <p className="font-bold text-on-surface">{f.value}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -173,7 +173,7 @@ export function ListingDetailView({
       {/* Right Column: Checkout & Escrow Protection Box */}
       <div className="flex flex-col gap-5">
         <Card className="sticky top-20 flex flex-col gap-4 border-2 border-primary-container bg-white shadow-lg p-6">
-          <h3 className="text-xl font-bold text-on-surface">{tYo("Purchase & Escrow Order")}</h3>
+          <h3 className="text-xl font-bold text-on-surface">{tYo("Buy this lot")}</h3>
 
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex justify-between text-on-surface-variant">
@@ -203,8 +203,8 @@ export function ListingDetailView({
           <p className="text-xs text-on-surface-variant">{tYo("You enter the delivery address and pay at checkout.")}</p>
 
           <div className="rounded-lg bg-earth-50 p-3 text-center text-xs text-on-surface-variant">
-            <span className="font-bold text-primary">{tYo("🛡️ CultivaNode Escrow Protection:")}</span>
-            <br />{tYo("Funds are held securely until you receive and verify the delivery.")}</div>
+            <span className="font-bold text-primary">{tYo("Your payment is held until delivery")}</span>
+            <br />{tYo("The seller is paid after you confirm you received the order.")}</div>
         </Card>
       </div>
     </div>

@@ -38,6 +38,7 @@ const enPages = {
     badge: "For machinery owners",
     title: "Keep your equipment working",
     intro: "List your tractor and implements with your prices, and be found by farms near you.",
+    findCta: "Need a tractor? Find one near your farm",
     typesTitle: "Equipment you can list",
     types: [
       "Tractor", "Plough", "Harrow", "Planter", "Harvester", "Sprayer", "Ridger", "Tiller",
