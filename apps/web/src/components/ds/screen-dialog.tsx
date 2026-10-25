@@ -132,16 +132,16 @@ export function ScreenDialogClose({
   className,
 }: {
   children?: React.ReactNode;
-  onClick?: (e: React.MouseEvent<any>) => void;
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   className?: string;
 }) {
   const ctx = React.useContext(DialogCtx);
-  const handleClick = (e: React.MouseEvent<any>) => {
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
     onClick?.(e);
     ctx?.close();
   };
 
-  if (React.isValidElement(children) && (children.type === "button" || (children.props as any)?.type === "button")) {
+  if (React.isValidElement(children) && (children.type === "button" || (children.props as { type?: string } | null)?.type === "button")) {
     return (
       <Slot.Root onClick={handleClick} className={className}>
         {children}
@@ -167,17 +167,17 @@ export function ScreenDialogAction({
   className,
 }: {
   children?: React.ReactNode;
-  onClick?: (e: React.MouseEvent<any>) => void;
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   className?: string;
 }) {
   const ctx = React.useContext(DialogCtx);
-  const handleClick = (e: React.MouseEvent<any>) => {
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
     onClick?.(e);
     const label = (e.currentTarget?.textContent ?? "").replace(/[-]/g, "").trim();
     ctx?.confirm(label);
   };
 
-  if (React.isValidElement(children) && (children.type === "button" || (children.props as any)?.type === "button")) {
+  if (React.isValidElement(children) && (children.type === "button" || (children.props as { type?: string } | null)?.type === "button")) {
     return (
       <Slot.Root onClick={handleClick} className={className}>
         {children}

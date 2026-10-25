@@ -5,6 +5,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import type { IconName } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
@@ -1065,7 +1066,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                             </td>
                             <td className="py-space-md px-space-sm">
                               <div className="flex items-center gap-1 font-medium text-on-surface">
-                                <Icon name={op.resourceIcon as any} className="text-sm text-secondary" />
+                                <Icon name={op.resourceIcon as IconName} className="text-sm text-secondary" />
                                 <span>{op.resource}</span>
                               </div>
                               <div className="text-on-surface-variant">{op.location}</div>

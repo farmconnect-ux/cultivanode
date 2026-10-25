@@ -49,7 +49,7 @@ function timeout(): AbortSignal {
 }
 
 async function gemini(images: CropImage[], text: string): Promise<string | null> {
-  const key = process.env.GEMINI_API_KEY;
+  const key = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
   if (!key) return null;
   const model = process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash";
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -58,10 +58,16 @@ async function gemini(images: CropImage[], text: string): Promise<string | null>
     signal: timeout(),
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text }, ...images.map((i) => ({ inline_data: { mime_type: i.mime, data: i.base64 } }))] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 1200 },
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+        // Gemini 2.5 "thinking" counts against the output budget and can leave the answer empty.
+        ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
     }),
   });
-  if (!res.ok) throw new Error(`gemini_${res.status}`);
+  if (!res.ok) throw new Error(`gemini_${res.status}: ${(await res.text().catch(() => "")).slice(0, 160)}`);
   const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
   return json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? null;
 }
@@ -69,7 +75,7 @@ async function gemini(images: CropImage[], text: string): Promise<string | null>
 async function openai(images: CropImage[], text: string): Promise<string | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
-  const model = process.env.AI_FALLBACK_MODEL || "gpt-4.1-mini";
+  const model = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -87,7 +93,7 @@ async function openai(images: CropImage[], text: string): Promise<string | null>
       ],
     }),
   });
-  if (!res.ok) throw new Error(`openai_${res.status}`);
+  if (!res.ok) throw new Error(`openai_${res.status}: ${(await res.text().catch(() => "")).slice(0, 160)}`);
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return json.choices?.[0]?.message?.content ?? null;
 }
@@ -133,7 +139,7 @@ function clean(raw: string): Diagnosis | null {
 }
 
 export function visionConfigured(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY);
+  return Boolean(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || process.env.OPENAI_API_KEY);
 }
 
 export async function diagnoseCropPhotos(images: CropImage[], context: Context): Promise<DiagnosisResult> {
@@ -142,7 +148,7 @@ export async function diagnoseCropPhotos(images: CropImage[], context: Context):
   const text = prompt(context);
   const tries: [string, () => Promise<string | null>][] = [
     [process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash", () => gemini(images, text)],
-    [process.env.AI_FALLBACK_MODEL || "gpt-4.1-mini", () => openai(images, text)],
+    [process.env.AI_FALLBACK_MODEL || "gpt-4o-mini", () => openai(images, text)],
   ];
   for (const [model, run] of tries) {
     try {

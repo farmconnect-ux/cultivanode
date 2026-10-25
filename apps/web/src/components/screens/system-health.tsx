@@ -48,6 +48,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                   <Icon name="lock" className="text-tertiary-container text-base" />
                   <span>Platform Lock / Migration</span>
                 </button>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
                 <a className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-export-audit" href="/api/account/export">
                   <Icon name="download" className="text-base" />
                   <span>Export Audit Ledger</span>

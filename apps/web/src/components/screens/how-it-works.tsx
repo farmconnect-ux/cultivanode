@@ -619,6 +619,7 @@ export function HowItWorks({ lang }: ScreenProps) {
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-space-sm shrink-0 relative z-10">
               <Link className="w-full sm:w-auto inline-flex items-center justify-center font-label-lg text-label-lg font-semibold bg-secondary text-on-secondary px-space-lg py-space-sm rounded-lg hover:bg-secondary-fixed transition-colors shadow-md" href={`/${lang}/sign-up`}>{tYo("Create Free Account")}</Link>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
               <a className="w-full sm:w-auto inline-flex items-center justify-center gap-space-xs font-label-lg text-label-lg font-semibold bg-surface-container-lowest text-primary px-space-md py-space-sm rounded-lg hover:bg-surface-container transition-colors shadow-sm" href="/api/documents/handbook?download=1">
                 <Icon name="download" className="text-[18px]" />
                 <span>{tYo("Pilot Trust Handbook (PDF)")}</span>

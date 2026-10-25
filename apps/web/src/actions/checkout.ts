@@ -253,9 +253,9 @@ async function getPaymentRuntime(orderId?: string): Promise<PaymentRuntime> {
   try {
     const supabase = await createClient();
     const { data: creds, error } = await supabase.rpc("get_checkout_payment_credentials", {
-      p_order_id: orderId || null,
+      p_order_id: orderId || undefined,
     });
-    if (!error && creds && typeof creds === "object") {
+    if (!error && creds && typeof creds === "object" && !Array.isArray(creds)) {
       const active = (creds.provider ?? "flutterwave") as "flutterwave" | "paystack" | "direct_transfer" | "test_adapter";
       const mode = (creds.mode ?? "live") as "test" | "live";
       const secrets = (creds.secrets as Record<string, string> | undefined) ?? {};
@@ -297,10 +297,12 @@ async function getPaymentRuntime(orderId?: string): Promise<PaymentRuntime> {
 
       const active = (settings?.active_provider ?? "flutterwave") as "flutterwave" | "paystack" | "direct_transfer" | "test_adapter";
 
-      const { data: rt } = await admin.rpc("integration_runtime", {
+      const { data: rtRaw } = await admin.rpc("integration_runtime", {
         p_kind: "payment",
         p_provider: active,
       });
+      // The function returns a JSON object; anything else means "not configured".
+      const rt = rtRaw && typeof rtRaw === "object" && !Array.isArray(rtRaw) ? rtRaw : null;
 
       const mode = (rt?.mode ?? "test") as "test" | "live";
       const secrets = (rt?.secrets as Record<string, string> | undefined) ?? {};

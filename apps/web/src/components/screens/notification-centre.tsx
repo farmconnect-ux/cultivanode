@@ -4,6 +4,7 @@
 // pages pass live data through props where the backend already provides it.
 import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import type { IconName } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
@@ -643,7 +644,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                       <div className="flex flex-wrap items-center gap-space-md mt-space-xs font-label-sm text-label-sm text-on-surface-variant">
                         {notif.meta.map((m, idx) => (
                           <div key={idx} className={`flex items-center gap-1 ${m.highlight ? "text-secondary font-semibold" : ""}`}>
-                            <Icon name={m.icon as any} className="text-[16px]" />
+                            <Icon name={m.icon as IconName} className="text-[16px]" />
                             <span>{m.text}</span>
                           </div>
                         ))}

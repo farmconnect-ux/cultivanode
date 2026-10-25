@@ -20,6 +20,8 @@ export interface GroundedAiAssistantResponse {
   answer: string;
   language: AppLanguage | 'pcm';
   providerUsed: 'gemini' | 'openai' | 'rule-engine';
+  /** Why the AI providers were skipped or failed (for server logs; never shown to farmers). */
+  providerErrors: string[];
   passedSafetyGuardrail: boolean;
   bannedChemicalsDetected: string[];
   approvedChemicalsDetected: string[];
@@ -141,7 +143,8 @@ async function callGemini(
   model: string,
   timeoutMs: number
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  // The key goes in a header, not the URL, so it never lands in request logs.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
     { text: `${prompt.systemPrompt}\n\n${prompt.userPrompt}` }
@@ -161,7 +164,10 @@ async function callGemini(
     contents: [{ role: 'user', parts }],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 1200,
+      maxOutputTokens: 2048,
+      // Gemini 2.5 models "think" before answering and that counts against the output budget; without this a
+      // long answer can come back empty. Advice answers don't need it.
+      ...(model.startsWith('gemini-2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     },
   };
 
@@ -171,7 +177,7 @@ async function callGemini(
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
@@ -185,7 +191,7 @@ async function callGemini(
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
 
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const answer = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('');
     if (!answer) throw new Error('Empty response from Gemini');
     return answer.trim();
   } finally {
@@ -275,6 +281,10 @@ export async function askGroundedAiAssistant(
 
   let rawAnswer = '';
   let providerUsed: 'gemini' | 'openai' | 'rule-engine' = 'rule-engine';
+  const providerErrors: string[] = [];
+  const reason = (e: unknown) => (e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'unknown').slice(0, 160);
+  if (!params.geminiApiKey) providerErrors.push('gemini: no key');
+  if (!params.openaiApiKey) providerErrors.push('openai: no key');
 
   // 1. Try Primary: Gemini
   if (params.geminiApiKey) {
@@ -288,7 +298,8 @@ export async function askGroundedAiAssistant(
         timeoutMs
       );
       providerUsed = 'gemini';
-    } catch {
+    } catch (e) {
+      providerErrors.push(`gemini: ${reason(e)}`);
       rawAnswer = '';
     }
   }
@@ -305,7 +316,8 @@ export async function askGroundedAiAssistant(
         timeoutMs
       );
       providerUsed = 'openai';
-    } catch {
+    } catch (e) {
+      providerErrors.push(`openai: ${reason(e)}`);
       rawAnswer = '';
     }
   }
@@ -323,6 +335,7 @@ export async function askGroundedAiAssistant(
     answer: guardrailResult.sanitizedResponseText,
     language: lang,
     providerUsed,
+    providerErrors,
     passedSafetyGuardrail: guardrailResult.passed,
     bannedChemicalsDetected: guardrailResult.bannedChemicalsDetected,
     approvedChemicalsDetected: guardrailResult.approvedChemicalsDetected,

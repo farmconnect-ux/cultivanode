@@ -3,6 +3,7 @@
 // Ported from the "content_knowledge_administration" design.
 import { useState } from "react";
 import { Icon } from "@/components/ds/icon";
+import type { IconName } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
 import { slot, type ScreenProps } from "./types";
@@ -18,7 +19,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
   const [isRollbackOpen, setIsRollbackOpen] = useState(false);
   const [isAddChemicalOpen, setIsAddChemicalOpen] = useState(false);
   const [isTranslationStudioOpen, setIsTranslationStudioOpen] = useState(false);
-  const [reviewDiffItem, setReviewDiffItem] = useState<any | null>(null);
+  const [reviewDiffItem, setReviewDiffItem] = useState<Record<string, string> | null>(null);
 
   // New Draft Form State
   const [draftTitle, setDraftTitle] = useState("");
@@ -287,7 +288,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`px-4 py-3 font-label-md text-label-md rounded-t-lg transition-colors flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? "font-bold text-primary border-b-2 border-primary bg-surface-container-lowest"
@@ -295,7 +296,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                 }`}
                 type="button"
               >
-                <Icon name={tab.icon as any} className="text-[18px]" />
+                <Icon name={tab.icon as IconName} className="text-[18px]" />
                 <span>{tab.label}</span>
               </button>
             ))}

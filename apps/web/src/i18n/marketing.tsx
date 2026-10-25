@@ -37,6 +37,7 @@ export function phrasebook(yo: Readonly<Record<string, string>>): Translator {
   function tYo<V>(value: V): V {
     if (typeof value !== "string") return value;
     // `use` may be called conditionally; tYo only runs while a component renders.
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- tYo is only ever called during render
     return (use(SiteLocale) === "yo" ? swap(yo, value) : value) as V;
   }
   tYo.now = function now<V>(value: V): V {

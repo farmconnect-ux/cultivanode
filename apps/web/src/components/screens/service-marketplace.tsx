@@ -5,6 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
+import type { IconName } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
 import { slot, type ScreenProps } from "./types";
 
@@ -550,7 +551,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                       className="w-full py-space-sm bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center justify-center gap-1 cursor-pointer"
                       type="button"
                     >
-                      <Icon name={item.btnIcon as any} className="text-base" />
+                      <Icon name={item.btnIcon as IconName} className="text-base" />
                       <span>{item.btnLabel}</span>
                     </button>
                   </div>

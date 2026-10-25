@@ -33,6 +33,10 @@ interface MessageItem {
   timestamp: string;
 }
 
+// Message ids for list keys; a counter keeps rendering pure (no clock reads).
+let messageSeq = 0;
+const newMessageId = (prefix: string) => `${prefix}-${++messageSeq}`;
+
 export function AiFarmAssistant({
   farms,
   plots,
@@ -133,7 +137,7 @@ export function AiFarmAssistant({
     if ((!text && !currentImg) || isPending) return;
 
     const userMsg: MessageItem = {
-      id: `usr-${Date.now()}`,
+      id: newMessageId('usr'),
       role: "user",
       text: text || "Diagnose this crop issue from the attached photo.",
       imagePreview: currentImg?.preview,
@@ -162,7 +166,7 @@ export function AiFarmAssistant({
         });
 
         const botMsg: MessageItem = {
-          id: `bot-${Date.now()}`,
+          id: newMessageId('bot'),
           role: "assistant",
           text: res.answer,
           language: res.language,
@@ -179,7 +183,7 @@ export function AiFarmAssistant({
         setMessages((prev) => [
           ...prev,
           {
-            id: `err-${Date.now()}`,
+            id: newMessageId('err'),
             role: "assistant",
             text: `Error connecting to advisor: ${errorMsg}`,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -350,8 +354,8 @@ export function AiFarmAssistant({
                   </span>
                   <div className="flex items-center gap-2">
                     {m.providerUsed && (
-                      <span className="font-mono text-[9px] uppercase opacity-75">
-                        [{m.providerUsed}]
+                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${m.providerUsed === "rule-engine" ? "bg-caution-soft text-[#92400e]" : "bg-secondary-container/40 text-secondary"}`}>
+                        {m.providerUsed === "rule-engine" ? "Basic advice · AI unavailable" : "AI"}
                       </span>
                     )}
                     <span>{m.timestamp}</span>

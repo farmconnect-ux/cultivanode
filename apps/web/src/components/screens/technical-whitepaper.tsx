@@ -40,6 +40,7 @@ export function TechnicalWhitepaper({ lang = "en" }: ScreenProps) {
               <Icon name="print" className="text-[16px]" />
               <span>{tYo("Print Specification")}</span>
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
             <a
               href="/api/documents/whitepaper?download=1"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-sm text-label-sm shadow-sm transition-colors"
@@ -276,6 +277,7 @@ export function TechnicalWhitepaper({ lang = "en" }: ScreenProps) {
               <span>{tYo("Explore Interactive Architecture Tiers")}</span>
             </Link>
             <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
               <a
                 href="/api/documents/institutional-whitepaper"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors"
@@ -283,6 +285,7 @@ export function TechnicalWhitepaper({ lang = "en" }: ScreenProps) {
                 <Icon name="corporate_fare" className="text-[18px]" />
                 <span>{tYo("Institutional Partner Dossier")}</span>
               </a>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
               <a
                 href="/api/documents/whitepaper?download=1"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-colors shadow-sm"

@@ -29,6 +29,15 @@ jobs:
         with:
           version: latest
       - name: Start local Supabase (applies all migrations)
-        run: supabase db start
+        # The default registry (public.ecr.aws) rate-limits shared CI runners ("toomanyrequests").
+        # Pull from GitHub's registry first, then Docker Hub, retrying once each.
+        run: |
+          for registry in ghcr.io ghcr.io docker.io docker.io; do
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY=$registry supabase db start; then exit 0; fi
+            echo "supabase db start failed with $registry, retrying"
+            supabase stop --no-backup || true
+            sleep 15
+          done
+          exit 1
       - name: Run pgTAP tests
         run: supabase test db

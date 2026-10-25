@@ -63,6 +63,7 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- the proxy redirects this to the APK file; it isn't a page */}
             <a
               href="/download/android"
               className="flex flex-1 items-center justify-center gap-3 rounded-xl bg-primary-container px-6 py-4 text-center text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"

@@ -82,10 +82,10 @@ export function PlatformFinance(_props: ScreenProps) {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isBatchPayoutOpen, setIsBatchPayoutOpen] = useState(false);
   const [isCbnLedgerOpen, setIsCbnLedgerOpen] = useState(false);
-  const [activeTelemetryModal, setActiveTelemetryModal] = useState<any | null>(null);
-  const [activeDisputeModal, setActiveDisputeModal] = useState<any | null>(null);
-  const [activeProrateModal, setActiveProrateModal] = useState<any | null>(null);
-  const [activeNibssStatusModal, setActiveNibssStatusModal] = useState<any | null>(null);
+  const [activeTelemetryModal, setActiveTelemetryModal] = useState<Record<string, string | number> | null>(null);
+  const [activeDisputeModal, setActiveDisputeModal] = useState<Record<string, string | number> | null>(null);
+  const [activeProrateModal, setActiveProrateModal] = useState<Record<string, string | number> | null>(null);
+  const [activeNibssStatusModal, setActiveNibssStatusModal] = useState<Record<string, string | number> | null>(null);
 
   // Dynamic statuses for table items
   const [payout0492Status, setPayout0492Status] = useState<"pending" | "authorized">("pending");

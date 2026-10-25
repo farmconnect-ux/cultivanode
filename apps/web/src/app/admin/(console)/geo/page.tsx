@@ -51,7 +51,9 @@ export default async function AdminGeoPage() {
     supabase.rpc("admin_listings", { p_limit: 30 }),
   ]);
 
-  const listingsList = ((realListings as any[]) ?? []);
+  // admin_listings returns JSON rows; only these fields are drawn on the map.
+  type ListingPin = { id: string; title: string; owner_state: string | null; status: string };
+  const listingsList = Array.isArray(realListings) ? (realListings as unknown as ListingPin[]) : [];
 
   // Map real database records to geographical display entities
   const points: RealGeoEntity[] = [];
@@ -90,7 +92,7 @@ export default async function AdminGeoPage() {
   });
 
   // Add real listings/equipment from database
-  ((realListings as any[]) ?? []).forEach((l, idx) => {
+  listingsList.forEach((l, idx) => {
     const base = STATE_COORDINATES[l.owner_state ?? "Oyo"] ?? { x: 400, y: 250 };
     const offset = ((idx * 31) % 40) - 20;
     points.push({

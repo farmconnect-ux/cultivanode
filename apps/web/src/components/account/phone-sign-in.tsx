@@ -17,10 +17,13 @@ export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: 
   const [state, send, sending] = useActionState(requestCode, { step: "input", method: "phone" } as AuthState);
   const [method, setMethod] = useState<AuthMethod>(state.method ?? "phone");
 
-  // Keep method in sync if action returns with a different method (e.g. from an error state)
-  useEffect(() => {
-    if (state.method) setMethod(state.method);
-  }, [state.method]);
+  // Follow the method the action came back with (e.g. after an error), adjusting state while rendering
+  // instead of in an effect, so there's no extra render pass.
+  const [methodFrom, setMethodFrom] = useState(state.method);
+  if (state.method && state.method !== methodFrom) {
+    setMethodFrom(state.method);
+    setMethod(state.method);
+  }
 
   if (state.step === "code") return <CodeStep key={state.sentAt} lang={lang} t={t} start={state} next={next} as={as} />;
 

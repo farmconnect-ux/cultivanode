@@ -7,6 +7,7 @@ import {
   type GroundedKnowledgeSnippet,
 } from "@cultivanode/shared";
 import { requireAccount } from "@/lib/account/session";
+import { logger } from "@/lib/logger";
 
 export interface AskAssistantParams {
   query: string;
@@ -51,6 +52,8 @@ export async function askFarmAssistantAction(
     fallbackModel,
     timeoutMs,
   });
+
+  if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });
 
   return {
     answer: result.answer,

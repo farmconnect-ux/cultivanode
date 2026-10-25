@@ -34,8 +34,6 @@ export function AgentHome({ lang, account, farmers }: { lang: Locale; account: A
       <AgentOnboardingHub
         lang={lang}
         slots={{
-          // The design's demand-clustering and offline-queue panels stay hidden until they run on live data.
-          operations: null,
           agentLine: (
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Badge tone="brand"><Icon name="badge" /> {account.profile.full_name ?? "Field agent"}</Badge>

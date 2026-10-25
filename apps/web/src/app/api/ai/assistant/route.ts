@@ -4,6 +4,7 @@ import {
   type FarmerContext,
   type AppLanguage,
 } from "@cultivanode/shared";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 interface RequestPayload {
@@ -80,6 +81,8 @@ export async function POST(req: Request) {
       fallbackModel,
       timeoutMs,
     });
+
+    if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });
 
     return NextResponse.json({
       answer: result.answer,

@@ -67,6 +67,7 @@ export function PilotPage({ lang = "en", slots }: ScreenProps<PilotPageSlot>) {
                     <Icon name="assignment_add" className="text-[20px]" />
                     <span>{tYo("Submit Pilot Application")}</span>
                   </a>
+                  {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
                   <a className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg bg-surface-container-low text-on-surface font-label-lg text-label-lg hover:bg-surface-container transition-all" href="/api/documents/handbook?download=1">
                     <Icon name="download" className="text-[20px] text-primary" />
                     <span>{tYo("Participant Handbook (PDF)")}</span>
