@@ -2,7 +2,7 @@
 
 // Ported from the "security_audit_compliance" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { Icon } from "@/components/ds/icon";
 import { showScreenToast, ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
 import { downloadFile } from "@/lib/download";
@@ -83,6 +83,8 @@ const INITIAL_AUDIT_LOGS: AuditRecord[] = [
 export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
+  // Filter on a deferred copy so typing stays smooth while the list re-renders.
+  const deferredSearchFilter = useDeferredValue(searchFilter);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lockReleased, setLockReleased] = useState(false);
   const [merkleVerifying, setMerkleVerifying] = useState(false);
@@ -91,8 +93,8 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
   // Filtered audit records
   const filteredLogs = auditLogs.filter((log) => {
     if (filterType !== "all" && log.typeCategory !== filterType) return false;
-    if (searchFilter.trim()) {
-      const q = searchFilter.toLowerCase();
+    if (deferredSearchFilter.trim()) {
+      const q = deferredSearchFilter.toLowerCase();
       const match =
         log.hash.toLowerCase().includes(q) ||
         log.actor.toLowerCase().includes(q) ||

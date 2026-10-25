@@ -2,7 +2,7 @@
 
 // Ported from the "resources_agronomy_library_cultivanode" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ds/icon";
 import { showScreenToast, ScreenDialog, ScreenDialogClose } from "@/components/ds/screen-dialog";
@@ -112,6 +112,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
   const [selectedLanguage, setSelectedLanguage] = useState<"en" | "yo">("en");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  // Filter on a deferred copy so typing stays smooth while the list re-renders.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [season, setSeason] = useState<"early" | "late">("early");
   const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
     a1: true,
@@ -125,8 +127,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
 
   const filteredGuides = GUIDES.filter((g) => {
     if (activeCategory !== "all" && g.category !== activeCategory) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const q = deferredSearchQuery.toLowerCase();
       const match = g.title.toLowerCase().includes(q) || g.description.toLowerCase().includes(q) || g.badge.toLowerCase().includes(q);
       if (!match) return false;
     }

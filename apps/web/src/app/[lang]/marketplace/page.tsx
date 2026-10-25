@@ -10,6 +10,7 @@ import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { pageMetadata } from "@/i18n/metadata";
 import { createClient } from "@/lib/supabase/server";
+import { getMarketplaceCategories, getMarketplaceStats } from "@/lib/public-cache";
 import { serverPhrasebook, setPageLocale } from "@/i18n/marketing-server";
 import YO from "@/i18n/yo-marketing/marketplace-page";
 
@@ -47,6 +48,7 @@ const TYPE_ICON: Record<string, "grass" | "inventory_2" | "agriculture" | "engin
 };
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 24;
 
 /** One query-string value, trimmed and capped so it is safe to put in a filter. */
 function param(value: string | string[] | undefined, max = 60): string {
@@ -67,6 +69,7 @@ export default async function MarketplacePage({
   const supabase = await createClient();
   const sp = await searchParams;
   const filters = { q: param(sp.q), state: param(sp.state), category: param(sp.category) };
+  const page = Math.max(1, Math.min(200, Number.parseInt(param(sp.page), 10) || 1));
 
   // marketplace_* tables are newer than the generated types, hence the loose client.
   let query = supabase
@@ -85,17 +88,28 @@ export default async function MarketplacePage({
   if (filters.state) query = query.eq("location_state", filters.state);
   if (filters.category) query = query.eq("marketplace_categories.slug", filters.category);
 
-  const [{ data }, { data: allActive }, { data: categoryRows }] = await Promise.all([
-    query.order("created_at", { ascending: false }).limit(30),
-    // Real numbers for the header: every active lot, how many sellers, and which states have lots.
-    supabase.from("marketplace_listings").select("seller_id, location_state").eq("status", "active").limit(5000),
-    supabase.from("marketplace_categories").select("slug, name").eq("is_active", true).order("sort_order"),
+  // One extra row tells us whether there is a next page without counting the whole table.
+  const from = (page - 1) * PAGE_SIZE;
+  const [{ data }, market, categories] = await Promise.all([
+    query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE),
+    // Real numbers for the header (cached for everyone, refreshed every few minutes).
+    getMarketplaceStats(),
+    getMarketplaceCategories(),
   ]);
-  const listings = (data ?? []) as Row[];
-  const active = (allActive ?? []) as { seller_id: string; location_state: string | null }[];
-  const stats = { lots: active.length, sellers: new Set(active.map((r) => r.seller_id)).size };
-  const states = [...new Set(active.map((r) => r.location_state).filter((s): s is string => Boolean(s)))].sort();
-  const categories = (categoryRows ?? []) as { slug: string; name: string }[];
+  const rows = (data ?? []) as Row[];
+  const hasNext = rows.length > PAGE_SIZE;
+  const listings = rows.slice(0, PAGE_SIZE);
+  const stats = { lots: market.lots, sellers: market.sellers };
+  const states = market.states;
+  const pageHref = (n: number) => {
+    const q = new URLSearchParams();
+    if (filters.q) q.set("q", filters.q);
+    if (filters.state) q.set("state", filters.state);
+    if (filters.category) q.set("category", filters.category);
+    if (n > 1) q.set("page", String(n));
+    const qs = q.toString();
+    return `/${lang}/marketplace${qs ? `?${qs}` : ""}`;
+  };
 
   return (
     <OpenMarketplace
@@ -125,6 +139,7 @@ export default async function MarketplacePage({
               }
             />
           ) : (
+            <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {listings.map((l) => {
                 const seller = l.marketplace_sellers;
@@ -195,6 +210,20 @@ export default async function MarketplacePage({
                   </article>
                 );
               })}
+            </div>
+            {(page > 1 || hasNext) && (
+              <nav aria-label={tYo("Pages")} className="flex items-center justify-between gap-3">
+                {page > 1 ? (
+                  <Link href={pageHref(page - 1)} className="inline-flex items-center gap-1 rounded-lg bg-surface-container-low px-4 py-2.5 font-label-md text-label-md text-primary hover:bg-surface-container-high">
+                    <Icon name="arrow_back" className="text-base" />{tYo("Previous")}</Link>
+                ) : <span />}
+                <span className="text-body-sm text-on-surface-variant">{tYo("Page")} {page}</span>
+                {hasNext ? (
+                  <Link href={pageHref(page + 1)} className="inline-flex items-center gap-1 rounded-lg bg-surface-container-low px-4 py-2.5 font-label-md text-label-md text-primary hover:bg-surface-container-high">
+                    {tYo("Next")}<Icon name="arrow_forward" className="text-base" /></Link>
+                ) : <span />}
+              </nav>
+            )}
             </div>
           ),
       }}

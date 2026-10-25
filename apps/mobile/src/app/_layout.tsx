@@ -6,10 +6,24 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nProvider } from '../i18n';
 import { withMonitoring } from '../lib/monitoring';
-import { SessionProvider } from '../lib/session';
+import { sendPendingLots } from '../lib/market';
+import { startAutoSync } from '../lib/outbox';
+import { SessionProvider, useSession } from '../lib/session';
 import { color } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+/** Sends what was saved without signal (records, crop checks, market lots) as soon as the phone is back online. */
+function AutoSync() {
+  const { session, account } = useSession();
+  const uid = session?.user.id;
+  const name = account?.profile.full_name ?? null;
+  useEffect(() => {
+    if (!uid) return;
+    return startAutoSync(() => sendPendingLots(uid, name));
+  }, [uid, name]);
+  return null;
+}
 
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -31,6 +45,7 @@ function RootLayout() {
     <SafeAreaProvider>
       <I18nProvider>
         <SessionProvider>
+          <AutoSync />
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.page }, animation: 'slide_from_right' }} />
         </SessionProvider>

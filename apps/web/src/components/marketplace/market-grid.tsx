@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import Link from "next/link";
 import { formatNaira } from "@cultivanode/shared";
 import { Badge, Button, Card, Field, Input, Select } from "@/components/ui";
@@ -33,6 +33,8 @@ export function MarketGrid({
   initialListings: ListingCardItem[];
 }) {
   const [query, setQuery] = useState("");
+  // Filter on a deferred copy so typing stays smooth while the list re-renders.
+  const deferredQuery = useDeferredValue(query);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [selectedRadius, setSelectedRadius] = useState<string>("50");
 
@@ -51,9 +53,9 @@ export function MarketGrid({
       item.listing_type === activeTab ||
       item.category_slug.includes(activeTab);
     const matchesQuery =
-      query.trim() === "" ||
-      item.title.toLowerCase().includes(query.toLowerCase()) ||
-      item.seller_name.toLowerCase().includes(query.toLowerCase());
+      deferredQuery.trim() === "" ||
+      item.title.toLowerCase().includes(deferredQuery.toLowerCase()) ||
+      item.seller_name.toLowerCase().includes(deferredQuery.toLowerCase());
     return matchesTab && matchesQuery;
   });
 
@@ -108,7 +110,7 @@ export function MarketGrid({
       {filtered.length === 0 ? (
         <div id="marketplace-results" className="flex flex-col items-center justify-center rounded-xl border border-border bg-white p-12 text-center">
           <span className="text-4xl mb-3">🌾</span>
-          <h3 className="text-lg font-bold text-on-surface">No marketplace listings match your query</h3>
+          <h3 className="text-lg font-bold text-on-surface">No marketplace listings match your deferredQuery</h3>
           <p className="mt-1 text-sm text-on-surface-variant">
             Try adjusting your search terms, increasing radius, or switching categories.
           </p>

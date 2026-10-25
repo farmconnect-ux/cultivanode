@@ -2,7 +2,7 @@
 
 // Ported from the "unified_notification_centre" design (New screen). Static content is the design's reference data;
 // pages pass live data through props where the backend already provides it.
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { Icon } from "@/components/ds/icon";
 import type { IconName } from "@/components/ds/icon";
 import { ScreenDialog, ScreenDialogClose, showScreenToast } from "@/components/ds/screen-dialog";
@@ -124,6 +124,8 @@ export function NotificationCentre({ slots }: ScreenProps<NotificationCentreSlot
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  // Filter on a deferred copy so typing stays smooth while the list re-renders.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [sortOrder, setSortOrder] = useState<"severity" | "recent">("severity");
   const [quietHours, setQuietHours] = useState(true);
   const [weatherOverride, setWeatherOverride] = useState(true);
@@ -132,8 +134,8 @@ export function NotificationCentre({ slots }: ScreenProps<NotificationCentreSlot
   // Filtered notifications
   const filteredNotifications = notifications.filter((n) => {
     if (activeFilter !== "all" && n.category !== activeFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const q = deferredSearchQuery.toLowerCase();
       const matchTitle = n.title.toLowerCase().includes(q);
       const matchBody = n.body.toLowerCase().includes(q);
       const matchSub = n.subsystem.toLowerCase().includes(q);

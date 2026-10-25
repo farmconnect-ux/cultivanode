@@ -52,7 +52,11 @@ export function ScoutScreen({ onBack, initialCropId }: Props) {
     if (!session) return;
     setError(null);
     setStage('saving');
-    const saved = await saveObservation(session.user.id, { cycleId: cropId, category, severity, title: title.trim(), description: what.trim(), photos });
+    const saved = await saveObservation(session.user.id, { cycleId: cropId, category, severity, title: title.trim(), description: what.trim(), photos, lang: lang === 'yo' ? 'yo' : 'en' });
+    if ('queued' in saved) {
+      setResult({ message: s.queued });
+      return setStage('done');
+    }
     if ('error' in saved) {
       setStage('form');
       return setError(saved.error);
@@ -80,7 +84,7 @@ export function ScoutScreen({ onBack, initialCropId }: Props) {
   if (stage === 'done' && result) {
     return (
       <Screen header={header} footer={<Button title={s.another} variant="secondary" icon="plus" onPress={reset} />}>
-        <Notice tone="success">{s.saved}</Notice>
+        {result.message === s.queued ? null : <Notice tone="success">{s.saved}</Notice>}
         {photos.length ? <PhotoRow photos={photos} /> : null}
         {result.diagnosis ? <DiagnosisCard d={result.diagnosis} /> : <Notice tone="info">{result.message ?? ''}</Notice>}
       </Screen>

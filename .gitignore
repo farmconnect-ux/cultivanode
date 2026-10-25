@@ -11,3 +11,7 @@ coverage/
 dist/
 doc/
 /Farm Management Dashboard with AI & IoT (Community)/
+
+# local tool output
+apps/web/lint-*.txt
+apps/web/build-output.txt

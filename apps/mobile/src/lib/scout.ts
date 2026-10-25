@@ -4,6 +4,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { reportError } from './monitoring';
 import { SITE_URL } from './site';
+import { enqueue, newId } from './outbox';
 import { supabase } from './supabase';
 
 const loose = supabase as unknown as SupabaseClient;
@@ -30,6 +31,8 @@ export type NewObservation = {
   title: string;
   description: string;
   photos: string[];
+  /** Language for the AI's answer when it is sent later. */
+  lang?: 'en' | 'yo';
 };
 
 async function upload(userId: string, obsId: string, uri: string): Promise<string | null> {
@@ -46,24 +49,39 @@ async function upload(userId: string, obsId: string, uri: string): Promise<strin
   }
 }
 
-export async function saveObservation(userId: string, o: NewObservation): Promise<{ id: string; photos: number } | { error: 'offline' | 'errorGeneric' }> {
-  const { data, error } = await supabase
+/** Sends one observation (and its photos) with a known id. Used directly and by the outbox. */
+export async function sendObservation(userId: string, id: string, payload: Record<string, unknown>): Promise<'ok' | 'offline' | 'rejected'> {
+  const o = payload as unknown as NewObservation & { lang?: 'en' | 'yo' };
+  const { error } = await supabase
     .from('crop_observations')
-    .insert({ crop_cycle_id: o.cycleId, category: o.category, severity: o.severity, title: o.title.slice(0, 140), description: o.description.slice(0, 2000), created_by: userId })
-    .select('id')
-    .single();
-  if (error || !data) {
-    if (isNetwork(error)) return { error: 'offline' };
-    reportError('mobile_scout_save_failed', error, { reason: error?.code ?? 'unknown' });
-    return { error: 'errorGeneric' };
+    .insert({ id, crop_cycle_id: o.cycleId, category: o.category, severity: o.severity, title: o.title.slice(0, 140), description: o.description.slice(0, 2000), created_by: userId });
+  if (error && error.code !== '23505') {
+    if (isNetwork(error)) return 'offline';
+    reportError('mobile_scout_save_failed', error, { reason: error.code ?? 'unknown' });
+    return 'rejected';
   }
   const paths: string[] = [];
-  for (const uri of o.photos.slice(0, 4)) {
-    const p = await upload(userId, data.id, uri);
+  for (const uri of (o.photos ?? []).slice(0, 4)) {
+    const p = await upload(userId, id, uri);
     if (p) paths.push(p);
   }
-  if (paths.length) await loose.from('crop_observations').update({ photo_urls: paths }).eq('id', data.id);
-  return { id: data.id, photos: paths.length };
+  if (paths.length) await loose.from('crop_observations').update({ photo_urls: paths }).eq('id', id);
+  lastPhotoCount.set(id, paths.length);
+  return 'ok';
+}
+
+const lastPhotoCount = new Map<string, number>();
+
+/** Saves an observation now, or keeps it on the phone (with its photos) to send when there is signal. */
+export async function saveObservation(userId: string, o: NewObservation): Promise<{ id: string; photos: number } | { queued: true } | { error: 'errorGeneric' }> {
+  const id = newId();
+  const res = await sendObservation(userId, id, o);
+  if (res === 'ok') return { id, photos: lastPhotoCount.get(id) ?? 0 };
+  if (res === 'offline') {
+    await enqueue('scout', userId, o, id);
+    return { queued: true };
+  }
+  return { error: 'errorGeneric' };
 }
 
 export type AnalyseResult = { outcome: 'done'; diagnosis: Diagnosis } | { outcome: 'off' | 'not_configured' | 'no_photos' | 'not_found' | 'failed' | 'offline' };
