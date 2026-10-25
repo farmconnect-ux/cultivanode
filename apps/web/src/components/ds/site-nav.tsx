@@ -57,7 +57,7 @@ export function SiteAuthActions({
   const signedIn = useSignedIn();
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex border-primary/20 text-primary hover:bg-primary/5">
+      <Button asChild variant="secondary" size="sm" className="hidden lg:inline-flex border-primary/20 text-primary hover:bg-primary/5">
         <Link href={`/${lang}/download`}>
           <Icon name="phone_android" className="text-base" />
           {lang === "yo" ? "Gba Àpù (APK)" : "Get App"}
