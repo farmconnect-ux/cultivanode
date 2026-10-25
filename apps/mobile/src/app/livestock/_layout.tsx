@@ -1,12 +1,12 @@
 import { Stack } from 'expo-router';
+import { useI18n } from '../../i18n';
+import { toolStack } from '../../ui/stack';
 
 export default function LivestockLayout() {
+  const { t } = useI18n();
   return (
-    <Stack screenOptions={{ headerShown: true, title: 'Livestock & Poultry' }}>
-      <Stack.Screen name="index" options={{ title: 'Flocks & Herds' }} />
-      <Stack.Screen name="new" options={{ title: 'Add Livestock' }} />
-      <Stack.Screen name="[id]" options={{ title: 'Batch Details' }} />
-      <Stack.Screen name="log-event" options={{ title: 'Log Event', presentation: 'modal' }} />
+    <Stack screenOptions={{ ...toolStack, title: t.farm.toolNames.livestock }}>
+      <Stack.Screen name="log-event" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

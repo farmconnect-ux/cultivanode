@@ -24,7 +24,7 @@ export default function HomeRoute() {
           case 'jobs':
             return router.navigate('/(tabs)/farm');
           case 'help':
-            return router.push({ pathname: '/assistant', params: target.job ? { topic: `${target.job.cropName}: ${target.job.name}` } : {} });
+            return router.push({ pathname: '/help', params: target.job ? { topic: `${target.job.cropName}: ${target.job.name}`, advice: target.job.notes ?? '' } : {} });
         }
       }}
     />

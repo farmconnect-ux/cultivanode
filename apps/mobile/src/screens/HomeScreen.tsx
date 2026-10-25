@@ -259,7 +259,7 @@ function JobCard({ job, label, late, busy, onDone, onHelp }: { job: Job; label: 
   );
 }
 
-function CropCard({ crop }: { crop: Crop }) {
+export function CropCard({ crop }: { crop: Crop }) {
   const { t, lang } = useI18n();
   const h = t.home;
   const planned = crop.plantingDate > new Date().toISOString().slice(0, 10);
