@@ -5,6 +5,7 @@
 // every write to the seller's own shop; trust fields (verification, rating, commission, suspension) are guarded
 // by database triggers, and order status moves only through public.seller_update_fulfilment.
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FormResult } from "@/components/live/action-form";
 import { actor, dbFail, fail, id, kobo, num, ok, oneOf, optText, refreshPages, text } from "@/lib/account/act";
 import { FULFIL_STEPS, LISTING_TYPES, PRICE_MODELS, SELLER_TYPES, UNITS } from "@/lib/shop";
@@ -287,4 +288,45 @@ export async function fulfilOrder(_: FormResult, form: FormData): R {
   }
   refreshPages(...SHOP_PATHS, "/marketplace/orders");
   return ok("Order updated — the buyer has been notified.");
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Direct payment (while escrow is switched off in Admin → Feature switches): buyers pay the seller's bank
+// account themselves, and the seller confirms the money arrived. These tables and functions are newer than
+// the generated database types, hence the untyped client.
+// ---------------------------------------------------------------------------------------------------------
+
+/** The bank account buyers pay into. Shown only to buyers with a direct-payment order from this shop. */
+export async function saveShopPayoutAccount(_: FormResult, form: FormData): R {
+  const { supabase, uid } = await actor(form);
+  const bank = text(form, "bank_name", 80);
+  const name = text(form, "account_name", 120);
+  const number = text(form, "account_number", 20).replace(/\s+/g, "");
+  if (bank.length < 2) return fail("Enter your bank's name.");
+  if (name.length < 2) return fail("Enter the name on the account.");
+  if (!/^[0-9]{10}$/.test(number)) return fail("A Nigerian account number has 10 digits.");
+  const shopId = await myShop(supabase, uid, "produce");
+  if (!shopId) return fail("Open your shop first.");
+  const loose = supabase as unknown as SupabaseClient;
+  const { error } = await loose
+    .from("marketplace_seller_payout_accounts")
+    .upsert({ seller_id: shopId, bank_name: bank, account_name: name, account_number: number, updated_at: new Date().toISOString() });
+  if (error) return dbFail(error, "save_payout_account");
+  refreshPages(...SHOP_PATHS);
+  return ok("Bank account saved. Buyers will see it when they order from you.");
+}
+
+/** The seller confirms the buyer's transfer has reached their account. */
+export async function confirmShopPayment(_: FormResult, form: FormData): R {
+  const { supabase } = await actor(form);
+  const fulfilmentId = id(form, "fulfilment_id");
+  if (!fulfilmentId) return fail("Order not found.");
+  const loose = supabase as unknown as SupabaseClient;
+  const { error } = await loose.rpc("seller_confirm_direct_payment", { p_fulfilment_id: fulfilmentId });
+  if (error) {
+    if (["P0001", "22023", "P0002", "42501"].includes(error.code ?? "")) return fail(error.message);
+    return dbFail(error, "confirm_direct_payment");
+  }
+  refreshPages(...SHOP_PATHS, "/marketplace/orders");
+  return ok("Payment confirmed. You can now prepare and send the order.");
 }

@@ -7,6 +7,7 @@ import { AppShell, type ShellContext, type ShellUser } from "@/components/ds/app
 import { accountNav } from "@/components/ds/nav-config";
 import type { Locale } from "@/i18n/config";
 import { WORKSPACE_DETAILS, type Workspace } from "@/lib/account/workspace";
+import type { Flags } from "@/lib/flags";
 
 /**
  * Account workspace frame: the suite's sidebar + top bar around every /[lang]/account page.
@@ -21,6 +22,7 @@ export function AccountShell({
   user,
   context,
   supportHref,
+  flags = {},
   children,
 }: {
   lang: Locale;
@@ -33,6 +35,8 @@ export function AccountShell({
   user: ShellUser;
   context?: ShellContext;
   supportHref?: string;
+  /** Admin feature switches: hide menu items for modules that are switched off. */
+  flags?: Flags;
   children: React.ReactNode;
 }) {
   const searchParams = useSearchParams();
@@ -42,7 +46,7 @@ export function AccountShell({
       ? (rawWs as Workspace)
       : (availableWorkspaces[0] ?? "farmer");
 
-  const groups = React.useMemo(() => accountNav(activeWorkspace), [activeWorkspace]);
+  const groups = React.useMemo(() => accountNav(activeWorkspace, flags), [activeWorkspace, flags]);
   const base = `/${lang}`;
 
   return (

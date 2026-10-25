@@ -89,9 +89,12 @@ function provenanceFacts(p: NonNullable<FullListingDetails["provenance"]>): { la
 export function ListingDetailView({
   lang,
   listing,
+  escrowOn = false,
 }: {
   lang: Locale;
   listing: FullListingDetails;
+  /** Admin switch: while off, buyers pay the seller directly by bank transfer. */
+  escrowOn?: boolean;
 }) {
   const outOfStock = listing.available_quantity <= 0;
 
@@ -203,8 +206,18 @@ export function ListingDetailView({
           <p className="text-xs text-on-surface-variant">{tYo("You enter the delivery address and pay at checkout.")}</p>
 
           <div className="rounded-lg bg-earth-50 p-3 text-center text-xs text-on-surface-variant">
-            <span className="font-bold text-primary">{tYo("Your payment is held until delivery")}</span>
-            <br />{tYo("The seller is paid after you confirm you received the order.")}</div>
+            {escrowOn ? (
+              <>
+                <span className="font-bold text-primary">{tYo("Your payment is held until delivery")}</span>
+                <br />{tYo("The seller is paid after you confirm you received the order.")}
+              </>
+            ) : (
+              <>
+                <span className="font-bold text-primary">{tYo("You pay the seller directly by bank transfer")}</span>
+                <br />{tYo("The seller confirms your payment, then sends the order. Paying through CultivaNode is coming soon.")}
+              </>
+            )}
+          </div>
         </Card>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { IconName } from "./icon";
 import type { Workspace } from "@/lib/account/workspace";
+import type { FlagKey, Flags } from "@/lib/flags";
 
 export type NavItem = {
   /** Path after the locale for account pages ("/account/farms"), absolute for admin ("/admin/health"). */
@@ -10,6 +11,8 @@ export type NavItem = {
   badge?: string;
   /** Match only the exact path (for parent routes like "/account"). */
   exact?: boolean;
+  /** Shown only while this admin feature switch is on (Admin → Feature switches). */
+  flag?: FlagKey;
 };
 
 export type NavGroup = {
@@ -18,6 +21,8 @@ export type NavGroup = {
   items: NavItem[];
   /** Collapsed by default (secondary groups such as the ecosystem hubs). */
   collapsible?: boolean;
+  /** The whole group is shown only while this admin feature switch is on. */
+  flag?: FlagKey;
 };
 
 const farmer: NavGroup[] = [
@@ -27,10 +32,10 @@ const farmer: NavGroup[] = [
     items: [
       { href: "/account", label: "Overview", icon: "grid_view", exact: true },
       { href: "/account/farms", label: "My Farms & Fields", icon: "landscape" },
-      { href: "/account/farms/map", label: "Farm Map & Cadastre", icon: "map" },
+      { href: "/account/farms/map", label: "Farm Map & Cadastre", icon: "map", flag: "module_farm_map" },
       { href: "/account/crops", label: "Crop Management", icon: "potted_plant" },
       { href: "/account/crops/scouting", label: "Field Scouting", icon: "pest_control" },
-      { href: "/account/livestock", label: "Livestock & Aquaculture", icon: "pets", badge: "Live" },
+      { href: "/account/livestock", label: "Livestock & Aquaculture", icon: "pets", flag: "module_livestock" },
       { href: "/account/tasks", label: "Field Operations & Calendar", icon: "calendar_month" },
     ],
   },
@@ -40,10 +45,10 @@ const farmer: NavGroup[] = [
     items: [
       { href: "/account/find", label: "Service & Machinery Marketplace", icon: "precision_manufacturing" },
       { href: "/account/bookings", label: "My Bookings", icon: "event_available" },
-      { href: "/account/machinery", label: "Fleet & Workshop", icon: "agriculture" },
-      { href: "/account/machinery/telemetry", label: "Telemetry & Tracking", icon: "satellite_alt" },
-      { href: "/account/iot", label: "IoT & Smart Farm", icon: "sensors" },
-      { href: "/account/irrigation", label: "Smart Irrigation", icon: "water_drop" },
+      { href: "/account/machinery", label: "Fleet & Workshop", icon: "agriculture", flag: "module_fleet" },
+      { href: "/account/machinery/telemetry", label: "Telemetry & Tracking", icon: "satellite_alt", flag: "module_telemetry" },
+      { href: "/account/iot", label: "IoT & Smart Farm", icon: "sensors", flag: "module_iot" },
+      { href: "/account/irrigation", label: "Smart Irrigation", icon: "water_drop", flag: "module_irrigation" },
       { href: "/account/inventory", label: "Inventory & Supplies", icon: "inventory_2" },
     ],
   },
@@ -53,18 +58,18 @@ const farmer: NavGroup[] = [
     items: [
       { href: "/account/marketplace/seller", label: "My Shop: Listings & Orders", icon: "store" },
       { href: "/account/marketplace/orders", label: "My Purchases", icon: "receipt_long" },
-      { href: "/account/harvest", label: "Produce & Harvest Commerce", icon: "storefront" },
-      { href: "/account/contracts", label: "Off-take Contracts", icon: "handshake" },
+      { href: "/account/harvest", label: "Produce & Harvest Commerce", icon: "storefront", flag: "module_harvest" },
+      { href: "/account/contracts", label: "Off-take Contracts", icon: "handshake", flag: "module_contracts" },
       { href: "/account/finance", label: "Farm Books & Accounting (₦)", icon: "account_balance_wallet" },
-      { href: "/account/reports", label: "Verified Records & Credit", icon: "verified" },
+      { href: "/account/reports", label: "Verified Records & Credit", icon: "verified", flag: "module_credit_reports" },
     ],
   },
   {
     id: "intelligence",
     label: "Intelligence",
     items: [
-      { href: "/account/risk", label: "Farm Health & Risk", icon: "shield_with_heart" },
-      { href: "/account/assistant", label: "CultivaNode Intelligence & AI", icon: "neurology" },
+      { href: "/account/risk", label: "Farm Health & Risk", icon: "shield_with_heart", flag: "module_risk" },
+      { href: "/account/assistant", label: "Farm assistant", icon: "neurology" },
     ],
   },
 ];
@@ -78,16 +83,16 @@ const provider: NavGroup[] = [
       { href: "/account/bookings", label: "Job Requests & Bookings", icon: "assignment" },
       { href: "/account/listings", label: "My Listings", icon: "list_alt" },
       { href: "/account/marketplace/seller", label: "Marketplace Shop & Orders", icon: "store" },
-      { href: "/account/machinery/dispatch", label: "Proof-of-Work Log", icon: "fact_check" },
+      { href: "/account/machinery/dispatch", label: "Proof-of-Work Log", icon: "fact_check", flag: "module_pow_log" },
     ],
   },
   {
     id: "fleet",
     label: "Fleet",
     items: [
-      { href: "/account/machinery", label: "Fleet & Workshop", icon: "agriculture" },
-      { href: "/account/machinery/telemetry", label: "Telemetry & Tracking", icon: "satellite_alt" },
-      { href: "/account/logistics", label: "Logistics & Haulage", icon: "local_shipping" },
+      { href: "/account/machinery", label: "Fleet & Workshop", icon: "agriculture", flag: "module_fleet" },
+      { href: "/account/machinery/telemetry", label: "Telemetry & Tracking", icon: "satellite_alt", flag: "module_telemetry" },
+      { href: "/account/logistics", label: "Logistics & Haulage", icon: "local_shipping", flag: "module_logistics" },
       { href: "/account/finance", label: "Earnings & Books (₦)", icon: "account_balance_wallet" },
     ],
   },
@@ -111,10 +116,11 @@ const ecosystem: NavGroup = {
   id: "ecosystem",
   label: "Ecosystem hubs",
   collapsible: true,
+  flag: "ecosystem_hubs",
   items: [
     { href: "/account/buyer", label: "Produce Buyer & Aggregator", icon: "shopping_bag" },
     { href: "/account/supplier", label: "Input Supplier & Agro-dealer", icon: "store" },
-    { href: "/account/logistics", label: "Logistics & Haulage", icon: "local_shipping" },
+    { href: "/account/logistics", label: "Logistics & Haulage", icon: "local_shipping", flag: "module_logistics" },
     { href: "/account/processing", label: "Agro-processing", icon: "factory" },
     { href: "/account/cooperative", label: "Cooperative", icon: "groups" },
     { href: "/account/enterprise", label: "Enterprise Agribusiness", icon: "corporate_fare" },
@@ -163,10 +169,18 @@ const customer: NavGroup[] = [
   },
 ];
 
-export function accountNav(ws: Workspace): NavGroup[] {
+/** Drop items and groups whose admin switch is off, and groups left empty. */
+export function withFlags(groups: NavGroup[], flags: Flags): NavGroup[] {
+  return groups
+    .filter((g) => !g.flag || flags[g.flag] === true)
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.flag || flags[i.flag] === true) }))
+    .filter((g) => g.items.length > 0);
+}
+
+export function accountNav(ws: Workspace, flags: Flags = {}): NavGroup[] {
   if (ws === "customer") return customer;
   const base = ws === "provider" ? provider : ws === "agent" ? agent : farmer;
-  return [...base, account, ecosystem];
+  return withFlags([...base, account, ecosystem], flags);
 }
 
 /** Admin console. `perm` items are hidden when the staff member lacks that permission. */
@@ -211,6 +225,7 @@ export const adminNav: AdminNavGroup[] = [
     items: [
       { href: "/admin/content", label: "Content & Knowledge", icon: "library_books", perm: ["site_content.manage"] },
       { href: "/admin/agronomy", label: "Agronomy Standards", icon: "eco" },
+      { href: "/admin/features", label: "Feature switches", icon: "tune", perm: ["settings.manage"] },
       { href: "/admin/integrations", label: "Integrations & APIs", icon: "api", perm: ["integrations.manage"] },
     ],
   },

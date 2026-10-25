@@ -2,7 +2,9 @@
 
 // Marketplace cart pricing and checkout. Prices, units, sellers and stock always come from the
 // database, never from the browser: the cart only carries listing ids and quantities.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isOn } from "@/lib/flags";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import { hasLocale } from "@/i18n/config";
@@ -104,14 +106,30 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
   if (priced.some((p) => mySellerIds.has(p.sellerId))) return { ok: false, error: "You can't buy your own listing." };
 
   const sellers = [...new Set(priced.map((p) => p.sellerId))];
+
+  // While escrow is switched off (Admin → Feature switches), the buyer pays each seller's bank account
+  // directly and the seller confirms the money arrived. Every seller must have added that account.
+  // The new columns and functions are newer than the generated types, hence the untyped client.
+  const loose = supabase as unknown as SupabaseClient;
+  const escrow = await isOn("escrow_payments");
+  if (!escrow) {
+    const { data: ready } = await loose.rpc("sellers_with_payout_account", { p_seller_ids: sellers });
+    const readyIds = new Set(((ready ?? []) as string[]).map(String));
+    const missing = priced.find((p) => !readyIds.has(p.sellerId));
+    if (missing) {
+      return { ok: false, error: `${missing.title}: this seller hasn't added the bank account buyers pay into yet. Remove it from your cart or try again later.` };
+    }
+  }
+
   const itemsSubtotal = priced.reduce((s, p) => s + Math.round(p.unitPriceKobo * p.quantity), 0);
   const delivery = DELIVERY_PER_SELLER_KOBO * sellers.length;
   const total = itemsSubtotal + delivery;
   const orderNumber = `ORD-${new Date().toISOString().slice(0, 7)}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
-  const { data: order, error: orderErr } = await supabase
+  const { data: order, error: orderErr } = await loose
     .from("marketplace_orders")
     .insert({
+      payment_mode: escrow ? "escrow" : "direct",
       order_number: orderNumber,
       buyer_id: auth.user.id,
       order_type: itemsSubtotal >= 50_000_000 ? "bulk" : "retail",
@@ -119,14 +137,14 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
       delivery_fee_kobo: delivery,
       platform_fee_kobo: 0,
       total_amount_kobo: total,
-      status: "placed",
+      status: escrow ? "placed" : "payment_pending",
       payment_status: "pending",
       delivery_address: { line: address, state, lga, phone },
       buyer_notes: input.notes ? String(input.notes).slice(0, 1000) : null,
       placed_at: new Date().toISOString(),
     })
     .select("id")
-    .single();
+    .single<{ id: string }>();
   if (orderErr || !order) {
     logger.warn("checkout_order_failed", { code: orderErr?.code });
     return { ok: false, error: "Couldn't create the order. Please try again." };
@@ -156,8 +174,9 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
     return { ok: false, error: "Couldn't save the order lines. Please try again." };
   }
 
-  const { error: fulErr } = await supabase.from("marketplace_fulfilments").insert(
+  const { error: fulErr } = await loose.from("marketplace_fulfilments").insert(
     sellers.map((sid, i) => ({
+      direct_payment_status: escrow ? null : "awaiting_payment",
       order_id: order.id,
       seller_id: sid,
       fulfilment_number: `${orderNumber}-F${i + 1}`,
@@ -176,6 +195,8 @@ export async function checkoutCart(input: CheckoutInput): Promise<CheckoutResult
   }
 
   const orderUrl = `/${lang}/account/marketplace/orders/${order.id}`;
+  // Direct payment: no gateway. The order page shows each seller's bank details and the reference to use.
+  if (!escrow) return { ok: true, orderId: order.id, redirectUrl: `${orderUrl}?placed=1` };
   const runtime = await getPaymentRuntime(order.id);
 
   let payUrl: string | null = null;
@@ -453,6 +474,9 @@ export async function initiateOrderPayment(orderId: string, lang = "en"): Promis
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { ok: false, error: "Sign in to complete payment." };
+  if (!(await isOn("escrow_payments"))) {
+    return { ok: false, error: "Paying through CultivaNode is coming soon. For now, pay the seller's bank account directly, as shown on your order." };
+  }
 
   const { data: order, error } = await supabase
     .from("marketplace_orders")

@@ -11,7 +11,18 @@ const naira = (kobo: number) => `₦${Math.round(kobo / 100).toLocaleString("en-
 const DELIVERY_PER_SELLER_KOBO = 300_000;
 const input = "h-10 w-full rounded-lg border border-outline-variant/60 bg-surface-container-low px-3 text-body-md text-on-surface outline-none focus:border-primary-container focus:bg-surface-container-lowest";
 
-export function CheckoutClient({ lang, signedIn, defaults }: { lang: string; signedIn: boolean; defaults: { state: string; lga: string; phone: string } }) {
+export function CheckoutClient({
+  lang,
+  signedIn,
+  defaults,
+  escrowOn = false,
+}: {
+  lang: string;
+  signedIn: boolean;
+  defaults: { state: string; lga: string; phone: string };
+  /** Admin switch: while off, the order is placed and the buyer pays each seller by bank transfer. */
+  escrowOn?: boolean;
+}) {
   const entries = useCart();
   const [priced, setPriced] = useState<PricedLine[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +69,7 @@ export function CheckoutClient({ lang, signedIn, defaults }: { lang: string; sig
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant bg-surface-container-lowest px-6 py-16 text-center">
         <Icon name="shopping_cart" className="text-4xl text-secondary" />
         <p className="font-headline-sm text-headline-sm text-on-surface">Your cart is empty</p>
-        <p className="max-w-sm text-body-sm text-on-surface-variant">Add produce, inputs or services from the marketplace, then come back here to pay into escrow.</p>
+        <p className="max-w-sm text-body-sm text-on-surface-variant">Add produce, inputs or services from the marketplace, then come back here to place your order.</p>
         <Link href={`/${lang}/marketplace`} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary-container px-4 py-2.5 font-label-md text-label-md text-on-primary hover:bg-primary">
           <Icon name="storefront" className="text-base" /> Browse the marketplace
         </Link>
@@ -133,12 +144,12 @@ export function CheckoutClient({ lang, signedIn, defaults }: { lang: string; sig
         <dl className="mt-1 flex flex-col gap-1 border-t border-outline-variant/40 pt-3 text-body-sm">
           <div className="flex justify-between"><dt className="text-on-surface-variant">Items</dt><dd className="tabular-nums">{priced ? naira(subtotal) : "…"}</dd></div>
           <div className="flex justify-between"><dt className="text-on-surface-variant">Delivery ({sellers} {sellers === 1 ? "seller" : "sellers"})</dt><dd className="tabular-nums">{priced ? naira(delivery) : "…"}</dd></div>
-          <div className="flex justify-between border-t border-outline-variant/40 pt-2 font-label-lg text-label-lg text-primary"><dt>Total into escrow</dt><dd className="tabular-nums">{priced ? naira(subtotal + delivery) : "…"}</dd></div>
+          <div className="flex justify-between border-t border-outline-variant/40 pt-2 font-label-lg text-label-lg text-primary"><dt>{escrowOn ? "Total into escrow" : "Total to pay sellers"}</dt><dd className="tabular-nums">{priced ? naira(subtotal + delivery) : "…"}</dd></div>
         </dl>
         {error && <p role="alert" className="rounded-lg bg-critical-soft px-3 py-2 text-body-sm text-[#b91c1c]">{error}</p>}
         {signedIn ? (
           <button type="submit" disabled={pending || !priced || problems.length > 0} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-container px-4 py-3 font-label-lg text-label-lg text-on-primary shadow-sm hover:bg-primary disabled:opacity-60">
-            <Icon name={pending ? "progress_activity" : "lock"} className={cn("text-base", pending && "animate-spin")} /> {pending ? "Placing order…" : "Pay into escrow"}
+            <Icon name={pending ? "progress_activity" : "lock"} className={cn("text-base", pending && "animate-spin")} /> {pending ? "Placing order…" : escrowOn ? "Pay into escrow" : "Place order"}
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -152,7 +163,10 @@ export function CheckoutClient({ lang, signedIn, defaults }: { lang: string; sig
           </div>
         )}
         <p className="flex items-start gap-1.5 text-body-sm text-on-surface-variant">
-          <Icon name="shield_lock" className="text-base text-secondary" /> Your money is held in escrow and released to the seller only after you confirm delivery.
+          <Icon name={escrowOn ? "shield_lock" : "account_balance"} className="text-base text-secondary" />
+          {escrowOn
+            ? "Your money is held in escrow and released to the seller only after you confirm delivery."
+            : "After you place the order you'll see each seller's bank account and a reference to use. The seller confirms your payment, then sends the order. Paying through CultivaNode is coming soon."}
         </p>
       </form>
     </div>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createListing, fulfilOrder, removeListing, setAvailable, setListingStatus, updateListing, updateShop } from "@/actions/seller";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { confirmShopPayment, createListing, fulfilOrder, removeListing, saveShopPayoutAccount, setAvailable, setListingStatus, updateListing, updateShop } from "@/actions/seller";
 import { Icon } from "@/components/ds/icon";
 import { PageHeader } from "@/components/ds/page-header";
 import { ActionButton, ActionDialog, type FieldSpec } from "@/components/live/action-form";
@@ -11,6 +12,7 @@ import { hasLocale } from "@/i18n/config";
 import { requireAccount } from "@/lib/account/session";
 import { label, naira, num } from "@/lib/format";
 import { LISTING_TYPE_LABEL, LISTING_TYPES, NEXT_STEPS, PRICE_MODELS, SELLER_TYPES, UNITS } from "@/lib/shop";
+import { isOn } from "@/lib/flags";
 import { createClient } from "@/lib/supabase/server";
 import { formatDay } from "@/lib/text";
 
@@ -20,6 +22,14 @@ const opt = (vals: readonly string[]) => vals.map((v) => ({ value: v, label: lab
 const OPEN = ["placed", "confirmed", "preparing", "ready_for_pickup", "dispatched", "in_transit"];
 
 type Address = { line?: string; address?: string; state?: string; lga?: string; phone?: string } | null;
+type Payout = { bank_name: string; account_name: string; account_number: string } | null;
+type DirectPay = { id: string; direct_payment_status: string | null; buyer_payment_reference: string | null; buyer_reported_paid_at: string | null };
+
+const DIRECT_LABEL: Record<string, string> = {
+  awaiting_payment: "Waiting for buyer's transfer",
+  buyer_reported: "Buyer says they've paid",
+  confirmed: "You confirmed payment",
+};
 
 export default async function SellerShopPage({ params }: PageProps<"/[lang]/account/marketplace/seller">) {
   const { lang } = await params;
@@ -51,6 +61,16 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
     supabase.from("marketplace_categories").select("id, name").order("sort_order"),
     supabase.from("farms").select("id, name").eq("owner_id", account.userId).order("created_at"),
   ]);
+
+  // Direct payment (escrow switched off): newer columns and table, read through an untyped client.
+  const loose = supabase as unknown as SupabaseClient;
+  const [escrowOn, { data: payoutRow }, { data: directRows }] = await Promise.all([
+    isOn("escrow_payments"),
+    loose.from("marketplace_seller_payout_accounts").select("bank_name, account_name, account_number").eq("seller_id", shopId).maybeSingle(),
+    loose.from("marketplace_fulfilments").select("id, direct_payment_status, buyer_payment_reference, buyer_reported_paid_at").eq("seller_id", shopId).not("direct_payment_status", "is", null).limit(200),
+  ]);
+  const payout = (payoutRow ?? null) as Payout;
+  const direct = new Map(((directRows ?? []) as DirectPay[]).map((d) => [d.id, d]));
 
   const L = listings ?? [];
   const F = fulfilments ?? [];
@@ -126,6 +146,22 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
                 { name: "description", label: "About your shop", type: "textarea", defaultValue: shop?.description ?? "" },
               ]}
             />
+            {shop && (
+              <ActionDialog
+                title="Bank account for payments"
+                description="Buyers pay this account directly while paying through CultivaNode is coming soon. Only buyers with an order from you can see it."
+                trigger={payout ? "Bank account" : "Add bank account"}
+                icon="account_balance"
+                tone="secondary"
+                action={saveShopPayoutAccount}
+                hidden={hidden}
+                fields={[
+                  { name: "bank_name", label: "Bank", required: true, defaultValue: payout?.bank_name ?? "", placeholder: "e.g. First Bank, Opay, Moniepoint" },
+                  { name: "account_name", label: "Account name", required: true, defaultValue: payout?.account_name ?? account.profile.full_name ?? "" },
+                  { name: "account_number", label: "Account number (10 digits)", required: true, defaultValue: payout?.account_number ?? "", type: "tel", placeholder: "0123456789" },
+                ]}
+              />
+            )}
             <ActionDialog
               title="New listing"
               description="Goods: enter how much you have. Services: how many jobs, hours or days you can take on. New shops show as 'pending' until CultivaNode verifies them."
@@ -151,6 +187,13 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
         </p>
       )}
 
+      {shop && !escrowOn && !payout && (
+        <p role="note" className="flex items-start gap-2 rounded-xl bg-caution-soft px-4 py-3 text-body-sm text-[#92400e]">
+          <Icon name="account_balance" className="mt-0.5 text-base" />
+          Add the bank account buyers should pay into. Until you do, buyers can&apos;t check out your listings. Paying through CultivaNode is coming soon.
+        </p>
+      )}
+
       <KpiGrid>
         <MetricCard label="Orders to confirm" value={toConfirm} icon="notifications_active" iconTone={toConfirm ? "bg-tertiary-fixed/50 text-tertiary-container" : undefined} foot="New orders waiting for you" />
         <MetricCard label="Open orders" value={open.length} icon="local_shipping" foot="Confirmed, preparing or on the way" />
@@ -161,7 +204,11 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
       <Section
         title="Orders"
         icon="receipt_long"
-        description="Confirm new orders, then mark them ready for pickup or dispatched once the buyer has paid. The buyer confirms receipt, which releases your money."
+        description={
+          escrowOn
+            ? "Confirm new orders, then mark them ready for pickup or dispatched once the buyer has paid. The buyer confirms receipt, which releases your money."
+            : "Buyers pay your bank account directly. Check the money has arrived, tap “Payment received”, then send the order. The buyer confirms when it arrives."
+        }
       >
         <DataTable
           rows={F}
@@ -196,7 +243,25 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
               },
             },
             { label: "Value", cell: (f) => naira(Number(f.subtotal_kobo)) },
-            { label: "Payment", cell: (f) => <Status value={f.marketplace_orders?.payment_status ?? "pending"} /> },
+            {
+              label: "Payment",
+              cell: (f) => {
+                const d = direct.get(f.id);
+                if (!d?.direct_payment_status) return <Status value={f.marketplace_orders?.payment_status ?? "pending"} />;
+                return (
+                  <div className="flex flex-col items-start gap-1 text-body-sm">
+                    <Pill tone={d.direct_payment_status === "confirmed" ? "positive" : d.direct_payment_status === "buyer_reported" ? "caution" : "neutral"} icon="account_balance">
+                      {DIRECT_LABEL[d.direct_payment_status] ?? label(d.direct_payment_status)}
+                    </Pill>
+                    <span className="text-on-surface-variant">Reference: {f.fulfilment_number}</span>
+                    {d.buyer_payment_reference && <span className="text-on-surface-variant">Buyer&apos;s note: {d.buyer_payment_reference}</span>}
+                    {d.direct_payment_status !== "confirmed" && !["rejected", "cancelled"].includes(f.status) && (
+                      <ActionButton action={confirmShopPayment} hidden={{ lang, fulfilment_id: f.id }} label="Payment received" icon="check_circle" tone={d.direct_payment_status === "buyer_reported" ? "primary" : "ghost"} />
+                    )}
+                  </div>
+                );
+              },
+            },
             { label: "Status", cell: (f) => <Status value={f.status} /> },
             {
               label: "",

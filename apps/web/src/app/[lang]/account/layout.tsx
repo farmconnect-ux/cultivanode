@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AccountShell } from "@/components/account/account-shell";
+import { getFlags } from "@/lib/flags";
 import { Alert } from "@/components/ui";
 import { site } from "@/config/site";
 import { hasLocale } from "@/i18n/config";
@@ -85,6 +86,7 @@ export default async function AccountLayout({ children, params }: LayoutProps<"/
       user={{ name, subtitle: [role, account.profile.state].filter(Boolean).join(" · "), initials: initials(name) }}
       context={context}
       supportHref={site.contact.whatsappUrl ?? `/${lang}/contact`}
+      flags={await getFlags()}
     >
       {children}
     </AccountShell>

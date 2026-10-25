@@ -154,7 +154,7 @@ export async function setFeatureFlag(_prev: AdminResult | null, form: FormData):
   });
   return explain(error, enabled
     ? `Switched on${states.length ? ` for ${states.join(", ")}` : " everywhere"}.`
-    : "Switched off. Search and publishing stop at once.");
+    : key === "marketplace_live" ? "Switched off. Search and publishing stop at once." : "Switched off.");
 }
 
 export async function moderateListing(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {

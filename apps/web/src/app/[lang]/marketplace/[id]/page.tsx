@@ -5,6 +5,7 @@ import { hasLocale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { ListingDetailView, type FullListingDetails } from "@/components/marketplace/listing-detail";
 import { serverPhrasebook, setPageLocale } from "@/i18n/marketing-server";
+import { isOn } from "@/lib/flags";
 import YO from "@/i18n/yo-marketing/marketplace-listing-page";
 
 const tYo = serverPhrasebook(YO);
@@ -109,7 +110,7 @@ export default async function ListingDetailPage({
         <span className="text-ink font-semibold">{tYo(fullListing.category_name)}</span>
       </div>
 
-      <ListingDetailView lang={lang} listing={fullListing} />
+      <ListingDetailView lang={lang} listing={fullListing} escrowOn={await isOn("escrow_payments")} />
     </Container>
   );
 }
