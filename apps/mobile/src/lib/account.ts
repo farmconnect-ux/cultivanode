@@ -10,6 +10,8 @@ export type Profile = {
   verification_tier: number;
   account_type: 'individual' | 'business';
   onboarded_at: string | null;
+  state: string | null;
+  lga: string | null;
 };
 
 export type Account = {
@@ -26,7 +28,7 @@ export async function loadAccount(userId: string): Promise<Account | null> {
     const [profile, roles, requests] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, full_name, phone, preferred_language, verification_tier, account_type, onboarded_at')
+        .select('id, full_name, phone, preferred_language, verification_tier, account_type, onboarded_at, state, lga')
         .eq('id', userId)
         .maybeSingle(),
       supabase.from('user_roles').select('role, provider_type').eq('profile_id', userId),

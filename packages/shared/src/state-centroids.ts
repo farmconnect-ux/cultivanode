@@ -1,0 +1,46 @@
+// Approximate centre of each state (state capital area). Used only when a person has no farm GPS point yet,
+// so weather and maps can start near them; always labelled as approximate. Keys match NIGERIAN_STATES.
+export const STATE_CENTROIDS: Record<string, { lat: number; lng: number }> = {
+  Abia: { lat: 5.4527, lng: 7.5248 },
+  Adamawa: { lat: 9.3265, lng: 12.3984 },
+  "Akwa Ibom": { lat: 5.0377, lng: 7.9128 },
+  Anambra: { lat: 6.2209, lng: 7.0719 },
+  Bauchi: { lat: 10.3158, lng: 9.8442 },
+  Bayelsa: { lat: 4.7719, lng: 6.0699 },
+  Benue: { lat: 7.7304, lng: 8.5211 },
+  Borno: { lat: 11.8333, lng: 13.15 },
+  "Cross River": { lat: 5.9631, lng: 8.33 },
+  Delta: { lat: 5.5325, lng: 5.8987 },
+  Ebonyi: { lat: 6.2649, lng: 8.0137 },
+  Edo: { lat: 6.335, lng: 5.6037 },
+  Ekiti: { lat: 7.621, lng: 5.2215 },
+  Enugu: { lat: 6.4584, lng: 7.5464 },
+  "FCT (Abuja)": { lat: 9.0765, lng: 7.3986 },
+  Gombe: { lat: 10.2897, lng: 11.1673 },
+  Imo: { lat: 5.4836, lng: 7.0333 },
+  Jigawa: { lat: 12.228, lng: 9.5616 },
+  Kaduna: { lat: 10.5105, lng: 7.4165 },
+  Kano: { lat: 12.0022, lng: 8.592 },
+  Katsina: { lat: 12.9908, lng: 7.6018 },
+  Kebbi: { lat: 12.4504, lng: 4.1999 },
+  Kogi: { lat: 7.7969, lng: 6.7408 },
+  Kwara: { lat: 8.4966, lng: 4.5421 },
+  Lagos: { lat: 6.5244, lng: 3.3792 },
+  Nasarawa: { lat: 8.4932, lng: 8.5153 },
+  Niger: { lat: 9.6139, lng: 6.5569 },
+  Ogun: { lat: 7.1604, lng: 3.3484 },
+  Ondo: { lat: 7.2571, lng: 5.2058 },
+  Osun: { lat: 7.5629, lng: 4.52 },
+  Oyo: { lat: 7.3775, lng: 3.8967 },
+  Plateau: { lat: 9.8965, lng: 8.8583 },
+  Rivers: { lat: 4.8156, lng: 7.0498 },
+  Sokoto: { lat: 13.0609, lng: 5.234 },
+  Taraba: { lat: 8.8937, lng: 11.3596 },
+  Yobe: { lat: 12.0, lng: 11.5 },
+  Zamfara: { lat: 12.1628, lng: 6.6614 },
+};
+
+/** The approximate point for a state, or null when the state is unknown. */
+export function stateCentroid(state: string | null | undefined): { lat: number; lng: number } | null {
+  return state ? STATE_CENTROIDS[state] ?? null : null;
+}

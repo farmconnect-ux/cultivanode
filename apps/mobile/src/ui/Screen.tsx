@@ -1,32 +1,52 @@
-import { colors, space } from '@cultivanode/shared';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { color as c, space } from '../theme';
 
-type Props = { children: ReactNode; footer?: ReactNode; background?: string };
+type Props = {
+  children: ReactNode;
+  /** Pinned under the content (main action of the screen). */
+  footer?: ReactNode;
+  /** Pinned above the content (back link and title). */
+  header?: ReactNode;
+  background?: string;
+  /** Inside the tab bar: the bottom safe area is already handled. */
+  inTabs?: boolean;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+};
 
-/** A scrolling page with safe-area padding, keyboard avoidance and an optional pinned footer. */
-export function Screen({ children, footer, background = colors.cream }: Props) {
+/** A scrolling page with safe-area padding, keyboard avoidance, and optional pinned header and footer. */
+export function Screen({ children, footer, header, background = c.page, inTabs, onRefresh, refreshing = false }: Props) {
   const insets = useSafeAreaInsets();
   return (
-    <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {header ? <View style={[styles.header, { paddingTop: insets.top + space[2] }]}>{header}</View> : null}
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + space[4] }]}
+        contentContainerStyle={[styles.content, { paddingTop: header ? space[2] : insets.top + space[4] }]}
         keyboardShouldPersistTaps="handled"
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.secondary} colors={[c.secondary]} /> : undefined}
       >
         {children}
       </ScrollView>
-      {footer ? <View style={[styles.footer, { paddingBottom: insets.bottom + space[4] }]}>{footer}</View> : null}
+      {footer ? (
+        <View style={[styles.footer, { paddingBottom: (inTabs ? 0 : insets.bottom) + space[4] }]}>{footer}</View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: space[6], paddingBottom: space[8], gap: space[6] },
-  footer: { paddingHorizontal: space[6], paddingTop: space[4], gap: space[4] },
+  header: { paddingHorizontal: space[5], paddingBottom: space[2], gap: space[2] },
+  content: { paddingHorizontal: space[5], paddingBottom: space[8], gap: space[4] },
+  footer: {
+    paddingHorizontal: space[5],
+    paddingTop: space[3],
+    gap: space[3],
+    borderTopWidth: 1,
+    borderTopColor: c.line,
+    backgroundColor: c.card,
+  },
 });

@@ -1,16 +1,17 @@
-import { colors, formatNgPhone, isValidEmail, normalizeNgPhone, radius, space } from '@cultivanode/shared';
+import { formatNgPhone, isValidEmail, normalizeNgPhone } from '@cultivanode/shared';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type TextInput } from 'react-native';
 import { fill, useI18n } from '../i18n';
 import { sendCode, sendEmailCode, verifyCode, verifyEmailCode, type AuthErrorKey } from '../lib/auth';
-import { Button, Notice, Screen, Text, TextField } from '../ui';
+import { color as c, space, tap } from '../theme';
+import { Button, Header, Notice, Screen, Steps, Text, TextField } from '../ui';
 
 const RESEND_SECONDS = 60;
 
-type Props = { mode: 'signIn' | 'signUp'; onBack: () => void };
+type Props = { mode: 'signIn' | 'signUp'; onBack: () => void; onSignedIn: () => void };
 
 /** Two steps: phone or email, then the 6-digit code. A successful code signs in (App reacts to the session). */
-export function PhoneSignInScreen({ mode, onBack }: Props) {
+export function PhoneSignInScreen({ mode, onBack, onSignedIn }: Props) {
   const { t } = useI18n();
   const [step, setStep] = useState<'input' | 'code'>('input');
   const [method, setMethod] = useState<'phone' | 'email'>('phone');
@@ -69,54 +70,29 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
     setError(null);
     const err = method === 'email' ? await verifyEmailCode(target, code) : await verifyCode(target, code);
     setBusy(false);
-    if (err) setError(err);
-    // On success the session appears and App moves on; nothing else to do here.
+    if (err) {
+      setError(err);
+      return;
+    }
+    onSignedIn();
   }
 
   const title = mode === 'signUp' ? t.auth.signUpTitle : t.auth.signInTitle;
 
   if (step === 'input') {
+    const other = method === 'phone' ? 'email' : 'phone';
     return (
       <Screen
+        header={<Header onBack={onBack} backLabel={t.common.back} right={mode === 'signUp' ? <View style={styles.steps}><Steps n={1} of={4} /></View> : undefined} />}
         footer={
           <>
-            <Button title={t.auth.sendCode} onPress={submitInput} loading={busy} />
+            <Button title={t.auth.sendCode} onPress={submitInput} loading={busy} icon="message-square" />
             <Text variant="caption" muted>{t.auth.termsNote}</Text>
           </>
         }
       >
-        <BackLink label={t.common.back} onPress={onBack} />
-        <Text variant="title" color={colors.leaf[800]} accessibilityRole="header">{title}</Text>
+        <Text variant="title" accessibilityRole="header">{title}</Text>
         <Text muted>{mode === 'signUp' ? t.auth.signUpIntro : t.auth.signInIntro}</Text>
-
-        <View style={styles.tabContainer} accessibilityRole="tablist">
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: method === 'phone' }}
-            onPress={() => {
-              setMethod('phone');
-              setError(null);
-            }}
-            style={[styles.tab, method === 'phone' && styles.tabActive]}
-          >
-            <Text variant="label" color={method === 'phone' ? colors.leaf[800] : colors.muted}>
-              {t.auth.usePhone}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: method === 'email' }}
-            onPress={() => {
-              setMethod('email');
-              setError(null);
-            }}
-            style={[styles.tab, method === 'email' && styles.tabActive]}
-          >
-            <Text variant="label" color={method === 'email' ? colors.leaf[800] : colors.muted}>
-              {t.auth.useEmail}
-            </Text>
-          </Pressable>
-        </View>
 
         {method === 'phone' ? (
           <TextField
@@ -134,6 +110,9 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
             returnKeyType="send"
             onSubmitEditing={submitInput}
             error={error === 'errorPhone' ? t.auth.errorPhone : undefined}
+            prefix="🇳🇬"
+            placeholder="0803 123 4567"
+            style={styles.phone}
             autoFocus
           />
         ) : (
@@ -157,6 +136,17 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
           />
         )}
         {error && error !== 'errorPhone' && error !== 'errorEmail' ? <Notice>{message(error)}</Notice> : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setMethod(other);
+            setRaw('');
+            setError(null);
+          }}
+          style={styles.link}
+        >
+          <Text variant="label" color={c.secondary}>{other === 'email' ? t.auth.useEmailInstead : t.auth.usePhoneInstead}</Text>
+        </Pressable>
       </Screen>
     );
   }
@@ -164,15 +154,20 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
   const isEmail = method === 'email';
 
   return (
-    <Screen footer={<Button title={t.auth.verify} onPress={submitCode} loading={busy} disabled={code.length < 6} />}>
-      <BackLink
-        label={isEmail ? t.auth.changeEmail : t.auth.changeNumber}
-        onPress={() => {
-          setStep('input');
-          setError(null);
-        }}
-      />
-      <Text variant="title" color={colors.leaf[800]} accessibilityRole="header">{title}</Text>
+    <Screen
+      header={
+        <Header
+          onBack={() => {
+            setStep('input');
+            setError(null);
+          }}
+          backLabel={isEmail ? t.auth.changeEmail : t.auth.changeNumber}
+          right={mode === 'signUp' ? <View style={styles.steps}><Steps n={2} of={4} /></View> : undefined}
+        />
+      }
+      footer={<Button title={t.auth.verify} onPress={submitCode} loading={busy} disabled={code.length < 6} />}
+    >
+      <Text variant="title" accessibilityRole="header">{t.auth.code}</Text>
       <Text muted>
         {isEmail
           ? fill(t.auth.codeSentToEmail, { email: target })
@@ -201,7 +196,7 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
         </Text>
       ) : (
         <Pressable accessibilityRole="button" onPress={() => requestCode(target, method)} disabled={busy} style={styles.link}>
-          <Text variant="label" color={colors.leaf[700]}>{t.auth.resend}</Text>
+          <Text variant="label" color={c.secondary}>{t.auth.resend}</Text>
         </Pressable>
       )}
     </Screen>
@@ -211,34 +206,14 @@ export function PhoneSignInScreen({ mode, onBack }: Props) {
 export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.link} hitSlop={8}>
-      <Text variant="label" color={colors.muted}>← {label}</Text>
+      <Text variant="label" color={c.inkSoft}>← {label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f4',
-    borderRadius: radius.md,
-    padding: 4,
-    marginVertical: space[2],
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: space[2],
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  code: { fontSize: 24, letterSpacing: 6, textAlign: 'center', fontWeight: '700' },
-  link: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  steps: { width: 120 },
+  phone: { fontSize: 20, letterSpacing: 1 },
+  code: { fontSize: 28, letterSpacing: 10, textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  link: { minHeight: tap, justifyContent: 'center', alignSelf: 'flex-start' },
 });

@@ -1,85 +1,87 @@
 import { brand } from '@cultivanode/shared/brand';
-import { space } from '@cultivanode/shared';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useI18n } from '../i18n';
-import { Logo, Screen, Text } from '../ui';
-
-const GREEN = brand.logo.background; // deep brand green
-const CYAN = '#3BC6D9';
-const OFF_WHITE = '#FAF7F0';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n, type Lang } from '../i18n';
+import { color as c, font, radius, space, tap } from '../theme';
+import { Button, Icon, Logo, Text } from '../ui';
 
 type Props = { onStart: () => void; onSignIn: () => void };
 
+const LANGS: { value: Lang; label: string; hint: string }[] = [
+  { value: 'yo', label: 'Yorùbá', hint: 'Èdè Yorùbá' },
+  { value: 'en', label: 'English', hint: 'English language' },
+];
+
+/** First screen: choose the language, then start or sign in. */
 export function WelcomeScreen({ onStart, onSignIn }: Props) {
   const { t, lang, setLang } = useI18n();
+  const insets = useSafeAreaInsets();
   return (
-    <Screen
-      background={GREEN}
-      footer={
-        <>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onStart}
-            style={({ pressed }) => [styles.primary, pressed && { opacity: 0.85 }]}
-          >
-            <Text variant="label" color={GREEN}>{t.welcome.start}</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onSignIn}
-            style={({ pressed }) => [styles.primary, styles.outline, pressed && { opacity: 0.85 }]}
-          >
-            <Text variant="label" color={OFF_WHITE}>{t.welcome.haveAccount}</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.common.switchLanguage}
-            onPress={() => setLang(lang === 'en' ? 'yo' : 'en')}
-            style={styles.lang}
-          >
-            <Text variant="caption" color="#9FB7A8">
-              {lang === 'en' ? 'English  ·  ' : ''}
-              <Text variant="caption" color={OFF_WHITE} style={styles.underline}>{t.common.switchLanguage}</Text>
-              {lang === 'yo' ? '  ·  Yorùbá' : ''}
-            </Text>
-          </Pressable>
-        </>
-      }
-    >
+    <View style={[styles.page, { paddingTop: insets.top + space[6], paddingBottom: insets.bottom + space[5] }]}>
       <StatusBar style="light" />
-      <View style={styles.hero}>
-        <Logo size={72} />
-        <Text variant="title" color={OFF_WHITE} style={styles.title} accessibilityRole="header">
-          {t.welcome.title}
-        </Text>
-        <Text color="#C9D8CF">{t.welcome.intro}</Text>
-        <View style={styles.chips}>
-          {t.welcome.chips.map((c) => (
-            <View key={c} style={styles.chip}>
-              <Text variant="caption" color="#BFE7C9">{c}</Text>
-            </View>
-          ))}
-        </View>
-        <Text variant="caption" color="#9FB7A8">{brand.tagline}</Text>
+      <View style={styles.brand}>
+        <Logo size={44} />
+        <Text style={styles.brandName} color={c.onDark}>{brand.name}</Text>
       </View>
-    </Screen>
+
+      <View style={styles.hero}>
+        <Text variant="display" color={c.onDark} style={styles.title} accessibilityRole="header">{t.start.title}</Text>
+        <Text color={c.onDarkSoft} style={styles.intro}>{t.start.intro}</Text>
+      </View>
+
+      <View style={styles.bottom}>
+        <Text variant="label" color={c.onDarkSoft}>{t.start.pickLanguage}</Text>
+        <View style={styles.langs} accessibilityRole="radiogroup">
+          {LANGS.map((l) => {
+            const on = l.value === lang;
+            return (
+              <Pressable
+                key={l.value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={l.hint}
+                onPress={() => setLang(l.value)}
+                style={[styles.lang, on && styles.langOn]}
+              >
+                <Text style={styles.langText} color={on ? c.primary : c.onDark}>{l.label}</Text>
+                {on ? <Icon name="check-circle" size={20} color={c.secondary} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+        <Button title={t.start.start} variant="mint" onPress={onStart} icon="arrow-right" />
+        <Pressable accessibilityRole="button" onPress={onSignIn} style={styles.signIn}>
+          <Text variant="label" color={c.onDark}>{t.start.haveAccount}</Text>
+        </Pressable>
+        <Text variant="caption" color={c.onDarkSoft} style={styles.center}>{t.start.free}</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: space[5], paddingTop: space[10] },
-  title: { fontSize: 38, lineHeight: 42 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  chip: { backgroundColor: '#1D5237', borderRadius: 999, paddingHorizontal: space[3], paddingVertical: 6 },
-  primary: {
-    minHeight: 52,
-    borderRadius: 14,
-    backgroundColor: CYAN,
+  page: { flex: 1, backgroundColor: c.primary, paddingHorizontal: space[5], justifyContent: 'space-between' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  brandName: { fontFamily: font.heading, fontSize: 20 },
+  hero: { gap: space[4] },
+  title: { fontSize: 38, lineHeight: 44 },
+  intro: { fontSize: 18, lineHeight: 26 },
+  bottom: { gap: space[3] },
+  langs: { flexDirection: 'row', gap: space[3], marginBottom: space[2] },
+  lang: {
+    flex: 1,
+    minHeight: tap + 8,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: space[2],
   },
-  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(250,247,240,0.5)' },
-  lang: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  underline: { textDecorationLine: 'underline' },
+  langOn: { backgroundColor: c.card, borderColor: c.card },
+  langText: { fontFamily: font.bold, fontSize: 18 },
+  signIn: { minHeight: tap, alignItems: 'center', justifyContent: 'center' },
+  center: { textAlign: 'center' },
 });

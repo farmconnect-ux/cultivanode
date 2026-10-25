@@ -1,45 +1,69 @@
-import { colors, radius, space, touchTarget } from '@cultivanode/shared';
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
+import { color as c, font, radius, space, tap } from '../theme';
+import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'gold';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'mint' | 'danger' | 'gold';
 
-type Props = Omit<PressableProps, 'children'> & { title: string; variant?: Variant; loading?: boolean };
-
-const palette: Record<Variant, { bg: string; bgPressed: string; fg: string; border?: string }> = {
-  primary: { bg: colors.leaf[600], bgPressed: colors.leaf[800], fg: colors.white },
-  secondary: { bg: colors.white, bgPressed: colors.leaf[50], fg: colors.leaf[700], border: colors.leaf[600] },
-  gold: { bg: colors.harvest[300], bgPressed: colors.harvest[400], fg: colors.ink },
+type Props = Omit<PressableProps, 'children'> & {
+  title: string;
+  variant?: Variant;
+  loading?: boolean;
+  icon?: IconName;
+  /** Shrink to fit the label instead of filling the row. */
+  compact?: boolean;
 };
 
-export function Button({ title, variant = 'primary', loading, disabled, style, ...rest }: Props) {
+const palette: Record<Variant, { bg: string; pressed: string; fg: string; border: string }> = {
+  primary: { bg: c.primaryContainer, pressed: c.primary, fg: c.onDark, border: c.primaryContainer },
+  secondary: { bg: c.card, pressed: c.mintSoft, fg: c.primary, border: c.outline },
+  ghost: { bg: 'transparent', pressed: c.mintSoft, fg: c.secondary, border: 'transparent' },
+  mint: { bg: c.mint, pressed: '#4edea3', fg: c.primary, border: c.mint },
+  gold: { bg: c.mint, pressed: '#4edea3', fg: c.primary, border: c.mint },
+  danger: { bg: c.card, pressed: c.dangerSoft, fg: c.danger, border: '#f3c4c4' },
+};
+
+export function Button({ title, variant = 'primary', loading, disabled, icon, compact, style, ...rest }: Props) {
   const p = palette[variant];
+  const off = Boolean(disabled || loading);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
-      disabled={disabled || loading}
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: off, busy: Boolean(loading) }}
+      disabled={off}
       style={(state) => [
         styles.base,
-        { backgroundColor: state.pressed ? p.bgPressed : p.bg, borderColor: p.border ?? 'transparent' },
-        (disabled || loading) && styles.disabled,
+        compact && styles.compact,
+        { backgroundColor: state.pressed ? p.pressed : p.bg, borderColor: p.border },
+        off && styles.off,
         typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}
     >
-      {loading ? <ActivityIndicator color={p.fg} /> : <Text variant="label" color={p.fg}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={p.fg} />
+      ) : (
+        <View style={styles.row}>
+          {icon ? <Icon name={icon} size={20} color={p.fg} /> : null}
+          <Text style={styles.label} color={p.fg} numberOfLines={2}>{title}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: touchTarget,
-    paddingHorizontal: space[5],
+    minHeight: tap + 4,
+    paddingHorizontal: space[3],
     borderRadius: radius.md,
-    borderWidth: 2,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  disabled: { opacity: 0.6 },
+  compact: { alignSelf: 'flex-start', minHeight: tap, paddingHorizontal: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space[2], alignSelf: 'stretch' },
+  label: { fontFamily: font.bold, fontSize: 16, flexShrink: 1, textAlign: 'center' },
+  off: { opacity: 0.55 },
 });

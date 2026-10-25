@@ -8,6 +8,7 @@ export default function SignInRoute() {
     <PhoneSignInScreen
       mode="signIn"
       onBack={() => router.back()}
+      onSignedIn={() => router.replace('/')}
     />
   );
 }

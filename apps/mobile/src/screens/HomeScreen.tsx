@@ -1,415 +1,351 @@
-import { colors, formatNgPhone, radius, space } from '@cultivanode/shared';
-import { brand } from '@cultivanode/shared/brand';
-import { useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fill, useI18n } from '../i18n';
-import type { Account } from '../lib/account';
-import { signOut } from '../lib/auth';
-import { siteLink } from '../lib/site';
-import { Button, Card, Notice, Screen, Text } from '../ui';
-import type { MobileFarmSummary } from '../lib/data';
+import { greeting, shortDate, whenLabel, daysFromToday } from '../lib/dates';
+import { loadCrops, loadJobs, markJobDone, type Crop, type Job } from '../lib/farm';
+import { isFarmer, useSession } from '../lib/session';
+import { loadFarmWeather, type FarmWeather } from '../lib/weather';
+import { color as c, font, radius, space, tap } from '../theme';
+import { Button, Card, Icon, Notice, Pill, Progress, Screen, SectionTitle, Text, Tile, type IconName } from '../ui';
 
-type NavDestination =
-  | 'marketplace'
-  | 'operations'
-  | 'scouting'
-  | 'sell'
-  | 'boundary_walk'
-  | 'provider_workspace'
-  | 'buy_inputs'
-  | 'farm_books'
-  | 'ai_assistant';
+export type HomeTarget =
+  | { to: 'hire'; kind: 'tractor' | 'hands' }
+  | { to: 'sell' }
+  | { to: 'buy' }
+  | { to: 'market' }
+  | { to: 'addCrop' }
+  | { to: 'addFarm' }
+  | { to: 'jobs' }
+  | { to: 'help'; job?: Job };
 
-type Props = {
-  account: Account;
-  justJoined: boolean;
-  onSignedOut: () => void;
-  onNavigate?: (destination: NavDestination, filter?: string) => void;
-  farmData?: MobileFarmSummary | null;
-  pendingSyncCount?: number;
+type Props = { toast?: string; onGo: (target: HomeTarget) => void };
+
+const WEATHER_ICON: Record<string, IconName> = {
+  clear: 'sun',
+  partly: 'cloud',
+  cloudy: 'cloud',
+  fog: 'cloud',
+  drizzle: 'cloud-drizzle',
+  rain: 'cloud-rain',
+  storm: 'cloud-lightning',
+  unknown: 'cloud',
 };
 
-const GREEN = brand.logo.background;
-const QUICK_ICONS = ['👷🏾', '🚜', '🧪', '📒'];
-
-function initials(name: string | null): string {
-  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  return (parts.length > 1 ? parts[0]![0]! + parts[parts.length - 1]![0]! : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
-}
-
-export function HomeScreen({
-  account,
-  justJoined,
-  onSignedOut,
-  onNavigate,
-  farmData,
-  pendingSyncCount = 0,
-}: Props) {
+/** Home: today's job, the weather, four big shortcuts and how each crop is coming along. */
+export function HomeScreen({ toast, onGo }: Props) {
   const { t, lang, setLang } = useI18n();
-  const [busy, setBusy] = useState<'local' | 'global' | null>(null);
-  const [offline, setOffline] = useState(false);
-  const a = t.account;
-  const p = account.profile;
-  const tier = Math.min(Math.max(p.verification_tier, 0), a.tiers.length - 1);
+  const h = t.home;
+  const { account, farm, farms, setFarm } = useSession();
+  const [crops, setCrops] = useState<Crop[] | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [weather, setWeather] = useState<FarmWeather | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState<string | null>(toast ?? null);
+  const [busyJob, setBusyJob] = useState<string | null>(null);
+  const [picker, setPicker] = useState(false);
 
-  const handleTilePress = (index: number) => {
-    if (!onNavigate) return;
-    if (index === 0) onNavigate('marketplace', 'labour');
-    else if (index === 1) onNavigate('provider_workspace');
-    else if (index === 2) onNavigate('buy_inputs');
-    else if (index === 3) onNavigate('farm_books');
-  };
+  const load = useCallback(async () => {
+    if (!farm) {
+      setCrops([]);
+      setJobs([]);
+      loadFarmWeather(account?.profile.state ?? null).then(setWeather);
+      return;
+    }
+    const [cr, w] = await Promise.all([loadCrops(farm.id).catch(() => [] as Crop[]), loadFarmWeather(farm.state)]);
+    setCrops(cr);
+    setWeather(w);
+    setJobs(await loadJobs(farm.id, cr).catch(() => [] as Job[]));
+  }, [farm, account?.profile.state]);
 
-  async function doSignOut(scope: 'local' | 'global') {
-    setBusy(scope);
-    setOffline(false);
-    const ok = await signOut(scope);
-    setBusy(null);
-    if (ok) onSignedOut();
-    else setOffline(true);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (toast) setMessage(toast);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!message) return;
+    const id = setTimeout(() => setMessage(null), 5000);
+    return () => clearTimeout(id);
+  }, [message]);
+
+  async function refresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
   }
 
-  function confirmSignOutAll() {
-    Alert.alert(a.signOutAll, a.signOutAllConfirm, [
-      { text: a.cancel, style: 'cancel' },
-      { text: a.signOutAll, style: 'destructive', onPress: () => doSignOut('global') },
-    ]);
+  async function done(job: Job) {
+    setBusyJob(job.id);
+    const ok = await markJobDone(job.id);
+    setBusyJob(null);
+    if (ok) {
+      setJobs((js) => js.filter((j) => j.id !== job.id));
+      setMessage(h.doneToast);
+    } else {
+      setMessage(t.common.offline);
+    }
   }
+
+  const firstName = (account?.profile.full_name ?? '').trim().split(/\s+/)[0] ?? '';
+  const farmer = isFarmer(account);
+  const due = jobs.filter((j) => daysFromToday(j.date) <= 0);
+  const focus = due[0] ?? null;
+  const next = focus ? null : jobs[0] ?? null;
 
   return (
-    <Screen>
+    <Screen inTabs onRefresh={refresh} refreshing={refreshing}>
       <View style={styles.top}>
         <View style={styles.flex}>
-          <Text variant="caption" muted>{a.greeting}</Text>
-          <Text variant="heading" color={colors.leaf[800]} accessibilityRole="header">
-            {p.full_name ?? ''}
-          </Text>
+          <Text muted>{greeting(h)}</Text>
+          <Text variant="display" numberOfLines={1}>{firstName || '👋'}</Text>
         </View>
         <Pressable
-          style={styles.providerPill}
-          onPress={() => onNavigate?.('provider_workspace')}
-          accessible
           accessibilityRole="button"
-          accessibilityLabel="Switch to Machinery and Provider Workspace"
+          accessibilityLabel={t.common.switchLanguage}
+          onPress={() => setLang(lang === 'en' ? 'yo' : 'en')}
+          style={styles.lang}
         >
-          <Text variant="caption" color="#123D27" style={styles.bold}>
-            🚜 Provider Mode
-          </Text>
+          <Text variant="label" color={lang === 'en' ? c.primary : c.inkSoft}>EN</Text>
+          <Text color={c.outline}>|</Text>
+          <Text variant="label" color={lang === 'yo' ? c.primary : c.inkSoft}>YO</Text>
         </Pressable>
-        <View style={styles.avatar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <Text variant="label" color={GREEN}>{initials(p.full_name)}</Text>
-        </View>
       </View>
 
-      {/* Offline Sync Banner */}
-      {pendingSyncCount > 0 && (
-        <View style={styles.syncBanner}>
-          <Text variant="caption" color={colors.leaf[900]} style={styles.syncText}>
-            🔄 {pendingSyncCount} observation(s) queued for offline sync
-          </Text>
-        </View>
-      )}
+      {message ? <Notice tone={message === t.common.offline ? 'error' : 'success'}>{message}</Notice> : null}
 
-      {justJoined ? (
-        <>
-          <Notice tone="info">{`${fill(a.welcome, { name: p.full_name ?? '' })} ${a.welcomeNew}`}</Notice>
-          <Card style={styles.onboardingActionCard}>
-            <Text variant="label" color="#123D27">
-              🛰️ Recommended Next Step: Map Farm Boundary
-            </Text>
-            <Text variant="caption" color={colors.soil[700]}>
-              Map your farm perimeter using your phone's built-in GPS and compass for precise hectare calculations, tractor bookings, and weather insights.
-            </Text>
-            <Button
-              title="Start GPS Boundary Walk"
-              variant="primary"
-              onPress={() => onNavigate?.('boundary_walk')}
-            />
-          </Card>
-        </>
+      {farm ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={h.switchFarm} onPress={() => setPicker(true)} style={styles.farm}>
+          <Icon name="map-pin" size={20} />
+          <Text variant="label" style={styles.flex} numberOfLines={1}>
+            {[farm.name, farm.lga ?? farm.state].filter(Boolean).join(' · ')}
+          </Text>
+          <Icon name="chevron-down" size={20} color={c.inkSoft} />
+        </Pressable>
       ) : null}
 
-      <View style={styles.hero}>
-        <Text variant="caption" color="#A9C7B5">{a.tierTitle}</Text>
-        <Text variant="heading" color="#FAF7F0">{a.tiers[tier]}</Text>
-        <Text variant="caption" color="#C9D8CF">{a.tierHint}</Text>
-      </View>
+      {weather ? <WeatherCard w={weather} /> : null}
 
-      {/* Live Farm & Synoptic Weather Card */}
-      <Card style={styles.farmCard}>
-        <View style={styles.farmHeader}>
-          <View>
-            <Text variant="caption" muted>ACTIVE FARM</Text>
-            <Text variant="heading" color={colors.leaf[900]}>
-              {farmData?.farmName ?? 'CultivaNode Agro Hub'}
-            </Text>
-          </View>
-          <View style={styles.weatherBadge}>
-            <Text variant="caption" color={colors.harvest[700]} style={styles.bold}>
-              ⛅ 29°C · NiMet
-            </Text>
-          </View>
+      {farmer && !farm ? (
+        <Card>
+          <Text variant="heading">{h.noFarm}</Text>
+          <Text muted>{h.noFarmBody}</Text>
+          <Button title={h.noFarm} icon="plus" onPress={() => onGo({ to: 'addFarm' })} />
+        </Card>
+      ) : null}
+
+      {farmer && farm ? (
+        <View style={styles.group}>
+          <SectionTitle title={h.todayTitle} action={jobs.length ? h.moreJobs : undefined} onAction={() => onGo({ to: 'jobs' })} />
+          {crops && crops.length === 0 ? (
+            <Card>
+              <Text variant="heading">{h.noCrop}</Text>
+              <Text muted>{h.noCropBody}</Text>
+              <Button title={h.addCrop} icon="plus" onPress={() => onGo({ to: 'addCrop' })} />
+            </Card>
+          ) : focus ? (
+            <JobCard job={focus} label={whenLabel(focus.date, h)} late={daysFromToday(focus.date) < 0} busy={busyJob === focus.id} onDone={() => done(focus)} onHelp={() => onGo({ to: 'help', job: focus })} />
+          ) : crops ? (
+            <Card>
+              <View style={styles.rowCenter}>
+                <Icon name="check-circle" size={22} />
+                <Text variant="heading">{h.nothingToday}</Text>
+              </View>
+              {next ? <Text muted>{fill(h.nextJob, { job: next.name, when: whenLabel(next.date, h).toLowerCase() })}</Text> : null}
+            </Card>
+          ) : null}
         </View>
+      ) : null}
 
-        <View style={styles.farmDetailsRow}>
-          <View style={styles.statBox}>
-            <Text variant="caption" muted>Crop Cycle</Text>
-            <Text variant="label" color={colors.leaf[800]}>
-              {farmData?.activeCrop ?? 'Cassava & Maize'}
-            </Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text variant="caption" muted>Plot Name</Text>
-            <Text variant="label" color={colors.leaf[800]}>
-              {farmData?.plotName ?? 'Plot A (Main)'}
-            </Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text variant="caption" muted>Open Tasks</Text>
-            <Text variant="label" color={colors.harvest[700]}>
-              {farmData?.tasks ? farmData.tasks.filter((t) => t.status === 'pending').length : 2} Due
-            </Text>
-          </View>
+      {!farmer ? (
+        <Card tone="soft">
+          <Text variant="heading">{h.buyerTitle}</Text>
+          <Text muted>{h.buyerBody}</Text>
+          <Button title={h.openMarket} icon="shopping-bag" onPress={() => onGo({ to: 'market' })} />
+        </Card>
+      ) : null}
+
+      <View style={styles.group}>
+        <SectionTitle title={h.quick} />
+        <View style={styles.grid}>
+          <Tile icon="truck" label={h.hireTractor} onPress={() => onGo({ to: 'hire', kind: 'tractor' })} />
+          <Tile icon="users" label={h.hireHands} onPress={() => onGo({ to: 'hire', kind: 'hands' })} />
         </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.mapBoundaryBtn,
-            pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
-          ]}
-          onPress={() => onNavigate?.('boundary_walk')}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel="Measure Farm Boundary with phone GPS and sensors"
-        >
-          <Text variant="label" color="#123D27" style={styles.mapBoundaryText}>
-            🛰️ Measure Farm Boundary (Walk Perimeter)
-          </Text>
-          <Text variant="caption" color={colors.leaf[700]}>
-            High-precision GPS & compass tracking →
-          </Text>
-        </Pressable>
-      </Card>
-
-      <View style={styles.quick}>
-        {a.quick.map((label, i) => (
-          <Pressable
-            key={label}
-            onPress={() => handleTilePress(i)}
-            style={({ pressed }) => [
-              styles.tile,
-              pressed && { opacity: 0.8, backgroundColor: colors.harvest[50] },
-            ]}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={`${label}. Tap to open.`}
-          >
-            <Text style={styles.icon}>{QUICK_ICONS[i]}</Text>
-            <Text variant="caption" style={styles.center}>{label}</Text>
-            <View style={styles.liveBadge}>
-              <Text variant="caption" color={colors.leaf[700]} style={styles.liveBadgeText}>
-                {a.comingSoon}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
-      <Text variant="caption" muted>{a.comingSoonTools}</Text>
-
-      {/* Field Actions Hub */}
-      <View style={styles.actionHubRow}>
-        <Button
-          title="🌾 Field Tasks"
-          variant="primary"
-          onPress={() => onNavigate?.('operations')}
-        />
-        <Button
-          title="📸 Scouting"
-          variant="secondary"
-          onPress={() => onNavigate?.('scouting')}
-        />
-        <Button
-          title="🤖 Ask AI"
-          variant="gold"
-          onPress={() => onNavigate?.('ai_assistant')}
-        />
+        <View style={styles.grid}>
+          <Tile icon="tag" tone="amber" label={h.sell} onPress={() => onGo({ to: 'sell' })} />
+          <Tile icon="shopping-bag" tone="amber" label={h.buy} onPress={() => onGo({ to: 'buy' })} />
+        </View>
       </View>
 
-      <Card>
-        <Text variant="label">{a.yourRoles}</Text>
-        {account.roles.length === 0 && account.pending.length === 0 ? <Text muted>{a.noRoles}</Text> : null}
-        {account.roles.map((r) => (
-          <RoleRow key={`${r.role}:${r.provider_type ?? ''}`} name={roleName(t, r)} />
-        ))}
-        {account.pending.map((r) => (
-          <RoleRow key={`p:${r.role}:${r.provider_type ?? ''}`} name={roleName(t, r)} status={a.pending} />
-        ))}
-      </Card>
+      {crops && crops.length > 0 ? (
+        <View style={styles.group}>
+          <SectionTitle title={h.crops} action={h.addCrop} onAction={() => onGo({ to: 'addCrop' })} />
+          {crops.slice(0, 4).map((cr) => (
+            <CropCard key={cr.id} crop={cr} />
+          ))}
+        </View>
+      ) : null}
+
+      <FarmPicker
+        open={picker}
+        onClose={() => setPicker(false)}
+        farms={farms.map((f) => ({ id: f.id, label: f.name, hint: [f.lga, f.state].filter(Boolean).join(', ') }))}
+        current={farm?.id ?? null}
+        onPick={(id) => {
+          setFarm(id);
+          setPicker(false);
+        }}
+        onAdd={() => {
+          setPicker(false);
+          onGo({ to: 'addFarm' });
+        }}
+        title={h.switchFarm}
+        addLabel={t.home.noFarm}
+        closeLabel={t.common.close}
+      />
     </Screen>
   );
 }
 
-function displayPhone(phone: string): string {
-  const digits = phone.replace(/[^0-9]/g, '');
-  return /^234[0-9]{10}$/.test(digits) ? formatNgPhone(digits) : phone;
-}
+/** The crop's name in the app language (Yorùbá from the catalogue when it has one). */
+export const cropLabel = (x: { cropName: string; cropLocal: string | null }, lang: string) => (lang === 'yo' && x.cropLocal ? x.cropLocal : x.cropName);
 
-function roleName(
-  t: ReturnType<typeof useI18n>['t'],
-  r: Account['roles'][number],
-): string {
-  return r.provider_type ? `${t.roleNames[r.role]} · ${t.providerTypes[r.provider_type]}` : t.roleNames[r.role];
-}
-
-function RoleRow({ name, status }: { name: string; status?: string }) {
+function WeatherCard({ w }: { w: FarmWeather }) {
+  const { t } = useI18n();
+  const h = t.home;
+  const rainy = w.todayRainMm >= 1 || (w.todayRainChance ?? 0) >= 50;
+  const advice = w.holdSpraying ? h.holdSpray : w.dryWeek ? h.dryWeek : h.goodDay;
   return (
-    <View style={styles.row}>
-      <Text style={styles.flex}>{name}</Text>
-      {status ? (
-        <View style={styles.pill}>
-          <Text variant="caption" color={colors.harvest[700]}>{status}</Text>
+    <Card tone="dark" accessibilityLabel={`${fill(h.weatherAt, { town: w.town })}. ${advice}`}>
+      <View style={styles.weatherTop}>
+        <View style={styles.weatherTemp}>
+          {w.tempC !== null ? <Text style={styles.temp} color={c.onDark}>{w.tempC}°</Text> : null}
+          <Text color={c.onDarkSoft}>{fill(h.weatherAt, { town: w.town })}</Text>
         </View>
-      ) : (
-        <Text color={colors.leaf[600]}>✓</Text>
-      )}
-    </View>
+        <Icon name={WEATHER_ICON[w.kind] ?? 'cloud'} size={40} color={c.mint} />
+      </View>
+      <Text color="#e3f3ea">{fill(rainy ? h.rainToday : h.dryToday, { mm: w.weekRainMm })}</Text>
+      <View style={[styles.advice, { backgroundColor: w.holdSpraying || w.dryWeek ? c.mint : 'rgba(108,248,187,0.18)' }]}>
+        <Text variant="label" color={w.holdSpraying || w.dryWeek ? c.primary : c.mint}>{advice}</Text>
+      </View>
+    </Card>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function JobCard({ job, label, late, busy, onDone, onHelp }: { job: Job; label: string; late: boolean; busy: boolean; onDone: () => void; onHelp: () => void }) {
+  const { t, lang } = useI18n();
   return (
-    <View style={styles.row}>
-      <Text muted>{label}</Text>
-      <Text variant="label">{value}</Text>
-    </View>
+    <Card>
+      <View style={styles.between}>
+        <Text variant="small" color={c.secondary}>{`${cropLabel(job, lang)} · ${job.areaHa} ha`}</Text>
+        <Pill tone={late ? 'red' : 'amber'}>{label}</Pill>
+      </View>
+      <Text variant="heading" style={styles.jobTitle}>{job.name}</Text>
+      {job.notes ? <Text muted numberOfLines={3}>{job.notes}</Text> : null}
+      {job.machinery ? (
+        <View style={styles.rowCenter}>
+          <Icon name="truck" size={16} color={c.inkSoft} />
+          <Text variant="caption" muted style={styles.flex}>{job.machinery}</Text>
+        </View>
+      ) : null}
+      <View style={styles.actions}>
+        <Button title={t.home.markDone} icon="check" onPress={onDone} loading={busy} style={styles.flex} />
+        <Button title={t.home.getHelp} variant="secondary" icon="help-circle" onPress={onHelp} style={styles.flex} />
+      </View>
+    </Card>
+  );
+}
+
+function CropCard({ crop }: { crop: Crop }) {
+  const { t, lang } = useI18n();
+  const h = t.home;
+  const planned = crop.plantingDate > new Date().toISOString().slice(0, 10);
+  return (
+    <Card>
+      <View style={styles.between}>
+        <Text variant="label">{cropLabel(crop, lang)}</Text>
+        <Text variant="caption" muted>{planned ? fill(h.plannedFor, { date: shortDate(crop.plantingDate) }) : fill(h.dayOf, { n: crop.day, total: crop.totalDays })}</Text>
+      </View>
+      <Progress value={planned ? 0 : crop.day / crop.totalDays} label={crop.cropName} />
+      <Text variant="caption" muted>
+        {[crop.stage, fill(h.harvestAround, { date: shortDate(crop.harvestDate) })].filter(Boolean).join(' · ')}
+      </Text>
+    </Card>
+  );
+}
+
+function FarmPicker(p: {
+  open: boolean;
+  onClose: () => void;
+  farms: { id: string; label: string; hint: string }[];
+  current: string | null;
+  onPick: (id: string) => void;
+  onAdd: () => void;
+  title: string;
+  addLabel: string;
+  closeLabel: string;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={p.open} transparent animationType="slide" onRequestClose={p.onClose}>
+      <Pressable style={styles.backdrop} onPress={p.onClose} accessibilityLabel={p.closeLabel} />
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + space[4] }]}>
+        <Text variant="heading">{p.title}</Text>
+        {p.farms.map((f) => (
+          <Pressable key={f.id} accessibilityRole="radio" accessibilityState={{ checked: f.id === p.current }} onPress={() => p.onPick(f.id)} style={[styles.pick, f.id === p.current && styles.pickOn]}>
+            <View style={styles.flex}>
+              <Text variant="label">{f.label}</Text>
+              {f.hint ? <Text variant="caption" muted>{f.hint}</Text> : null}
+            </View>
+            {f.id === p.current ? <Icon name="check" size={20} /> : null}
+          </Pressable>
+        ))}
+        <Button title={p.addLabel} variant="secondary" icon="plus" onPress={p.onAdd} />
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.harvest[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  providerPill: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-    borderWidth: 1.5,
-    borderRadius: radius.full,
-    paddingHorizontal: space[3],
-    paddingVertical: 4,
-  },
-  hero: { backgroundColor: GREEN, borderRadius: radius.lg + 8, padding: space[5], gap: space[2] },
-  onboardingActionCard: {
-    backgroundColor: '#FAF7F0',
-    borderColor: '#123D27',
-    borderWidth: 1.5,
-    borderRadius: radius.lg,
-    padding: space[4],
-    gap: space[2],
-  },
-  syncBanner: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#7DD3FC',
+  lang: {
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingVertical: space[2],
-    paddingHorizontal: space[3],
-  },
-  syncText: {
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  farmCard: {
-    padding: space[4],
-    gap: space[3],
-    backgroundColor: colors.white,
-    borderColor: colors.line,
-  },
-  farmHeader: {
+    borderColor: c.outline,
+    backgroundColor: c.card,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 6,
   },
-  weatherBadge: {
-    backgroundColor: colors.harvest[50],
-    borderColor: colors.harvest[200],
+  farm: {
+    minHeight: tap,
+    paddingHorizontal: space[4],
+    borderRadius: radius.lg - 2,
     borderWidth: 1,
-    paddingHorizontal: space[2],
-    paddingVertical: 2,
-    borderRadius: radius.full,
-  },
-  bold: {
-    fontWeight: 'bold',
-  },
-  farmDetailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: colors.soil[100],
-    paddingTop: space[3],
-    gap: space[2],
-  },
-  statBox: {
-    flex: 1,
-    gap: 2,
-  },
-  mapBoundaryBtn: {
-    marginTop: space[3],
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
-    borderWidth: 1.5,
-    borderRadius: radius.md,
-    padding: space[3],
-    alignItems: 'center',
-    gap: 2,
-  },
-  mapBoundaryText: {
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  quick: { flexDirection: 'row', gap: space[2] },
-  tile: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingVertical: space[3],
-    paddingHorizontal: space[1],
-    alignItems: 'center',
-    gap: 4,
-  },
-  icon: { fontSize: 24, lineHeight: 30 },
-  center: { textAlign: 'center' },
-  soon: { fontSize: 11, textAlign: 'center' },
-  liveBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: radius.full,
-    marginTop: 2,
-  },
-  liveBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  actionHubRow: {
-    flexDirection: 'row',
-    gap: space[3],
-    marginVertical: space[1],
-  },
-  row: {
-    minHeight: 44,
+    borderColor: c.line,
+    backgroundColor: c.card,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: space[3],
   },
-  pill: { backgroundColor: colors.harvest[50], borderRadius: 999, paddingHorizontal: space[3], paddingVertical: 4 },
+  group: { gap: space[3] },
+  grid: { flexDirection: 'row', gap: space[3] - 2 },
+  rowCenter: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
+  jobTitle: { fontSize: 19, lineHeight: 24 },
+  actions: { flexDirection: 'row', gap: space[3] - 2, paddingTop: space[1] },
+  weatherTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  weatherTemp: { flexDirection: 'row', alignItems: 'baseline', gap: space[3], flex: 1, flexWrap: 'wrap' },
+  temp: { fontFamily: font.display, fontSize: 40, lineHeight: 44 },
+  advice: { alignSelf: 'flex-start', paddingHorizontal: space[3], paddingVertical: 6, borderRadius: radius.pill },
+  backdrop: { flex: 1, backgroundColor: 'rgba(11,28,48,0.35)' },
+  sheet: { backgroundColor: c.page, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: space[5], gap: space[3] },
+  pick: { minHeight: tap + 8, borderRadius: radius.md, borderWidth: 1, borderColor: c.line, backgroundColor: c.card, paddingHorizontal: space[4], flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  pickOn: { borderColor: c.secondary, backgroundColor: c.mintSoft },
 });

@@ -10,7 +10,9 @@
     "./brand": "./src/brand.ts",
     "./places": "./src/places.ts",
     "./engines": "./src/engines/index.ts",
-    "./engines/marketplace": "./src/engines/marketplace/index.ts"
+    "./engines/marketplace": "./src/engines/marketplace/index.ts",
+    "./crop-plan": "./src/crop-plan.ts",
+    "./state-centroids": "./src/state-centroids.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p ../../supabase/functions",

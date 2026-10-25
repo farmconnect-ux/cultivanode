@@ -1,19 +1,22 @@
-import { colors, fontSize, fontWeight, lineHeight } from '@cultivanode/shared';
 import { Text as RNText, type TextProps } from 'react-native';
+import { color as c, font } from '../theme';
 
-type Variant = 'title' | 'heading' | 'body' | 'label' | 'caption';
+type Variant = 'display' | 'title' | 'heading' | 'body' | 'label' | 'caption' | 'small';
 
 const styles = {
-  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: fontSize['3xl'], lineHeight: fontSize['3xl'] * lineHeight.tight },
-  heading: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: fontSize.xl, lineHeight: fontSize.xl * lineHeight.snug },
-  body: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: fontSize.base, lineHeight: fontSize.base * lineHeight.normal },
-  label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: fontSize.base, lineHeight: fontSize.base * lineHeight.snug },
-  caption: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: fontSize.sm, lineHeight: fontSize.sm * lineHeight.normal },
+  display: { fontFamily: font.display, fontSize: 28, lineHeight: 32 },
+  title: { fontFamily: font.display, fontSize: 24, lineHeight: 30 },
+  heading: { fontFamily: font.heading, fontSize: 18, lineHeight: 24 },
+  body: { fontFamily: font.body, fontSize: 16, lineHeight: 23 },
+  label: { fontFamily: font.semibold, fontSize: 16, lineHeight: 21 },
+  caption: { fontFamily: font.body, fontSize: 14, lineHeight: 20 },
+  small: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17 },
 } as const;
 
 type Props = TextProps & { variant?: Variant; muted?: boolean; color?: string };
 
-/** Text with the CultivaNode type scale. Body text is never smaller than 16. */
+/** Text in the CultivaNode type scale: Plus Jakarta Sans for titles, Inter for reading. Body is 16. */
 export function Text({ variant = 'body', muted, color, style, ...rest }: Props) {
-  return <RNText style={[styles[variant], { color: color ?? (muted ? colors.muted : colors.ink) }, style]} {...rest} />;
+  const tone = color ?? (muted ? c.inkSoft : variant === 'title' || variant === 'display' ? c.primary : c.ink);
+  return <RNText style={[styles[variant], { color: tone }, style]} {...rest} />;
 }
