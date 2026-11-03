@@ -40,7 +40,7 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
     supabase.from("crop_cycle_operations").select("*").eq("crop_cycle_id", id).order("scheduled_date"),
     supabase.from("crop_observations").select("*").eq("crop_cycle_id", id).order("observed_at", { ascending: false }),
     supabase.from("crop_harvests").select("*").eq("crop_cycle_id", id).order("harvest_date", { ascending: false }),
-    c.standard_id ? supabase.from("farm_agronomic_standards").select("standard_code, source_authority, parameters").eq("id", c.standard_id).maybeSingle() : Promise.resolve({ data: null }),
+    c.standard_id ? supabase.from("farm_agronomic_standards").select("standard_code, source_authority, version, approved_by_name, status, parameters").eq("id", c.standard_id).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("farm_plan_actual_variances").select("*").eq("crop_cycle_id", id),
   ]);
 
@@ -72,7 +72,11 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
             <Status value={c.status} />
             {c.health_status && <Status value={c.health_status} />}
             <Chip icon="calendar_month">{c.season}</Chip>
-            {std && <Chip icon="verified">{std.standard_code}</Chip>}
+            {std && (
+              <Chip icon="verified">
+                {std.standard_code} v{std.version} · {std.approved_by_name ?? "Approved"}
+              </Chip>
+            )}
           </>
         }
         title={title}

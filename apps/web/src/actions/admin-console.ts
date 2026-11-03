@@ -268,3 +268,85 @@ export async function adminCancelJob(_prev: AdminResult | null, form: FormData):
   });
   return explain(error, "Job cancelled by staff. Both parties have been notified.");
 }
+
+export async function adminCreateStandardDraft(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const code = field(form, "standard_code", 80);
+  const cropId = field(form, "crop_id", 80);
+  const agroZone = field(form, "agro_zone", 80) || "rainforest";
+  const version = field(form, "version", 20) || "1.0";
+  const title = field(form, "title", 200);
+  const description = field(form, "description", 1000);
+  const maxN = field(form, "max_nitrogen_kg_ha", 20);
+  const source = field(form, "source_authority", 200) || "IITA_NIHORT_GAP";
+  const supersedesId = id(form, "supersedes_id");
+
+  const opsRaw = field(form, "mandated_operations", 2000);
+  const chemsRaw = field(form, "restricted_chemicals", 2000);
+  const paramsRaw = field(form, "parameters_json", 2000);
+
+  if (!code || !cropId || !title) {
+    return failed("Standard code, crop identifier, and title are required.");
+  }
+
+  const mandatedOps = opsRaw ? opsRaw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const restrictedChems = chemsRaw ? chemsRaw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
+  
+  let parameters = {};
+  if (paramsRaw) {
+    try {
+      parameters = JSON.parse(paramsRaw);
+    } catch {
+      return failed("Parameters must be a valid JSON object.");
+    }
+  }
+
+  const supabase = await createClient();
+  const { error } = await (supabase.rpc as any)("agronomy_create_standard_draft", {
+    p_code: code,
+    p_crop_id: cropId,
+    p_agro_zone: agroZone,
+    p_version: version,
+    p_title: title,
+    p_description: description || null,
+    p_parameters: parameters,
+    p_mandated_operations: mandatedOps,
+    p_restricted_chemicals: restrictedChems,
+    p_max_nitrogen_kg_ha: maxN ? Number(maxN) : null,
+    p_source_authority: source,
+    p_supersedes_id: supersedesId || null,
+  });
+
+  return explain(error, `Draft standard "${title}" created successfully.`);
+}
+
+export async function adminSubmitStandardForReview(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const standardId = id(form, "standard_id");
+  const notes = field(form, "notes", 1000);
+  if (!standardId) return failed("Invalid standard ID.");
+
+  const supabase = await createClient();
+  const { error } = await (supabase.rpc as any)("agronomy_submit_standard_for_review", {
+    p_standard_id: standardId,
+    p_notes: notes || null,
+  });
+
+  return explain(error, "Standard submitted for peer review.");
+}
+
+export async function adminPublishStandard(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const standardId = id(form, "standard_id");
+  const approverTitle = field(form, "approver_title", 200);
+  const partnerRef = field(form, "partner_reference", 200);
+  const notes = field(form, "notes", 1000);
+  if (!standardId) return failed("Invalid standard ID.");
+
+  const supabase = await createClient();
+  const { error } = await (supabase.rpc as any)("agronomy_publish_standard", {
+    p_standard_id: standardId,
+    p_approver_title: approverTitle || null,
+    p_partner_reference: partnerRef || null,
+    p_notes: notes || null,
+  });
+
+  return explain(error, "Standard published! It is now active and accessible to farmers.");
+}
