@@ -1,11 +1,11 @@
 # Roadmap (Phase 1)
 
-Revised 2026-09-28 to take in the independent MVP audit ("CultivaNode — Independent MVP Audit and Roadmap").
+Revised 2026-09-28 to take in the independent MVP audit ("CultivaNode — Independent MVP Audit and Roadmap"). Current release state was reconciled on 3 November 2026; see the [current release ledger](RELEASE_LEDGER.md), which is authoritative over historical status notes below.
 The master build plan's milestones M0–M7 and its 12 modules stay the Phase 1 scope. What changes is the order:
 after M1, a four-week **MVP track, "first real jobs"**, pulls the hiring flow and the admin controls it needs
 forward from M4, M5, M7 and module 12, and runs it without money. The rest of Phase 1 follows the MVP.
 
-Requirement-level status: [`requirements-matrix.md`](requirements-matrix.md). Every MVP item there carries its week (W1–W4).
+Requirement coverage: [`requirements-matrix.md`](requirements-matrix.md). Current readiness by journey, deployed migration, feature switch, device test and field evidence: [`RELEASE_LEDGER.md`](RELEASE_LEDGER.md). The service-hiring MVP still has a direct-payment boundary; goods-market checkout is a separate product flow and its escrow switch is off.
 
 ## Why the order changed
 
@@ -19,42 +19,28 @@ and both sides and CultivaNode staff can see that the job was agreed, done, prov
 done when real jobs run through the platform, not when M1 is finished. Listing moderation, the bookings view,
 dispute resolution and user suspension are MVP items.
 
-**Payment boundary (confirmed 2026-10-02).** No money moves through CultivaNode in the MVP. A booking records the agreed
-price in kobo; the farmer pays the provider directly (cash or transfer) and both mark the job paid. No
-commission in the pilot, and the site says so. Escrow, ledger and commission start in M5 after the fintech
-lawyer's sign-off. `PAYMENT_MODE` stays `test`. Paystack is registered in `integration_providers`
-(kind `payment`, test mode, `implemented: false`) so the M5 adapter already has its configuration home; no charge
-or escrow code ships before legal sign-off.
+**Payment boundary (service-hiring MVP, confirmed 2026-10-02).** A job booking records the agreed price in kobo; the farmer pays the provider directly and both mark it paid. Hiring escrow remains OFF pending legal and operational gates. This statement applies to service hiring, not the separate goods marketplace: goods checkout/payment code exists, the marketplace escrow switch is OFF, and the current provider/transaction readiness must be verified separately. See the [release ledger](RELEASE_LEDGER.md).
 
 **Mobile.** The job flow is built once, as responsive web for Android Chrome (camera and GPS through the
 browser). Native parity comes after the MVP, with offline sync (M7).
 
-## Sequence
+## Current release sequence — 3 November 2026
 
-| # | Milestone | Master plan source | Status | Gate |
-|---|---|---|---|---|
-| 1 | M0 Foundations | M0 | ✅ done | – |
-| 2 | M1 Website and identity | M1, modules 1–2 | ✅ done (leftovers listed below) | – |
-| 3 | **MVP W1** Safe foundation, supply online | M1 leftovers, M4, module 12 | ✅ code done and live on the hosted project 2026-09-28 (marketplace switch still closed) | – |
-| 4 | **MVP W2** Booking agreed | M4, M7 (notifications) | ✅ done: code 2026-09-29, verified live on the hosted project 2026-10-01 (migration, worker, Vault, cron) | W1 |
-| 5 | **MVP W3** Job done, proven, confirmed | M4, M5 (disputes, no money) | 🟡 database live 2026-10-02; review fixes 2026-10-03; web job pages go live with the fix push (earlier builds failed); on-device pilot test pending | W2 |
-| 6 | **MVP W4** Operable pilot | module 12, M5 (cancellation, no money), M7 (agents) | ⬜ | legal review of direct-payment terms |
-| 7 | Closed beta: 5 providers, 10 farmers, one cluster | pilot plan step 4 | ⬜ | W4 |
-| 8 | M5 Payments and escrow (money parts) | M5 | ⬜ | fintech lawyer, Paystack/Flutterwave accounts |
-| 9 | M2 Farms and crop engine | M2, modules 3–4 | ⬜ | agronomist content |
-| 10 | M3 Weather, inventory, farm books | M3, modules 5–6, 9 | ⬜ | M2; WeatherAPI plan with 14 days |
-| 11 | M6 AI assistant | M6, module 10 | ⬜ | M2 content, knowledge base |
-| 12 | M4 remainder: availability calendar, demand-nearby, tier 3 | M4 | ⬜ | booking history |
-| 13 | M7 Hardening: native parity, offline sync, agent dashboard, push, load and security tests, Play Store | M7, modules 8, 11 | ⬜ | – |
+The phases below are ordered by release risk and dependencies, not by code volume. “In main” does not mean deployed or pilot-proven.
 
-Rows 8 and 9 wait on outside work (lawyer, agronomist), so both start collecting inputs now and are built in
-whichever order their gate clears first. The master plan times the pilot for early-season planting
-(March–April): the crop engine needs to be ready for that, so agronomist content collection starts in W1.
+| Order | Work | Evidence now | Next gate |
+|---|---|---|---|
+| 1 | Close production exposure gap | Supabase reports `marketplace_live` enabled in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos; active SMS and identity providers are test-only mocks. | Configure and verify live providers, or close the marketplace before real-user onboarding. |
+| 2 | Reconcile schema and release switches | Supabase migration head is 25 Oct. Four 3 Nov migrations in GitHub (W4 booking disputes, agronomy governance, draft crop standards, goods-market disputes) are not applied. `marketplace_disputes` is missing/off; `ai_photo_diagnosis` is on. | Review/apply migrations; reconcile switches and run advisors; verify version and flag state. |
+| 3 | Finish service-job release validation | W1–W4 service code exists; W1–W3 DB work is applied. W4 DB change is pending. Five booking rows exist, but records alone do not prove real jobs. | Apply W4, execute documented real-device journeys, and record provenance/results for real completed jobs. |
+| 4 | Complete goods-market release gate | Seller/catalogue/cart/checkout/order flows exist; escrow is off. Goods dispute migration is pending. Fifteen order rows exist, with no verified field-pilot attribution. | Confirm payment mode/credentials, apply dispute schema, test order/payment/fulfilment/dispute with real devices and users. |
+| 5 | Establish safe agronomy and assistant release | Crop operations, assistant and photo analysis code exist. Draft standards and governance changes are in main but not deployed; photo-diagnosis flag is on. | Apply governance, obtain agronomist review, reconcile the photo switch, and publish evaluation/device evidence. |
+| 6 | Validate field operations and mobile/offline behavior | Native farm/hire/market flows and offline cache/outbox code exist; full deterministic sync is not proven. | Test supported phones under weak/no signal, define conflict outcomes, finish Yorùbá review and agent/support runbook. |
+| 7 | Closed beta and scale decisions | No verified pilot report was found; database status counts are not a substitute for user evidence. | Start a bounded beta only after gates 1–6. Measure completion, dispute, repeat booking, support effort and retention before expanding scope. |
 
-**Time.** Four weeks means four weeks of full-time-equivalent focus. Alongside 12-hour shifts, plan six to eight
-calendar weeks and keep the week order. If time runs short, cut W4 hardening items before cutting W1–W3.
+**Current deployment evidence:** Supabase is ACTIVE_HEALTHY and its listed Edge Functions are ACTIVE. The latest GitHub `main` commit has a Vercel `success` status check. Direct Vercel deployment metadata was unavailable in this audit, so the production alias and environment settings remain to be confirmed.
 
-## The four MVP weeks
+## Original four-week MVP acceptance plan (current status is in RELEASE_LEDGER.md)
 
 ### W1 — Safe foundation and supply online
 
