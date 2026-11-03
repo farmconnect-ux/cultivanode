@@ -135,6 +135,7 @@ select is(
 );
 
 -- Test 8: Immutability guard - Published standard cannot have parameters or title altered in-place
+select pg_temp.as_author();
 select throws_ok(
   $$ update public.farm_agronomic_standards set title = 'Sneaky edit' where id = (select id from pg_temp.agri_test where k = 'std_1') $$,
   '42501',
