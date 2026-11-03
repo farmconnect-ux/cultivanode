@@ -1,6 +1,6 @@
 -- Test suite 18: Marketplace Disputes, Direct-Payment Arbitration, and Seller RLS
 begin;
-select plan(20);
+select plan(24);
 
 -- Fixtures: Create user profiles, roles, seller profile, and orders
 insert into auth.users (id, phone) values
@@ -156,6 +156,7 @@ select is(
 );
 
 -- Test 6: Notification sent to Seller
+select pg_temp.as_seller();
 select is(
   (select count(*)::int from public.notifications where profile_id = 'b4000000-0000-0000-0000-000000000002' and kind = 'mkt_dispute_opened'),
   1,
@@ -163,6 +164,7 @@ select is(
 );
 
 -- Test 7: Double dispute on same order rejected
+select pg_temp.as_buyer();
 select throws_ok(
   $$ select public.open_marketplace_dispute(
        'b4000000-0000-0000-0000-0000000000d1'::uuid,
