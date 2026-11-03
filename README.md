@@ -1,19 +1,13 @@
 # CultivaNode
 
-**Connected intelligence for agriculture.** Farm management, agricultural services (machinery and labour hire)
-and, later, marketplace, IoT and AI, starting with farmers in South-West Nigeria. Web and mobile apps on one
-Supabase backend.
+**Connected intelligence for agriculture.** Farm management, machinery and labour services, produce and input commerce, and farmer tools for weather, records and advice, starting with farmers in South-West Nigeria. Web and mobile apps share one Supabase backend.
 
 > **Name.** CultivaNode. Name, taglines and logo come from
 > `packages/shared/src/brand.ts`.
 
-The authoritative product specification is the Phase 1 master build prompt. The reconciled execution sequence and gates are in
-[`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md); the original milestone order is retained in [`docs/ROADMAP.md`](docs/ROADMAP.md).
-Status by requirement:
-[`docs/requirements-matrix.md`](docs/requirements-matrix.md). Architecture, database, security, payments,
-agronomy, AI, offline sync, deployment and contribution rules are in [`docs/`](docs).
+The current release status is maintained in the [release ledger](docs/RELEASE_LEDGER.md), which separates code, migrations, deployment, feature switches, device tests and field-pilot evidence. It overrides older status labels in the [requirements matrix](docs/requirements-matrix.md), [roadmap](docs/ROADMAP.md) and [build plan](docs/BUILD_PLAN.md). Architecture, database, security, payments, agronomy, AI, offline sync, deployment and contribution rules are documented in [`docs/`](docs).
 
-## What's here (M0 and M1 done)
+## Repository and product areas
 
 ```
 apps/
@@ -34,23 +28,23 @@ Status:
 - [x] Farms schema: farms with GPS pin and walked boundary (area calculated), plots, soil records
 - [x] `nearby_listings()` search, ported from the prototype with fixes and tests
 - [x] CI: typecheck, lint, unit tests, database tests
-- [x] Hosted Supabase project `cultivanode` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1) with all migrations applied
+- [x] Hosted Supabase project `cultivanode` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1); migrations applied through 25 Oct 2026. Four migrations committed 3 Nov remain unapplied; see the [release ledger](docs/RELEASE_LEDGER.md).
 - [x] Design system: shared tokens (`packages/shared/src/design/tokens.ts`), web components (`apps/web/src/components/ui`), mobile components (`apps/mobile/src/ui`)
 - [x] Public website in English and Yorùbá: home, how it works, about, FAQ, contact form, Marketplace waitlist
 - [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
 - [x] Spec alignment: permission-based admin, roles table, verification documents (private storage), bank accounts, consents, append-only audit with old/new values, record provenance, farm zones, multi-rate listings
 - [x] Shared Zod validation, structured errors, redacted logging, Sentry adapter, security headers, brand config
-- [x] Switchable providers: SMS (Termii) and identity checks (Prembly) chosen, configured and tested in the admin console (`/admin/integrations`), keys in Supabase Vault. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
+- [x] Switchable SMS and identity provider adapters, admin configuration and Supabase Vault integration. The connected production project currently selects test-only mock providers; see the [release ledger](docs/RELEASE_LEDGER.md) before inviting real users.
 - [x] Edge Functions: Send SMS hook, NIN/BVN/bank account checks, provider test
 - [x] Admin console: staff phone sign-in, overview with analytics and pilot-state weather, approvals, users, inbox, privacy requests, audit, integrations, home-page pictures
 - [x] M1: public sign-up and onboarding (web and mobile), roles and documents, ID check screens, admin approval queue, business staff, field-agent onboarding, farms by pin (web)
-- [ ] MVP "first real jobs" (W1–W4 in `docs/ROADMAP.md`): listings, search, bookings, proof, ratings, notifications, admin controls
+- [~] Service-job W1–W4 implementation is present in `main`; the W4 database migration is not yet applied, real-device checks are pending, and no field-pilot result is verified. See the [release ledger](docs/RELEASE_LEDGER.md) before treating this as released.
 
 ## Prerequisites
 
 - Node.js 22 (`.nvmrc`)
 - Docker Desktop, only for running Supabase locally and the database tests
-- The hosted Supabase project (ref `vqbtnftnxyfaembwgfrk`). Migrations are already applied.
+- The hosted Supabase project (ref `vqbtnftnxyfaembwgfrk`). The [release ledger](docs/RELEASE_LEDGER.md) records the current applied migration head and pending migrations.
 
 ## First-time setup
 
@@ -128,12 +122,12 @@ Colours, type sizes, spacing and radii live in `packages/shared/src/design/token
 ## Tests
 
 ```bash
-npm run test          # unit tests: shared package, Edge Functions and mobile modules (152)
+npm run test          # unit tests across workspaces
 npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP: 279 permission, identity, search, website-form, function-exposure, integration, account, content and analytics tests
+npm run db:test       # pgTAP database tests (current count depends on the checked-out revision)
 npm run db:stop
 ```
 
@@ -157,5 +151,5 @@ Local development uses fixed test numbers from `supabase/config.toml` (`23480000
 
 ## Known limitations
 
-- The native app covers sign-in, onboarding and account home only; roles, documents, ID checks and farms are on the web. The MVP job flow is built for mobile web first (see `docs/ROADMAP.md`).
+- Native flows now include farm, hiring and marketplace work, but parity and real-device/field testing are incomplete. Offline caching/outbox code is present; full deterministic offline sync is not release-proven. See the [release ledger](docs/RELEASE_LEDGER.md).
 - Mobile sessions are AES-encrypted: a fresh key per write lives in the Android Keystore / iOS Keychain (expo-secure-store), the ciphertext in app storage (`apps/mobile/src/lib/encrypted-storage.ts`).
