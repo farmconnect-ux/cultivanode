@@ -25,7 +25,7 @@ function useSignedIn() {
 export function SiteNavLinks({ links }: { links: SiteLink[] }) {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="Main" className="hidden items-center gap-1 xl:flex">
+    <nav aria-label="Main" className="hidden items-center gap-1 2xl:flex">
       {links.map((l) => {
         const active = pathname === l.href || pathname.startsWith(l.href + "/");
         return (
@@ -100,7 +100,7 @@ export function SiteMobileMenu({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="secondary" size="icon-sm" className="xl:hidden" aria-label={t.menu}>
+        <Button variant="secondary" size="icon-sm" className="2xl:hidden" aria-label={t.menu}>
           <Icon name="menu" className="text-xl" />
         </Button>
       </SheetTrigger>
