@@ -38,7 +38,7 @@ The phases below are ordered by release risk and dependencies, not by code volum
 | 6 | Validate field operations and mobile/offline behavior | Native farm/hire/market flows and offline cache/outbox code exist; full deterministic sync is not proven. | Test supported phones under weak/no signal, define conflict outcomes, finish Yorùbá review and agent/support runbook. |
 | 7 | Closed beta and scale decisions | No verified pilot report was found; database status counts are not a substitute for user evidence. | Start a bounded beta only after gates 1–6. Measure completion, dispute, repeat booking, support effort and retention before expanding scope. |
 
-**Current deployment evidence:** Supabase is ACTIVE_HEALTHY and its listed Edge Functions are ACTIVE. The latest GitHub `main` commit has a Vercel `success` status check. Direct Vercel deployment metadata was unavailable in this audit, so the production alias and environment settings remain to be confirmed.
+**Current deployment evidence:** Supabase is ACTIVE_HEALTHY and its listed Edge Functions are ACTIVE. The application-code head (`21e595b`) has a Vercel `success` status check; the later docs-only `main` commit is `pending`. Direct Vercel deployment metadata was unavailable in this audit, so the production alias and environment settings remain to be confirmed.
 
 ## Original four-week MVP acceptance plan (current status is in RELEASE_LEDGER.md)
 
