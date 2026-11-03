@@ -301,7 +301,12 @@ export async function adminCreateStandardDraft(_prev: AdminResult | null, form: 
   }
 
   const supabase = await createClient();
-  const { error } = await (supabase.rpc as any)("agronomy_create_standard_draft", {
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("agronomy_create_standard_draft", {
     p_code: code,
     p_crop_id: cropId,
     p_agro_zone: agroZone,
@@ -325,7 +330,12 @@ export async function adminSubmitStandardForReview(_prev: AdminResult | null, fo
   if (!standardId) return failed("Invalid standard ID.");
 
   const supabase = await createClient();
-  const { error } = await (supabase.rpc as any)("agronomy_submit_standard_for_review", {
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("agronomy_submit_standard_for_review", {
     p_standard_id: standardId,
     p_notes: notes || null,
   });
@@ -341,7 +351,12 @@ export async function adminPublishStandard(_prev: AdminResult | null, form: Form
   if (!standardId) return failed("Invalid standard ID.");
 
   const supabase = await createClient();
-  const { error } = await (supabase.rpc as any)("agronomy_publish_standard", {
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("agronomy_publish_standard", {
     p_standard_id: standardId,
     p_approver_title: approverTitle || null,
     p_partner_reference: partnerRef || null,

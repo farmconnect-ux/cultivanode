@@ -40,7 +40,29 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
     supabase.from("crop_cycle_operations").select("*").eq("crop_cycle_id", id).order("scheduled_date"),
     supabase.from("crop_observations").select("*").eq("crop_cycle_id", id).order("observed_at", { ascending: false }),
     supabase.from("crop_harvests").select("*").eq("crop_cycle_id", id).order("harvest_date", { ascending: false }),
-    c.standard_id ? (supabase.from("farm_agronomic_standards") as any).select("standard_code, source_authority, version, approved_by_name, status, parameters").eq("id", c.standard_id).maybeSingle() : Promise.resolve({ data: null }),
+    c.standard_id
+      ? (
+          supabase.from("farm_agronomic_standards") as unknown as {
+            select: (cols: string) => {
+              eq: (col: string, val: string) => {
+                maybeSingle: () => Promise<{
+                  data: {
+                    standard_code: string;
+                    source_authority: string;
+                    version: string;
+                    approved_by_name: string | null;
+                    status: string;
+                    parameters: Record<string, unknown>;
+                  } | null;
+                }>;
+              };
+            };
+          }
+        )
+          .select("standard_code, source_authority, version, approved_by_name, status, parameters")
+          .eq("id", c.standard_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase.from("farm_plan_actual_variances").select("*").eq("crop_cycle_id", id),
   ]);
 
