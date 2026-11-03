@@ -9,9 +9,11 @@ import { confirmDeliveryAndReleaseEscrowAction } from "@/actions/marketplace";
 import { initiateOrderPayment } from "@/actions/checkout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { confirmDirectDelivery, reportDirectPayment } from "@/actions/direct-payment";
+import { openMarketplaceDisputeAction } from "@/actions/marketplace-disputes";
 import { ActionButton, ActionDialog } from "@/components/live/action-form";
 import { isOn } from "@/lib/flags";
 
+type DisputeRow = { id: string; fulfilment_id: string | null; status: string; reason: string; decision: string | null };
 type DirectRow = { id: string; seller_id: string; direct_payment_status: string | null; buyer_payment_reference: string | null };
 type Payout = { seller_id: string; bank_name: string; account_name: string; account_number: string };
 const HANDED_OVER = ["ready_for_pickup", "dispatched", "in_transit", "delivered"];
@@ -82,11 +84,15 @@ export default async function OrderDetailPage({
 
   // Direct payment (escrow switched off): newer columns and table, read through an untyped client.
   const loose = supabase as unknown as SupabaseClient;
-  const [escrowOn, { data: modeRow }, { data: directRows }] = await Promise.all([
+  const [escrowOn, disputesOn, { data: modeRow }, { data: directRows }, { data: disputeRows }] = await Promise.all([
     isOn("escrow_payments"),
+    isOn("marketplace_disputes"),
     loose.from("marketplace_orders").select("payment_mode").eq("id", id).maybeSingle(),
     loose.from("marketplace_fulfilments").select("id, seller_id, direct_payment_status, buyer_payment_reference").eq("order_id", id),
+    loose.from("marketplace_disputes").select("id, fulfilment_id, status, reason, decision").eq("order_id", id),
   ]);
+  const disputeByFulfilment = new Map(((disputeRows ?? []) as DisputeRow[]).filter((d) => d.fulfilment_id).map((d) => [d.fulfilment_id!, d]));
+  const orderLevelDispute = ((disputeRows ?? []) as DisputeRow[]).find((d) => !d.fulfilment_id);
   const isDirect = (modeRow as { payment_mode?: string } | null)?.payment_mode === "direct";
   const direct = new Map(((directRows ?? []) as DirectRow[]).map((d) => [d.id, d]));
   let payouts = new Map<string, Payout>();
@@ -238,7 +244,9 @@ export default async function OrderDetailPage({
           </p>
         )}
 
-        {fulfilments.map((f) => (
+        {fulfilments.map((f) => {
+          const fDispute = disputeByFulfilment.get(f.id) ?? orderLevelDispute;
+          return (
           <Card key={f.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-line bg-white">
             <div>
               <div className="flex items-center gap-2">
@@ -272,15 +280,65 @@ export default async function OrderDetailPage({
               ) : (
                 <span className="text-xs text-muted">Waiting for the seller to {f.status === "placed" ? "confirm" : "send"} your order.</span>
               )}
-              <Link
-                href={`/${lang}/account/support?dispute_order=${order.id}&fulfilment=${f.id}`}
-                className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-danger hover:bg-red-100 transition"
-              >
-                Dispute
-              </Link>
+              {fDispute ? (
+                <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  Dispute: {fDispute.status.replace(/_/g, " ")}
+                </span>
+              ) : disputesOn ? (
+                <ActionDialog
+                  title="Open Dispute"
+                  description="Describe what went wrong with this shipment. Our arbitration team will review proof and handle the case."
+                  trigger="Dispute"
+                  icon="gavel"
+                  tone="secondary"
+                  action={openMarketplaceDisputeAction}
+                  hidden={{ lang, fulfilment_id: f.id, order_id: order.id }}
+                  submit="Submit Dispute"
+                  fields={[
+                    {
+                      name: "reason",
+                      label: "Dispute reason",
+                      type: "select",
+                      required: true,
+                      defaultValue: "not_delivered",
+                      options: [
+                        { value: "not_delivered", label: "Goods not delivered" },
+                        { value: "damaged_goods", label: "Goods damaged or spoiled" },
+                        { value: "wrong_items", label: "Wrong items or short quantity" },
+                        { value: "payment_issue", label: "Payment transfer issue" },
+                        { value: "counterfeit", label: "Counterfeit or bad quality inputs" },
+                        { value: "other", label: "Other dispute" },
+                      ],
+                    },
+                    {
+                      name: "claim_amount_naira",
+                      label: "Claim amount in ₦ (optional)",
+                      type: "number",
+                      placeholder: "e.g. 50000",
+                    },
+                    {
+                      name: "notes",
+                      label: "Detailed explanation",
+                      type: "textarea",
+                      required: true,
+                      placeholder: "Explain what happened, tracking numbers, or agreed arrangements...",
+                      wide: true,
+                    },
+                  ]}
+                />
+              ) : (
+                <Link
+                  href={`/${lang}/account/support?dispute_order=${order.id}&fulfilment=${f.id}`}
+                  className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-danger hover:bg-red-100 transition"
+                >
+                  Dispute
+                </Link>
+              )}
             </div>
           </Card>
-        ))}
+        );
+      })}
       </div>
     </Container>
   );

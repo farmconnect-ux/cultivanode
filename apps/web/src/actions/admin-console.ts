@@ -365,3 +365,100 @@ export async function adminPublishStandard(_prev: AdminResult | null, form: Form
 
   return explain(error, "Standard published! It is now active and accessible to farmers.");
 }
+
+export async function adminResolveMarketplaceDispute(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const disputeId = id(form, "dispute_id");
+  const decision = field(form, "decision", 40);
+  const reason = field(form, "reason", 1000);
+  const decisionText = field(form, "decision_text", 1000);
+  const instructions = field(form, "settlement_instructions", 1000);
+  const amountStr = field(form, "settlement_naira", 20);
+
+  if (!disputeId) return failed("Invalid dispute ID.");
+  if (!["uphold_buyer", "uphold_seller", "settlement"].includes(decision)) {
+    return failed("Choose an arbitration decision.");
+  }
+  if (reason.length < 10) {
+    return failed("Write down your arbitration reasoning (at least 10 characters).");
+  }
+
+  let settlementKobo: number | null = null;
+  if (decision === "settlement") {
+    const naira = Number(amountStr);
+    if (!Number.isFinite(naira) || naira <= 0) {
+      return failed("Enter a positive settlement amount in Naira.");
+    }
+    settlementKobo = Math.round(naira * 100);
+    if (instructions.length < 10) {
+      return failed("Write explicit restitution/payment instructions (at least 10 characters).");
+    }
+  }
+
+  const supabase = await createClient();
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("resolve_marketplace_dispute", {
+    p_dispute_id: disputeId,
+    p_decision: decision,
+    p_reason: reason,
+    p_decision_text: decisionText || null,
+    p_settlement_kobo: settlementKobo,
+    p_settlement_instructions: instructions || null,
+  });
+
+  return explain(error, `Marketplace dispute resolved as ${decision.replaceAll("_", " ")}. Both parties notified.`);
+}
+
+export async function adminReopenMarketplaceDispute(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const disputeId = id(form, "dispute_id");
+  const reason = field(form, "reason", 1000);
+  if (!disputeId) return failed("Invalid dispute ID.");
+  if (reason.length < 10) {
+    return failed("Write down why the dispute is reopened (at least 10 characters).");
+  }
+
+  const supabase = await createClient();
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("reopen_marketplace_dispute", {
+    p_dispute_id: disputeId,
+    p_reason: reason,
+  });
+
+  return explain(error, "Marketplace dispute reopened for review. Both parties notified.");
+}
+
+export async function adminRequestMarketplaceDisputeEvidence(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const disputeId = id(form, "dispute_id");
+  const note = field(form, "note", 500);
+  const to = field(form, "to", 20) || "both";
+  const hoursRaw = Number(field(form, "hours", 10) || "24");
+
+  if (!disputeId) return failed("Invalid dispute ID.");
+  if (!["buyer", "seller", "both"].includes(to)) return failed("Choose who should provide evidence.");
+  if (note.length < 10) return failed("Say what evidence is needed (at least 10 characters).");
+  if (!Number.isInteger(hoursRaw) || hoursRaw < 1 || hoursRaw > 168) {
+    return failed("Give 1 to 168 hours to answer.");
+  }
+
+  const supabase = await createClient();
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+
+  const { error } = await rpc("request_marketplace_dispute_evidence", {
+    p_dispute_id: disputeId,
+    p_note: note,
+    p_hours: hoursRaw,
+    p_to: to,
+  });
+
+  return explain(error, `Evidence request sent to ${to}.`);
+}

@@ -17,7 +17,11 @@ const GROUPS: { title: string; intro: string; keys: Record<string, string> }[] =
   {
     title: "Payments",
     intro: "Escrow stays off until a licensed payment partner is signed. While off, buyers pay sellers directly and sellers confirm the money arrived.",
-    keys: { escrow_payments: "Marketplace escrow (pay online, held until delivery)", hiring_escrow: "Escrow for tractor and farm-hand jobs" },
+    keys: {
+      escrow_payments: "Marketplace escrow (pay online, held until delivery)",
+      hiring_escrow: "Escrow for tractor and farm-hand jobs",
+      marketplace_disputes: "Marketplace order dispute workflow and arbitration",
+    },
   },
   {
     title: "Modules in the menu",

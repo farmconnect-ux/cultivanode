@@ -25,6 +25,7 @@ export type FlagKey =
   | "module_risk"
   | "module_logistics"
   | "module_pow_log"
+  | "marketplace_disputes"
   | "ai_photo_diagnosis";
 
 export type Flags = Partial<Record<FlagKey, boolean>>;
