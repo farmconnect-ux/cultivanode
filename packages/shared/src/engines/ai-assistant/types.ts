@@ -14,7 +14,8 @@ export interface FarmerContext {
 export interface GroundedKnowledgeSnippet {
   sourceTitle: string;
   sourceVersion: number;
-  approvedBy: string;
+  approvedBy?: string;
+  status?: 'draft' | 'published';
   content: string;
 }
 

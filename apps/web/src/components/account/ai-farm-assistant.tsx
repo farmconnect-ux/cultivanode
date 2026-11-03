@@ -202,7 +202,7 @@ export function AiFarmAssistant({
             <div className="flex items-center gap-2">
               <span className="text-xl">🤖</span>
               <h2 className="text-lg font-black text-primary">AI Farm Assistant</h2>
-              <Badge className="bg-secondary-container/40 text-primary text-[10px]">NAFDAC &amp; IITA Grounded</Badge>
+              <Badge className="bg-amber-100 text-amber-800 text-[10px]">Draft Reference Guidance · Not Agronomist-Approved</Badge>
             </div>
             <p className="text-xs text-on-surface-variant mt-0.5">
               Agricultural intelligence for Nigeria with multimodal crop photo diagnosis, chemical safety guardrails, and multilingual support.
@@ -379,7 +379,7 @@ export function AiFarmAssistant({
                 {/* Citations & Sources */}
                 {m.sources && m.sources.length > 0 && (
                   <div className="mt-3 border-t border-border/60 pt-2 text-[11px] text-on-surface-variant space-y-1">
-                    <p className="font-semibold text-primary">Verified Knowledge Grounding:</p>
+                    <p className="font-semibold text-primary">Reference Knowledge (Draft / Unapproved):</p>
                     {m.sources.map((src, i) => (
                       <p key={i}>
                         • <strong>{src.sourceTitle}</strong> (v{src.sourceVersion}, {src.approvedBy})
@@ -395,7 +395,7 @@ export function AiFarmAssistant({
             <div className="flex items-start">
               <div className="rounded-xl rounded-bl-none bg-surface border border-border p-3 text-xs text-on-surface-variant shadow-sm flex items-center gap-2">
                 <span className="inline-block h-2 w-2 rounded-full bg-primary-container animate-ping" />
-                Analyzing against GAP agronomic standards &amp; NAFDAC regulations...
+                Analyzing against reference agronomic guidelines...
               </div>
             </div>
           )}

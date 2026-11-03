@@ -62,11 +62,11 @@ export function generatePlantingSchedule(params: GenerateScheduleParams): Planti
     season,
     operations: scheduledOps,
     standardsCompliance: {
-      standardId: params.standardId ?? 'GAP-NG-2026-V1',
+      standardId: params.standardId ?? 'DRAFT-GAP-TEMPLATE-V1',
       version: 1,
-      source: 'IITA / NIHORT Technical Guides 2026',
-      approvedBy: 'IITA / CultivaNode Agronomy Board',
-      approvedAt: '2026-01-15',
+      source: 'IITA / NIHORT Technical Guides (Draft / Unapproved Reference)',
+      approvedBy: 'Draft Template (Pending Certified Agronomist Review)',
+      approvedAt: 'Pending Review',
     },
   };
 }

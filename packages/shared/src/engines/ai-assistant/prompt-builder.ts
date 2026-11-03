@@ -13,11 +13,11 @@ export function buildGroundedPrompt(
   const snippets = retrieveGroundedContext(context);
 
   const contextText = snippets
-    .map((s, idx) => `[Source ${idx + 1}: ${s.sourceTitle} (v${s.sourceVersion}, approved by ${s.approvedBy})]\n${s.content}`)
+    .map((s, idx) => `[Source ${idx + 1}: ${s.sourceTitle} (v${s.sourceVersion}, status: ${s.status ?? 'draft'})]\n${s.content}`)
     .join('\n\n');
 
-  let systemPrompt = `You are CultivaNode Farm Assistant, a trusted agricultural advisor for farmers in Nigeria.
-Answer the farmer's question strictly grounded in the vetted context below.
+  let systemPrompt = `You are CultivaNode Farm Assistant, an advisory support tool for farmers in Nigeria.
+Answer the farmer's question using the reference agronomic context below. Note that this reference material is currently unapproved draft guidance; advise farmers to confirm treatment specifics with a local extension agent or certified agronomist.
 Never recommend unapproved or banned chemicals (e.g. Paraquat).
 Clearly distinguish verified facts from general advice. If confidence is low, recommend an extension agent.`;
 
@@ -33,7 +33,7 @@ Clearly distinguish verified facts from general advice. If confidence is low, re
 - Current Stage: ${context.stageName ?? 'General'}
 - Days after planting: ${context.daysAfterPlanting ?? 'N/A'}
 
-Vetted Knowledge Context:
+Reference Guidelines (Draft):
 ${contextText}
 
 Farmer's Question:

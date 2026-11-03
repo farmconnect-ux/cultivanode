@@ -4,7 +4,8 @@ import { getCropTemplate } from '../agronomy/templates';
 import { PUBLISHED_STANDARDS } from '../agronomy/standards';
 
 /**
- * Retrieves verified, approved agronomic standards and template facts to ground AI generation.
+ * Retrieves reference agronomic guidelines and template facts to ground AI generation.
+ * Note: Until standards pass the agronomist review pipeline, all snippets are flagged as draft references.
  */
 export function retrieveGroundedContext(context: FarmerContext): GroundedKnowledgeSnippet[] {
   const snippets: GroundedKnowledgeSnippet[] = [];
@@ -13,9 +14,10 @@ export function retrieveGroundedContext(context: FarmerContext): GroundedKnowled
   const crop = getCropById(context.cropId);
   if (crop) {
     snippets.push({
-      sourceTitle: `${crop.commonName} Agronomy Reference`,
+      sourceTitle: `${crop.commonName} Agronomy Reference (Draft)`,
       sourceVersion: 1,
-      approvedBy: 'CultivaNode Agronomy Board',
+      status: 'draft',
+      approvedBy: 'Draft Reference (Not yet agronomist-reviewed)',
       content: `${crop.commonName} (${crop.scientificName}) suitable for ${crop.suitableZones.join(', ')} zones.`,
     });
   }
@@ -29,9 +31,10 @@ export function retrieveGroundedContext(context: FarmerContext): GroundedKnowled
 
     for (const op of relevantOps) {
       snippets.push({
-        sourceTitle: `Approved Operation: ${op.name}`,
+        sourceTitle: `Draft Operation Guideline: ${op.name}`,
         sourceVersion: template.version,
-        approvedBy: 'IITA / NIHORT Guidelines',
+        status: 'draft',
+        approvedBy: 'Public Agricultural Reference (Pending Agronomist Verification)',
         content: `Stage: ${op.stageName}. Days relative: ${op.relativeStartDay} to ${op.relativeEndDay}. Description: ${op.description}`,
       });
     }
@@ -42,9 +45,10 @@ export function retrieveGroundedContext(context: FarmerContext): GroundedKnowled
   const standard = PUBLISHED_STANDARDS[standardKey];
   if (standard) {
     snippets.push({
-      sourceTitle: standard.title,
+      sourceTitle: `${standard.title} (Draft Benchmark)`,
       sourceVersion: standard.version,
-      approvedBy: standard.approvedBy,
+      status: 'draft',
+      approvedBy: 'Draft Reference (Pending Regulatory Review)',
       content: `Mandatory operations: ${standard.mandatedOperations.join(', ')}. Banned chemicals: ${standard.restrictedChemicals.join(', ')}. Max N: ${standard.maxFertiliserNitrogenKgPerHa} kg/ha.`,
     });
   }

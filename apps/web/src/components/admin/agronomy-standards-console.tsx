@@ -156,7 +156,7 @@ export function AgronomyStandardsConsole({ initialStandards, crops }: Props) {
       </div>
 
       <div className="rounded-md border-l-4 border-l-harvest-500 bg-harvest-50 p-4 text-sm text-harvest-900">
-        <p className="font-semibold">Agronomic Invariant: Strict Version Immutability</p>
+        <p className="font-semibold">Agronomic Governance Notice: Content Draft Mode</p>
         <p className="mt-0.5 text-xs text-harvest-800">
           Published crop standards are cryptographically anchored and cannot be overwritten in place. Publishing creates a new immutable version (e.g., v1.0 &rarr; v1.1) ensuring historical farm advice and seasonal records remain audit-compliant.
         </p>

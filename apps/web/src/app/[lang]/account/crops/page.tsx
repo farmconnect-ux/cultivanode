@@ -60,7 +60,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/crops"
   const startCycle = (
     <ActionDialog
       title="Start a crop cycle"
-      description="Plan a planting on one of your plots. Maize, cassava and soybean link to the GAP standard automatically."
+      description="Plan a planting on one of your plots. Maize, cassava and soybean link to preliminary baseline draft standards."
       trigger="New crop cycle"
       action={createCropCycle}
       hidden={hidden}

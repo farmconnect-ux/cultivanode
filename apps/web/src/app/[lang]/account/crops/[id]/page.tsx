@@ -201,7 +201,7 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
               />
             </Section>
             <Section
-              title="Suggested operations"
+              title="Suggested operations (Draft Reference)"
               icon="tips_and_updates"
               description={
                 plan.specific
