@@ -6,7 +6,16 @@ import { phoneLabel, when } from "@/lib/admin/labels";
 import { requireStaff } from "@/lib/admin/staff";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Cancellations & Reschedules | CultivaNode Admin" };
+export const metadata: Metadata = { title: "Cancellations & Declines | CultivaNode Admin" };
+
+type BookingStats = {
+  total: number;
+  disputed: number;
+  cancelled: number;
+  declined: number;
+  resolved_disputes: number;
+  open_over_48h: number;
+};
 
 export default async function AdminCancellationsPage() {
   const staff = await requireStaff();
@@ -14,44 +23,61 @@ export default async function AdminCancellationsPage() {
 
   const supabase = await createClient();
 
-  const { data: cancelledJobs } = await supabase
-    .from("bookings")
-    .select(
-      "id, listing_title, farm_name, job_state, job_lga, job_date, total_kobo, status, farmer_id, provider_id, updated_at, created_at, profiles!bookings_farmer_id_fkey(full_name, phone)",
-    )
-    .in("status", ["cancelled", "declined"])
-    .order("updated_at", { ascending: false })
-    .limit(50);
+  const [{ data: cancelledJobs }, { data: rawStats }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(
+        "id, listing_title, farm_name, job_state, job_lga, job_date, total_kobo, status, closed_reason, dispute_outcome, farmer_id, provider_id, updated_at, created_at, profiles!bookings_farmer_id_fkey(full_name, phone)",
+      )
+      .in("status", ["cancelled", "declined"])
+      .order("updated_at", { ascending: false })
+      .limit(50),
+    supabase.rpc("admin_booking_stats"),
+  ]);
 
   const list = cancelledJobs ?? [];
+  const stats = (rawStats ?? null) as unknown as BookingStats | null;
+  const totalBookings = stats?.total ?? 0;
+  const cancelledCount = stats?.cancelled ?? list.filter((j) => j.status === "cancelled").length;
+  const declinedCount = stats?.declined ?? list.filter((j) => j.status === "declined").length;
+  const cancellationRate = totalBookings > 0 ? `${((cancelledCount / totalBookings) * 100).toFixed(1)}%` : "—";
+  const disputeCancelledCount = list.filter((j) => j.dispute_outcome === "uphold_farmer").length;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-leaf-900">Cancellations &amp; Reschedules Queue</h1>
-          <p className="mt-1 text-muted">Audited cancellation events, policy tier penalties, and refund settlements.</p>
+          <h1 className="text-3xl font-extrabold text-leaf-900">Cancellations &amp; Declines Queue</h1>
+          <p className="mt-1 text-muted">Live cancelled and declined bookings with recorded reasons and audit links.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-line text-muted">Total Recorded: {list.length}</Badge>
+          <Badge className="bg-line text-muted">Showing: {list.length}</Badge>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="flex flex-col gap-1">
           <p className="text-xs font-semibold uppercase text-muted">Cancellation Rate</p>
-          <p className="text-2xl font-black text-leaf-800">2.4%</p>
-          <p className="text-xs text-muted">Well within pilot tolerance (&lt; 8%)</p>
+          <p className="text-2xl font-black text-leaf-800">{cancellationRate}</p>
+          <p className="text-xs text-muted">
+            {totalBookings > 0
+              ? `${cancelledCount} cancelled of ${totalBookings} total bookings`
+              : "No bookings recorded yet"}
+          </p>
         </Card>
         <Card className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase text-muted">Grace Period (&gt;48h)</p>
-          <p className="text-2xl font-black text-leaf-800">82%</p>
-          <p className="text-xs text-leaf-700">100% full refund to farmer</p>
+          <p className="text-xs font-semibold uppercase text-muted">Cancelled Jobs</p>
+          <p className="text-2xl font-black text-leaf-800">{cancelledCount}</p>
+          <p className="text-xs text-leaf-700">
+            {disputeCancelledCount > 0
+              ? `${disputeCancelledCount} closed via farmer-upheld dispute`
+              : "Withdrawn by party or staff override"}
+          </p>
         </Card>
         <Card className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase text-muted">Late (&lt;24h) Cancellations</p>
-          <p className="text-2xl font-black text-harvest-800">18%</p>
-          <p className="text-xs text-muted">Provider mobilization compensation paid</p>
+          <p className="text-xs font-semibold uppercase text-muted">Declined Requests</p>
+          <p className="text-2xl font-black text-harvest-800">{declinedCount}</p>
+          <p className="text-xs text-muted">Declined by provider before work began</p>
         </Card>
       </div>
 
@@ -64,7 +90,7 @@ export default async function AdminCancellationsPage() {
                 <th className="p-3">Service &amp; Farm</th>
                 <th className="p-3">Farmer</th>
                 <th className="p-3">Total Amount</th>
-                <th className="p-3">Status</th>
+                <th className="p-3">Status &amp; Reason</th>
                 <th className="p-3">Updated</th>
                 <th className="p-3 text-right">Inspect</th>
               </tr>
@@ -95,6 +121,11 @@ export default async function AdminCancellationsPage() {
                         <Badge className={job.status === "cancelled" ? "bg-red-50 text-danger" : "bg-line text-muted"}>
                           {job.status.toUpperCase()}
                         </Badge>
+                        {job.closed_reason && (
+                          <div className="mt-1 max-w-xs truncate text-xs text-muted" title={job.closed_reason}>
+                            {job.closed_reason}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 text-xs text-muted">{when(job.updated_at)}</td>
                       <td className="p-3 text-right">

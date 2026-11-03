@@ -57,6 +57,12 @@ export type BookingDetail = Omit<BookingSummary, "my_side" | "other_name"> & {
   dispute_reason: string | null;
   dispute_category: DisputeCategory | null;
   disputed_by: "farmer" | "provider" | "staff" | null;
+  dispute: {
+    outcome: "uphold_provider" | "uphold_farmer" | "settlement";
+    decision: string | null;
+    settlement_kobo: number | null;
+    decided_at: string | null;
+  } | null;
   payment: {
     mine: { at: string; kobo: number } | { farmer: number | null; provider: number | null } | null;
     theirs_marked: boolean | null;

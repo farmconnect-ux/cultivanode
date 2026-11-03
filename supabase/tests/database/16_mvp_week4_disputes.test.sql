@@ -52,7 +52,7 @@ grant execute on all functions in schema pg_temp to authenticated, service_role;
 grant select on pg_temp.ids to authenticated;
 
 -- Four jobs for today: j1 and j2 go through the full work flow and get disputed;
--- j3 stays requested until staff cancel it; j4 is disputed and left open.
+-- j3 stays in progress until staff cancel it; j4 is disputed and left open.
 set local role authenticated;
 select pg_temp.farmer();
 do $$ begin
@@ -105,6 +105,7 @@ select throws_ok($$ select public.resolve_booking_dispute(pg_temp.r('j1'), 'upho
 select lives_ok($$ select public.resolve_booking_dispute(pg_temp.r('j1'), 'uphold_provider',
   'GPS and the after photo show the whole plot ploughed', 'The work was done as agreed.') $$,
   'staff uphold the provider on j1');
+reset role;
 select is((select status::text || '/' || dispute_outcome || '/' || dispute_decided_by::text
              from public.bookings where id = pg_temp.r('j1')),
   'completed/uphold_provider/c4000000-0000-0000-0000-000000000009',
@@ -122,6 +123,7 @@ select is((select count(*)::int from public.admin_actions
 select is((select count(*)::int from public.audit_log
              where entity = 'booking' and entity_id = pg_temp.r('j1') and action = 'dispute_resolved'), 1,
   'the resolution is in the audit log');
+set local role authenticated;
 select pg_temp.farmer();
 select is((public.booking_detail(pg_temp.r('j1')) -> 'dispute' ->> 'outcome'), 'uphold_provider',
   'the farmer reads the outcome on her booking');
@@ -139,12 +141,16 @@ select lives_ok($$ select public.reopen_booking_dispute(pg_temp.r('j1'), 'The pr
   'staff reopen the resolved dispute');
 select is((select status::text || '/' || coalesce(dispute_outcome, '-') from public.bookings where id = pg_temp.r('j1')),
   'disputed/-', 'the booking is disputed again and the outcome cleared');
+select pg_temp.farmer();
 select is((public.booking_detail(pg_temp.r('j1')) -> 'can' ->> 'add_evidence'), 'true',
   'after the reopen the farmer can upload evidence again');
+reset role;
 select is((select count(*)::int from public.booking_events where booking_id = pg_temp.r('j1') and event = 'dispute_reopened'), 1,
   'the reopen is in the history');
 select is((select count(*)::int from public.notifications where booking_id = pg_temp.r('j1') and kind = 'dispute_reopened'), 2,
   'both parties hear the dispute is open again');
+set local role authenticated;
+select pg_temp.staff();
 select throws_ok($$ select public.reopen_booking_dispute(pg_temp.r('j2'), 'Nothing was ever resolved here') $$,
   '22023', 'Only a resolved dispute can be reopened.', 'a booking without a resolution cannot be reopened');
 
@@ -160,10 +166,13 @@ select throws_ok($$ select public.request_dispute_evidence(pg_temp.r('j1'), 'A c
 select lives_ok($$ select public.request_dispute_evidence(pg_temp.r('j1'),
   'Please send a close-up photo of the western half of the plot', 24, 'farmer') $$,
   'staff ask the farmer for a specific photo');
+reset role;
 select is((select count(*)::int from public.notifications where booking_id = pg_temp.r('j1') and kind = 'dispute_evidence_requested'), 1,
   'only the farmer is asked');
 select is((select count(*)::int from public.booking_events where booking_id = pg_temp.r('j1') and event = 'evidence_requested'), 1,
   'the request is in the history');
+set local role authenticated;
+select pg_temp.staff();
 
 ---------------------------------------------------------------- settlement on j1
 select lives_ok($$ select public.resolve_booking_dispute(pg_temp.r('j1'), 'settlement',
@@ -207,14 +216,16 @@ select throws_ok($$ select public.admin_cancel_booking(pg_temp.r('j3'), 'Cancell
   '22023', 'This booking is already closed.', 'a closed booking cannot be cancelled again');
 
 ---------------------------------------------------------------- stats and the staff view
+select pg_temp.farmer();
 select throws_ok($$ select public.admin_booking_stats() $$, '42501',
   'You do not have permission to view bookings.', 'a farmer cannot read the staff stats');
 select is((select count(*)::int from public.bookings where id = pg_temp.r('j4') and status = 'in_progress'), 1,
   'j4 is at check-in');
-select pg_temp.farmer();
 select lives_ok($$ select public.dispute_booking(pg_temp.r('j4'), 'no_show', 'Nobody came to the farm today') $$,
   'the farmer reports a no-show on j4');
+reset role;
 update public.bookings set disputed_at = now() - interval '49 hours' where id = pg_temp.r('j4');
+set local role authenticated;
 select pg_temp.staff();
 select is((public.admin_booking_stats() ->> 'disputed_over_48h')::int > 0, true,
   'a dispute older than 48 hours raises the SLA flag');

@@ -243,7 +243,7 @@ export default async function AdminJobDetailPage({
       <Card className="flex flex-col gap-4 border-2 border-line bg-cream/50 p-5">
         <h2 className="text-lg font-bold text-leaf-900">Admin Operations & Interventions</h2>
         <div className="flex flex-wrap gap-4">
-          {x.status === "disputed" && (
+          {(x.status === "disputed" || x.disputed_at) && (
             <Link
               href={`/admin/disputes/${x.id}`}
               className="inline-flex items-center rounded-md bg-danger px-4 py-2 font-bold text-white hover:bg-danger/90"
@@ -252,7 +252,7 @@ export default async function AdminJobDetailPage({
             </Link>
           )}
 
-          {can(staff, "disputes.decide") && x.status !== "completed" && x.status !== "cancelled" && (
+          {can(staff, "disputes.decide") && ["requested", "accepted", "in_progress"].includes(x.status) && (
             <AdminForm
               action={adminCancelJob}
               hidden={{ booking_id: x.id }}

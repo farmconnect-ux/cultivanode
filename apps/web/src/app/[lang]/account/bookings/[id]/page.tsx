@@ -100,7 +100,20 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
           {x.dispute_reason && <span className="mt-1 block">“{x.dispute_reason}”</span>}
         </p>
       )}
-      {x.closed_reason && (x.status === "declined" || x.status === "cancelled") && (
+      {x.dispute && x.status !== "disputed" && (
+        <div role="note" className="rounded-md border-l-4 border-leaf-600 bg-leaf-50 p-3">
+          <p className="font-bold text-leaf-900">
+            {b.disputeResolvedTitle}: {b.disputeOutcomes[x.dispute.outcome]}
+          </p>
+          {x.dispute.decision && <p className="mt-1">“{x.dispute.decision}”</p>}
+          {x.dispute.outcome === "settlement" && x.dispute.settlement_kobo !== null && (
+            <p className="mt-1 font-semibold text-leaf-900">
+              {fill(b.disputeSettlementInstruction, { amount: formatNaira(x.dispute.settlement_kobo) })}
+            </p>
+          )}
+        </div>
+      )}
+      {x.closed_reason && !x.dispute && (x.status === "declined" || x.status === "cancelled") && (
         <p className="rounded-md bg-cream p-3">{fill(b.closedReason, { reason: x.closed_reason })}</p>
       )}
 
@@ -216,7 +229,7 @@ export default async function BookingPage({ params }: PageProps<"/[lang]/account
               <li className="text-muted">{x.payment.theirs_marked ? b.theyMarked : b.theyNotMarked}</li>
             </ul>
           )}
-          {x.can.mark_paid && <MarkPaidForm lang={lang} t={t.acct} id={x.id} totalKobo={x.total_kobo} side={x.my_side as "farmer" | "provider"} />}
+          {x.can.mark_paid && <MarkPaidForm lang={lang} t={t.acct} id={x.id} totalKobo={x.dispute?.outcome === "settlement" && x.dispute.settlement_kobo !== null ? x.dispute.settlement_kobo : x.total_kobo} side={x.my_side as "farmer" | "provider"} />}
         </Card>
       )}
 

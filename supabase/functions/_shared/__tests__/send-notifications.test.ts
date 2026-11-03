@@ -33,7 +33,7 @@ describe('booking SMS wording', () => {
     expect(long).toContain('A {date} tractor with a ver...');
     for (const kind of ['booking_requested', 'booking_accepted', 'booking_declined', 'booking_cancelled', 'booking_expired',
                         'job_checked_in', 'proof_submitted', 'booking_confirmed', 'booking_disputed', 'booking_completed',
-                        'payment_marked', 'payment_mismatch']) {
+                        'payment_marked', 'payment_mismatch', 'dispute_resolved', 'dispute_reopened', 'dispute_evidence_requested']) {
       expect(renderBookingSms(kind, { title: 'x'.repeat(80), job_date: '2026-12-31', name: 'y'.repeat(40) }, 'en')!.length)
         .toBeLessThanOrEqual(160);
     }
@@ -43,7 +43,7 @@ describe('booking SMS wording', () => {
     // Kinds that private.notify(..., true) can queue; rating_received and booking_auto_confirmed are inbox-only.
     const queued = ['booking_requested', 'booking_accepted', 'booking_declined', 'booking_cancelled', 'booking_expired',
       'job_checked_in', 'proof_submitted', 'booking_confirmed', 'booking_disputed', 'booking_completed',
-      'payment_marked', 'payment_mismatch'];
+      'payment_marked', 'payment_mismatch', 'dispute_resolved', 'dispute_reopened', 'dispute_evidence_requested'];
     for (const kind of queued) {
       expect(renderBookingSms(kind, data, 'en'), kind).toMatch(/^CultivaNode: /);
       expect(renderBookingSms(kind, data, 'yo'), kind).toContain('/yo/account/');

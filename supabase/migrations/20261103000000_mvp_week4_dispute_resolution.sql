@@ -119,7 +119,7 @@ begin
   if p_decision = 'settlement' then
     if p_settlement_kobo is null or p_settlement_kobo <= 0 or p_settlement_kobo > v_booking.total_kobo then
       perform private.booking_error('The settlement must be more than zero and at most the agreed price.', 'bad_amount');
-    end if
+    end if;
   elsif p_settlement_kobo is not null then
     perform private.booking_error('Only a settlement has an amount.', 'bad_amount');
   end if;
@@ -439,7 +439,7 @@ $$;
 -- 8. Grants
 ------------------------------------------------------------------------------------------------
 
-grant select (dispute_outcome, dispute_decision, settlement_kobo, dispute_decided_at)
+grant select (dispute_outcome, dispute_decision, settlement_kobo, dispute_decided_by, dispute_decided_at)
   on public.bookings to authenticated;
 
 revoke execute on function private.booking_for_staff(uuid) from public, anon, authenticated;

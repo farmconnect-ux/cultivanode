@@ -494,6 +494,10 @@ export type Database = {
           confirm_by: string | null
           created_at: string
           dispute_category: string | null
+          dispute_decided_at: string | null
+          dispute_decided_by: string | null
+          dispute_decision: string | null
+          dispute_outcome: string | null
           dispute_reason: string | null
           disputed_at: string | null
           disputed_by: string | null
@@ -524,6 +528,7 @@ export type Database = {
           quantity: number
           rate_kobo: number
           responded_at: string | null
+          settlement_kobo: number | null
           status: Database["public"]["Enums"]["booking_status"]
           total_kobo: number
           unit: Database["public"]["Enums"]["pricing_unit"]
@@ -539,6 +544,10 @@ export type Database = {
           confirm_by?: string | null
           created_at?: string
           dispute_category?: string | null
+          dispute_decided_at?: string | null
+          dispute_decided_by?: string | null
+          dispute_decision?: string | null
+          dispute_outcome?: string | null
           dispute_reason?: string | null
           disputed_at?: string | null
           disputed_by?: string | null
@@ -569,6 +578,7 @@ export type Database = {
           quantity: number
           rate_kobo: number
           responded_at?: string | null
+          settlement_kobo?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
           total_kobo: number
           unit: Database["public"]["Enums"]["pricing_unit"]
@@ -584,6 +594,10 @@ export type Database = {
           confirm_by?: string | null
           created_at?: string
           dispute_category?: string | null
+          dispute_decided_at?: string | null
+          dispute_decided_by?: string | null
+          dispute_decision?: string | null
+          dispute_outcome?: string | null
           dispute_reason?: string | null
           disputed_at?: string | null
           disputed_by?: string | null
@@ -614,6 +628,7 @@ export type Database = {
           quantity?: number
           rate_kobo?: number
           responded_at?: string | null
+          settlement_kobo?: number | null
           status?: Database["public"]["Enums"]["booking_status"]
           total_kobo?: number
           unit?: Database["public"]["Enums"]["pricing_unit"]
@@ -8619,6 +8634,33 @@ export type Database = {
       admin_agent_codes: { Args: { p_limit?: number }; Returns: Json }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_booking_stats: { Args: never; Returns: Json }
+      admin_cancel_booking: {
+        Args: { p_booking: string; p_reason: string }
+        Returns: undefined
+      }
+      reopen_booking_dispute: {
+        Args: { p_booking: string; p_reason: string }
+        Returns: undefined
+      }
+      request_dispute_evidence: {
+        Args: {
+          p_booking: string
+          p_hours?: number
+          p_note: string
+          p_to?: string
+        }
+        Returns: undefined
+      }
+      resolve_booking_dispute: {
+        Args: {
+          p_booking: string
+          p_decision: string
+          p_decision_text?: string | null
+          p_reason: string
+          p_settlement_kobo?: number | null
+        }
+        Returns: undefined
+      }
       admin_clear_integration_secret: {
         Args: {
           p_field: string

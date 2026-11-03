@@ -7,7 +7,9 @@ export type BookingSmsKind =
   | 'booking_requested' | 'booking_accepted' | 'booking_declined' | 'booking_cancelled' | 'booking_expired'
   // MVP week 3: the job itself
   | 'job_checked_in' | 'proof_submitted' | 'booking_confirmed' | 'booking_disputed' | 'booking_completed'
-  | 'payment_marked' | 'payment_mismatch';
+  | 'payment_marked' | 'payment_mismatch'
+  // MVP week 4: staff dispute resolution
+  | 'dispute_resolved' | 'dispute_reopened' | 'dispute_evidence_requested';
 export type SmsLanguage = 'en' | 'yo';
 
 export type BookingSmsData = { title?: unknown; job_date?: unknown; name?: unknown };
@@ -29,6 +31,9 @@ const TEMPLATES: Record<SmsLanguage, Record<BookingSmsKind, string>> = {
     booking_completed: '{brand}: {title} on {date} is complete and paid. Please rate the job: {site}/en/account/bookings',
     payment_marked: '{brand}: {name} marked the payment for {title}. Mark yours too: {site}/en/account/bookings',
     payment_mismatch: '{brand}: The amounts marked for {title} do not match. Check with {name}: {site}/en/account/bookings',
+    dispute_resolved: '{brand}: Our team decided the dispute on {title} ({date}). Read the outcome: {site}/en/account/bookings',
+    dispute_reopened: '{brand}: The dispute on {title} ({date}) has been reopened. Details: {site}/en/account/bookings',
+    dispute_evidence_requested: '{brand}: Please add evidence for {title} ({date}): {site}/en/account/bookings',
   },
   yo: {
     booking_requested: '{brand}: {name} fẹ́ {title} ní {date}. Gbà á tàbí kọ̀ ọ́ kí àkókò tó tán: {site}/yo/account/bookings',
@@ -43,6 +48,9 @@ const TEMPLATES: Record<SmsLanguage, Record<BookingSmsKind, string>> = {
     booking_completed: '{brand}: {title} ní {date} ti parí, a sì ti sanwó. Jọ̀wọ́ fún iṣẹ́ náà ní ìdíyelé: {site}/yo/account/bookings',
     payment_marked: '{brand}: {name} ti sàmì sí owó fún {title}. Sàmì sí tìrẹ náà: {site}/yo/account/bookings',
     payment_mismatch: '{brand}: Iye owó tí ẹ sàmì sí fún {title} kò bá ara wọn mu. Bá {name} sọ̀rọ̀: {site}/yo/account/bookings',
+    dispute_resolved: '{brand}: Ẹgbẹ́ wa ti yanju àríyànjiyàn lórí {title} ({date}). Ka ìpinnu: {site}/yo/account/bookings',
+    dispute_reopened: '{brand}: A ti tún ṣí àríyànjiyàn lórí {title} ({date}). Wo àlàyé: {site}/yo/account/bookings',
+    dispute_evidence_requested: '{brand}: Jọ̀wọ́ fi ẹ̀rí kún un fún {title} ({date}): {site}/yo/account/bookings',
   },
 };
 

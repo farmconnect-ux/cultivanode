@@ -4,7 +4,6 @@ import { refresh } from "next/cache";
 import { DbConstants } from "@cultivanode/shared";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { can, requireStaff } from "@/lib/admin/staff";
 
 // Staff actions. Each database function checks the staff member's permission itself (has_permission),
 // so a forged post from someone without it fails there. Messages here are shown to staff only.
@@ -191,89 +190,81 @@ export async function removeOrgMember(_prev: AdminResult | null, form: FormData)
 export async function adminResolveDispute(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
   const bookingId = id(form, "booking_id");
   const decision = field(form, "decision", 30);
-  const reason = reasonOf(form);
-  const note = field(form, "internal_note", 1000);
+  const reason = field(form, "reason", 1000);
+  const decisionText = field(form, "decision_text", 1000) || reason;
+  const settlementNairaRaw = field(form, "settlement_naira", 20).replaceAll(",", "");
   if (!bookingId || !["uphold_farmer", "uphold_provider", "settlement"].includes(decision)) {
-    return failed("Invalid decision option chosen.");
+    return failed("Choose a valid arbitration decision.");
   }
-  if (reason.length < 5) return failed(needReason);
-  const staff = await requireStaff();
-  if (!staff || !can(staff, "disputes.decide")) {
-    return failed("You do not have the disputes.decide permission.");
+  if (reason.length < 10) {
+    return failed("Write down your reasoning (at least 10 characters).");
+  }
+  let settlementKobo: number | null = null;
+  if (decision === "settlement") {
+    const naira = Number(settlementNairaRaw);
+    if (!Number.isFinite(naira) || naira <= 0) {
+      return failed("Enter the agreed settlement amount in Naira (more than zero).");
+    }
+    settlementKobo = Math.round(naira * 100);
   }
   const supabase = await createClient();
+  const { error } = await supabase.rpc("resolve_booking_dispute", {
+    p_booking: bookingId,
+    p_decision: decision,
+    p_reason: reason,
+    p_decision_text: decisionText,
+    p_settlement_kobo: settlementKobo,
+  });
+  return explain(error, `Dispute resolved as ${decision.replaceAll("_", " ")}. Both parties have been notified.`);
+}
 
-  const nextStatus = decision === "uphold_provider" ? "completed" : "cancelled";
-  const { error } = await supabase
-    .from("bookings")
-    .update({
-      status: nextStatus,
-      closed_reason: `Arbitration: ${reason}`,
-    })
-    .eq("id", bookingId);
+export async function adminReopenDispute(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const bookingId = id(form, "booking_id");
+  const reason = field(form, "reason", 1000);
+  if (!bookingId) return failed("Invalid booking ID.");
+  if (reason.length < 10) {
+    return failed("Write down why the dispute is reopened (at least 10 characters).");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reopen_booking_dispute", {
+    p_booking: bookingId,
+    p_reason: reason,
+  });
+  return explain(error, "Dispute reopened. Both parties have been notified and can upload additional evidence.");
+}
 
-  if (error) return explain(error, "Dispute resolved.");
-
-  await Promise.all([
-    supabase.from("admin_actions").insert({
-      actor_id: staff.userId,
-      permission: "disputes.decide",
-      action: "resolve_dispute",
-      entity: "bookings",
-      entity_id: bookingId,
-      reason: `${decision}: ${reason} (Note: ${note})`,
-    }),
-    supabase.from("audit_log").insert({
-      actor_id: staff.userId,
-      action: "dispute_resolved",
-      entity: "bookings",
-      entity_id: bookingId,
-      metadata: { decision, reason, note, nextStatus },
-    }),
-  ]);
-
-  return explain(null, `Dispute resolved successfully as ${decision.replaceAll("_", " ")}.`);
+export async function adminRequestDisputeEvidence(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const bookingId = id(form, "booking_id");
+  const note = field(form, "note", 500);
+  const to = field(form, "to", 20) || "both";
+  const hoursRaw = Number(field(form, "hours", 10) || "24");
+  if (!bookingId) return failed("Invalid booking ID.");
+  if (!["farmer", "provider", "both"].includes(to)) return failed("Choose who should answer.");
+  if (note.length < 10) return failed("Say what evidence you need (at least 10 characters).");
+  if (!Number.isInteger(hoursRaw) || hoursRaw < 1 || hoursRaw > 168) {
+    return failed("Give 1 to 168 hours to answer.");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("request_dispute_evidence", {
+    p_booking: bookingId,
+    p_note: note,
+    p_hours: hoursRaw,
+    p_to: to,
+  });
+  return explain(error, `Evidence request sent (${to}).`);
 }
 
 export async function adminCancelJob(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
   const bookingId = id(form, "booking_id");
-  const reason = reasonOf(form);
+  const reason = field(form, "reason", 500);
   if (!bookingId) return failed("Invalid booking ID.");
-  if (reason.length < 5) return failed(needReason);
-  const staff = await requireStaff();
-  if (!staff || (!can(staff, "bookings.read") && !can(staff, "disputes.decide"))) {
-    return failed("Permission required.");
+  if (reason.length < 10) {
+    return failed("Write down why staff cancelled this booking (at least 10 characters).");
   }
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("bookings")
-    .update({
-      status: "cancelled",
-      closed_reason: `Staff intervention: ${reason}`,
-    })
-    .eq("id", bookingId);
-
-  if (error) return explain(error, "Job cancelled.");
-
-  await Promise.all([
-    supabase.from("admin_actions").insert({
-      actor_id: staff.userId,
-      permission: "disputes.decide",
-      action: "cancel_job",
-      entity: "bookings",
-      entity_id: bookingId,
-      reason,
-    }),
-    supabase.from("audit_log").insert({
-      actor_id: staff.userId,
-      action: "job_cancelled",
-      entity: "bookings",
-      entity_id: bookingId,
-      metadata: { reason },
-    }),
-  ]);
-
-  return explain(null, "Job cancelled by staff.");
+  const { error } = await supabase.rpc("admin_cancel_booking", {
+    p_booking: bookingId,
+    p_reason: reason,
+  });
+  return explain(error, "Job cancelled by staff. Both parties have been notified.");
 }
-
