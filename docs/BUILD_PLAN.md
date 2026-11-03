@@ -36,7 +36,7 @@ In the pilot, a farmer can find a verified provider, agree a service job, see ev
 - The monorepo, web/native apps, Supabase/PostGIS schema, shared TypeScript packages, CI, provider adapters, admin permissions and audit foundation remain in place.
 - Identity/account, farm operations, hiring, goods commerce, weather, AI-assistant, and admin workflows have advanced beyond the original M0/M1 snapshot. Current journey-by-journey evidence is in [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
 - The 3 November GitHub head includes service-job W4 dispute resolution, goods-market disputes, agronomy governance, and a regional draft-catalogue seed. Database tests and migration files for these changes exist in the repository.
-- Supabase reports ACTIVE_HEALTHY; migrations are applied through `20261025212753_fk_indexes_rls_initplan`. Six Edge Functions report ACTIVE. The latest GitHub `main` head has a Vercel success status, but direct Vercel deployment metadata was not available, so production alias/configuration was not independently confirmed.
+- Supabase reports ACTIVE_HEALTHY; migrations are applied through `20261025212753_fk_indexes_rls_initplan`. Six Edge Functions report ACTIVE. The application-code head (`21e595b`) has a Vercel success status; a newer documentation-only `main` commit is pending. Direct Vercel deployment metadata was not available, so production alias/configuration was not independently confirmed.
 
 ### Live configuration and schema gaps
 
