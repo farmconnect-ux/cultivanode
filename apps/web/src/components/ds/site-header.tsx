@@ -12,7 +12,6 @@ export function siteLinks(lang: Locale, t: Dictionary["nav"]): SiteLink[] {
     { href: `/${lang}/how-it-works`, label: t.how },
     { href: `/${lang}/marketplace`, label: t.marketplace },
     { href: `/${lang}/machinery`, label: lang === "yo" ? "Ẹ̀rọ Oko" : "Machinery" },
-    { href: `/${lang}/download`, label: lang === "yo" ? "Gba Àpù (APK)" : "Get App" },
     { href: `/${lang}/resources`, label: lang === "yo" ? "Ìmọ̀ Oko" : "Resources" },
     { href: `/${lang}/waitlist`, label: lang === "yo" ? "Ìdánwò Àkọ́kọ́" : "Pilot" },
     { href: `/${lang}/about`, label: t.about },
