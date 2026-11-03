@@ -5,6 +5,23 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 Build order: [`ROADMAP.md`](ROADMAP.md). After M1 comes the MVP track "first real jobs" (weeks W1–W4, section below);
 rows pulled into it from later milestones are marked **→ MVP Wn**.
 
+## Current release evidence — 3 November 2026
+
+The detailed snapshot is the [current release ledger](RELEASE_LEDGER.md). It is the source of truth for release readiness; the milestone rows below map requirements and code locations, and older checkmarks do not imply deployment or field validation.
+
+| Journey | Current release reading |
+|---|---|
+| Identity and account | Web/native code exists; production Supabase currently selects test-only mock SMS and identity providers. |
+| Farm and crop operations | Real-data workflows exist; agronomy governance/catalogue migrations from 3 Nov are pending in Supabase. |
+| Service hiring | W1–W4 code exists; W4 migration is pending. Marketplace is enabled in six states; real-device and field-pilot proof is absent. |
+| Goods marketplace | Checkout/order code exists; escrow is off and order-dispute switch is absent/off; latest dispute migration is pending. |
+| Weather | Weather Edge Function is active; live provider selection is NiMet. |
+| AI assistant | Assistant/photo-analysis code exists; photo-diagnosis switch is ON, but agronomy review/evaluation and handset results are unverified. |
+| Native/offline | Native journeys and an outbox/cache exist; complete offline behavior and device validation are unproven. |
+| Admin dispute/agronomy | Latest UI and logic are in GitHub; four Nov 3 database changes are not yet deployed. |
+
+**Cross-cutting release gate:** the production marketplace switch is ON while SMS and identity select test-only mocks. Resolve this before onboarding real users. The ledger records the deployed migration head, current flags, Vercel evidence, device results, and pilot provenance separately.
+
 ## M0 Foundations
 
 | ID | Requirement | Database | Server logic | Web UI | Mobile UI | Tests | Status |
@@ -56,22 +73,22 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 | REQ-FARM-002 | Zone auto-detection and admin correction | farm_zones, farms.zone_corrected_* | detect_farm_zone, correct_farm_zone | ⬜ | ⬜ | 06 | 🟡 needs zone map data |
 | REQ-FARM-003 | Soil records | soil_records | – | ⬜ | ⬜ | 02 | 🟡 |
 | REQ-FARM-004 | Record provenance | record_source on farms, soil_records | set_*_source triggers | – | – | 06 | ✅ |
-| REQ-CROP-001 | Crop catalogue (15 crops), varieties | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-CROP-002 | Templates, stages, operations by zone and season | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-CROP-003 | Plantings with several varieties; schedule generation | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-STD-001 | Standards engine (published/custom, versioned, approved) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| REQ-CAL-001 | Calendar and reminders | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| REQ-CROP-001 | Crop catalogue (15 crops), varieties | draft catalogue seed (3 Nov migration pending) | agronomy governance code | crop cycle UI | partial native | governance tests in repo | 🟡 draft content only; not deployed/approved |
+| REQ-CROP-002 | Templates, stages, operations by zone and season | shared catalogue + draft standards; DB governance pending | schedule generator | planner/cycle UI | partial native | unit/DB governance tests | 🟡 code present; approval/deployment incomplete |
+| REQ-CROP-003 | Plantings with several varieties; schedule generation | crop cycles/operations applied through 25 Oct | shared schedule generator | crop planner and cycle detail | partial native | tests exist | 🟡 implementation present; field validation pending |
+| REQ-STD-001 | Standards engine (published/custom, versioned, approved) | 3 Nov governance migration pending | approval/publishing logic in main | agronomy admin console | – | pgTAP suite in main | 🟡 code present; not deployed; draft standards not approved |
+| REQ-CAL-001 | Calendar and reminders | crop operation schedule + calendar feeds applied before 25 Oct | task/calendar actions | field calendar + iCalendar feed | partial | automated coverage | 🟡 implemented; handset/pilot use unverified |
 
 ## M3 Weather, inventory, farm books
 
 | ID | Requirement | Status |
 |---|---|---|
-| REQ-WX-001 | 14-day forecast via cached weather cells; monthly outlook | ⬜ |
-| REQ-WX-002 | Crop-aware alerts (heavy rain, dry spell, heat, wind) | ⬜ |
-| REQ-FERT-001 | Deterministic fertiliser engine with unit tests | ⬜ |
-| REQ-SPRAY-001 | Spray planner, approved products only, safety data | ⬜ |
-| REQ-INV-001 | Inventory, transactional stock movements, no negative stock, alerts | ⬜ |
-| REQ-BOOK-001 | Farm books, reports, PDF export | ⬜ |
+| REQ-WX-001 | 14-day forecast via cached weather cells; monthly outlook | 🟡 active weather provider/function; verify forecast horizon and production response against current promise |
+| REQ-WX-002 | Crop-aware alerts (heavy rain, dry spell, heat, wind) | 🟡 app alert workflows exist; crop/field validation and pilot evidence not recorded |
+| REQ-FERT-001 | Deterministic fertiliser engine with unit tests | 🟡 schedule/standards code exists; approved standards and evaluation are pending |
+| REQ-SPRAY-001 | Spray planner, approved products only, safety data | 🟡 code/guardrails exist; approved product governance and safety validation remain gates |
+| REQ-INV-001 | Inventory, transactional stock movements, no negative stock, alerts | 🟡 real-data inventory code and migrations exist; reconcile rule coverage and field use in ledger |
+| REQ-BOOK-001 | Farm books, reports, PDF export | 🟡 farm finance/book workflows exist; confirm reporting/export scope and pilot use |
 
 ## M4 Marketplace
 
@@ -89,12 +106,12 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 
 | ID | Requirement | Status |
 |---|---|---|
-| REQ-PAY-001 | Payment provider adapters (Paystack, Flutterwave) in test mode | ⬜ (Paystack registered in integration_providers, test mode, implemented=false, 2026-10-02; adapter code stays M5) |
+| REQ-PAY-001 | Payment provider adapters (Paystack, Flutterwave) for service-job escrow | 🟡 provider/checkout code exists for goods commerce; live service escrow remains OFF and legally gated |
 | REQ-PAY-002 | Verified, idempotent webhooks | ⬜ |
 | REQ-PAY-003 | Double-entry hash-chained ledger | ⬜ |
-| REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | ⬜ |
+| REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | 🟡 marketplace ledger/escrow code exists; escrow switch is OFF and no live end-to-end settlement is verified; service-job escrow remains gated |
 | REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ rules without money **→ MVP W4**; refunds after legal sign-off |
-| REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 MVP W3: either side disputes within 48 h with a reason category (job not done, poor quality, wrong area, damage, no-show) and evidence photos from both sides (no funds frozen); staff outcome, audit entry and admin screens in W4 |
+| REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 W4 booking and goods-dispute code is in main; November migrations pending, switches/device/staff pilot not verified |
 | REQ-PAY-007 | PAYMENT_MODE test/live guard | ✅ (resolvePaymentMode) |
 | REQ-FRAUD-001 | Fraud flags (duplicate NIN/BVN, GPS mismatch, patterns) | 🟡 one claimant per ID ✅ (W1); GPS check-in ✅ and before/after photos must carry GPS inside the farm boundary ✅ (W3); booking needs tier 1 (NIN) ✅; repeated-pair and payout-limit patterns later |
 
@@ -102,16 +119,16 @@ rows pulled into it from later milestones are marked **→ MVP Wn**.
 
 | ID | Requirement | Status |
 |---|---|---|
-| REQ-AI-001 | Chat in English, Pidgin, Yorùbá with retrieval and crop context | ⬜ |
-| REQ-AI-002 | Photo diagnosis with confidence and escalation | ⬜ |
-| REQ-AI-003 | Chemical safety from the approved product table | ⬜ |
-| REQ-AI-004 | Knowledge base with approval workflow | ⬜ |
+| REQ-AI-001 | Chat in English, Pidgin, Yorùbá with retrieval and crop context | 🟡 assistant/grounding code exists; knowledge governance migration is pending; evaluation not recorded |
+| REQ-AI-002 | Photo diagnosis with confidence and escalation | 🟡 photo-analysis code exists and production switch is ON; agronomist/device validation not evidenced |
+| REQ-AI-003 | Chemical safety from the approved product table | 🟡 guardrail code exists; approved product table/governance and evaluation are incomplete |
+| REQ-AI-004 | Knowledge base with approval workflow | 🟡 governance code exists; 3 Nov migration pending, seeded standards are drafts |
 
 ## M7 Hardening
 
 | ID | Requirement | Status |
 |---|---|---|
-| REQ-OFF-001 | Offline-first mobile with deterministic sync | ⬜ |
+| REQ-OFF-001 | Offline-first mobile with deterministic sync | 🟡 local cache/outbox/retry code exists; deterministic sync, conflict validation, handset and field proof remain open |
 | REQ-AGT-002 | Field-agent dashboard and visits | ⬜ booking on behalf of a farmer **→ MVP W4**; dashboard and visits later |
 | REQ-NOTIF-001 | In-app, push and SMS notifications with preferences | 🟡 in-app inbox and booking SMS done (MVP W2); push and preferences later |
 | REQ-OPS-001 | Monitoring dashboards, load and security testing | ⬜ |
@@ -139,11 +156,11 @@ agreed price in kobo and both sides mark it paid. New requirements from the audi
 | REQ-MKT-005 | GPS check-in near the farm pin; proof photos in a private bucket (EXIF stripped, GPS and time stored) | W3 | 🟡 code done and applied on hosted 2026-10-02 (check-in within 1000 m on the job day; EXIF stripped in the browser; photo GPS within 2000 m); real-phone pass pending |
 | REQ-MKT-008 | Confirm or dispute within 48 hours; auto-confirm by `pg_cron`; marked paid by each side, mismatch flagged | W3 | 🟡 code done and applied on hosted 2026-10-02 (confirm_booking, dispute_booking, autoconfirm cron every 15 min, mark_paid both sides with mismatch flag) |
 | REQ-MKT-006 | Ratings once per side after confirmation; average in search | W3 | 🟡 code done and applied on hosted 2026-10-02 (rate_booking, 1–5 stars plus fixed tags; average + count badge on the search card) |
-| REQ-ADM-016 | Admin bookings list and detail (timeline, proofs, notes); dispute resolution with outcome and notifications | W4 | ⬜ |
-| REQ-MKT-009 | Cancellation windows, provider strikes, free weather reschedule, as settings data (no money) | W4 | ⬜ |
-| REQ-AGT-003 | Field agent books on behalf of a farmer they onboarded | W4 | ⬜ |
+| REQ-ADM-016 | Admin bookings list and detail (timeline, proofs, notes); dispute resolution with outcome and notifications | W4 | 🟡 W4 UI/logic in main; migration `20261103000000` pending Supabase; device and staff rehearsal not evidenced |
+| REQ-MKT-009 | Cancellation windows, provider strikes, free weather reschedule, as settings data (no money) | W4 | ⬜ not evidenced as complete; retain as release gate |
+| REQ-AGT-003 | Field agent books on behalf of a farmer they onboarded | W4 | ⬜ not evidenced as complete; retain as release gate |
 | REQ-SEC-011 | Identity-check attempt limit counts provider calls | W4 | ⬜ |
-| REQ-OPS-011 | Pilot runbook, Sentry alerts on booking functions, low-end Android over 3G pass, Yorùbá copy for new screens | W4 | ⬜ |
+| REQ-OPS-011 | Pilot runbook, Sentry alerts on booking functions, low-end Android over 3G pass, Yorùbá copy for new screens | W4 | ⬜ no runbook/device/language acceptance evidence found |
 
 ## Decisions and assumptions
 - **MVP first (2026-09-28):** after M1, the "first real jobs" MVP runs before M2–M7; the job flow is responsive web first; no money through the platform until M5 and legal sign-off. See ROADMAP.md.
