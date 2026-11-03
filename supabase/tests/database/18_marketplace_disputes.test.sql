@@ -88,11 +88,12 @@ create or replace function pg_temp.as_staff() returns void language sql as $$
   select set_config('request.jwt.claims', '{"sub":"b4000000-0000-0000-0000-000000000009"}', true);
 $$;
 
+update public.feature_flags set enabled = false where key = 'marketplace_disputes';
+
 set local role authenticated;
 
 -- Test 1: Dispute opening fails when feature flag marketplace_disputes is disabled
 select pg_temp.as_buyer();
-update public.feature_flags set enabled = false where key = 'marketplace_disputes';
 
 select throws_ok(
   $$ select public.open_marketplace_dispute(
