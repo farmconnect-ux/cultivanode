@@ -8,22 +8,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Cancellations & Declines | CultivaNode Admin" };
 
-type BookingStats = {
-  total: number;
-  disputed: number;
-  cancelled: number;
-  declined: number;
-  resolved_disputes: number;
-  open_over_48h: number;
-};
-
 export default async function AdminCancellationsPage() {
   const staff = await requireStaff();
   if (!staff) return null;
 
   const supabase = await createClient();
 
-  const [{ data: cancelledJobs }, { data: rawStats }] = await Promise.all([
+  const [{ data: cancelledJobs }, { count: totalCount }, { count: cancelledExact }, { count: declinedExact }] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -32,14 +23,15 @@ export default async function AdminCancellationsPage() {
       .in("status", ["cancelled", "declined"])
       .order("updated_at", { ascending: false })
       .limit(50),
-    supabase.rpc("admin_booking_stats"),
+    supabase.from("bookings").select("id", { count: "exact", head: true }),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "cancelled"),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "declined"),
   ]);
 
   const list = cancelledJobs ?? [];
-  const stats = (rawStats ?? null) as unknown as BookingStats | null;
-  const totalBookings = stats?.total ?? 0;
-  const cancelledCount = stats?.cancelled ?? list.filter((j) => j.status === "cancelled").length;
-  const declinedCount = stats?.declined ?? list.filter((j) => j.status === "declined").length;
+  const totalBookings = totalCount ?? 0;
+  const cancelledCount = cancelledExact ?? list.filter((j) => j.status === "cancelled").length;
+  const declinedCount = declinedExact ?? list.filter((j) => j.status === "declined").length;
   const cancellationRate = totalBookings > 0 ? `${((cancelledCount / totalBookings) * 100).toFixed(1)}%` : "—";
   const disputeCancelledCount = list.filter((j) => j.dispute_outcome === "uphold_farmer").length;
 

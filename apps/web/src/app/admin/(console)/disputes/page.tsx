@@ -189,7 +189,7 @@ export default async function AdminDisputesListPage() {
                       <p className="text-label-sm font-normal text-on-surface-variant">{d.farm_name}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge tone={d.dispute_outcome === "uphold_farmer" ? "warning" : "positive"}>
+                      <Badge tone={d.dispute_outcome === "uphold_farmer" ? "caution" : "positive"}>
                         {d.dispute_outcome ? OUTCOME_LABEL[d.dispute_outcome] : d.status}
                       </Badge>
                     </TableCell>

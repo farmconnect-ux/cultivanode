@@ -95,15 +95,16 @@ export default async function AdminDisputeDetailPage({
   const suggestion = arbitrateDispute({
     disputeId: x.id,
     bookingId: x.id,
-    category: ((x.dispute_category as DisputeCategory | null) ?? "other") as DisputeCategory,
-    farmerClaim: x.dispute_reason ?? "",
+    category: ((x.dispute_category as DisputeCategory | null) ?? "poor_quality") as DisputeCategory,
     agreedPriceKobo: x.total_kobo,
     farmLocation: farmLoc,
+    disputeOpenedAt: x.disputed_at ? new Date(x.disputed_at).getTime() : 0,
+    jobCompletedAt: x.work_submitted_at ? new Date(x.work_submitted_at).getTime() : undefined,
     evidences: x.proofs.map((p) => ({
-      evidenceId: p.id,
-      role: p.by === "farmer" ? "farmer" : "provider",
       photoUrl: p.path,
-      timestamp: new Date(p.taken_at).getTime(),
+      uploaderId: p.by,
+      role: p.by === "farmer" ? "farmer" : "provider",
+      capturedAt: new Date(p.taken_at).getTime(),
       gps: p.gps_distance_m !== null && p.gps_distance_m <= 1000 ? farmLoc : undefined,
     })),
   });

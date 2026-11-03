@@ -413,7 +413,9 @@ language plpgsql stable security definer
 set search_path = ''
 as $$
 begin
-  perform private.require_permission('bookings.read');
+  if not public.has_permission('bookings.read') then
+    raise exception 'You do not have permission to view bookings.' using errcode = '42501';
+  end if;
   return jsonb_build_object(
     'requested', (select count(*) from public.bookings where status = 'requested' and expires_at > now()),
     'accepted', (select count(*) from public.bookings where status = 'accepted'),
