@@ -35,6 +35,7 @@ insert into public.user_roles (profile_id, role) values
 on conflict do nothing;
 
 create table pg_temp.agri_test (k text primary key, id uuid);
+grant all on pg_temp.agri_test to authenticated;
 
 -- Helper functions for JWT switching
 create or replace function pg_temp.as_author() returns void language sql as $$
