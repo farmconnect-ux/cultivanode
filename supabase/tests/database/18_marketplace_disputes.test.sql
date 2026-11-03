@@ -26,13 +26,13 @@ on conflict do nothing;
 -- Create Seller record
 insert into public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
 values
-  ('b4000000-0000-0000-0000-0000000000s2', 'b4000000-0000-0000-0000-000000000002', 'Ibadan Farm Supplies Ltd', 'input_retailer', 'verified')
+  ('b4000000-0000-0000-0000-000000000020', 'b4000000-0000-0000-0000-000000000002', 'Ibadan Farm Supplies Ltd', 'input_retailer', 'verified')
 on conflict (id) do nothing;
 
 -- Seller Payout bank account
 insert into public.marketplace_seller_payout_accounts (seller_id, bank_name, account_number, account_name)
 values
-  ('b4000000-0000-0000-0000-0000000000s2', 'First Bank of Nigeria', '0123456789', 'Ibadan Farm Supplies')
+  ('b4000000-0000-0000-0000-000000000020', 'First Bank of Nigeria', '0123456789', 'Ibadan Farm Supplies')
 on conflict (seller_id) do nothing;
 
 -- Two Direct-Payment Orders
@@ -42,12 +42,12 @@ insert into public.marketplace_orders (
 )
 values
   (
-    'b4000000-0000-0000-0000-0000000000o1', 'ORD-2026-TEST-001',
+    'b4000000-0000-0000-0000-0000000000d1', 'ORD-2026-TEST-001',
     'b4000000-0000-0000-0000-000000000001', 'placed', 'direct', 'pending',
     5000000, 5000000, '{"state":"Oyo","lga":"Ibadan North"}'::jsonb
   ),
   (
-    'b4000000-0000-0000-0000-0000000000o2', 'ORD-2026-TEST-002',
+    'b4000000-0000-0000-0000-0000000000d2', 'ORD-2026-TEST-002',
     'b4000000-0000-0000-0000-000000000001', 'placed', 'direct', 'pending',
     3000000, 3000000, '{"state":"Oyo","lga":"Ibadan North"}'::jsonb
   )
@@ -59,14 +59,14 @@ insert into public.marketplace_fulfilments (
 values
   (
     'b4000000-0000-0000-0000-0000000000f1',
-    'b4000000-0000-0000-0000-0000000000o1',
-    'b4000000-0000-0000-0000-0000000000s2',
+    'b4000000-0000-0000-0000-0000000000d1',
+    'b4000000-0000-0000-0000-000000000020',
     'FUL-TEST-001', 'placed', 5000000, 'dispatch_rider'
   ),
   (
     'b4000000-0000-0000-0000-0000000000f2',
-    'b4000000-0000-0000-0000-0000000000o2',
-    'b4000000-0000-0000-0000-0000000000s2',
+    'b4000000-0000-0000-0000-0000000000d2',
+    'b4000000-0000-0000-0000-000000000020',
     'FUL-TEST-002', 'placed', 3000000, 'dispatch_rider'
   )
 on conflict (id) do nothing;
@@ -96,7 +96,7 @@ update public.feature_flags set enabled = false where key = 'marketplace_dispute
 
 select throws_ok(
   $$ select public.open_marketplace_dispute(
-       'b4000000-0000-0000-0000-0000000000o1'::uuid,
+       'b4000000-0000-0000-0000-0000000000d1'::uuid,
        'b4000000-0000-0000-0000-0000000000f1'::uuid,
        'damaged_goods',
        'Received broken fertilizer containers.'
@@ -115,7 +115,7 @@ set local role authenticated;
 select pg_temp.as_outsider();
 select throws_ok(
   $$ select public.open_marketplace_dispute(
-       'b4000000-0000-0000-0000-0000000000o1'::uuid,
+       'b4000000-0000-0000-0000-0000000000d1'::uuid,
        'b4000000-0000-0000-0000-0000000000f1'::uuid,
        'damaged_goods',
        'Not my order but filing anyway'
@@ -132,7 +132,7 @@ declare
   v_rec public.marketplace_disputes;
 begin
   select * into v_rec from public.open_marketplace_dispute(
-    'b4000000-0000-0000-0000-0000000000o1'::uuid,
+    'b4000000-0000-0000-0000-0000000000d1'::uuid,
     'b4000000-0000-0000-0000-0000000000f1'::uuid,
     'damaged_goods',
     'Fertilizer sacks torn open during delivery; 3 bags spoiled.',
@@ -149,7 +149,7 @@ select is(
 
 -- Test 5: Order status transitioned to disputed
 select is(
-  (select status from public.marketplace_orders where id = 'b4000000-0000-0000-0000-0000000000o1'),
+  (select status from public.marketplace_orders where id = 'b4000000-0000-0000-0000-0000000000d1'),
   'disputed',
   'Order 1 status changed to disputed'
 );
@@ -164,7 +164,7 @@ select is(
 -- Test 7: Double dispute on same order rejected
 select throws_ok(
   $$ select public.open_marketplace_dispute(
-       'b4000000-0000-0000-0000-0000000000o1'::uuid,
+       'b4000000-0000-0000-0000-0000000000d1'::uuid,
        'b4000000-0000-0000-0000-0000000000f1'::uuid,
        'wrong_item',
        'Trying to open a second dispute'
@@ -181,7 +181,7 @@ declare
   v_rec public.marketplace_disputes;
 begin
   select * into v_rec from public.open_marketplace_dispute(
-    'b4000000-0000-0000-0000-0000000000o2'::uuid,
+    'b4000000-0000-0000-0000-0000000000d2'::uuid,
     'b4000000-0000-0000-0000-0000000000f2'::uuid,
     'other',
     'Buyer claimed they made bank transfer but 0 naira received in business account.'
@@ -311,7 +311,7 @@ select is(
 );
 
 select is(
-  (select status from public.marketplace_orders where id = 'b4000000-0000-0000-0000-0000000000o1'),
+  (select status from public.marketplace_orders where id = 'b4000000-0000-0000-0000-0000000000d1'),
   'cancelled',
   'Order 1 status changed to cancelled'
 );
