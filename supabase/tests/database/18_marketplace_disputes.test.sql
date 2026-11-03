@@ -26,7 +26,7 @@ on conflict do nothing;
 -- Create Seller record
 insert into public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
 values
-  ('b4000000-0000-0000-0000-000000000020', 'b4000000-0000-0000-0000-000000000002', 'Ibadan Farm Supplies Ltd', 'input_retailer', 'verified')
+  ('b4000000-0000-0000-0000-000000000020', 'b4000000-0000-0000-0000-000000000002', 'Ibadan Farm Supplies Ltd', 'agro_dealer', 'verified')
 on conflict (id) do nothing;
 
 -- Seller Payout bank account
@@ -61,13 +61,13 @@ values
     'b4000000-0000-0000-0000-0000000000f1',
     'b4000000-0000-0000-0000-0000000000d1',
     'b4000000-0000-0000-0000-000000000020',
-    'FUL-TEST-001', 'placed', 5000000, 'dispatch_rider'
+    'FUL-TEST-001', 'placed', 5000000, 'seller_delivery'
   ),
   (
     'b4000000-0000-0000-0000-0000000000f2',
     'b4000000-0000-0000-0000-0000000000d2',
     'b4000000-0000-0000-0000-000000000020',
-    'FUL-TEST-002', 'placed', 3000000, 'dispatch_rider'
+    'FUL-TEST-002', 'placed', 3000000, 'seller_delivery'
   )
 on conflict (id) do nothing;
 
