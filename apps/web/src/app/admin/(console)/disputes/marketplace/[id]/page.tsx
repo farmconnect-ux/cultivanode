@@ -72,7 +72,7 @@ type MarketplaceDisputeDetail = {
     title: string;
     quantity: number;
     unit_price_kobo: number;
-    total_price_kobo: number;
+    subtotal_kobo: number;
   }[];
   is_staff: boolean;
 };
@@ -270,7 +270,7 @@ export default async function AdminMarketplaceDisputeDetailPage({
                     <p className="text-muted">Qty: {item.quantity}</p>
                   </div>
                   <span className="font-mono font-semibold text-ink">
-                    {formatNaira(item.total_price_kobo)}
+                    {formatNaira(item.subtotal_kobo)}
                   </span>
                 </div>
               ))}

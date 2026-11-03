@@ -534,7 +534,7 @@ declare
   v_seller public.marketplace_sellers;
   v_seller_profile public.profiles;
   v_fulfilment public.marketplace_fulfilments;
-  v_payout public.marketplace_payout_accounts;
+  v_payout public.marketplace_seller_payout_accounts;
   v_items jsonb;
   v_is_staff boolean := public.has_permission('disputes.decide') or public.is_admin();
 begin
@@ -552,7 +552,7 @@ begin
     select * into v_fulfilment from public.marketplace_fulfilments where order_id = v_dispute.order_id limit 1;
   end if;
 
-  select * into v_payout from public.marketplace_payout_accounts where seller_id = v_seller.id and is_default = true limit 1;
+  select * into v_payout from public.marketplace_seller_payout_accounts where seller_id = v_seller.id limit 1;
 
   -- Access control check
   if not (v_is_staff or auth.uid() in (v_order.buyer_id, v_seller.profile_id, v_dispute.initiator_id)) then
@@ -563,7 +563,7 @@ begin
     'title', oi.title,
     'quantity', oi.quantity,
     'unit_price_kobo', oi.unit_price_kobo,
-    'total_price_kobo', oi.total_price_kobo
+    'subtotal_kobo', oi.subtotal_kobo
   )), '[]'::jsonb)
   into v_items
   from public.marketplace_order_items oi
