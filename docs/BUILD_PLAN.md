@@ -1,8 +1,8 @@
 # CultivaNode — Integrated Build Plan
 
-**Planning baseline:** 6 October 2026 · **Status:** proposed execution plan · **Scope:** Phase 1 completion through a safe, measurable pilot and the next production foundations.
+**Release evidence baseline:** 3 November 2026 · **Status:** current build plan · **Scope:** safely release the implemented journeys, prove them with device and field evidence, then expand.
 
-This plan is the execution companion to the original M0–M7 master plan. It reconciles that plan with the repository as it exists on 6 October 2026, where the codebase has progressed beyond several status documents. It does **not** treat a feature as live merely because its component, migration, or shared engine exists in the repository.
+The canonical state is the [current release ledger](RELEASE_LEDGER.md), based on GitHub `main`, the connected Supabase project, and available Vercel status evidence. This plan preserves the M0–M7 objectives but updates the execution gates to the current deployed schema and feature switches. Code, migration, deployment, device test, and field pilot are tracked as separate states.
 
 ## 1. Product archaeology: what CultivaNode is building
 
@@ -29,47 +29,34 @@ In the pilot, a farmer can find a verified provider, agree a service job, see ev
 | Work under real field conditions | Android-first responsive web, large touch targets, low-bandwidth behaviour, agents, English and Yorùbá | Task completion on low-end Android/3G; agent-assisted completion; language QA pass |
 | Protect people and the business | RLS, masked identity values, consent, auditability, direct-payment boundary, provider adapters | Security-test pass rate; PII exposure incidents = 0; reconciliation accuracy |
 
-## 2. Current-state assessment
+## 2. Current release assessment — 3 November 2026
 
-### What is established
+### What is established in code
 
-- The monorepo is a sound base: Next.js web app, Expo mobile app, shared TypeScript package, Supabase/PostGIS, Edge Functions, generated database types, CI, and shared design tokens.
-- The public website, phone-first onboarding, roles, identity flow, business memberships, field-agent onboarding, permission-based admin, consent/privacy requests, and integration management are implemented.
-- Marketplace W1 and W2 are implemented in the checked-out code: provider listings, nearby search, marketplace switch, moderation, booking transitions, inbox, and SMS queue/worker.
-- Marketplace W3 has the required technical building blocks: check-in, private proof storage, confirmation/dispute/marked-paid states, ratings, booking pages, database tests, and the auto-confirm worker. A real-device pilot pass remains a release gate.
-- Recent 6 October changes add real persistence/UI for farm enterprise records and crop cycles: fields/plots, crop operations, scouting, measurements, inputs, harvests, alerts, livestock, workers, inventory, financial records, and farm records.
-- The repository type-checks and its automated TypeScript test suite passes at this baseline: 23 test files and 248 tests.
+- The monorepo, web/native apps, Supabase/PostGIS schema, shared TypeScript packages, CI, provider adapters, admin permissions and audit foundation remain in place.
+- Identity/account, farm operations, hiring, goods commerce, weather, AI-assistant, and admin workflows have advanced beyond the original M0/M1 snapshot. Current journey-by-journey evidence is in [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
+- The 3 November GitHub head includes service-job W4 dispute resolution, goods-market disputes, agronomy governance, and a regional draft-catalogue seed. Database tests and migration files for these changes exist in the repository.
+- Supabase reports ACTIVE_HEALTHY; migrations are applied through `20261025212753_fk_indexes_rls_initplan`. Six Edge Functions report ACTIVE. The latest GitHub `main` head has a Vercel success status, but direct Vercel deployment metadata was not available, so production alias/configuration was not independently confirmed.
 
-### What is not yet proven or should not be called complete
+### Live configuration and schema gaps
 
-| Area | Why it is not yet a production claim | Required next action |
-|---|---|---|
-| W3 job flow | The roadmap records a real-phone pilot as outstanding. | Run and record end-to-end provider/farmer tests on real Android devices, including GPS, camera, upload, SMS, auto-confirm, and dispute paths. |
-| W4 operability | Admin booking/dispute views exist in recent code, but the original W4 acceptance gate is not documented as complete. | Finish evidence/outcome workflow, cancellation policy, agent booking, support runbooks, alerts, and pilot rehearsal. |
-| Crop and agronomy programme | The new crop-cycle schema stores `crop_id`/`variety_id` as text and the catalogue/templates are shared-code data. That conflicts with the master-plan rule that agronomy content must be approved, versioned database records. | Build the controlled catalogue, varieties, standards, and approval/version workflow before presenting advice as agronomist-approved. |
-| AI assistant | The UI and deterministic grounding/guardrail engine exist, but no approved knowledge base, provider adapter, evaluation corpus, or production answer audit trail is evident. | Treat AI as an internal/pre-production assistant until the M6 gate is completed. |
-| Ledger/escrow | The shared ledger/escrow engine is tested domain code, not a regulated payment implementation: the planned tables, verified webhooks, provider adapter, and legal approval are absent. | Keep direct payment as the only live model; do not expose escrow or wallet language. |
-| Offline capability | The mobile app includes early sync utilities and crop screens, but the documented offline-first system and deterministic conflict rules are not released. | Run an M7 offline spike and field validation before promising offline use. |
-| Remote production status | Local migration files and documentation describe hosted deployment, but remote state was not independently inspected in this review. | Reconcile remote migrations, functions, cron, storage policies, auth, provider modes, and secrets with the connected Supabase project. |
+- **Production provider mismatch:** live Supabase selects `mock_sms` and `mock_identity`, both marked test-only, while `marketplace_live` is enabled in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos. This is a stop-ship condition for real-user onboarding until live providers are verified or the marketplace is closed.
+- **Pending migrations:** four migrations committed on 3 November are absent from the connected project: `20261103000000_mvp_week4_dispute_resolution`, `20261103120000_agronomy_standards_governance`, `20261103130000_seed_crop_catalogue_draft_standards`, and `20261103140000_marketplace_disputes_w4`. Do not treat the related W4/governance/order-dispute code as live backend functionality yet.
+- **Feature switches:** `escrow_payments` and `hiring_escrow` are OFF, matching the service-hiring direct-payment boundary. `marketplace_disputes` is absent and therefore OFF. `ai_photo_diagnosis` is ON even though the admin switch description says diagnosis should stay off until a real model has agronomist review; reconcile before relying on this gate. Farm map, fleet, harvest and livestock are ON; several advanced ecosystem modules are OFF.
+- **Pilot evidence:** Supabase contains five booking rows and fifteen order rows in mixed states. Their provenance is not classified as seeded/demo/test versus real activity. No verified real-device pass or field-pilot report was found in the connected evidence. Do not infer field success from row counts.
+- **Security triage:** Supabase advisors on 3 November report 10 RLS-enabled tables without policies, 13 SECURITY DEFINER RPCs callable by anon, 88 callable by authenticated, and a leaked-password-protection warning. Some callable functions may be intentional and perform their own checks; review each grant and authorization path, then document disposition and re-run advisors.
 
-### Documentation drift to resolve first
+### Release gates, in order
 
-`ROADMAP.md`, `requirements-matrix.md`, `ARCHITECTURE.md`, `DATABASE.md`, `AGRONOMY_ENGINE.md`, `AI.md`, `PAYMENTS.md`, and `OFFLINE_SYNC.md` have material status differences from the 6 October implementation. The first deliverable of this plan is one status ledger that separates **designed**, **coded**, **migrated**, **deployed**, **device-tested**, and **pilot-proven**. No marketing or user-facing copy should use a stronger status than the ledger permits.
+1. Close the marketplace/provider mismatch: verify production SMS and identity providers end-to-end, or turn off marketplace access until ready.
+2. Review and apply the four pending migrations through the normal migration workflow. Confirm remote migration head, function versions, and feature switches afterward.
+3. Review Supabase advisor findings and prove function/table grants are least-privilege before inviting users.
+4. Reconcile the AI photo-diagnosis switch with the agronomist approval and model evaluation gates. Do not market unreviewed advice as validated.
+5. Run documented real-device journeys on supported low-end Android devices and weak connectivity: sign-in, farm setup, hiring GPS/proof, checkout, order/job disputes, and retries.
+6. Rehearse operational support and record real pilot provenance/outcomes, including completion, disputes, repeats, support interventions, and consented language feedback.
+7. Only then expand closed-beta enrolment or add high-cost adjacent modules.
 
-### Hosted-project verification — 6 October 2026
-
-The connected production project is healthy and its schema is current through the 6 October `crop_management` and `farm_enterprise_subsections` migrations. The expected Edge Functions are active, the booking expiry/SMS wake-up/auto-confirm cron jobs are active, and the proof and verification buckets are private. This is a strong technical base, but the live configuration creates immediate P0 work:
-
-| Finding | Planning consequence |
-|---|---|
-| `marketplace_live` is enabled for Oyo, Ogun, Osun, Ondo, Ekiti, and Lagos. | Treat the marketplace as externally reachable now, not as a closed pre-pilot environment. Do not invite or market to real users until the configuration and readiness gates below are resolved. |
-| Active SMS and identity providers are `mock_sms` and `mock_identity`. | This contradicts the earlier “live provider” documentation. Before accepting real users, either close the marketplace or configure, test, and evidence the approved live providers; otherwise sign-in/verification trust cannot be assumed. |
-| The database has three profiles, no bookings/proofs/ratings, two crop cycles, and two inventory records. | There is no evidence of a completed job pilot yet. Preserve this as a pre-pilot baseline; do not use it to infer field success. |
-| Supabase reports nine anonymous-callable `SECURITY DEFINER` functions, including farm/cycle helper RPCs; it also reports 70 signed-in callable definer functions. | Public contact/waitlist/page-view functions are intentional only if rate-limited. Farm/cycle helpers must be triaged and restricted to the minimum required role, or moved to the private schema. Verify every definer function has fixed `search_path`, explicit grants, and an authorization check. |
-| Several new farm-enterprise policies use the `public` role and duplicate permissive `SELECT`/`ALL` policies. | Replace them with least-privilege `TO authenticated` policies, combine duplicate policies, revoke unintended `anon` access, and prove anonymous reads/writes are denied. |
-| Nine server-oriented tables have RLS with no policies. | This may be correct only if their table grants are also absent. Explicitly revoke Data API access to server-only tables and add a regression check for every one. |
-
-Supabase will enforce explicit Data API exposure for existing projects on **30 October 2026**. P0 must therefore make application grants explicit for browser-accessed tables/RPCs and make server-only access explicit for all other objects; it cannot rely on historical default exposure.
+The legacy milestone and requirement tables are useful scope references, not evidence of current deployment. Use the ledger to resolve any status conflict with the README, requirements matrix, or roadmap.
 
 ## 3. Product and UI principles
 
