@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import { useState, useTransition, useRef } from "react";
 import { askFarmAssistantAction, type AssistantResponse } from "@/actions/ai-assistant";
 import { Badge, Button, Card } from "@/components/ui";
@@ -36,6 +38,25 @@ interface MessageItem {
 // Message ids for list keys; a counter keeps rendering pure (no clock reads).
 let messageSeq = 0;
 const newMessageId = (prefix: string) => `${prefix}-${++messageSeq}`;
+
+/** Shows the AI's light Markdown (**bold**, "- " bullets, "### " headings) as text, never as HTML. */
+function renderAnswer(text: string): React.ReactNode {
+  const bold = (line: string, key: number) =>
+    line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") && part.length > 4 ? <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong> : part,
+    );
+  return text.split("\n").map((raw, i) => {
+    const heading = raw.match(/^#{1,4}\s+(.*)$/);
+    const bullet = raw.match(/^\s*[-*•]\s+(.*)$/);
+    const line = heading ? heading[1]! : bullet ? `• ${bullet[1]}` : raw;
+    return (
+      <React.Fragment key={i}>
+        {heading ? <strong>{bold(line, i)}</strong> : bold(line, i)}
+        {"\n"}
+      </React.Fragment>
+    );
+  });
+}
 
 export function AiFarmAssistant({
   farms,
@@ -374,7 +395,7 @@ export function AiFarmAssistant({
                 )}
 
                 {/* Content */}
-                <div className="whitespace-pre-wrap">{m.text}</div>
+                <div className="whitespace-pre-wrap">{renderAnswer(m.text)}</div>
 
                 {/* Citations & Sources */}
                 {m.sources && m.sources.length > 0 && (
