@@ -78,7 +78,8 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
       language: 'en',
     });
 
-    expect(res.passedSafetyGuardrail).toBe(false);
+    // The answer is itself a warning, so it is shown as written; the banned name is still recorded.
+    expect(res.passedSafetyGuardrail).toBe(true);
     expect(res.bannedChemicalsDetected).toContain('paraquat');
     expect(res.answer).toContain('BANNED');
   });

@@ -47,3 +47,23 @@ describe('Claude as the farm assistant', () => {
     expect(res.answer).toContain('BANNED');
   });
 });
+
+describe('NAFDAC guardrail reads the sentence, not just the word', async () => {
+  const { checkChemicalSafetyGuardrails } = await import('./chemical-guardrail');
+  it('lets a warning against a banned product through unchanged', () => {
+    const text = 'Apply NPK 15:15:15 at planting. Never use paraquat for weeding; it is banned in Nigeria.';
+    const r = checkChemicalSafetyGuardrails(text);
+    expect(r.passed).toBe(true);
+    expect(r.sanitizedResponseText).toContain('NPK 15:15:15');
+    expect(r.bannedChemicalsDetected).toContain('paraquat');
+  });
+  it('still blocks a sentence that recommends one, even next to a warning', () => {
+    const r = checkChemicalSafetyGuardrails('Avoid DDT. Spray carbofuran around the stems to kill the borers.');
+    expect(r.passed).toBe(false);
+    expect(r.sanitizedResponseText).toContain('carbofuran');
+    expect(r.sanitizedResponseText).not.toContain('DDT');
+  });
+  it('does not match parts of other words', () => {
+    expect(checkChemicalSafetyGuardrails('Additional ddtx notes and paraquatic plants.').passed).toBe(true);
+  });
+});
