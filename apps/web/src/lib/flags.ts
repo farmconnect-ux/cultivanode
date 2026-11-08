@@ -26,7 +26,9 @@ export type FlagKey =
   | "module_logistics"
   | "module_pow_log"
   | "marketplace_disputes"
-  | "ai_photo_diagnosis";
+  | "ai_photo_diagnosis"
+  /** Sign in with a phone number (needs a working SMS provider in Integrations). Off: email only. */
+  | "phone_sign_in";
 
 export type Flags = Partial<Record<FlagKey, boolean>>;
 

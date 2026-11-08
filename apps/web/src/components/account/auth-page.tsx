@@ -20,6 +20,7 @@ export function AuthPage({
   mode,
   next = "",
   as = "",
+  phoneEnabled = false,
 }: {
   lang: Locale;
   t: Dictionary["auth"];
@@ -28,14 +29,18 @@ export function AuthPage({
   next?: string;
   /** "customer": a marketplace shopper; onboarding then asks only for name, state and consent. */
   as?: string;
+  /** Phone sign-in switched on in Admin → Feature switches (needs a working SMS provider). */
+  phoneEnabled?: boolean;
 }) {
   const customer = as === "customer";
   const title = customer ? (mode === "sign-in" ? "Sign in to check out" : "Create your customer account") : mode === "sign-in" ? t.signInTitle : t.signUpTitle;
   const intro = customer
-    ? "Use your phone number or email. We'll send a 6-digit code, then you're back at checkout. Your account only shows your orders and deliveries."
-    : mode === "sign-in"
-      ? t.signInIntro
-      : t.signUpIntro;
+    ? `Use your ${phoneEnabled ? "phone number or " : ""}email. We'll send a 6-digit code, then you're back at checkout. Your account only shows your orders and deliveries.`
+    : !phoneEnabled
+      ? t.emailOnlyIntro
+      : mode === "sign-in"
+        ? t.signInIntro
+        : t.signUpIntro;
   const carry = new URLSearchParams({ ...(next ? { next } : {}), ...(customer ? { as: "customer" } : {}) }).toString();
   const [before, rest] = t.termsNote.split("{terms}");
   const [middle, after] = (rest ?? "").split("{privacy}");
@@ -51,7 +56,7 @@ export function AuthPage({
           </section>
 
           <section className="card-surface p-6 sm:p-8">
-            <PhoneSignIn lang={lang} t={t} next={next} as={as} />
+            <PhoneSignIn lang={lang} t={t} next={next} as={as} phoneEnabled={phoneEnabled} />
             <p className="mt-6 border-t border-[#f1f5f9] pt-4 text-body-sm text-on-surface-variant">
               {before}
               <Link href={`/${lang}/terms`} className="font-semibold text-secondary underline-offset-4 hover:underline">{t.terms}</Link>

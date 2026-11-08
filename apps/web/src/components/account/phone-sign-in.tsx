@@ -13,9 +13,24 @@ const RESEND_AFTER_SECONDS = 60;
 type T = Dictionary["auth"];
 
 /** Phone or email, then the 6-digit code. Works without JavaScript for the first step (plain form post). */
-export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: T; next?: string; as?: string }) {
-  const [state, send, sending] = useActionState(requestCode, { step: "input", method: "phone" } as AuthState);
-  const [method, setMethod] = useState<AuthMethod>(state.method ?? "phone");
+export function PhoneSignIn({
+  lang,
+  t,
+  next = "",
+  as = "",
+  phoneEnabled = false,
+}: {
+  lang: Locale;
+  t: T;
+  next?: string;
+  as?: string;
+  /** Admin → Feature switches → phone_sign_in. Off (no SMS provider yet): email only. */
+  phoneEnabled?: boolean;
+}) {
+  const first: AuthMethod = phoneEnabled ? "phone" : "email";
+  const [state, send, sending] = useActionState(requestCode, { step: "input", method: first } as AuthState);
+  const [chosen, setMethod] = useState<AuthMethod>(state.method ?? first);
+  const method: AuthMethod = phoneEnabled ? chosen : "email";
 
   // Follow the method the action came back with (e.g. after an error), adjusting state while rendering
   // instead of in an effect, so there's no extra render pass.
@@ -29,7 +44,9 @@ export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: 
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Method switcher tabs */}
+      {!phoneEnabled && <p className="text-body-sm text-on-surface-variant">{t.phoneSoon}</p>}
+      {/* Method switcher tabs (only when phone sign-in is switched on) */}
+      {phoneEnabled && (
       <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container-low p-1">
         <button
           type="button"
@@ -66,6 +83,7 @@ export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: 
           {t.useEmail}
         </button>
       </div>
+      )}
 
       <form action={send} className="flex flex-col gap-4" noValidate>
         <input type="hidden" name="lang" value={lang} />
@@ -96,7 +114,7 @@ export function PhoneSignIn({ lang, t, next = "", as = "" }: { lang: Locale; t: 
             </Field>
           </div>
         ) : (
-          <div id="auth-panel-email" role="tabpanel" aria-labelledby="auth-tab-email">
+          <div id="auth-panel-email" role={phoneEnabled ? "tabpanel" : undefined} aria-labelledby={phoneEnabled ? "auth-tab-email" : undefined}>
             <Field id="email" label={t.email} hint={t.emailHint}>
               <Input
                 id="email"

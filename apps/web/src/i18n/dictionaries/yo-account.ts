@@ -12,6 +12,8 @@ const yoAccount: typeof enAccount = {
     signUpIntro: "Ọ̀fẹ́ ni. Nọ́ńbà fóònù tàbí àdírẹ́sì ímeèlì nìkan ni o nílò. A ó fi kóòdù ìfìdí-múlẹ̀ ránṣẹ́ láti rí i dájú pé tìrẹ ni.",
     usePhone: "Nọ́ńbà fóònù",
     useEmail: "Àdírẹ́sì ímeèlì",
+    emailOnlyIntro: "Tẹ àdírẹ́sì ímeèlì rẹ. A ó fi kóòdù oní-nọ́ńbà mẹ́fà ránṣẹ́ láti rí i dájú pé tìrẹ ni.",
+    phoneSoon: "Wíwọlé pẹ̀lú nọ́ńbà fóònù ń bọ̀ láìpẹ́. Lo ímeèlì rẹ fún báyìí.",
     phone: "Nọ́ńbà fóònù",
     phoneHint: "Bí àpẹẹrẹ 0803 123 4567",
     email: "Àdírẹ́sì ímeèlì",

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { isValidEmail, normalizeNgPhone } from "@cultivanode/shared";
 import { hasLocale, type Locale } from "@/i18n/config";
 import { logger } from "@/lib/logger";
+import { isOn } from "@/lib/flags";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
@@ -52,6 +53,8 @@ export async function requestCode(prev: AuthState, form: FormData): Promise<Auth
     return { step: "code", method: "email", target: raw, email: raw, sentAt: Date.now() };
   }
 
+  // No SMS provider yet: phone codes cannot be delivered, so only email is accepted until the switch is on.
+  if (!(await isOn("phone_sign_in"))) return { step: "input", method: "email", error: "errorSend" };
   const raw = String(form.get("phone") ?? (prev.step === "code" ? (prev.phone ?? prev.target) : "")).slice(0, 30);
   const phone = normalizeNgPhone(raw);
   if (!phone || phone === "invalid") return { step: "phone", method: "phone", raw, error: "errorPhone" };

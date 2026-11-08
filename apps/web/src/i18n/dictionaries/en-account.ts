@@ -10,6 +10,8 @@ const enAccount = {
     signUpIntro: "It is free. You only need a phone number or email address. We will send you a verification code to check it is yours.",
     usePhone: "Phone number",
     useEmail: "Email address",
+    emailOnlyIntro: "Enter your email address. We will send you a 6-digit code to check it is yours.",
+    phoneSoon: "Signing in with a phone number is coming soon. Use your email for now.",
     phone: "Phone number",
     phoneHint: "For example 0803 123 4567",
     email: "Email address",

@@ -12,13 +12,13 @@ export function AdminSignInForm() {
   return (
     <form action={sendCode} className="flex flex-col gap-4" noValidate>
       {phoneState.error && <Alert tone="danger">{phoneState.error}</Alert>}
-      <Field id="phone" label="Phone number" hint="The number on your staff account.">
+      <Field id="phone" label="Email or phone number" hint="The email or phone number on your staff account.">
         <Input
           id="phone"
           name="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
+          type="text"
+          inputMode="email"
+          autoComplete="username"
           defaultValue={phoneState.phone}
           required
           aria-describedby={phoneState.error ? undefined : "phone-hint"}
@@ -34,9 +34,10 @@ export function AdminSignInForm() {
 function CodeStep({ start }: { start: Extract<SignInState, { step: "code" }> }) {
   const [state, verify, checking] = useActionState(verifySignInCode, start as SignInState);
   const local = `0${start.phone.slice(3)}`;
+  const where = start.kind === "email" ? start.phone : `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`;
   return (
     <form action={verify} className="flex flex-col gap-4" noValidate>
-      <p role="status">Code sent to {local.slice(0, 4)} {local.slice(4, 7)} {local.slice(7)}.</p>
+      <p role="status">Code sent to {where}.</p>
       {state.error && <Alert tone="danger">{state.error}</Alert>}
       <Field id="code" label="Verification code">
         <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} pattern="[0-9]{6,10}" required autoFocus />
@@ -46,7 +47,7 @@ function CodeStep({ start }: { start: Extract<SignInState, { step: "code" }> }) 
       </Button>
       {/* A full reload starts the form again (new number, or a fresh code). */}
       <Button variant="ghost" onClick={() => window.location.reload()}>
-        Use a different number or resend
+        Use a different email or number, or resend
       </Button>
     </form>
   );

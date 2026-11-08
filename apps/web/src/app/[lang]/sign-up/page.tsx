@@ -1,3 +1,4 @@
+import { isOn } from "@/lib/flags";
 import { notFound } from "next/navigation";
 import { AuthPage } from "@/components/account/auth-page";
 import { hasLocale } from "@/i18n/config";
@@ -17,5 +18,5 @@ export default async function Page({ params, searchParams }: PageProps<"/[lang]/
   const sp = await searchParams;
   if (!hasLocale(lang)) notFound();
   const t = await getDictionary(lang);
-  return <AuthPage lang={lang} t={t.auth} mode="sign-up" next={safeNext(sp.next, lang) ?? ""} as={sp.as === "customer" ? "customer" : ""} />;
+  return <AuthPage lang={lang} t={t.auth} mode="sign-up" next={safeNext(sp.next, lang) ?? ""} as={sp.as === "customer" ? "customer" : ""} phoneEnabled={await isOn("phone_sign_in")} />;
 }

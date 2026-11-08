@@ -32,6 +32,8 @@ const en = {
     usePhone: 'Phone number',
     useEmail: 'Email address',
     useEmailInstead: 'Use email instead',
+    emailOnlyIntro: 'Enter your email address. We will send you a 6-digit code to check it is yours.',
+    phoneSoon: 'Signing in with a phone number is coming soon. Use your email for now.',
     usePhoneInstead: 'Use phone number instead',
     phone: 'Phone number',
     phoneHint: 'For example 0803 123 4567',

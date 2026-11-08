@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type TextInput } from 'react-native';
 import { fill, useI18n } from '../i18n';
 import { sendCode, sendEmailCode, verifyCode, verifyEmailCode, type AuthErrorKey } from '../lib/auth';
+import { useFlags } from '../lib/flags';
 import { color as c, space, tap } from '../theme';
 import { Button, Header, Notice, Screen, Steps, Text, TextField } from '../ui';
 
@@ -14,7 +15,10 @@ type Props = { mode: 'signIn' | 'signUp'; onBack: () => void; onSignedIn: () => 
 export function PhoneSignInScreen({ mode, onBack, onSignedIn }: Props) {
   const { t } = useI18n();
   const [step, setStep] = useState<'input' | 'code'>('input');
-  const [method, setMethod] = useState<'phone' | 'email'>('phone');
+  // Phone codes need an SMS provider; until Admin switches phone_sign_in on, the app offers email only.
+  const phoneOn = useFlags().phone_sign_in === true;
+  const [chosen, setMethod] = useState<'phone' | 'email'>('email');
+  const method = phoneOn ? chosen : 'email';
   const [raw, setRaw] = useState('');
   const [target, setTarget] = useState('');
   const [code, setCode] = useState('');
@@ -92,7 +96,8 @@ export function PhoneSignInScreen({ mode, onBack, onSignedIn }: Props) {
         }
       >
         <Text variant="title" accessibilityRole="header">{title}</Text>
-        <Text muted>{mode === 'signUp' ? t.auth.signUpIntro : t.auth.signInIntro}</Text>
+        <Text muted>{!phoneOn ? t.auth.emailOnlyIntro : mode === 'signUp' ? t.auth.signUpIntro : t.auth.signInIntro}</Text>
+        {!phoneOn ? <Text variant="caption" muted>{t.auth.phoneSoon}</Text> : null}
 
         {method === 'phone' ? (
           <TextField
@@ -136,6 +141,7 @@ export function PhoneSignInScreen({ mode, onBack, onSignedIn }: Props) {
           />
         )}
         {error && error !== 'errorPhone' && error !== 'errorEmail' ? <Notice>{message(error)}</Notice> : null}
+        {phoneOn ? (
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -147,6 +153,7 @@ export function PhoneSignInScreen({ mode, onBack, onSignedIn }: Props) {
         >
           <Text variant="label" color={c.secondary}>{other === 'email' ? t.auth.useEmailInstead : t.auth.usePhoneInstead}</Text>
         </Pressable>
+        ) : null}
       </Screen>
     );
   }
