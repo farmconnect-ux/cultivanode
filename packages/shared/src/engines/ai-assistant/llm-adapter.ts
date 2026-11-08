@@ -171,7 +171,7 @@ async function callClaude(
       body: JSON.stringify({
         model,
         max_tokens: 1500,
-        temperature: 0.2,
+        // No temperature: current Claude models reject it.
         system: prompt.systemPrompt,
         messages: [{ role: 'user', content }],
       }),
@@ -369,11 +369,11 @@ export async function askGroundedAiAssistant(
         params.imageBase64,
         mimeType,
         params.geminiApiKey,
-        params.primaryModel || 'gemini-2.5-flash',
+        params.primaryModel || 'gemini-flash-latest',
         timeoutMs
       );
       providerUsed = 'gemini';
-      modelUsed = params.primaryModel || 'gemini-2.5-flash';
+      modelUsed = params.primaryModel || 'gemini-flash-latest';
     } catch (e) {
       providerErrors.push(`gemini: ${reason(e)}`);
       rawAnswer = '';

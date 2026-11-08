@@ -13,7 +13,7 @@ export function aiConfig() {
     claudeModels,
     geminiApiKey: process.env.GEMINI_API_KEY || process.env.AI_API_KEY || undefined,
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
-    primaryModel: process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash",
+    primaryModel: process.env.AI_PRIMARY_MODEL || "gemini-flash-latest",
     fallbackModel: process.env.AI_FALLBACK_MODEL || "gpt-4o-mini",
     timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 30000,
   };

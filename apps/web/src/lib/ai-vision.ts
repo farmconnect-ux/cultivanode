@@ -59,7 +59,6 @@ async function claude(model: string, images: CropImage[], text: string): Promise
     body: JSON.stringify({
       model,
       max_tokens: 2048,
-      temperature: 0.2,
       messages: [
         {
           role: "user",

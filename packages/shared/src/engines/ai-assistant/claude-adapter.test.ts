@@ -24,6 +24,7 @@ describe('Claude as the farm assistant', () => {
     const body = JSON.parse(String(init.body));
     expect(body.model).toBe('claude-sonnet-5-5');
     expect(body.system).toBeTruthy();
+    expect(body.temperature).toBeUndefined(); // current Claude models reject it
     expect(body.messages[0].content[0]).toEqual({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'QUJD' } });
   });
 
