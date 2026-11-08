@@ -26,7 +26,7 @@ interface MessageItem {
   text: string;
   imagePreview?: string;
   language?: AppLanguage | "pcm";
-  providerUsed?: "gemini" | "openai" | "rule-engine";
+  providerUsed?: "claude" | "gemini" | "openai" | "rule-engine";
   sources?: GroundedKnowledgeSnippet[];
   safetyAppendices?: string[];
   passedSafetyGuardrail?: boolean;

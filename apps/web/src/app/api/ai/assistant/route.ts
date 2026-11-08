@@ -4,6 +4,7 @@ import {
   type FarmerContext,
   type AppLanguage,
 } from "@cultivanode/shared";
+import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
@@ -61,25 +62,14 @@ export async function POST(req: Request) {
 
     const lang: AppLanguage | "pcm" = body.language || "en";
 
-    // 3. Environment configuration
-    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    const primaryModel = process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash";
-    const fallbackModel = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
-    const timeoutMs = process.env.AI_TIMEOUT_MS ? Number(process.env.AI_TIMEOUT_MS) : 20000;
-
-    // 4. Run Grounded Assistant with Guardrails
+    // 3. Run Grounded Assistant with Guardrails (keys and models from lib/ai-config)
     const result = await askGroundedAiAssistant({
       query: body.query || "Analyze this crop image and recommend verified treatments.",
       context,
       language: lang,
       imageBase64: body.imageBase64,
       imageMimeType: body.imageMimeType,
-      geminiApiKey,
-      openaiApiKey,
-      primaryModel,
-      fallbackModel,
-      timeoutMs,
+      ...aiConfig(),
     });
 
     if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });

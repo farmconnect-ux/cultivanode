@@ -1,9 +1,10 @@
 import "server-only";
 import { checkChemicalSafetyGuardrails } from "@cultivanode/shared";
+import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
 
-// Crop photo analysis with a vision model. Gemini answers first, OpenAI is the fallback (the same setup as
-// the farm assistant: GEMINI_API_KEY, OPENAI_API_KEY, AI_PRIMARY_MODEL, AI_FALLBACK_MODEL, AI_TIMEOUT_MS).
+// Crop photo analysis with a vision model: Claude (Sonnet, then Haiku) first, then Gemini, then OpenAI. Keys
+// and models come from lib/ai-config.ts, the same setup as the farm assistant.
 // The keys stay on the server. Every answer passes the NAFDAC chemical guardrail before anyone sees it.
 
 export type CropImage = { mime: string; base64: string };
@@ -45,13 +46,39 @@ function prompt(c: Context): string {
 }
 
 function timeout(): AbortSignal {
-  return AbortSignal.timeout(Number(process.env.AI_TIMEOUT_MS) || 20000);
+  return AbortSignal.timeout(aiConfig().timeoutMs);
+}
+
+async function claude(model: string, images: CropImage[], text: string): Promise<string | null> {
+  const key = aiConfig().anthropicApiKey;
+  if (!key) return null;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+    signal: timeout(),
+    body: JSON.stringify({
+      model,
+      max_tokens: 2048,
+      temperature: 0.2,
+      messages: [
+        {
+          role: "user",
+          content: [
+            ...images.map((i) => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.base64 } })),
+            { type: "text", text },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`claude_${res.status}: ${(await res.text().catch(() => "")).slice(0, 160)}`);
+  const json = (await res.json()) as { content?: { type: string; text?: string }[] };
+  return (json.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("") || null;
 }
 
 async function gemini(images: CropImage[], text: string): Promise<string | null> {
-  const key = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
+  const { geminiApiKey: key, primaryModel: model } = aiConfig();
   if (!key) return null;
-  const model = process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash";
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -73,9 +100,8 @@ async function gemini(images: CropImage[], text: string): Promise<string | null>
 }
 
 async function openai(images: CropImage[], text: string): Promise<string | null> {
-  const key = process.env.OPENAI_API_KEY;
+  const { openaiApiKey: key, fallbackModel: model } = aiConfig();
   if (!key) return null;
-  const model = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -105,7 +131,9 @@ const list = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => str(x))
 function clean(raw: string): Diagnosis | null {
   let j: Record<string, unknown>;
   try {
-    j = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, "")) as Record<string, unknown>;
+    // Models sometimes wrap the JSON in a code fence or a sentence: keep only the outermost object.
+    const body = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+    j = JSON.parse(body) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -139,16 +167,19 @@ function clean(raw: string): Diagnosis | null {
 }
 
 export function visionConfigured(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || process.env.OPENAI_API_KEY);
+  const c = aiConfig();
+  return Boolean(c.anthropicApiKey || c.geminiApiKey || c.openaiApiKey);
 }
 
 export async function diagnoseCropPhotos(images: CropImage[], context: Context): Promise<DiagnosisResult> {
   if (!visionConfigured()) return { ok: false, error: "not_configured" };
   if (!images.length) return { ok: false, error: "failed" };
   const text = prompt(context);
+  const c = aiConfig();
   const tries: [string, () => Promise<string | null>][] = [
-    [process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash", () => gemini(images, text)],
-    [process.env.AI_FALLBACK_MODEL || "gpt-4o-mini", () => openai(images, text)],
+    ...c.claudeModels.map((m): [string, () => Promise<string | null>] => [m, () => claude(m, images, text)]),
+    [c.primaryModel, () => gemini(images, text)],
+    [c.fallbackModel, () => openai(images, text)],
   ];
   for (const [model, run] of tries) {
     try {

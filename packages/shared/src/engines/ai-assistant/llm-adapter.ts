@@ -3,12 +3,20 @@ import type { AppLanguage } from '../../roles';
 import { buildGroundedPrompt } from './prompt-builder';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
 
+export type AiProvider = 'claude' | 'gemini' | 'openai' | 'rule-engine';
+
+export const DEFAULT_CLAUDE_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5'];
+
 export interface GroundedAiAssistantRequest {
   query: string;
   context: FarmerContext;
   language?: AppLanguage | 'pcm';
   imageBase64?: string;
   imageMimeType?: string;
+  /** Anthropic (Claude) API key. Claude is tried first when it is set. */
+  anthropicApiKey?: string;
+  /** Claude models, best first (defaults: claude-sonnet-5-5, then claude-haiku-5-5). */
+  claudeModels?: string[];
   geminiApiKey?: string;
   openaiApiKey?: string;
   primaryModel?: string;
@@ -19,7 +27,9 @@ export interface GroundedAiAssistantRequest {
 export interface GroundedAiAssistantResponse {
   answer: string;
   language: AppLanguage | 'pcm';
-  providerUsed: 'gemini' | 'openai' | 'rule-engine';
+  providerUsed: AiProvider;
+  /** The exact model that answered (empty for the rule engine). */
+  modelUsed: string;
   /** Why the AI providers were skipped or failed (for server logs; never shown to farmers). */
   providerErrors: string[];
   passedSafetyGuardrail: boolean;
@@ -130,6 +140,54 @@ export function generateAgronomicAdvisorAnswer(
 - Certified Planting Material: Use high-yielding, disease-resistant varieties vetted by IITA/NIHORT.
 - Timely Operations: Adhere strictly to the operations schedule for land prep, basal fertiliser, and pest scouting.
 - Need mechanization? You can directly book tractors, ridgers, or spraying providers through your CultivaNode dashboard.`;
+}
+
+/**
+ * Calls the Anthropic Messages API (Claude) with optional image input.
+ */
+async function callClaude(
+  prompt: GroundedPrompt,
+  imageBase64: string | undefined,
+  mimeType: string,
+  apiKey: string,
+  model: string,
+  timeoutMs: number
+): Promise<string> {
+  const content: Array<Record<string, unknown>> = [];
+  if (imageBase64) {
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: imageBase64.replace(/^data:[^;]+;base64,/, '') },
+    });
+  }
+  content.push({ type: 'text', text: prompt.userPrompt });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1500,
+        temperature: 0.2,
+        system: prompt.systemPrompt,
+        messages: [{ role: 'user', content }],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Claude ${model} error status ${res.status}: ${errText.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+    const answer = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
+    if (!answer.trim()) throw new Error(`Empty response from Claude ${model}`);
+    return answer.trim();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -267,7 +325,7 @@ async function callOpenAI(
 }
 
 /**
- * Orchestrates grounded AI generation across Gemini (primary) -> OpenAI (fallback) -> Rule Engine.
+ * Orchestrates grounded AI generation: Claude (Sonnet, then Haiku) -> Gemini -> OpenAI -> Rule Engine.
  * Enforces mandatory NAFDAC chemical safety guardrails on the final generated text.
  */
 export async function askGroundedAiAssistant(
@@ -280,14 +338,31 @@ export async function askGroundedAiAssistant(
   const groundedPrompt = buildGroundedPrompt(params.query, params.context, lang);
 
   let rawAnswer = '';
-  let providerUsed: 'gemini' | 'openai' | 'rule-engine' = 'rule-engine';
+  let providerUsed: AiProvider = 'rule-engine';
+  let modelUsed = '';
   const providerErrors: string[] = [];
   const reason = (e: unknown) => (e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'unknown').slice(0, 160);
+  if (!params.anthropicApiKey) providerErrors.push('claude: no key');
   if (!params.geminiApiKey) providerErrors.push('gemini: no key');
   if (!params.openaiApiKey) providerErrors.push('openai: no key');
 
-  // 1. Try Primary: Gemini
-  if (params.geminiApiKey) {
+  // 1. Claude: the best model first, then the faster, cheaper one.
+  if (params.anthropicApiKey) {
+    for (const model of params.claudeModels?.length ? params.claudeModels : DEFAULT_CLAUDE_MODELS) {
+      try {
+        rawAnswer = await callClaude(groundedPrompt, params.imageBase64, mimeType, params.anthropicApiKey, model, timeoutMs);
+        providerUsed = 'claude';
+        modelUsed = model;
+        break;
+      } catch (e) {
+        providerErrors.push(`claude ${model}: ${reason(e)}`);
+        rawAnswer = '';
+      }
+    }
+  }
+
+  // 2. Gemini
+  if (!rawAnswer && params.geminiApiKey) {
     try {
       rawAnswer = await callGemini(
         groundedPrompt,
@@ -298,13 +373,14 @@ export async function askGroundedAiAssistant(
         timeoutMs
       );
       providerUsed = 'gemini';
+      modelUsed = params.primaryModel || 'gemini-2.5-flash';
     } catch (e) {
       providerErrors.push(`gemini: ${reason(e)}`);
       rawAnswer = '';
     }
   }
 
-  // 2. Try Fallback: OpenAI
+  // 3. OpenAI
   if (!rawAnswer && params.openaiApiKey) {
     try {
       rawAnswer = await callOpenAI(
@@ -316,25 +392,27 @@ export async function askGroundedAiAssistant(
         timeoutMs
       );
       providerUsed = 'openai';
+      modelUsed = params.fallbackModel || 'gpt-4o-mini';
     } catch (e) {
       providerErrors.push(`openai: ${reason(e)}`);
       rawAnswer = '';
     }
   }
 
-  // 3. Fallback to deterministic agronomic advisor
+  // 4. Fallback to deterministic agronomic advisor
   if (!rawAnswer) {
     rawAnswer = generateAgronomicAdvisorAnswer(params.query, params.context, lang);
     providerUsed = 'rule-engine';
   }
 
-  // 4. Pass output through mandatory NAFDAC chemical safety guardrails
+  // 5. Pass output through mandatory NAFDAC chemical safety guardrails
   const guardrailResult: GuardrailCheckResult = checkChemicalSafetyGuardrails(rawAnswer);
 
   return {
     answer: guardrailResult.sanitizedResponseText,
     language: lang,
     providerUsed,
+    modelUsed,
     providerErrors,
     passedSafetyGuardrail: guardrailResult.passed,
     bannedChemicalsDetected: guardrailResult.bannedChemicalsDetected,

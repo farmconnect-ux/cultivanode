@@ -7,6 +7,7 @@ import {
   type GroundedKnowledgeSnippet,
 } from "@cultivanode/shared";
 import { requireAccount } from "@/lib/account/session";
+import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
 
 export interface AskAssistantParams {
@@ -20,7 +21,7 @@ export interface AskAssistantParams {
 export interface AssistantResponse {
   answer: string;
   language: AppLanguage | "pcm";
-  providerUsed: "gemini" | "openai" | "rule-engine";
+  providerUsed: "claude" | "gemini" | "openai" | "rule-engine";
   passedSafetyGuardrail: boolean;
   bannedChemicalsDetected: string[];
   approvedChemicalsDetected: string[];
@@ -34,26 +35,17 @@ export async function askFarmAssistantAction(
   const lang = params.language ?? "en";
   await requireAccount(lang === "yo" ? "yo" : "en");
 
-  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const primaryModel = process.env.AI_PRIMARY_MODEL || "gemini-2.5-flash";
-  const fallbackModel = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
-  const timeoutMs = process.env.AI_TIMEOUT_MS ? Number(process.env.AI_TIMEOUT_MS) : 20000;
-
   const result = await askGroundedAiAssistant({
     query: params.query,
     context: params.context,
     language: lang,
     imageBase64: params.imageBase64,
     imageMimeType: params.imageMimeType,
-    geminiApiKey,
-    openaiApiKey,
-    primaryModel,
-    fallbackModel,
-    timeoutMs,
+    ...aiConfig(),
   });
 
   if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });
+  else if (result.providerErrors.some((e) => !e.endsWith("no key"))) logger.info("ai_assistant_provider_skipped", { used: result.modelUsed, reasons: result.providerErrors.join("; ") });
 
   return {
     answer: result.answer,
