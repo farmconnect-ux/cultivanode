@@ -4,9 +4,9 @@ import { TechnicalWhitepaper } from "@/components/screens/technical-whitepaper";
 import { hasLocale } from "@/i18n/config";
 
 export const metadata: Metadata = {
-  title: "Technical Whitepaper · Agrarian Mesh & Digital Rail Operating System",
+  title: "Technical whitepaper (draft)",
   description:
-    "Comprehensive engineering and agronomic architecture specification for CultivaNode, detailing cadastral GIS, degree-day phenology, cryptographic double-entry ledger, and fleet transit optimization.",
+    "How the CultivaNode pilot app is built: farm records in a Postgres database with farm locations, crop calendars, hiring and farm books. Draft for the pilot in South-West Nigeria.",
 };
 
 export default async function Page({ params }: PageProps<"/[lang]/whitepaper">) {

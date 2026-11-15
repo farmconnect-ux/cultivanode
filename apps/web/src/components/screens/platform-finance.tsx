@@ -27,8 +27,8 @@ const INITIAL_LEDGER: LedgerEntry[] = [
     ref: "#JE-2026-8914",
     title: "PoW Release #BKG-0489",
     debitAccount: "2010 · Escrow Liability",
-    debitName: "Paystack Trustee Sub-Ledger",
-    creditAccount: "1020 · NIBSS Outflow Clearing",
+    debitName: "Escrow (not live)",
+    creditAccount: "1020 · Payout Outflow Clearing",
     creditName: "Provider Disbursal Acct",
     amount: 220000,
     hash: "0x9b7a...3c2f",
@@ -40,7 +40,7 @@ const INITIAL_LEDGER: LedgerEntry[] = [
     ref: "#JE-2026-8913",
     title: "Inflow Deposit #DEP-1102",
     debitAccount: "1010 · Paystack Clearing",
-    debitName: "Zenith Trustee Deposit",
+    debitName: "Payment partner (not signed yet)",
     creditAccount: "2010 · Escrow Liability",
     creditName: "Farmer Offtake Lock",
     amount: 1500000,
@@ -53,7 +53,7 @@ const INITIAL_LEDGER: LedgerEntry[] = [
     ref: "#JE-2026-8912",
     title: "USSD Farm Batch #FLW-8930",
     debitAccount: "1015 · Flutterwave Transit",
-    debitName: "Wema Virtual Account Collection",
+    debitName: "Virtual Account Collection (sample)",
     creditAccount: "2010 · Escrow Liability",
     creditName: "Farmer Syndicate Deposit",
     amount: 640000,
@@ -103,7 +103,7 @@ export function PlatformFinance(_props: ScreenProps) {
 
   const handleReconcileFeed = () => {
     setReconciling(true);
-    showScreenToast("Initiating live banking feeds polling (Paystack, Flutterwave, NIBSS)...");
+    showScreenToast("Polling payment feeds (sample data)...");
     setTimeout(() => {
       setReconciling(false);
       showScreenToast("Reconciliation complete: 1,280 ledger lines verified with 0x00 variance.");
@@ -121,36 +121,34 @@ export function PlatformFinance(_props: ScreenProps) {
 
   const handleDownloadCbnReport = () => {
     const report = {
-      title: "CBN & NIBSS Statutory Compliance Ledger",
-      regulatoryFramework: "CBN AML/CFT & Payment Service System Guidelines 2024",
-      segregatedTrusteeDepository: "Zenith Bank PLC / Providus Bank",
+      title: "Sample payment ledger summary (not a regulatory report)",
+      operator: "CultivaNode is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission.",
+      escrow: "Escrow (not live — waiting for a licensed payment partner)",
       generatedAt: new Date().toISOString(),
-      activeEscrowVolumeNGN: 18450000,
+      activeEscrowVolumeNGN: 0,
       dailyPayoutVolumeNGN: 8320000,
       clearedTransactions: 1280,
       varianceNGN: 0,
       cryptoMerkleRoot: "0x4e8b3941dfa92c9082bcfe0912ad581179ab8419",
     };
-    downloadFile(JSON.stringify(report, null, 2), `CBN_NIBSS_Audit_Ledger_${new Date().toISOString().slice(0, 10)}.json`, "application/json");
-    showScreenToast("Downloaded CBN / NIBSS Statutory Audit Report.");
+    downloadFile(JSON.stringify(report, null, 2), `CultivaNode_Sample_Ledger_Summary_${new Date().toISOString().slice(0, 10)}.json`, "application/json");
+    showScreenToast("Downloaded sample ledger summary.");
   };
 
   const handleDownloadComplianceCert = () => {
     const cert = {
-      certificateId: "CERT-CBN-NDPA-2026-9902",
-      organization: "CultivaNode Integrated Services Ltd",
+      note: "This is a statement, not a certificate.",
+      organization: "Excel Palace Global Concept (BN 7455859)",
       jurisdiction: "Federal Republic of Nigeria",
       statutes: [
-        "Banks and Other Financial Institutions Act (BOFIA) 2020",
-        "Nigeria Data Protection Act (NDPA) 2023 §31",
-        "Central Bank of Nigeria Escrow Trustee Guidelines",
-      ],
-      trusteeAccount: "Zenith Bank Escrow Settlement Node #1029384721",
-      bvnVerificationRail: "NIBSS Central Switch Biometric Integration",
-      validity: "Active - Valid through 2026-12-31",
+                "We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.",
+              ],
+      escrow: "Escrow (not live — waiting for a licensed payment partner)",
+      idChecks: "Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account.",
+      status: "Statement only — no certification held",
     };
-    downloadFile(JSON.stringify(cert, null, 2), `CultivaNode_CBN_NDPA_Certificate.json`, "application/json");
-    showScreenToast("Downloaded CBN & NDPA 2023 Statutory Compliance Certificate.");
+    downloadFile(JSON.stringify(cert, null, 2), `CultivaNode_Compliance_Statement.json`, "application/json");
+    showScreenToast("Downloaded compliance statement (not a certificate).");
   };
 
   return (
@@ -170,11 +168,11 @@ export function PlatformFinance(_props: ScreenProps) {
                 <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">Platform Finance Operations</h1>
                 <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm font-semibold">
                   <span className={`w-2 h-2 rounded-full ${reconciling ? "bg-amber-500 animate-ping" : "bg-secondary animate-pulse"}`} />
-                  {reconciling ? "Polling Banks..." : "Ledger Synchronized"}
+                  {reconciling ? "Polling Feeds..." : "Ledger Synchronized"}
                 </span>
               </div>
               <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-0.5">
-                Reconcile double-entry ledger journals, Paystack/Flutterwave gateway clearing, NIBSS instant settlement batches, and proof-of-work escrow disbursement queues with cryptographic audit integrity.
+                Reconcile double-entry ledger journals, payment gateway clearing and payout batches. Escrow and proof-of-work release are not live yet — waiting for a licensed payment partner. Figures below are sample data.
               </p>
             </div>
             <div className="flex items-center gap-space-sm flex-wrap shrink-0 mt-3 md:mt-0">
@@ -192,7 +190,7 @@ export function PlatformFinance(_props: ScreenProps) {
                 onClick={() => setIsCbnLedgerOpen(true)}
               >
                 <Icon name="verified_user" className="text-lg text-secondary" />
-                <span>CBN / NIBSS Ledger</span>
+                <span>Payment Ledger Summary</span>
               </button>
               <button
                 className="flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-semibold shadow-sm hover:bg-primary-container transition-colors"
@@ -212,10 +210,10 @@ export function PlatformFinance(_props: ScreenProps) {
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                 <span className="font-label-md text-label-md font-bold text-on-surface tracking-wide uppercase">Active Settlement Cycle:</span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">NIBSS Automated Clearing System (NACS) · Batch Window WAT 16:30</span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">Payout batch window WAT 16:30 (sample)</span>
                 <span className="hidden sm:inline text-on-surface-variant/40">•</span>
                 <span className="inline-flex items-center gap-1 font-label-sm text-label-sm font-semibold text-primary px-2 py-0.5 rounded bg-surface-container-lowest">
-                  <Icon name="verified" className="text-sm text-secondary" /> Direct Pilot 0% Platform Commission Policy Active
+                  <Icon name="verified" className="text-sm text-secondary" /> No platform fee on hires during the pilot
                 </span>
               </div>
             </div>
@@ -242,16 +240,16 @@ export function PlatformFinance(_props: ScreenProps) {
             </div>
             <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="font-label-sm text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider">Active Escrow Locked</span>
+                <span className="font-label-sm text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider">Escrow (not live)</span>
                 <Icon name="lock_clock" className="p-1 rounded bg-surface-container-low text-tertiary-container text-base" />
               </div>
               <div className="my-space-xs">
-                <div className="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">₦18,450,000</div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Held in trustee escrow nodes</p>
+                <div className="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold">₦0</div>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Waiting for a licensed payment partner</p>
               </div>
               <div className="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm pt-1">
                 <span className="w-2 h-2 rounded-full bg-secondary" />
-                <span>100% Segregated &amp; Liquid</span>
+                <span>Not live yet</span>
               </div>
             </div>
             <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -265,7 +263,7 @@ export function PlatformFinance(_props: ScreenProps) {
               </div>
               <div className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-semibold pt-1">
                 <Icon name="verified" className="text-sm" />
-                <span>100% BVN validated</span>
+                <span>Providers checked with NIN, BVN and bank account</span>
               </div>
             </div>
             <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -321,7 +319,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
                       <h2 className="font-headline-md text-headline-md text-primary font-bold">Banking Rail &amp; Gateway Clearing Mesh</h2>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Segregated escrow depository balances &amp; direct payout settlement nodes</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Escrow (not live — waiting for a licensed payment partner) &amp; direct payout status</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant font-semibold">Real-Time Polling</span>
@@ -330,7 +328,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       title="Refresh Telemetry"
                       type="button"
                       onClick={() => {
-                        showScreenToast("Refreshed banking mesh telemetry (Paystack, Flutterwave, Stripe, NIBSS).");
+                        showScreenToast("Refreshed payment feed status (sample data).");
                       }}
                     >
                       <Icon name="autorenew" className="text-lg" />
@@ -342,7 +340,7 @@ export function PlatformFinance(_props: ScreenProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex flex-col">
                         <span className="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant">Paystack Clearing</span>
-                        <span className="font-label-md text-label-md text-primary font-bold">Zenith Bank Trustee</span>
+                        <span className="font-label-md text-label-md text-primary font-bold">Escrow (not live)</span>
                       </div>
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary-fixed text-on-secondary-fixed">HEALTHY</span>
                     </div>
@@ -387,7 +385,7 @@ export function PlatformFinance(_props: ScreenProps) {
                   <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col justify-between gap-3">
                     <div className="flex items-start justify-between">
                       <div className="flex flex-col">
-                        <span className="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant">NIBSS Instant (NIP)</span>
+                        <span className="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant">Instant Payout Rail</span>
                         <span className="font-label-md text-label-md text-primary font-bold">Direct Provider Rail</span>
                       </div>
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary-fixed text-on-secondary-fixed">LIVE</span>
@@ -419,7 +417,7 @@ export function PlatformFinance(_props: ScreenProps) {
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded bg-surface-container-lowest font-mono text-label-sm text-label-sm text-primary font-bold shadow-sm">Audit Proof: Verified</span>
+                    <span className="px-2.5 py-1 rounded bg-surface-container-lowest font-mono text-label-sm text-label-sm text-primary font-bold shadow-sm">Sample Data</span>
                   </div>
                 </div>
               </div>
@@ -468,7 +466,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       </span>
                       <div>
                         <div className="font-label-md text-label-md font-bold text-on-surface">Net Escrow Increment Today</div>
-                        <div className="font-body-sm text-body-sm text-on-surface-variant">Held in Zenith Trustee Escrow</div>
+                        <div className="font-body-sm text-body-sm text-on-surface-variant">Escrow not live — waiting for a licensed payment partner</div>
                       </div>
                     </div>
                     <div className="font-headline-sm text-headline-sm text-primary font-bold">+₦6,570,000</div>
@@ -488,7 +486,7 @@ export function PlatformFinance(_props: ScreenProps) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h2 className="font-headline-lg text-headline-lg text-primary font-bold tracking-tight">Live Escrow Disbursement &amp; Proof-of-Work Queue</h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Disbursements staged for NIBSS release upon spatial polygon verification and field sign-off</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">Escrow and proof-of-work release are not live — waiting for a licensed payment partner. Sample rows.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant font-semibold">4 Actionable Entries</span>
@@ -519,7 +517,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       </td>
                       <td className="py-3.5 px-space-md">
                         <div className="font-headline-sm text-headline-sm text-on-surface font-bold">₦95,000</div>
-                        <div className="text-[11px] text-on-surface-variant font-mono">Held: Paystack Trustee</div>
+                        <div className="text-[11px] text-on-surface-variant font-mono">Held: Escrow (not live)</div>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-fixed/50 text-on-secondary-fixed-variant font-label-sm text-label-sm font-semibold">
@@ -545,11 +543,11 @@ export function PlatformFinance(_props: ScreenProps) {
                             type="button"
                             onClick={() => {
                               if (payout0492Status === "authorized") {
-                                showScreenToast("Payout already executed via NIP rail.");
+                                showScreenToast("Payout already executed (sample).");
                                 return;
                               }
                               setPayout0492Status("authorized");
-                              showScreenToast("Authorized ₦95,000 payout via NIBSS NIP rail. Reference: #NIP-99402.");
+                              showScreenToast("Authorized ₦95,000 payout (sample). Reference: #NIP-99402.");
                             }}
                           >
                             {payout0492Status === "authorized" ? "Payout Dispatched" : "Authorize NIP Payout"}
@@ -579,10 +577,10 @@ export function PlatformFinance(_props: ScreenProps) {
                     <tr className="bg-surface-container-lowest/50 hover:bg-surface-container-low/60 transition-colors">
                       <td className="py-3.5 px-space-md">
                         <div className="font-label-md text-label-md font-bold text-primary font-mono">#CTR-2026-081</div>
-                        <div className="text-on-surface-variant text-xs">Psaltry Cassava Offtake · 60 MT</div>
+                        <div className="text-on-surface-variant text-xs">Cassava Offtake (sample buyer) · 60 MT</div>
                       </td>
                       <td className="py-3.5 px-space-md">
-                        <div className="font-label-md text-label-md font-semibold text-on-surface">Psaltry International PLC</div>
+                        <div className="font-label-md text-label-md font-semibold text-on-surface">Sample buyer</div>
                         <div className="text-on-surface-variant text-xs">Seller: Iseyin Outgrower Union</div>
                       </td>
                       <td className="py-3.5 px-space-md">
@@ -591,7 +589,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-fixed/50 text-on-secondary-fixed-variant font-label-sm text-label-sm font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Weighbridge Digitally Certified (61.2 MT)
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Weighbridge reading (planned) · 61.2 MT
                         </span>
                         <div className="text-[11px] text-on-surface-variant mt-1">Starch content: 22.4% Verified</div>
                       </td>
@@ -610,12 +608,12 @@ export function PlatformFinance(_props: ScreenProps) {
                             onClick={() =>
                               setActiveTelemetryModal({
                                 id: "#CTR-2026-081",
-                                service: "Psaltry Cassava Offtake · 60 MT",
-                                operator: "Psaltry Processing Weighbridge Ado-Awaye",
+                                service: "Cassava Offtake (sample buyer) · 60 MT",
+                                operator: "Weighbridge (planned feature)",
                                 boundary: "Weighbridge Station WB-02",
                                 hourMeter: "Gross: 92.4 MT / Net: 61.2 MT",
                                 fuelUsed: "N/A (Fixed Facility)",
-                                signedAt: "Digitally certified by Psaltry QC Officer on 2026-03-29",
+                                signedAt: "Buyer QC sign-off (sample) on 2026-03-29",
                               })
                             }
                           >
@@ -650,11 +648,11 @@ export function PlatformFinance(_props: ScreenProps) {
                       </td>
                       <td className="py-3.5 px-space-md">
                         <div className="font-label-md text-label-md font-semibold text-on-surface">Oorelope Farmers Cooperative</div>
-                        <div className="text-on-surface-variant text-xs">Provider: John Deere Syndicate 02</div>
+                        <div className="text-on-surface-variant text-xs">Provider: Tractor Syndicate 02</div>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <div className="font-headline-sm text-headline-sm text-on-surface font-bold">₦400,000</div>
-                        <div className="text-[11px] text-on-surface-variant font-mono">Held: Paystack Trustee</div>
+                        <div className="text-[11px] text-on-surface-variant font-mono">Held: Escrow (not live)</div>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold">
@@ -714,7 +712,7 @@ export function PlatformFinance(_props: ScreenProps) {
                               setActiveDisputeModal({
                                 id: "#BKG-2026-0478",
                                 contracted: "12.0 Ha Maize Harvesting (₦180,000)",
-                                delivered: "8.1 Ha verified by GPS RTK receiver",
+                                delivered: "8.1 Ha (sample; GPS measurement planned)",
                                 discrepancy: "3.9 Ha unharvested due to swamp boundary",
                                 parties: "Saki West Maize Cluster vs Northern Tractors Hub",
                               })
@@ -865,14 +863,14 @@ export function PlatformFinance(_props: ScreenProps) {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-on-surface-variant">Registered CultivaNode Name:</span>
-                      <span className="font-mono text-error font-semibold">&quot;Babatunde G. Lawal&quot;</span>
+                      <span className="font-mono text-error font-semibold">&quot;Provider name A (sample)&quot;</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-on-surface-variant">Commercial Bank BVN (GTBank):</span>
-                      <span className="font-mono text-on-surface font-semibold">&quot;Babatunde Gbadamosi&quot;</span>
+                      <span className="text-on-surface-variant">Bank BVN Name:</span>
+                      <span className="font-mono text-on-surface font-semibold">&quot;Provider name B (sample)&quot;</span>
                     </div>
                     <div className="p-2 rounded bg-surface-container text-xs text-on-surface-variant">
-                      <strong>CBN AML Risk Flag:</strong> Partial surname divergence exceeds automated matching threshold (&gt;25% Levenshtein difference). Payout withheld pending confirmation.
+                      <strong>Name Match Flag:</strong> Partial surname divergence exceeds automated matching threshold (&gt;25% Levenshtein difference). Payout withheld pending confirmation.
                     </div>
                   </div>
                 </div>
@@ -881,8 +879,8 @@ export function PlatformFinance(_props: ScreenProps) {
                     className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-primary-container transition-colors shadow-sm"
                     type="button"
                     onClick={() => {
-                      setExc092Resolved("KYC Re-match Dispatched via NIBSS");
-                      showScreenToast("Requested automated KYC Re-match with NIBSS Central Biometrics for Babatunde Lawal.");
+                      setExc092Resolved("KYC Re-match Requested");
+                      showScreenToast("Requested KYC re-match through the verification provider (sample).");
                     }}
                   >
                     Request KYC Re-match
@@ -902,7 +900,7 @@ export function PlatformFinance(_props: ScreenProps) {
                     type="button"
                     onClick={() => {
                       setExc092Resolved("Refunded to Escrow");
-                      showScreenToast("Refunded ₦175,000 to originating cooperative escrow account.");
+                      showScreenToast("Refund recorded (sample). Escrow is not live yet.");
                     }}
                   >
                     Refund to Escrow
@@ -915,7 +913,7 @@ export function PlatformFinance(_props: ScreenProps) {
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-mono text-xs font-bold">#EXC-093 · NETWORK TIMEOUT</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mt-1.5">NIBSS NIP Push Latency Timeout</h3>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mt-1.5">Payout Push Latency Timeout</h3>
                     </div>
                     <span className="text-on-surface-variant text-xs font-mono">
                       {exc093Resolved ? `Status: ${exc093Resolved}` : "Attempt 2 of 3"}
@@ -924,7 +922,7 @@ export function PlatformFinance(_props: ScreenProps) {
                   <div className="p-space-md rounded-lg bg-surface-container-low space-y-2 font-body-sm text-body-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-on-surface-variant">Destination Rail:</span>
-                      <span className="font-semibold text-on-surface">Access Bank PLC (044)</span>
+                      <span className="font-semibold text-on-surface">Recipient bank (sample)</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-on-surface-variant">Batch Reference:</span>
@@ -949,7 +947,7 @@ export function PlatformFinance(_props: ScreenProps) {
                     type="button"
                     onClick={() => {
                       setExc093Resolved("NIP Retry Dispatched");
-                      showScreenToast("Idempotent retry executed with NIBSS Switch. Transaction cleared successfully.");
+                      showScreenToast("Retry executed (sample). Transaction cleared.");
                     }}
                   >
                     <Icon name="refresh" className="text-base" /> Force Immediate NIP Retry
@@ -960,7 +958,7 @@ export function PlatformFinance(_props: ScreenProps) {
                     onClick={() =>
                       setActiveNibssStatusModal({
                         reference: "#NIP-99238-ACC",
-                        destinationBank: "Access Bank PLC (044)",
+                        destinationBank: "Recipient bank (sample)",
                         amount: "₦320,000.00",
                         switchStatus: "RESOLVED_AFTER_DELAY",
                         sessionID: "9990442603291522001928374",
@@ -968,7 +966,7 @@ export function PlatformFinance(_props: ScreenProps) {
                       })
                     }
                   >
-                    Query NIBSS Switch Status
+                    Query Payout Status
                   </button>
                   <button
                     className="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md font-semibold hover:bg-surface-container-high transition-colors shadow-sm"
@@ -992,11 +990,11 @@ export function PlatformFinance(_props: ScreenProps) {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-headline-sm text-headline-sm text-primary font-bold">CBN Regulatory Compliance &amp; NDPA 2023 Verified</span>
-                  <span className="px-2 py-0.5 rounded bg-surface-container-highest text-primary font-label-sm text-label-sm font-semibold">Audit Active</span>
+                  <span className="font-headline-sm text-headline-sm text-primary font-bold">Data protection &amp; payments: where we stand</span>
+                  <span className="px-2 py-0.5 rounded bg-surface-container-highest text-primary font-label-sm text-label-sm font-semibold">No certification held</span>
                 </div>
                 <p className="font-body-sm text-body-sm text-on-surface-variant max-w-5xl">
-                  CultivaNode operates in strict compliance with the Central Bank of Nigeria (CBN) Anti-Money Laundering and Combating the Financing of Terrorism (AML/CFT) framework and Nigeria Data Protection Act (NDPA) 2023. All funds are maintained in segregated trustee accounts held at licensed commercial banks. Farmer private accounting records (&quot;Farm Books&quot;) remain cryptographically quarantined from platform financial operations.
+                  CultivaNode is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission. We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data. When you hire in the pilot, you pay the tractor owner or farm hand directly. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed. Farm Books records are kept separate from platform finance records.
                 </p>
               </div>
             </div>
@@ -1007,7 +1005,7 @@ export function PlatformFinance(_props: ScreenProps) {
                 onClick={handleDownloadComplianceCert}
               >
                 <Icon name="verified" className="text-base text-secondary" />
-                <span>Compliance Certificate</span>
+                <span>Compliance Statement</span>
               </button>
             </div>
           </div>
@@ -1025,10 +1023,10 @@ export function PlatformFinance(_props: ScreenProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
                   { id: "ALL", label: "All Ledger Accounts", desc: "Show complete journal trail" },
-                  { id: "1010", label: "1010 · Paystack Clearing", desc: "Zenith Trustee collections" },
-                  { id: "1015", label: "1015 · Flutterwave Transit", desc: "Wema Virtual Accounts" },
-                  { id: "1020", label: "1020 · NIBSS Outflow", desc: "Provider instant payouts" },
-                  { id: "2010", label: "2010 · Escrow Liability", desc: "Locked cooperative funds" },
+                  { id: "1010", label: "1010 · Paystack Clearing", desc: "Gateway collections (sample)" },
+                  { id: "1015", label: "1015 · Flutterwave Transit", desc: "Virtual accounts (sample)" },
+                  { id: "1020", label: "1020 · Payout Outflow", desc: "Provider instant payouts" },
+                  { id: "2010", label: "2010 · Escrow Liability", desc: "Escrow (not live)" },
                   { id: "4010", label: "4010 · Platform Revenue", desc: "Pilot zero-commission ledger" },
                 ].map((acc) => (
                   <button
@@ -1063,8 +1061,8 @@ export function PlatformFinance(_props: ScreenProps) {
       {/* MODAL 2: Batch Payout Execution */}
       {isBatchPayoutOpen && (
         <ScreenDialog
-          title="Execute NIBSS Batch Payout Run"
-          subtitle="Disburse validated proof-of-work payouts across licensed commercial banks"
+          title="Execute Batch Payout Run"
+          subtitle="Sample payout run. Escrow is not live — waiting for a licensed payment partner."
           onClose={() => setIsBatchPayoutOpen(false)}
           panel={
             <div className="space-y-4">
@@ -1078,8 +1076,8 @@ export function PlatformFinance(_props: ScreenProps) {
                   <span className="font-headline-sm text-primary font-bold">₦8,320,000.00</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-on-surface-variant">Originating Escrow Vault:</span>
-                  <span className="font-mono text-sm font-semibold">Zenith Bank Trustee #1029384721</span>
+                  <span className="text-sm text-on-surface-variant">Escrow:</span>
+                  <span className="font-mono text-sm font-semibold">Not live — waiting for a licensed payment partner</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-on-surface-variant">Payment Gateways:</span>
@@ -1087,7 +1085,7 @@ export function PlatformFinance(_props: ScreenProps) {
                 </div>
               </div>
               <p className="text-xs text-on-surface-variant">
-                Disbursements are protected by automated CBN AML checks and cryptographic two-person authorization.
+                Disbursements need two-person authorization. Providers are checked with their NIN, BVN and bank account.
               </p>
               <div className="flex justify-end gap-2 pt-2">
                 <ScreenDialogClose onClick={() => setIsBatchPayoutOpen(false)}>
@@ -1097,7 +1095,7 @@ export function PlatformFinance(_props: ScreenProps) {
                   type="button"
                   onClick={() => {
                     setIsBatchPayoutOpen(false);
-                    showScreenToast("Successfully executed batch payout of ₦8,320,000 to 52 beneficiaries via NIBSS NIP.");
+                    showScreenToast("Sample batch payout of ₦8,320,000 to 52 beneficiaries recorded.");
                   }}
                   className="px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold text-sm hover:bg-primary-container"
                 >
@@ -1112,21 +1110,21 @@ export function PlatformFinance(_props: ScreenProps) {
       {/* MODAL 3: CBN / NIBSS Ledger Modal */}
       {isCbnLedgerOpen && (
         <ScreenDialog
-          title="Central Bank of Nigeria (CBN) Statutory Audit Ledger"
-          subtitle="Regulatory compliance records for payment service provider licensing and inspection"
+          title="Payment Ledger Summary"
+          subtitle="Sample data. Escrow waits for a licensed payment partner."
           onClose={() => setIsCbnLedgerOpen(false)}
           panel={
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-surface-container-low space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm">Regulatory Status:</span>
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-secondary/20 text-secondary">FULLY COMPLIANT</span>
+                  <span className="font-semibold text-sm">Escrow Status:</span>
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-secondary/20 text-secondary">NOT LIVE</span>
                 </div>
                 <div className="text-xs text-on-surface-variant space-y-1">
-                  <div><strong>Trustee Depository:</strong> Zenith Bank Custodial Escrow (#1029384721)</div>
-                  <div><strong>NIBSS Institution Code:</strong> 999814 (CultivaNode Escrow Clearing)</div>
-                  <div><strong>AML Screening Rate:</strong> 100% Biometric BVN &amp; NIN matched</div>
-                  <div><strong>Daily Audited Turnover:</strong> ₦142,680,000.00 GMV</div>
+                  <div><strong>Escrow Partner:</strong> Not signed yet — we will name the licensed partner here once the agreement is signed</div>
+                  <div><strong>Operator:</strong> Excel Palace Global Concept (BN 7455859)</div>
+                  <div><strong>ID Checks:</strong> Providers checked with NIN, BVN and bank account</div>
+                  <div><strong>Turnover:</strong> Sample data</div>
                 </div>
               </div>
               <div className="flex justify-between items-center pt-2">
@@ -1136,7 +1134,7 @@ export function PlatformFinance(_props: ScreenProps) {
                   className="px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold flex items-center gap-1.5"
                 >
                   <Icon name="download" className="text-sm" />
-                  <span>Download Audit Packet (JSON)</span>
+                  <span>Download Summary (JSON)</span>
                 </button>
                 <ScreenDialogClose onClick={() => setIsCbnLedgerOpen(false)}>
                   Close
@@ -1182,7 +1180,7 @@ export function PlatformFinance(_props: ScreenProps) {
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-surface-container-low space-y-2 text-sm">
                 <div><strong>Contracted Scope:</strong> {activeDisputeModal.contracted}</div>
-                <div><strong>GPS RTK Measured:</strong> {activeDisputeModal.delivered}</div>
+                <div><strong>GPS Measured (planned):</strong> {activeDisputeModal.delivered}</div>
                 <div><strong>Identified Variance:</strong> {activeDisputeModal.discrepancy}</div>
                 <div><strong>Parties:</strong> {activeDisputeModal.parties}</div>
               </div>
@@ -1246,7 +1244,7 @@ export function PlatformFinance(_props: ScreenProps) {
       {/* MODAL 7: NIBSS Switch Status */}
       {activeNibssStatusModal && (
         <ScreenDialog
-          title={`NIBSS NIP Central Switch Packet`}
+          title={`Payout Status Packet (sample)`}
           subtitle={`Reference: ${activeNibssStatusModal.reference}`}
           onClose={() => setActiveNibssStatusModal(null)}
           panel={

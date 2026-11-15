@@ -29,11 +29,11 @@ export default async function FarmersPage({ params }: PageProps<"/[lang]/farmers
       </Section>
       <Section tone="white" title={p.helpTitle} intro={p.helpBody} />
       <CtaBox
-        title={lang === "yo" ? "Ṣe Ìgbàsílẹ̀ Àpù Alágbèéká fún Oko Rẹ" : "Get the Offline Field App for Your Farm"}
+        title={lang === "yo" ? "Ṣe Ìgbàsílẹ̀ Àpù Alágbèéká fún Oko Rẹ" : "Get the Mobile App for Your Farm"}
         body={
           lang === "yo"
-            ? "Ṣiṣẹ́ lórí oko láìsí intanẹẹti. Ṣe àkọsílẹ̀, ya ààlà oko pẹ̀lú GPS, kí o sì lo AI fún àyẹ̀wò àrùn ohun ọ̀gbìn."
-            : "Operate in remote fields without cellular connectivity. Log operations, map boundary polygons with hardware GPS, and get instant AI pest diagnosis."
+            ? "Kọ iṣẹ́ oko rẹ sílẹ̀, sàmì sí ibi tí oko rẹ wà pẹ̀lú GPS, kí o sì béèrè ìbéèrè lọ́wọ́ olùrànlọ́wọ́ oko. Ṣíṣiṣẹ́ láìsí nẹ́tíwọ́ọ̀kì àti àyẹ̀wò àwòrán ewéko ń bọ̀ láìpẹ́."
+            : "Log your farm work, drop a pin on your farm with GPS, and ask the farm assistant. Offline mode and photo diagnosis are coming soon."
         }
         href={`/${lang}/download`}
         label={lang === "yo" ? "Gba Àpù Android (APK)" : "Download Android APK"}

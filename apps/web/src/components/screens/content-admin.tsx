@@ -41,14 +41,14 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
     {
       id: "#STD-MZE-02",
       title: "Tomato Dry-Season Staking Protocol",
-      submittedBy: "Dr. K. Alabi",
-      appraiser: "NIHORT Vegetable Specialist",
+      submittedBy: "Staff member",
+      appraiser: "Reviewer (not assigned yet)",
       status: "In Review",
     },
     {
       id: "#STD-CAS-08",
       title: "Cassava Stems Pro-Vitamin A TME-419 Quality Standard",
-      submittedBy: "NCRI Roots & Tubers Division",
+      submittedBy: "Staff member",
       appraiser: "Active in Oyo and Osun field clusters",
       status: "Published v2.1",
     },
@@ -72,7 +72,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
       activeSpec: {
         crop: "Maize (Zea mays)",
         zone: "Derived Savanna (Oke-Ogun / Oyo North)",
-        authority: "IITA & NIHORT Joint Advisory",
+        authority: "CultivaNode draft based on published IITA & NIHORT guidance",
         stages: 6,
       },
     };
@@ -83,11 +83,11 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
   const handleAddChemical = (e: React.FormEvent) => {
     e.preventDefault();
     setIsAddChemicalOpen(false);
-    showScreenToast(`Registered NAFDAC chemical: "${chemName}" (Reg: ${chemNafdac})`);
+    showScreenToast(`Added agrochemical: "${chemName}" (label NAFDAC no.: ${chemNafdac})`);
   };
 
   const playAudioPrompt = (title: string, yorubaText: string) => {
-    showScreenToast(`Playing Yoruba audio guidance: "${title}" (${yorubaText})`);
+    showScreenToast(`Audio guidance is planned. Text: "${title}" (${yorubaText})`);
   };
 
   return (
@@ -147,7 +147,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-space-md">
               <div className="max-w-3xl flex flex-col gap-space-xs">
                 <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary tracking-tight">Content &amp; Knowledge Administration</h1>
-                <p className="font-body-md text-body-md text-on-surface-variant">Curate, calibrate, and version agronomic phenology templates, crop standards, NAFDAC-approved input formulations, veterinary protocols, and multilingual translations across South-West Nigeria agro-ecological zones.</p>
+                <p className="font-body-md text-body-md text-on-surface-variant">Curate, calibrate, and version agronomic phenology templates, crop standards, input product notes, veterinary protocols, and multilingual translations across South-West Nigeria agro-ecological zones.</p>
               </div>
               <div className="flex items-center gap-3 shrink-0 self-start md:self-auto bg-surface-container-low p-2.5 rounded-lg">
                 <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary">
@@ -155,7 +155,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Ecosystem Governance</span>
-                  <span className="font-label-md text-label-md text-primary font-bold">NCRI · NIHORT · IITA Calibrated</span>
+                  <span className="font-label-md text-label-md text-primary font-bold">Based on published research guidance</span>
                 </div>
               </div>
             </div>
@@ -176,7 +176,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
             </div>
             <div className="flex flex-col gap-0.5 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
               <span className="truncate">8 Field/Staple, 7 Vegetables</span>
-              <span className="text-[11px] text-outline font-mono">42 Calibrated Stages (SW Belts)</span>
+              <span className="text-[11px] text-outline font-mono">42 Stages (SW Belts)</span>
             </div>
           </div>
           <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow">
@@ -190,8 +190,8 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
               <span className="font-metric-num text-metric-num text-on-surface font-bold">38 Rulesets</span>
             </div>
             <div className="flex flex-col gap-0.5 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-              <span className="text-secondary font-medium">100% Peer-Reviewed</span>
-              <span className="text-[11px] text-outline truncate">IITA, NIHORT &amp; NCRI Citations</span>
+              <span className="text-secondary font-medium">Staff reviewed</span>
+              <span className="text-[11px] text-outline truncate">Cites IITA, NIHORT &amp; NCRI publications</span>
             </div>
           </div>
           <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow">
@@ -202,10 +202,10 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
               </span>
             </div>
             <div className="my-space-xs">
-              <span className="font-metric-num text-metric-num text-on-surface font-bold">164 Certified</span>
+              <span className="font-metric-num text-metric-num text-on-surface font-bold">164 Listed</span>
             </div>
             <div className="flex flex-col gap-0.5 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-              <span className="text-secondary font-medium">NAFDAC Verified Registry</span>
+              <span className="text-secondary font-medium">NAFDAC numbers from product labels</span>
               <span className="text-[11px] text-outline">0 Banned Actives · Strict PHI/REI</span>
             </div>
           </div>
@@ -220,8 +220,8 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
               <span className="font-metric-num text-metric-num text-on-surface font-bold">4,820</span>
             </div>
             <div className="flex flex-col gap-0.5 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-              <span className="text-secondary font-medium">99.4% Yorùbá Verified</span>
-              <span className="text-[11px] text-outline">92.1% Pidgin Audio Prompts</span>
+              <span className="text-secondary font-medium">Yorùbá: native review pending</span>
+              <span className="text-[11px] text-outline">Audio prompts planned</span>
             </div>
           </div>
           <div className="flex flex-col justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow">
@@ -235,7 +235,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
               <span className="font-metric-num text-metric-num text-on-surface font-bold">1,280 Q&amp;As</span>
             </div>
             <div className="flex flex-col gap-0.5 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-              <span className="text-secondary font-medium">80% Agronomist Precision</span>
+              <span className="text-secondary font-medium">Sample data</span>
               <span className="text-[11px] text-outline">0 Unapproved Chem Prescriptions</span>
             </div>
           </div>
@@ -249,9 +249,9 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                 <h2 className="font-headline-md text-headline-md text-primary font-bold">Maize (Zea mays) — Derived Savanna (Oke-Ogun / Oyo North) Early-Rains Standard v3.2</h2>
               </div>
               <div className="text-on-surface-variant font-body-sm text-body-sm flex items-center gap-2 flex-wrap pt-0.5">
-                <span><strong className="text-on-surface">Principal Reviewer:</strong> Dr. Quadri Olapade (Lead Agronomist)</span>
+                <span><strong className="text-on-surface">Principal Reviewer:</strong> Quadri Olapade (Founder)</span>
                 <span>·</span>
-                <span><strong className="text-on-surface">Authority:</strong> IITA Maize Improvement Program &amp; NIHORT Joint Advisory</span>
+                <span><strong className="text-on-surface">Sources:</strong> published IITA &amp; NIHORT guidance</span>
                 <span>·</span>
                 <span><strong className="text-secondary font-semibold">Effective Cycle:</strong> Early Rains 2026</span>
               </div>
@@ -339,7 +339,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                     </div>
                   </div>
                   <div className="flex md:flex-col items-end gap-1 shrink-0">
-                    <span className="px-2 py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Validated IITA</span>
+                    <span className="px-2 py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Draft</span>
                     <span className="text-[11px] text-outline font-mono">Telemetry Key: #PHEN_LP_01</span>
                   </div>
                 </div>
@@ -544,7 +544,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                 <button
                   onClick={() => playAudioPrompt("Fall Armyworm Alert", "Kòkòrò Apẹẹrẹ")}
                   className="shrink-0 p-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-primary transition-colors flex items-center gap-1 text-xs font-semibold"
-                  title="Listen to 12s voice guidance"
+                  title="Voice guidance (planned)"
                   type="button"
                 >
                   <Icon name="volume_up" className="text-[16px]" />
@@ -630,15 +630,15 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                   <span>2026-03-29 11:22 WAT</span>
                   <span className="text-secondary font-bold">STATE HASH: 0x9b82..f04e</span>
                 </div>
-                <div className="font-bold text-on-surface">Revision v3.2 Published by Dr. Quadri Olapade</div>
-                <div className="text-on-surface-variant">Calibrated with IITA Derived Savanna Trials (Saki &amp; Iseyin blocks).</div>
+                <div className="font-bold text-on-surface">Revision v3.2 Published by Quadri Olapade</div>
+                <div className="text-on-surface-variant">Updated using published Derived Savanna guidance.</div>
               </div>
               <div className="p-3 rounded-lg bg-surface space-y-1">
                 <div className="flex justify-between text-on-surface-variant">
                   <span>2026-02-14 09:15 WAT</span>
                   <span className="text-secondary font-bold">STATE HASH: 0x7a11..bc90</span>
                 </div>
-                <div className="font-bold text-on-surface">Revision v3.1 Published by Dr. K. Alabi</div>
+                <div className="font-bold text-on-surface">Revision v3.1 Published by Staff member</div>
                 <div className="text-on-surface-variant">Initial early-rains basal fertilizer calibration.</div>
               </div>
             </div>
@@ -648,8 +648,8 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
         <div className="rounded-xl bg-surface-container-lowest shadow-sm p-space-lg flex flex-col gap-space-md">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
             <div className="flex flex-col gap-0.5">
-              <h2 className="font-headline-md text-headline-md text-primary font-bold">NAFDAC Certified Input Registry &amp; Safety Formulations</h2>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Live repository of certified agronomic compounds, pre-harvest safety thresholds, and operator re-entry parameters for South-West Nigeria field operations.</p>
+              <h2 className="font-headline-md text-headline-md text-primary font-bold">Input Product List &amp; Safety Notes</h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Reference list of agronomic products, pre-harvest safety thresholds, and operator re-entry parameters for South-West Nigeria field operations.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -684,7 +684,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                       <span className="text-xs text-on-surface-variant">Granular Inorganic Fertilizer</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-mono text-xs font-semibold">A5-0182</td>
+                  <td className="py-3 px-3 font-mono text-xs font-semibold">See label</td>
                   <td className="py-3 px-3">Notore Chemical Ind. Plc</td>
                   <td className="py-3 px-3 font-mono text-xs">N:15% · P₂O₅:15% · K₂O:15%</td>
                   <td className="py-3 px-3 font-medium">200 kg / Ha (Basal)</td>
@@ -705,7 +705,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                       <span className="text-xs text-on-surface-variant">Selective Pre-emergence Herbicide</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-mono text-xs font-semibold">A5-0442</td>
+                  <td className="py-3 px-3 font-mono text-xs font-semibold">See label</td>
                   <td className="py-3 px-3">Jubaili Agrotec Nigeria Ltd</td>
                   <td className="py-3 px-3 font-mono text-xs">Atrazine 500 g/L</td>
                   <td className="py-3 px-3 font-medium">3.0 L / Ha in 200L H₂O</td>
@@ -726,7 +726,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                       <span className="text-xs text-on-surface-variant">Bio-rational Ingestion Insecticide</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-mono text-xs font-semibold">A5-1108</td>
+                  <td className="py-3 px-3 font-mono text-xs font-semibold">See label</td>
                   <td className="py-3 px-3">Syngenta Nigeria / C. Zard</td>
                   <td className="py-3 px-3 font-mono text-xs">Emamectin benzoate 50 g/kg</td>
                   <td className="py-3 px-3 font-medium">250 g / Ha (Knapsack)</td>
@@ -881,7 +881,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Collaborating Research Institute</label>
+                    <label className="text-xs font-bold text-on-surface">Reference Source (published guidance)</label>
                     <select
                       value={draftInstitute}
                       onChange={(e) => setDraftInstitute(e.target.value)}
@@ -925,7 +925,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
         {isPublishRevisionsOpen && (
           <ScreenDialog
             title="Publish Approved Revisions to Field Edge Mesh"
-            subtitle="Broadcast updated standards to PowerSync offline databases across all extension tablets"
+            subtitle="Publish updated standards to the app (offline mode coming soon)"
             onClose={() => setIsPublishRevisionsOpen(false)}
             panel={
               <div className="space-y-3 text-sm">
@@ -993,7 +993,7 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
         {/* MODAL 4: Add Agrochemical */}
         {isAddChemicalOpen && (
           <ScreenDialog
-            title="Register NAFDAC Certified Agrochemical"
+            title="Add Agrochemical"
             subtitle="Add approved fertilizer, bio-rational insecticide, or selective herbicide"
             onClose={() => setIsAddChemicalOpen(false)}
             panel={
@@ -1093,12 +1093,12 @@ export function ContentAdmin({ slots }: ScreenProps<ContentAdminSlot>) {
             panel={
               <div className="space-y-3 text-xs">
                 <p className="text-on-surface-variant">
-                  CultivaNode voice engines utilize tonal Yorùbá synthesis with accurate tone marking (àmi ohùn) to ensure smallholder farmers in rural Oyo, Ogun, and Osun clearly comprehend safety warnings.
+                  Voice prompts are planned. Yorùbá text uses tone marks (àmi ohùn); new phrases need review by a native speaker.
                 </p>
                 <div className="p-3 rounded-lg bg-surface-container-low space-y-1 font-mono">
                   <div><strong>Total Active Phrases:</strong> 4,820</div>
-                  <div><strong>Tone-Checked Accuracy:</strong> 99.4%</div>
-                  <div><strong>AMR-WB 16kHz Audio Cache:</strong> 4,440 clips ready</div>
+                  <div><strong>Native-Speaker Review:</strong> Pending</div>
+                  <div><strong>Audio Clips:</strong> Planned</div>
                 </div>
                 <div className="flex justify-end pt-2">
                   <ScreenDialogClose onClick={() => setIsTranslationStudioOpen(false)}>

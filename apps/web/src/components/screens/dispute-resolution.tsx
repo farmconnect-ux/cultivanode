@@ -20,58 +20,59 @@ export function DisputeResolution({ slots }: ScreenProps<DisputeResolutionSlot>)
   const farmerRefund = totalDisputeEscrow - operatorPayout;
 
   const handleDownloadDossier = () => {
-    const docket = `CULTIVANODE AGRO-ENTERPRISE DISPUTE ARBITRATION DOCKET
+    const docket = `CULTIVANODE DISPUTE CASE SUMMARY (SAMPLE)
 ============================================================
 Case ID: #DSP-2026-014
 Category: Machinery Harrowing Coverage Dispute (Job #BKG-2026-0482)
-Arbiter: Quadri Olapade (FIDO2 Hardware Token #9921)
+Reviewer: Quadri Olapade (Founder)
 Date: ${new Date().toLocaleDateString("en-NG")}
+Operator: Excel Palace Global Concept (BN 7455859)
 
 PARTIES:
-- Complainant: Gbadamosi Lateef (Smallholder Farmer, Saki West)
-- Respondent: Muritala Lawal (Syndicate Tractor Lead, Machine #04)
+- Complainant: Sample Farmer (Saki West)
+- Respondent: Sample operator (Machine #04)
 
-ESCROW CONTEXT:
-- Fiduciary Custodian: Zenith Bank Trustee Segregated Account
-- Total Frozen Value: â‚¦47,000.00
-- Pilot Commission Deducted: â‚¦0.00 (0% Waiver Active)
+PAYMENT CONTEXT:
+- In the pilot the farmer pays the operator directly. Escrow is not live yet.
+- Agreed Job Fee: â‚¦47,000.00
+- Platform fee on hires in the pilot: none
 
-EVIDENCE AUDIT CHAIN:
-1. PostGIS Cadastral Perimeter: 4.50 Hectares Target
-2. CAN-Bus Traversed Area: 3.82 Hectares Verified (84.89%)
+EVIDENCE (SAMPLE):
+1. Farm area on record: 4.50 Hectares
+2. Area reported as worked: 3.82 Hectares (84.89%)
 3. Natural Granite Ridge: 0.68 Hectares (15.11% Geological Hazard)
-4. Photographic Proof: 4/4 Verified with EXIF SHA-256 Timestamps
-5. Extension Agent Report: Verified Impassable Submerged Bedrock
+4. Photos submitted by the operator (proof of work with location and time is coming soon)
+5. Staff site visit note: Impassable Submerged Bedrock
 
-ARBITRATION RULING:
+SUGGESTED SPLIT:
 - Current Settlement Ratio: ${splitRatio}% Operator / ${100 - splitRatio}% Farmer
-- Operator Net Payout: â‚¦${operatorPayout.toLocaleString()} NGN
-- Farmer Pro-Rata Refund: â‚¦${farmerRefund.toLocaleString()} NGN
+- Operator Share: â‚¦${operatorPayout.toLocaleString()} NGN
+- Unworked Portion: â‚¦${farmerRefund.toLocaleString()} NGN
 
-Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â§11.3.`;
+This is a sample summary, not a legal ruling or arbitration award.`;
 
-    downloadFile("Arbitration-Dossier-DSP-2026-014.txt", docket, "text/plain");
-    showScreenToast("Arbitration Dossier PDF/Text downloaded for Case #DSP-2026-014.");
+    downloadFile("Dispute-Summary-DSP-2026-014.txt", docket, "text/plain");
+    showScreenToast("Dispute summary (sample) downloaded for Case #DSP-2026-014.");
   };
 
   const handleExecuteSettlement = () => {
     showScreenToast(
-      `Executed settlement: â‚¦${operatorPayout.toLocaleString()} to Muritala Lawal, â‚¦${farmerRefund.toLocaleString()} refund to Gbadamosi Lateef. Paystack/NIBSS instruction queued.`
+      `Split recorded (sample): â‚¦${operatorPayout.toLocaleString()} to the operator, â‚¦${farmerRefund.toLocaleString()} not payable by the farmer. Escrow is not live; the farmer pays the operator directly.`
     );
   };
 
   const handleFullOperatorRelease = () => {
     setSplitRatio(100);
-    showScreenToast("Authorized 100% Escrow Release (â‚¦47,000) to Operator Muritala Lawal.");
+    showScreenToast("Recorded (sample): full fee (â‚¦47,000) due to the operator. Escrow is not live.");
   };
 
   const handleFullFarmerRefund = () => {
     setSplitRatio(0);
-    showScreenToast("Authorized 100% Escrow Refund (â‚¦47,000) to Farmer Gbadamosi Lateef.");
+    showScreenToast("Recorded (sample): nothing due from the farmer (â‚¦47,000). Escrow is not live.");
   };
 
   const handleEscalateBoard = () => {
-    showScreenToast("Case #DSP-2026-014 escalated to Chief Arbitrator & Agronomy Board.");
+    showScreenToast("Case #DSP-2026-014 escalated to senior staff for review.");
   };
 
   return (
@@ -89,13 +90,13 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
             </div>
             <div className="flex flex-wrap items-center gap-space-xs">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Pilot 0% Commission Policy Active
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> No platform fee on hires in the pilot
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> Escrow Frozen: â‚¦615,000 (3 Active Claims)
+                <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> Escrow not live Â· â‚¦615,000 in dispute (3 sample claims)
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm">
-                <Icon name="timer" className="text-[14px]" /> 48-Hour Arbitration SLA
+                <Icon name="timer" className="text-[14px]" /> 48-Hour Review Target
               </span>
             </div>
           </div>
@@ -103,7 +104,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
             <div className="max-w-4xl">
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface tracking-tight">Dispute Resolution &amp; PoW Arbitration</h1>
               <p className="font-body-md text-body-md text-on-surface-variant mt-1 leading-relaxed">
-                Investigate disagreements regarding machinery tillage quality, boundary gaps, weighbridge grain variances, and off-taker logistics using multi-spectral GIS polygons, CAN-bus engine telemetry, and tamper-evident SHA-256 evidence vaults.
+                Investigate disagreements regarding machinery tillage quality, boundary gaps, weighbridge grain variances, and off-taker logistics using farm maps, photos and statements. Proof of work and machine tracking are coming soon.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-space-xs shrink-0">
@@ -113,7 +114,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                 type="button"
               >
                 <Icon name="picture_as_pdf" className="text-[18px] text-on-surface-variant" />
-                <span>Arbitration Dossier (PDF/Text)</span>
+                <span>Dispute Summary (Text)</span>
               </button>
               <button
                 onClick={() => showScreenToast("Field agent inspection dispatched. Extension Officer Quadri Olapade notified via Termii SMS.")}
@@ -124,12 +125,12 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                 <span>Request Field Agent Inspection</span>
               </button>
               <button
-                onClick={() => showScreenToast("Zenith Trustee settlement reconciliation batch executed. â‚¦615,000 across 3 disputes verified.")}
+                onClick={() => showScreenToast("Sample reconciliation run: â‚¦615,000 across 3 disputes. Escrow is not live yet.")}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow hover:bg-primary-container transition-colors"
                 type="button"
               >
                 <Icon name="account_balance_wallet" className="text-[18px]" />
-                <span>Batch Escrow Reconciliation</span>
+                <span>Batch Reconciliation (sample)</span>
               </button>
             </div>
           </div>
@@ -150,7 +151,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <span className="font-metric-num text-metric-num text-on-surface">3 Cases</span>
                   <span className="font-label-sm text-label-sm text-secondary font-bold">-67% vs last mo</span>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">1 Critical Â· 1 Telemetry Review Â· 1 Awaiting Counterparty</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">1 Critical Â· 1 Evidence Review Â· 1 Awaiting Counterparty</p>
               </div>
               <div className="mt-space-sm pt-2 bg-surface-container-low px-2 py-1.5 rounded-lg flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
                 <span>Portfolio Dispute Rate</span>
@@ -159,7 +160,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
             </div>
             <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between mb-space-xs">
-                <span className="font-label-md text-label-md text-on-surface-variant">Total Frozen Escrow</span>
+                <span className="font-label-md text-label-md text-on-surface-variant">Amount in Dispute (escrow not live)</span>
                 <span className="w-8 h-8 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center">
                   <Icon name="lock_clock" className="text-[18px]" />
                 </span>
@@ -167,13 +168,13 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="font-metric-num text-metric-num text-on-surface">â‚¦615,000</span>
-                  <span className="font-label-sm text-label-sm text-primary font-bold">100% Segregated</span>
+                  <span className="font-label-sm text-label-sm text-primary font-bold">Sample data</span>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Zenith Bank Trustee Segregated Fiduciary Account</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Escrow partner: not signed yet â€” we will name the licensed partner here once the agreement is signed</p>
               </div>
               <div className="mt-space-sm pt-2 bg-secondary-container text-on-secondary-container px-2 py-1.5 rounded-lg flex items-center justify-between font-label-sm text-label-sm">
                 <span>Fee Policy</span>
-                <span className="font-bold">Zero commission deducted (â‚¦0.00)</span>
+                <span className="font-bold">No platform fee on hires in the pilot</span>
               </div>
             </div>
             <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
@@ -207,7 +208,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <span className="font-metric-num text-metric-num text-on-surface">88.2%</span>
                   <span className="font-label-sm text-label-sm text-secondary font-bold">+12.4% MoM</span>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Settled via CAN-Bus/GIS geometry without court litigation</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Settled by agreement without going to court (sample)</p>
               </div>
               <div className="mt-space-sm pt-2 bg-surface-container-low px-2 py-1.5 rounded-lg flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
                 <span>Human Escalation</span>
@@ -273,7 +274,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
               </div>
               <div className="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant">
                 <Icon name="verified_user" className="text-[16px] text-secondary" />
-                <span>Auto-sync enabled with Zenith Trustee API</span>
+                <span>Escrow not live â€” waiting for a licensed payment partner</span>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -283,7 +284,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                     <th className="py-3 px-space-md">Case ID &amp; Severity</th>
                     <th className="py-3 px-space-md">Category &amp; Ref</th>
                     <th className="py-3 px-space-md">Disputing Parties</th>
-                    <th className="py-3 px-space-md">Escrow Frozen</th>
+                    <th className="py-3 px-space-md">Amount in Dispute</th>
                     <th className="py-3 px-space-md w-1/4">Claim Core Issue</th>
                     <th className="py-3 px-space-md">PoW Score</th>
                     <th className="py-3 px-space-md">Status</th>
@@ -305,8 +306,8 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                         <div className="text-on-surface-variant text-[11px] font-mono">Job #BKG-2026-0482</div>
                       </td>
                       <td className="py-3.5 px-space-md">
-                        <div className="text-on-surface font-semibold">Gbadamosi Lateef (Smallholder)</div>
-                        <div className="text-on-surface-variant text-[11px]">vs Muritala Lawal (Tractor #04)</div>
+                        <div className="text-on-surface font-semibold">Sample Farmer (Smallholder)</div>
+                        <div className="text-on-surface-variant text-[11px]">vs Sample operator (Tractor #04)</div>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="font-headline-sm text-headline-sm text-on-surface font-bold">â‚¦47,000</span>
@@ -322,7 +323,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                           </div>
                           <span className="font-bold text-on-surface text-[12px]">98%</span>
                         </div>
-                        <span className="text-[10px] text-on-surface-variant">CAN-Bus + GPS + Photos</span>
+                        <span className="text-[10px] text-on-surface-variant">Photos + Statements</span>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
@@ -354,19 +355,19 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                         <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-tertiary-fixed text-on-tertiary-fixed">Under Review</span>
                       </td>
                       <td className="py-3.5 px-space-md">
-                        <div className="font-semibold text-on-surface">Weighbridge Starch Variance</div>
+                        <div className="font-semibold text-on-surface">Starch Variance (sample)</div>
                         <div className="text-on-surface-variant text-[11px] font-mono">CTR-2026-081</div>
                       </td>
                       <td className="py-3.5 px-space-md">
-                        <div className="text-on-surface font-semibold">Psaltry International PLC</div>
-                        <div className="text-on-surface-variant text-[11px]">vs Odo-Ogun Outgrower Union</div>
+                        <div className="text-on-surface font-semibold">Sample buyer</div>
+                        <div className="text-on-surface-variant text-[11px]">vs Sample outgrower union</div>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="font-bold text-on-surface">â‚¦388,000</span>
                         <div className="text-on-surface-variant text-[11px]">4.2 MT disputed</div>
                       </td>
                       <td className="py-3.5 px-space-md">
-                        <p className="line-clamp-2 text-on-surface-variant leading-snug">Offtaker deducted 4.2 MT citing low starch (&lt;21%) &amp; soil tare. Outgrower presents farmgate NIR scan certifying 23.8% prior to transit.</p>
+                        <p className="line-clamp-2 text-on-surface-variant leading-snug">Offtaker deducted 4.2 MT citing low starch (&lt;21%) &amp; soil tare. Outgrower presents a farmgate scan showing 23.8% before transit.</p>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <div className="flex items-center gap-1.5">
@@ -375,7 +376,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                           </div>
                           <span className="font-bold text-on-surface text-[12px]">85%</span>
                         </div>
-                        <span className="text-[10px] text-on-surface-variant">Weighbridge slip + NIR</span>
+                        <span className="text-[10px] text-on-surface-variant">Weigh slip + scan</span>
                       </td>
                       <td className="py-3.5 px-space-md">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
@@ -384,7 +385,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       </td>
                       <td className="py-3.5 px-space-md text-right">
                         <button
-                          onClick={() => showScreenToast("Viewing Psaltry vs Odo-Ogun NIR assay scan & weighbridge slip #CTR-2026-081.")}
+                          onClick={() => showScreenToast("Viewing sample buyer vs outgrower scan & weigh slip #CTR-2026-081.")}
                           className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors"
                           type="button"
                         >
@@ -469,12 +470,12 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                 <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm">
                   <div className="flex flex-wrap items-center justify-between gap-space-xs">
                     <div>
-                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Geospatial Audit</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface">Cadastral Boundary vs. Tractor CAN-Bus Telemetry Overlay</h3>
+                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Plot Map (sample)</span>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface">Farm Area vs. Reported Worked Area (machine tracking planned)</h3>
                     </div>
                     <div className="flex items-center gap-1 font-label-sm text-label-sm">
-                      <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface">RTK Accuracy: Â±2.5cm</span>
-                      <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold">PostGIS 3.4 Validated</span>
+                      <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface">Sample View</span>
+                      <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold">PostGIS</span>
                     </div>
                   </div>
                   <div className="relative w-full h-80 rounded-xl bg-surface-dim overflow-hidden shadow-inner flex items-center justify-center">
@@ -541,7 +542,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       <span className="text-[11px] text-on-surface-variant">100.0% expected</span>
                     </div>
                     <div className="p-2.5 bg-secondary-container rounded-lg text-on-secondary-container">
-                      <span className="font-label-sm text-label-sm block">CAN-Bus Cultivated</span>
+                      <span className="font-label-sm text-label-sm block">Reported Worked</span>
                       <span className="font-headline-sm text-headline-sm font-bold">3.82 Ha</span>
                       <span className="text-[11px] font-semibold">84.89% actual area</span>
                     </div>
@@ -561,10 +562,10 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Visual Proof-of-Work</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface">EXIF &amp; GPS-Anchored Photographic Evidence Chain (4/4 Verified)</h3>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface">Photo Evidence (4 photos Â· proof of work coming soon)</h3>
                     </div>
                     <span className="inline-flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold">
-                      <Icon name="verified" className="text-[16px]" /> Cryptographically Stamped
+                      <Icon name="verified" className="text-[16px]" /> Sample
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-space-sm">
@@ -593,10 +594,10 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       </div>
                     </div>
                     <div className="group relative rounded-lg overflow-hidden bg-surface-container">
-                      <img className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-200" data-alt="Field Agent on-site audit" src="/images/screens/4f4241d07409.webp" alt="Agent Audit" loading="lazy" decoding="async" />
+                      <img className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-200" data-alt="Staff site visit" src="/images/screens/4f4241d07409.webp" alt="Agent Audit" loading="lazy" decoding="async" />
                       <div className="p-2 bg-surface-container-low">
-                        <span className="font-label-sm text-label-sm font-bold text-on-surface block truncate">4. Field Agent Audit</span>
-                        <span className="font-mono text-[10px] text-on-surface-variant block">Agent Quadri O. Â· On-site</span>
+                        <span className="font-label-sm text-label-sm font-bold text-on-surface block truncate">4. Staff Site Visit</span>
+                        <span className="font-mono text-[10px] text-on-surface-variant block">Staff member Â· On-site</span>
                         <span className="inline-block mt-1 px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">Signed Report</span>
                       </div>
                     </div>
@@ -612,7 +613,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-6 h-6 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-[11px]">GL</span>
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Gbadamosi Lateef</span>
+                        <span className="font-label-md text-label-md text-on-surface font-bold">Sample Farmer</span>
                         <span className="text-[11px] text-on-surface-variant">(Smallholder)</span>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface font-mono text-[10px] font-semibold">Tier 1 Â· BVN Valid</span>
@@ -625,7 +626,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-[11px]">ML</span>
-                        <span className="font-label-md text-label-md text-on-surface font-bold">Muritala Lawal</span>
+                        <span className="font-label-md text-label-md text-on-surface font-bold">Sample operator</span>
                         <span className="text-[11px] text-on-surface-variant">(Syndicate #04)</span>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-mono text-[10px] font-semibold">4.95â˜… Â· 48 Jobs</span>
@@ -648,22 +649,22 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Automated Math Engine</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface">Algorithmic Escrow Settlement Split</h3>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface">Suggested Fee Split (escrow not live)</h3>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold">84.89% Verified</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold">84.89% Reported</span>
                   </div>
                   <div className="p-3 bg-surface-container-low rounded-xl flex flex-col gap-2">
                     <div className="flex items-center justify-between font-body-sm text-body-sm">
-                      <span className="text-on-surface-variant">Total Contract Escrow (Zenith Trustee)</span>
+                      <span className="text-on-surface-variant">Agreed Job Fee (paid directly)</span>
                       <span className="font-mono font-bold text-on-surface">â‚¦47,000.00</span>
                     </div>
                     <div className="flex items-center justify-between font-body-sm text-body-sm">
-                      <span className="text-on-surface-variant">Traversed Cultivable Area (PostGIS)</span>
+                      <span className="text-on-surface-variant">Reported Worked Area</span>
                       <span className="font-mono text-on-surface">3.82 / 4.50 Ha (84.89%)</span>
                     </div>
                     <div className="flex items-center justify-between font-body-sm text-body-sm">
-                      <span className="text-on-surface-variant">Platform Arbitration Commission</span>
-                      <span className="font-mono text-secondary font-bold">â‚¦0.00 (Pilot 0% Waiver)</span>
+                      <span className="text-on-surface-variant">Platform Fee</span>
+                      <span className="font-mono text-secondary font-bold">None on hires in the pilot</span>
                     </div>
                     <div className="h-px bg-surface-container my-1" />
                     <div className="flex items-center justify-between font-headline-sm text-headline-sm">
@@ -671,7 +672,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       <span className="font-mono text-primary font-bold">â‚¦{operatorPayout.toLocaleString()}.00</span>
                     </div>
                     <div className="flex items-center justify-between font-headline-sm text-headline-sm">
-                      <span className="text-tertiary-container font-bold">Farmer Refund ({100 - splitRatio}%):</span>
+                      <span className="text-tertiary-container font-bold">Unworked Portion ({100 - splitRatio}%):</span>
                       <span className="font-mono text-tertiary-container font-bold">â‚¦{farmerRefund.toLocaleString()}.00</span>
                     </div>
                   </div>
@@ -697,7 +698,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       type="button"
                     >
                       <Icon name="gavel" className="text-[18px]" />
-                      <span>Execute Telemetry-Prorated Settlement (â‚¦{operatorPayout.toLocaleString()} / â‚¦{farmerRefund.toLocaleString()})</span>
+                      <span>Record Prorated Split (â‚¦{operatorPayout.toLocaleString()} / â‚¦{farmerRefund.toLocaleString()})</span>
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -721,7 +722,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                       type="button"
                     >
                       <Icon name="supervisor_account" className="text-[16px]" />
-                      <span>Escalate to Chief Arbitrator &amp; Agronomy Board</span>
+                      <span>Escalate to Senior Staff</span>
                     </button>
                   </div>
                 </div>
@@ -739,7 +740,7 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <Icon name="security" className="text-secondary text-[22px]" />
                   <h2 className="font-headline-lg text-headline-lg text-on-surface">Proof-of-Work Arbitration Audit Trail</h2>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Append-only ledger cryptographically anchoring dispute decisions, evidence hashes, and NIBSS refund triggers (Â§11.7).</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Append-only log of dispute decisions and evidence hashes (Â§11.7). Sample rows.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container font-mono text-[11px] font-semibold">
@@ -763,27 +764,27 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                   <tr className="hover:bg-surface-container-low transition-colors">
                     <td className="py-3 px-3 text-on-surface">2026-04-20 11:15 WAT</td>
                     <td className="py-3 px-3 font-bold text-primary font-sans">#DSP-2026-014</td>
-                    <td className="py-3 px-3 font-sans text-on-surface">Quadri Olapade (FIDO2 Hard-Token)</td>
+                    <td className="py-3 px-3 font-sans text-on-surface">Quadri Olapade (Founder)</td>
                     <td className="py-3 px-3 text-on-surface-variant">
                       <span className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface">0x8f2a...c89e</span>
-                      <span className="text-[10px] text-on-surface-variant block font-sans">RTK GeoJSON + 4 Exif JPGs</span>
+                      <span className="text-[10px] text-on-surface-variant block font-sans">Plot pin + 4 photos</span>
                     </td>
                     <td className="py-3 px-3 font-sans text-on-surface"><span className="font-bold text-secondary">Prorated:</span> {splitRatio}% Operator / {100 - splitRatio}% Farmer</td>
                     <td className="py-3 px-3 text-right font-sans">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">Paystack Split Queued</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">Pay Directly</span>
                     </td>
                   </tr>
                   <tr className="hover:bg-surface-container-low transition-colors">
                     <td className="py-3 px-3 text-on-surface">2026-04-18 16:30 WAT</td>
                     <td className="py-3 px-3 font-bold text-on-surface font-sans">#DSP-2026-013</td>
-                    <td className="py-3 px-3 font-sans text-on-surface">Algorithmic Auto-Release (48h SLA)</td>
+                    <td className="py-3 px-3 font-sans text-on-surface">Staff Review (sample)</td>
                     <td className="py-3 px-3 text-on-surface-variant">
                       <span className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface">0x4e1b...902a</span>
-                      <span className="text-[10px] text-on-surface-variant block font-sans">Full Area RTK Verified (12.4 Ha)</span>
+                      <span className="text-[10px] text-on-surface-variant block font-sans">Full Area Confirmed by Both Sides (12.4 Ha)</span>
                     </td>
-                    <td className="py-3 px-3 font-sans text-on-surface">100% Provider Release (â‚¦125,000)</td>
+                    <td className="py-3 px-3 font-sans text-on-surface">Full Fee Due to Provider (â‚¦125,000)</td>
                     <td className="py-3 px-3 text-right font-sans">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm">NIBSS Transfer Cleared</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm">Paid Directly</span>
                     </td>
                   </tr>
                   <tr className="hover:bg-surface-container-low transition-colors">
@@ -792,11 +793,11 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
                     <td className="py-3 px-3 font-sans text-on-surface">Support Panel (Weather Force Majeure)</td>
                     <td className="py-3 px-3 text-on-surface-variant">
                       <span className="px-1.5 py-0.5 rounded bg-surface-container text-on-surface">0x3d9f...7104</span>
-                      <span className="text-[10px] text-on-surface-variant block font-sans">NiMet Radar 54mm Rain Event</span>
+                      <span className="text-[10px] text-on-surface-variant block font-sans">Forecast 54mm Rain Event</span>
                     </td>
                     <td className="py-3 px-3 font-sans text-on-surface">100% Farmer Free Reschedule</td>
                     <td className="py-3 px-3 text-right font-sans">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Escrow Re-locked</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Rescheduled</span>
                     </td>
                   </tr>
                 </tbody>
@@ -804,10 +805,10 @@ Statutory Compliance: Nigerian Arbitration Act 2023 & CultivaNode Master Terms Â
             </div>
             <div className="flex flex-wrap items-center justify-between gap-space-sm pt-2 bg-surface-container-low p-3 rounded-lg text-on-surface-variant font-label-sm text-label-sm">
               <div className="flex flex-wrap items-center gap-space-md">
-                <span className="flex items-center gap-1 text-on-surface"><Icon name="verified_user" className="text-[16px] text-secondary" /> NDPA 2023 Compliant PII Masking</span>
+                <span className="flex items-center gap-1 text-on-surface"><Icon name="verified_user" className="text-[16px] text-secondary" /> Masked ID Numbers (NDPA 2023)</span>
                 <span className="flex items-center gap-1 text-on-surface"><Icon name="account_tree" className="text-[16px] text-primary" /> Zero-Trust Merkle Tree Root Verified</span>
               </div>
-              <span className="text-[11px] text-on-surface-variant italic">All dispute decisions are legally binding under CultivaNode Pilot Master Agreement &amp; Nigerian Arbitration Act 2023.</span>
+              <span className="text-[11px] text-on-surface-variant italic">Sample data. Dispute decisions here are not legal rulings; either side can still seek other remedies.</span>
             </div>
           </div>
         ))}

@@ -61,7 +61,7 @@ const INITIAL_AUDIT_LOGS: AuditRecord[] = [
     timestamp: "2026-04-12 16:15:45",
     type: "Standard Update",
     typeCategory: "standard",
-    actor: "Dr. Quadri Olapade",
+    actor: "Quadri Olapade",
     actorKey: "KEY#YUBI-5C-0941",
     target: "agronomy_standards",
     hash: "0x117ca884029109ad552bba9901452efc",
@@ -70,9 +70,9 @@ const INITIAL_AUDIT_LOGS: AuditRecord[] = [
   {
     id: "rec5",
     timestamp: "2026-04-12 15:58:20",
-    type: "Escrow Override",
+    type: "Escrow Override (not live)",
     typeCategory: "escrow",
-    actor: "zenith.trustee#ops",
+    actor: "payment.partner (not signed yet)",
     actorKey: "KEY#HSM-ESCROW-2",
     target: "escrow_dispatches",
     hash: "0x88ee273b1104812fcc091a27748bb701",
@@ -132,19 +132,17 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
 
   const handleExportCompliance = () => {
     const report =
-      "FEDERAL REPUBLIC OF NIGERIA - NDPA 2023 STATUTORY COMPLIANCE DOSSIER\n" +
+      "CULTIVANODE DATA PROTECTION SUMMARY (NIGERIA DATA PROTECTION ACT 2023)\n" +
       `Date Generated: ${new Date().toLocaleDateString("en-NG", { dateStyle: "full" })}\n` +
-      "Data Controller: CultivaNode Agro-Node Technologies Ltd (NDPC Registered)\n" +
-      "Registration Number: #NDPC-FCT-2024-09881\n" +
-      "Data Protection Officer: dpo@cultivanode.io (Zenith Chambers, Lagos)\n" +
-      "\n--- ZERO-TRUST TECHNICAL ENFORCEMENT ---\n" +
-      "1. FIDO2 / YubiKey 5C hardware authentication enforced for all privileged admin sessions.\n" +
-      "2. Row Level Security (RLS): 35/35 tables strictly isolated with tenant partition rules.\n" +
-      "3. Append-Only Ledger: 48,291 SHA-256 records verified against Merkle Root #341.\n" +
-      "4. Data Minimization: NIN & BVN vaulted in AES-256-GCM hardware security module (HSM).\n" +
-      "5. Data Subject Access Requests (DSAR): 14 completed, 0 statutory SLA breaches.\n";
-    downloadFile(report, `CultivaNode-NDPA-2023-Statutory-Audit.txt`, "text/plain");
-    showScreenToast("NDPA 2023 statutory audit compliance report generated.");
+      "CultivaNode is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission.\n" +
+      "NDPC registration: not shown until confirmed.\n" +
+      "Data protection contact: not appointed yet.\n" +
+      "\n--- HOW WE HANDLE DATA ---\n" +
+      "1. We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.\n" +
+      "2. Records are in a Postgres database (Supabase) with PostGIS for farm locations and row-level security.\n" +
+      "3. This is a summary, not an audit or certification.\n";
+    downloadFile(report, `CultivaNode-Data-Protection-Summary.txt`, "text/plain");
+    showScreenToast("Data protection summary downloaded.");
   };
 
   const handleRunMerkleProof = () => {
@@ -184,7 +182,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
         <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Emergency Platform Lockdown</h3>
       </div>
       <p className="font-body-sm text-body-sm text-on-surface-variant">
-        This high-consequence action suspends all non-critical microservices, revokes all unauthenticated sessions, freezes automated escrow sweeps, and requires Super Admin FIDO2 hardware re-attestation to restore.
+        This high-consequence action suspends all non-critical microservices, revokes all unauthenticated sessions, freezes escrow actions (escrow is not live — waiting for a licensed payment partner), and requires Super Admin FIDO2 hardware re-attestation to restore.
       </p>
       <div className="p-3 bg-error-container/30 border border-error-container rounded-lg text-body-sm text-on-surface">
         <strong>Mandatory Safety Rule:</strong> Critical livestock ventilation controls and offline SQLite local synchronization will remain in read-only defensive mode.
@@ -215,7 +213,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
         <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">NDPA 2023 Data Retention Rules</h3>
       </div>
       <p className="font-body-sm text-body-sm text-on-surface-variant">
-        Configure automated cryptographic scrubbing intervals in accordance with Section 28 of the Nigeria Data Protection Act 2023.
+        Configure automated cryptographic scrubbing intervals in line with the Nigeria Data Protection Act 2023.
       </p>
       <form
         onSubmit={(e) => {
@@ -229,7 +227,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
           <select defaultValue="90" className="w-full bg-surface-container-low p-2 rounded-lg text-body-sm border border-outline-variant focus:outline-none">
             <option value="30">30 Days (Strict Minimization)</option>
             <option value="60">60 Days</option>
-            <option value="90">90 Days (Standard Statutory)</option>
+            <option value="90">90 Days (Standard)</option>
           </select>
         </div>
         <div>
@@ -295,15 +293,15 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
     <div className="flex flex-col gap-4 p-4 max-w-lg">
       <div className="flex items-center gap-2">
         <Icon name="contact_mail" className="text-xl text-primary" />
-        <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Contact Data Protection Officer</h3>
+        <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Data Protection Contact</h3>
       </div>
       <p className="font-body-sm text-body-sm text-on-surface-variant">
-        Submit statutory inquiries, data portability requests, or audit notifications directly to CultivaNode&apos;s Legal &amp; Compliance Chambers.
+        Send data questions, download requests or delete requests to the CultivaNode team. CultivaNode is run by Excel Palace Global Concept (BN 7455859). A data protection officer is not appointed yet.
       </p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          showScreenToast("Inquiry dispatched to DPO (dpo@cultivanode.io). Statutory reference #DPO-2026-902 created.");
+          showScreenToast("Inquiry noted. A data protection contact will be named here once appointed.");
         }}
         className="flex flex-col gap-3"
       >
@@ -311,7 +309,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
           <label className="font-label-sm text-label-sm font-semibold text-on-surface block mb-1">Subject</label>
           <input
             required
-            defaultValue="NDPA 2023 Section 31 Audit Inquiry"
+            defaultValue="Data protection inquiry"
             className="w-full bg-surface-container-low p-2 rounded-lg text-body-sm border border-outline-variant focus:outline-none"
           />
         </div>
@@ -332,7 +330,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
           </ScreenDialogClose>
           <ScreenDialogClose>
             <button onClick={() => {}} type="submit" className="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold">
-              Send to DPO
+              Send inquiry
             </button>
           </ScreenDialogClose>
         </div>
@@ -355,7 +353,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                <span>NDPA 2023 Audit Active</span>
+                <span>Follows NDPA 2023</span>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium">
                 <Icon name="verified_user" className="text-[14px] text-primary" />
@@ -383,7 +381,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     Security, Audit &amp; Compliance
                   </h1>
                   <p className="font-label-sm text-label-sm text-primary uppercase tracking-wider font-semibold">
-                    Statutory Oversight Specification §11.7 · Phase 1 Build Plan Doc 41
+                    Oversight Specification §11.7 · Phase 1 Build Plan Doc 41
                   </p>
                 </div>
               </div>
@@ -407,7 +405,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 type="button"
               >
                 <Icon name="policy" className="text-[18px]" />
-                <span>NDPA Compliance Report</span>
+                <span>Data Protection Summary</span>
               </button>
               <ScreenDialog title="Emergency Lockdown" side="center" panel={modalLockdown}>
                 <button
@@ -477,7 +475,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 <div className="font-label-md text-label-md text-primary font-semibold mt-0.5">Automated Scrubbing</div>
               </div>
               <div className="mt-3 pt-2 text-on-surface-variant font-body-sm text-body-sm bg-surface-container-low px-2 py-1 rounded">
-                NIN / BVN AES-256 vaulted
+                Only masked NIN / BVN stored
               </div>
             </div>
             <div className="bg-surface-container-lowest p-4 rounded-xl flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
@@ -623,7 +621,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     <span>Leaf #48,289</span>
                     <span className="text-secondary font-bold">Anchored</span>
                   </div>
-                  <div className="font-label-md text-label-md text-on-surface font-semibold truncate">NIBSS Settlement Batch</div>
+                  <div className="font-label-md text-label-md text-on-surface font-semibold truncate">Payout Batch (sample)</div>
                   <span className="font-mono text-xs text-primary truncate">0x992fa...4481</span>
                   <span className="font-label-sm text-label-sm text-on-surface-variant">16:30:12 WAT</span>
                 </div>
@@ -641,7 +639,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     <span>Leaf #48,287</span>
                     <span className="text-secondary font-bold">Anchored</span>
                   </div>
-                  <div className="font-label-md text-label-md text-on-surface font-semibold truncate">Escrow Release ₦4.2M</div>
+                  <div className="font-label-md text-label-md text-on-surface font-semibold truncate">Escrow Release (not live)</div>
                   <span className="font-mono text-xs text-primary truncate">0x88ee2...73b1</span>
                   <span className="font-label-sm text-label-sm text-on-surface-variant">15:58:20 WAT</span>
                 </div>
@@ -693,8 +691,8 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xs">QO</div>
                         <div>
-                          <div className="font-label-md text-label-md text-on-surface font-semibold">Dr. Quadri Olapade</div>
-                          <div className="font-label-sm text-label-sm text-primary">Super Admin · Lead Agronomist</div>
+                          <div className="font-label-md text-label-md text-on-surface font-semibold">Quadri Olapade</div>
+                          <div className="font-label-sm text-label-sm text-primary">Super Admin · Founder</div>
                         </div>
                       </div>
                     </td>
@@ -723,7 +721,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => showScreenToast("Step-up FIDO2 challenge triggered for Dr. Quadri Olapade.")}
+                          onClick={() => showScreenToast("Step-up FIDO2 challenge triggered for Quadri Olapade.")}
                           className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
                           title="Trigger Step-Up Auth"
                           type="button"
@@ -731,7 +729,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                           <Icon name="verified" className="text-[18px]" />
                         </button>
                         <button
-                          onClick={() => showScreenToast("Session token revoked for Dr. Quadri Olapade.")}
+                          onClick={() => showScreenToast("Session token revoked for Quadri Olapade.")}
                           className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant hover:text-error transition-colors"
                           title="Revoke Session Token"
                           type="button"
@@ -747,7 +745,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-xs">PO</div>
                         <div>
-                          <div className="font-label-md text-label-md text-on-surface font-semibold">platform.ops@cultivanode.io</div>
+                          <div className="font-label-md text-label-md text-on-surface font-semibold">platform.ops</div>
                           <div className="font-label-sm text-label-sm text-on-surface-variant">DevOps &amp; Infrastructure Lead</div>
                         </div>
                       </div>
@@ -801,8 +799,8 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs">VO</div>
                         <div>
-                          <div className="font-label-md text-label-md text-on-surface font-semibold">verification.officer@cultivanode.io</div>
-                          <div className="font-label-sm text-label-sm text-on-surface-variant">Tier-3 KYC Compliance Auditor</div>
+                          <div className="font-label-md text-label-md text-on-surface font-semibold">verification.officer</div>
+                          <div className="font-label-sm text-label-sm text-on-surface-variant">KYC Reviewer</div>
                         </div>
                       </div>
                     </td>
@@ -811,7 +809,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                         <Icon name="fingerprint" className="text-secondary text-[16px]" />
                         <span className="font-semibold text-xs">TOTP + Mobile Biometric</span>
                       </div>
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">Smile ID Attested Device</span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">Attested Device</span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-mono text-xs text-on-surface">102.89.33.204</div>
@@ -872,7 +870,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                       <div className="font-label-sm text-label-sm text-on-surface-variant">Cloudflare Edge (LOS Node)</div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded bg-surface-container font-mono text-xs text-primary font-medium">nibss_batch:WAT-16:30</span>
+                      <span className="px-2 py-0.5 rounded bg-surface-container font-mono text-xs text-primary font-medium">payout_batch:WAT-16:30</span>
                     </td>
                     <td className="py-3 px-4 text-on-surface">
                       Task Complete <span className="text-on-surface-variant text-xs">(Job ID: 9021)</span>
@@ -884,7 +882,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
-                        onClick={() => showScreenToast("Inspected Worker #01 execution audit log: All 1,420 NIBSS payout records reconciled.")}
+                        onClick={() => showScreenToast("Inspected Worker #01 execution audit log: All 1,420 sample payout records reconciled.")}
                         className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface transition-colors"
                         type="button"
                       >
@@ -912,7 +910,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 </span>
               </div>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Nigeria Data Protection Act 2023 compliance engine. Tokenization of farmer identifiers, statutory DSAR handling, and auto-purge policies.
+                Data protection tools in line with the Nigeria Data Protection Act 2023: masked farmer identifiers, data access and deletion requests, and auto-purge policies.
               </p>
             </div>
 
@@ -936,14 +934,14 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 </div>
               </div>
               <p className="font-label-sm text-label-sm text-on-surface-variant leading-tight">
-                Raw BVN/NIN keys are stored exclusively in the isolated HSM vault. Only salted hashes are accessible to analytics and agronomic roster interfaces.
+                Only masked NIN and BVN numbers are stored. Full numbers are not kept.
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="font-label-md text-label-md text-on-surface font-semibold">Active Data Subject Access Requests (DSAR)</span>
-                <span className="font-label-sm text-label-sm text-primary font-medium">Statutory SLA: 30 Calendar Days</span>
+                <span className="font-label-sm text-label-sm text-primary font-medium">Response target: 30 Calendar Days</span>
               </div>
               <div className="space-y-2">
                 <div className="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-3">
@@ -951,7 +949,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     <Icon name="file_download" className="text-secondary text-[20px] shrink-0" />
                     <div className="truncate">
                       <div className="font-label-md text-label-md text-on-surface font-semibold truncate">#DSAR-2026-004 · Portability Export</div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant truncate">Farmer Folake Ibironke (Iseyin, Oyo) · 14 Farm Books</div>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant truncate">Farmer (Iseyin, Oyo) · 14 Farm Books</div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -966,7 +964,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                     <Icon name="person_remove" className="text-tertiary-container text-[20px] shrink-0" />
                     <div className="truncate">
                       <div className="font-label-md text-label-md text-on-surface font-semibold truncate">#DSAR-2026-005 · Consent Revocation</div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant truncate">Off-taker Anonymization Request (AgroLanka Ltd)</div>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant truncate">Off-taker Anonymization Request (sample buyer)</div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -1022,14 +1020,14 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                   <Icon name="check_circle" className="text-secondary text-[16px]" />
                 </div>
                 <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">RLS: cluster_membership check</p>
-                <span className="text-xs text-secondary font-medium mt-1">0 Bypass · Zenith Trustee Enforced</span>
+                <span className="text-xs text-secondary font-medium mt-1">0 Bypass · Cluster Scoped</span>
               </div>
               <div className="p-3 rounded-lg bg-surface-container-low flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs font-semibold text-primary">public.verifications</span>
                   <Icon name="check_circle" className="text-secondary text-[16px]" />
                 </div>
-                <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">RLS: tier_accreditation role check</p>
+                <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">RLS: verification tier role check</p>
                 <span className="text-xs text-secondary font-medium mt-1">Vault Key Isolated</span>
               </div>
               <div className="p-3 rounded-lg bg-surface-container-low flex flex-col justify-between">
@@ -1175,7 +1173,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                       <span className="font-label-sm text-label-sm text-on-surface-variant">· 2h 14m ago</span>
                     </div>
                     <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                      NIMC vNIN Gateway Rapid Query Burst: Rate limiter tripped at 45 requests/min on Dojah integration. Circuit breaker dynamically preserved tenant quota.
+                      ID-check gateway query burst: rate limiter tripped at 45 requests/min on the verification provider integration. Circuit breaker dynamically preserved tenant quota.
                     </p>
                     <div className="flex items-center gap-3 mt-2 text-on-surface-variant font-label-sm text-label-sm">
                       <span>Automated Action: Throttled to 20 req/min</span>
@@ -1186,7 +1184,7 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
                   <button
-                    onClick={() => showScreenToast("Displaying Dojah / NIMC gateway telemetry trace: Circuit recovery confirmed at 14:18 WAT.")}
+                    onClick={() => showScreenToast("Displaying verification gateway trace: circuit recovered at 14:18 WAT.")}
                     className="px-3 py-1.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors"
                     type="button"
                   >
@@ -1360,8 +1358,8 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 <Icon name="shield" className="text-[20px]" />
               </div>
               <div>
-                <div className="font-label-md text-label-md text-on-surface font-semibold">NDPA 2023 Certified</div>
-                <div className="font-label-sm text-label-sm text-on-surface-variant">Registered Data Controller: #NDPC-FCT-2024-09881</div>
+                <div className="font-label-md text-label-md text-on-surface font-semibold">NDPA 2023</div>
+                <div className="font-label-sm text-label-sm text-on-surface-variant">We follow the Act: consent before ID checks, masked ID numbers</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1369,8 +1367,8 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 <Icon name="verified_user" className="text-[20px]" />
               </div>
               <div>
-                <div className="font-label-md text-label-md text-on-surface font-semibold">ISO/IEC 27001 ISMS</div>
-                <div className="font-label-sm text-label-sm text-on-surface-variant">Continuous Audit Baseline Compliant</div>
+                <div className="font-label-md text-label-md text-on-surface font-semibold">ISO/IEC 27001</div>
+                <div className="font-label-sm text-label-sm text-on-surface-variant">Not certified</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1378,23 +1376,23 @@ export function SecurityAudit({ slots }: ScreenProps<SecurityAuditSlot>) {
                 <Icon name="hub" className="text-[20px]" />
               </div>
               <div>
-                <div className="font-label-md text-label-md text-on-surface font-semibold">Zero-Trust Cloud Mesh</div>
-                <div className="font-label-sm text-label-sm text-on-surface-variant">NIST SP 800-207 Architecture Alignment</div>
+                <div className="font-label-md text-label-md text-on-surface font-semibold">Row-Level Security</div>
+                <div className="font-label-sm text-label-sm text-on-surface-variant">Postgres (Supabase) row-level security</div>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4 text-right border-t md:border-t-0 pt-4 md:pt-0 w-full md:w-auto justify-between md:justify-end">
             <div>
-              <div className="font-label-sm text-label-sm text-on-surface-variant">Statutory Data Protection Officer</div>
-              <div className="font-label-md text-label-md text-primary font-semibold">dpo@cultivanode.io · Zenith Chambers Lagos</div>
+              <div className="font-label-sm text-label-sm text-on-surface-variant">Data Protection Contact</div>
+              <div className="font-label-md text-label-md text-primary font-semibold">Not appointed yet · Excel Palace Global Concept (BN 7455859)</div>
             </div>
-            <ScreenDialog title="Contact DPO" side="center" panel={modalContactDpo}>
+            <ScreenDialog title="Data Protection Contact" side="center" panel={modalContactDpo}>
               <button
                 onClick={() => {}}
                 className="px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-medium transition-colors"
                 type="button"
               >
-                Contact DPO
+                Contact Us
               </button>
             </ScreenDialog>
           </div>

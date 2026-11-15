@@ -49,7 +49,7 @@ const en = {
     heroAccent: "intelligence",
     heroPromise: "Your farm's working partner.",
     heroProof: [
-      { title: "Phone sign-in", body: "No passwords to remember" },
+      { title: "Email sign-in", body: "Phone sign-in is coming soon" },
       { title: "Verified people", body: "ID-checked hands and owners" },
       { title: "Clear prices", body: "Rates shown before you hire" },
     ],
@@ -98,7 +98,7 @@ const en = {
         key: "farmer",
         label: "Farmers",
         steps: [
-          "Sign up with your phone number. No email needed.",
+          "Sign up with your email address. Phone sign-in is coming soon.",
           "Add your farm by dropping a pin with your phone. Walking the boundary comes later.",
           `Choose your crops. ${brand.name} builds your season plan and reminds you of each job.`,
           "Find a tractor or farm hands near your farm. In the pilot you pay the provider directly.",
@@ -121,7 +121,7 @@ const en = {
           "Sign up as a farm hand, operator, sprayer, mechanic or extension agent.",
           "Set your services, rates and how far you can travel.",
           "Get job requests from farmers nearby.",
-          "Build your rating with every completed job.",
+          "Coming soon: build your rating with every completed job.",
         ],
       },
     ],
@@ -195,7 +195,7 @@ const en = {
       },
       {
         q: "How do I download and install the Android app?",
-        a: "You can download the official Android APK directly from our Download page (/en/download). Tap Download APK, tap Download anyway if prompted by Chrome, open the file, and tap Install. Sign in with your phone number to use offline field sync and AI crop diagnosis.",
+        a: "You can download the official Android APK directly from our Download page (/en/download). Tap Download APK, tap Download anyway if prompted by Chrome, open the file, and tap Install. Sign in with your email address. Phone sign-in, offline mode and photo diagnosis are coming soon.",
       },
       {
         q: "Who can use it?",
@@ -207,11 +207,11 @@ const en = {
       },
       {
         q: "Do I need an email address?",
-        a: "No. You sign up with your phone number and a one-time code sent by SMS. Email is optional.",
+        a: "Yes, for now. You sign up and sign in with your email address. Signing in with your phone number and a one-time code sent by SMS is coming soon.",
       },
       {
         q: "How is my money protected when I hire?",
-        a: `During the pilot, ${brand.name} does not collect, hold or pay out money. You agree the price, pay the provider directly (cash or transfer), and both of you mark the job as paid. If something goes wrong, tell us in the app and our team will help. Protected payments, held by a licensed payment partner until you confirm the job, are planned after legal review; we will tell you before they start.`,
+        a: `During the pilot, ${brand.name} does not collect, hold or pay out money for hires. You agree the price, pay the provider directly (cash or transfer), and both of you mark the job as paid. If something goes wrong, tell us in the app and our team will help. Protected payments, held by a licensed payment partner until you confirm the job, are planned after legal review; we will tell you before they start.`,
       },
       {
         q: "How much does it cost?",

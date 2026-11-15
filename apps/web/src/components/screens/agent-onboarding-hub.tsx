@@ -28,54 +28,54 @@ const INITIAL_ROSTER: FarmerRecord[] = [
   {
     id: "f-1",
     caseId: "#FMR-2026-089",
-    name: "Alhaji Rasheed Adeleke",
-    phone: "+234 803 112 4091",
+    name: "Sample Farmer A",
+    phone: "+234 803 *** 4091",
     community: "Ado-Awaye Village",
     enterprise: "Cassava / Maize",
     areaHa: 5.0,
     tier: "Tier 2 Payout-Ready",
     incentive: "₦3,500",
     synced: true,
-    nin: "7382 9104 2910",
+    nin: "•••• •••• 2910",
   },
   {
     id: "f-2",
     caseId: "#FMR-2026-090",
-    name: "Madam Folashade Alabi",
-    phone: "+234 812 770 1933",
+    name: "Sample Farmer B",
+    phone: "+234 812 *** 1933",
     community: "Odo-Ogun Community",
     enterprise: "Tomato Roma VF",
     areaHa: 2.5,
     tier: "Tier 1 Verified",
     incentive: "₦2,250",
     synced: true,
-    nin: "8821 0039 4419",
+    nin: "•••• •••• 4419",
   },
   {
     id: "f-3",
     caseId: "#FMR-2026-091",
-    name: "Babatunde Ogundipe",
-    phone: "+234 705 889 0211",
+    name: "Sample Farmer C",
+    phone: "+234 705 *** 0211",
     community: "Iseyin East Outskirts",
     enterprise: "Cowpea & Soy",
     areaHa: 8.0,
     tier: "Pending BVN match",
     incentive: "₦5,000",
     synced: false,
-    nin: "4920 1948 2011",
+    nin: "•••• •••• 2011",
   },
   {
     id: "f-4",
     caseId: "#FMR-2026-092",
-    name: "Funke Balogun",
-    phone: "+234 814 621 9904",
+    name: "Sample Farmer D",
+    phone: "+234 814 *** 9904",
     community: "Oke-Ola Farm Settlement",
     enterprise: "Poultry (500 Broilers)",
     areaHa: 1.8,
     tier: "Tier 2 Payout-Ready",
     incentive: "₦1,900",
     synced: true,
-    nin: "6629 1849 5502",
+    nin: "•••• •••• 5502",
   },
 ];
 
@@ -87,9 +87,9 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
   const [jobDispatched, setJobDispatched] = useState<boolean>(false);
 
   // Form states
-  const [fullName, setFullName] = useState<string>("Gbadamosi Lateef Adebowale");
+  const [fullName, setFullName] = useState<string>("Sample Farmer");
   const [phone, setPhone] = useState<string>("803 459 2819");
-  const [nin, setNin] = useState<string>("7382 9104 2910");
+  const [nin, setNin] = useState<string>("");
   const [village, setVillage] = useState<string>("Ado-Awaye settlement, Ward 4");
   const [selectedEnterprises, setSelectedEnterprises] = useState<string[]>(["Cassava (TME 419)", "Yellow Maize"]);
 
@@ -108,13 +108,13 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
 
   const handleSyncOffline = () => {
     if (offlinePendingCount === 0) {
-      showScreenToast("PowerSync queue already clean. All records mirrored to master Supabase instance.");
+      showScreenToast("Nothing waiting to sync.");
       return;
     }
     const count = offlinePendingCount;
     setOfflinePendingCount(0);
     setRoster(roster.map((r) => ({ ...r, synced: true })));
-    showScreenToast(`PowerSync flushed: ${count} offline field submissions synced via 4G gateway.`);
+    showScreenToast(`Synced ${count} field submissions (sample). Offline mode is coming soon.`);
   };
 
   const handleExportRoster = () => {
@@ -152,7 +152,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
     setRoster([newRecord, ...roster]);
     setOfflinePendingCount((prev) => prev + 1);
     setWizardStep(1);
-    showScreenToast(`Farmer ${fullName} registered (${newCaseId}). Polygon of ${calculatedArea} Ha cached to SQLite.`);
+    showScreenToast(`Farmer ${fullName} registered (${newCaseId}). Farm pin saved (sample area ${calculatedArea} Ha).`);
   };
 
   const filteredRoster = roster.filter((r) => {
@@ -172,20 +172,20 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               </span>
             </div>
             <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface tracking-tight">Field Agent &amp; Assisted Onboarding Hub</h1>
-            <p className="font-body-md text-body-md text-on-surface-variant">Community field registrations, GPS boundary walk capture, assisted service bookings, and PowerSync offline sync queue.</p>
+            <p className="font-body-md text-body-md text-on-surface-variant">Community field registrations, farm pin capture (boundary walking coming soon), assisted service bookings, and an offline queue (offline mode coming soon).</p>
             {slot(
               slots,
               "agentLine",
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <div className="inline-flex items-center gap-2 text-on-surface font-label-md text-label-md">
                   <Icon name="badge" className="text-secondary text-lg" />
-                  <span>Quadri Olapade (Senior Extension Agent #AG-OYO-042)</span>
+                  <span>Quadri Olapade (Founder)</span>
                 </div>
                 <span className="text-outline-variant">•</span>
                 <div className="inline-flex items-center gap-1.5 text-on-surface-variant font-label-md text-label-md bg-surface-container-low px-2.5 py-1 rounded-md">
                   <Icon name="cloud_sync" className="text-secondary text-base" />
                   <span>
-                    PowerSync SQLite Node: <strong>{offlinePendingCount} Records Queued</strong>
+                    Offline sync (coming soon): <strong>{offlinePendingCount} Records Waiting</strong>
                   </span>
                 </div>
               </div>
@@ -215,11 +215,11 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   setWizardStep(2);
                   const el = document.getElementById("wizard-section");
                   if (el) el.scrollIntoView({ behavior: "smooth" });
-                  showScreenToast("GPS Boundary Walk mode active.");
+                  showScreenToast("Boundary walking is coming soon. For now the app drops a pin for the farm.");
                 }}
               >
                 <Icon name="timeline" className="text-secondary text-lg" />
-                <span>Start GPS Boundary Walk</span>
+                <span>GPS Boundary Walk (coming soon)</span>
               </button>
               <button
                 className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest text-secondary rounded-lg font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all"
@@ -286,7 +286,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 <div className="flex items-baseline gap-2">
                   <span className="font-metric-num text-metric-num text-on-surface">₦1,850,000</span>
                 </div>
-                <p className="mt-2 text-on-surface-variant font-body-sm text-body-sm">42 machinery &amp; labor jobs • 0% commission pilot</p>
+                <p className="mt-2 text-on-surface-variant font-body-sm text-body-sm">42 machinery &amp; labor jobs • no platform fee on hires in the pilot</p>
               </div>
               <div className="w-full bg-surface-container h-1.5 rounded-full mt-4 overflow-hidden">
                 <div className="bg-secondary-container h-1.5 rounded-full" style={{ width: "68%" }} />
@@ -323,11 +323,11 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <Icon name="tablet_mac" className="text-secondary" />
                   <h2 className="font-headline-lg text-headline-lg text-on-surface">Assisted Farmer Registration &amp; Survey Wizard</h2>
                 </div>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-1">Designed for quick offline field execution. Auto-caches locally to SQLite via PowerSync.</p>
+                <p className="font-body-md text-body-md text-on-surface-variant mt-1">Designed for quick field work. Offline mode is coming soon.</p>
               </div>
               <div className="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg text-on-surface font-label-md text-label-md">
                 <Icon name="signal_cellular_connected_no_internet_4_bar" className="text-secondary text-base" />
-                <span>Field Mode: Standalone Form Auto-Cache</span>
+                <span>Field Mode: Online (offline coming soon)</span>
               </div>
             </div>
 
@@ -453,7 +453,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                     className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"
                     type="button"
                     onClick={() => {
-                      showScreenToast("Draft saved locally to tablet SQLite node.");
+                      showScreenToast("Draft saved.");
                     }}
                   >
                     Save Draft to Tablet
@@ -463,7 +463,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                       className="px-4 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"
                       type="button"
                       onClick={() => {
-                        showScreenToast(`NIMC OTP Challenge sent via SMS to +234 ${phone}.`);
+                        showScreenToast(`Verification code sent by SMS to +234 ${phone}.`);
                       }}
                     >
                       SMS OTP Challenge
@@ -499,7 +499,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Icon name="explore" className="text-secondary" />
-                      <span className="font-headline-sm text-headline-sm text-on-surface">GPS Boundary Walk Capture</span>
+                      <span className="font-headline-sm text-headline-sm text-on-surface">GPS Boundary Walk (coming soon · sample view)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded text-xs bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
                       HDOP: 0.8m (Accurate)
@@ -567,14 +567,14 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                         <Icon name="check_circle" className="text-sm" /> Attached
                       </span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">NIN facial matching tolerance: 98.2% verified.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Photo for the farmer record. Face matching is not live.</p>
                   </div>
                   <button
                     className="p-2.5 bg-surface-container-low rounded-lg text-on-surface hover:bg-surface-container transition-colors"
                     title="Retake Photo"
                     type="button"
                     onClick={() => {
-                      showScreenToast("Camera activated. New portrait captured and facial geometry cross-verified.");
+                      showScreenToast("Camera activated. New portrait captured.");
                     }}
                   >
                     <Icon name="photo_camera" className="text-lg" />
@@ -791,19 +791,19 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">Assigned Smallholders in Group:</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-label-md text-label-md">
                 <div className="p-2.5 bg-surface-container-low rounded-lg flex justify-between items-center">
-                  <span>Madam Folashade Alabi</span>
+                  <span>Sample Farmer B</span>
                   <span className="font-bold text-on-surface">2.5 Ha</span>
                 </div>
                 <div className="p-2.5 bg-surface-container-low rounded-lg flex justify-between items-center">
-                  <span>Yekini Bello</span>
+                  <span>Sample Farmer E</span>
                   <span className="font-bold text-on-surface">4.0 Ha</span>
                 </div>
                 <div className="p-2.5 bg-surface-container-low rounded-lg flex justify-between items-center">
-                  <span>Kafayat Ajayi</span>
+                  <span>Sample Farmer F</span>
                   <span className="font-bold text-on-surface">3.5 Ha</span>
                 </div>
                 <div className="p-2.5 bg-surface-container-low rounded-lg flex justify-between items-center">
-                  <span>Elder Samuel Oguntola</span>
+                  <span>Sample Farmer G</span>
                   <span className="font-bold text-on-surface">6.0 Ha</span>
                 </div>
               </div>
@@ -814,7 +814,7 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                   <Icon name="precision_manufacturing" className="text-lg" />
                 </div>
                 <div>
-                  <span className="font-label-md text-label-md text-on-surface font-semibold block">Matched: Alhaji Kazeem Tractor Syndicate</span>
+                  <span className="font-label-md text-label-md text-on-surface font-semibold block">Matched: Sample Tractor Syndicate</span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">MF 375 (75 HP) + Heavy Disc Harrow • Available Tomorrow</span>
                 </div>
               </div>
@@ -823,10 +823,10 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
                 type="button"
                 onClick={() => {
                   setJobDispatched(true);
-                  showScreenToast("Harrowing job dispatched to Alhaji Kazeem Tractor Syndicate! ₦240,000 escrow secured.");
+                  showScreenToast("Harrowing job sent to Sample Tractor Syndicate. Farmers pay the provider directly (escrow not live).");
                 }}
               >
-                {jobDispatched ? "Job Dispatched (Escrow Locked)" : "Dispatch Job (Escrow Funded)"}
+                {jobDispatched ? "Job Dispatched (Pay Directly)" : "Dispatch Job (Pay Directly)"}
               </button>
             </div>
           </div>
@@ -835,9 +835,9 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
             <div className="flex items-center justify-between pb-3 border-b border-surface-container">
               <div className="flex items-center gap-2">
                 <Icon name="wifi_off" className="text-secondary" />
-                <h3 className="font-headline-md text-headline-md text-on-surface">Offline Queue Engine</h3>
+                <h3 className="font-headline-md text-headline-md text-on-surface">Offline Queue (coming soon)</h3>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface">SQLite Active</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface">Coming soon</span>
             </div>
             <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-container-low">
               <div className="w-12 h-12 rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-center text-secondary">
@@ -845,14 +845,14 @@ export function AgentOnboardingHub({ slots }: ScreenProps<AgentOnboardingHubSlot
               </div>
               <div className="flex-1">
                 <span className="font-headline-sm text-headline-sm text-on-surface font-bold">{offlinePendingCount} Forms Pending</span>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Will auto-stream to Master Node when signal reaches 3G/4G or Wi-Fi.</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">Offline mode is coming soon. Sample counts shown.</p>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 text-on-surface">
                   <Icon name="person" className="text-secondary text-base" />
-                  <span>NIN Biometric Registrations</span>
+                  <span>NIN Registrations</span>
                 </div>
                 <span className="font-label-md text-label-md text-on-surface font-semibold">6 items</span>
               </div>

@@ -50,7 +50,7 @@ const yo: Dictionary = {
     heroAccent: "Ọgbọ́n tí a so pọ̀",
     heroPromise: "Alábàáṣiṣẹ́ oko rẹ.",
     heroProof: [
-      { title: "Wọlé pẹ̀lú fóònù", body: "Kò sí ọ̀rọ̀ aṣínà láti rántí" },
+      { title: "Wọlé pẹ̀lú ímeèlì", body: "Wíwọlé pẹ̀lú fóònù ń bọ̀ láìpẹ́" },
       { title: "Àwọn ènìyàn tí a fìdí wọn múlẹ̀", body: "A ti ṣàyẹ̀wò ìdánimọ̀ òṣìṣẹ́ àti onímọ́tò" },
       { title: "Iye owó tó ṣe kedere", body: "A ń fi iye owó hàn kí o tó gba ẹnikẹ́ni" },
     ],
@@ -99,7 +99,7 @@ const yo: Dictionary = {
         key: "farmer",
         label: "Àwọn àgbẹ̀",
         steps: [
-          "Forúkọsílẹ̀ pẹ̀lú nọ́ńbà fóònù rẹ. O kò nílò ímeèlì.",
+          "Forúkọsílẹ̀ pẹ̀lú ímeèlì rẹ. Wíwọlé pẹ̀lú fóònù ń bọ̀ láìpẹ́.",
           "Fi oko rẹ kún un nípa sísàmì sí ibi tí ó wà pẹ̀lú fóònù rẹ. Rírìn yí ààlà rẹ̀ ká yóò dé lẹ́yìn náà.",
           `Yan ohun ọ̀gbìn rẹ. ${brand.name} yóò ṣe ètò àsìkò rẹ, yóò sì máa rán ọ létí iṣẹ́ kọ̀ọ̀kan.`,
           "Rí tírákítọ̀ tàbí àwọn òṣìṣẹ́ oko nítòsí oko rẹ. Nínú ìdánwò, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà.",
@@ -122,7 +122,7 @@ const yo: Dictionary = {
           "Forúkọsílẹ̀ gẹ́gẹ́ bí òṣìṣẹ́ oko, awakọ̀ ẹ̀rọ, afín-oògùn, mẹkáníìkì tàbí òṣìṣẹ́ ìgbaniníyànjú àgbẹ̀.",
           "Ṣètò iṣẹ́ rẹ, iye owó rẹ, àti bí o ṣe lè rìn jìnnà tó.",
           "Gba ìbéèrè iṣẹ́ láti ọ̀dọ̀ àwọn àgbẹ̀ tó wà nítòsí.",
-          "Kọ́ orúkọ rere rẹ pẹ̀lú gbogbo iṣẹ́ tí o bá parí.",
+          "Ó ń bọ̀ láìpẹ́: kọ́ orúkọ rere rẹ pẹ̀lú gbogbo iṣẹ́ tí o bá parí.",
         ],
       },
     ],
@@ -197,7 +197,7 @@ const yo: Dictionary = {
       },
       {
         q: "Báwo ni mo ṣe lè gba àpù alágbèéká Android (APK)?",
-        a: "Ẹ lè gba àpù CultivaNode tààrà láti ojú-ìwé ìgbàsílẹ̀ wa (/yo/download). Ẹ tẹ 'Gba Àpù Náà', tí foonu bá bi yín léèrè ẹ tẹ 'Download anyway', ẹ ṣí i kí ẹ sì fi sí foonu (Install). Ẹ lè lò ó láìsí intanẹẹti lórí oko.",
+        a: "Ẹ lè gba àpù CultivaNode tààrà láti ojú-ìwé ìgbàsílẹ̀ wa (/yo/download). Ẹ tẹ 'Gba Àpù Náà', tí foonu bá bi yín léèrè ẹ tẹ 'Download anyway', ẹ ṣí i kí ẹ sì fi sí foonu (Install). Ẹ wọlé pẹ̀lú ímeèlì yín. Wíwọlé pẹ̀lú fóònù, ṣíṣiṣẹ́ láìsí íńtánẹ́ẹ̀tì àti àyẹ̀wò àwòrán ewéko ń bọ̀ láìpẹ́.",
       },
       {
         q: "Ta ló lè lò ó?",
@@ -209,11 +209,11 @@ const yo: Dictionary = {
       },
       {
         q: "Ṣé mo nílò ímeèlì?",
-        a: "Rárá. O máa forúkọsílẹ̀ pẹ̀lú nọ́ńbà fóònù rẹ àti kóòdù ìgbà kan tí a ó fi ránṣẹ́ nípasẹ̀ SMS. Ímeèlì kò pọn dandan.",
+        a: "Bẹ́ẹ̀ni, fún ìsinsìnyí. O máa forúkọsílẹ̀, o sì máa wọlé pẹ̀lú ímeèlì rẹ. Wíwọlé pẹ̀lú nọ́ńbà fóònù rẹ àti kóòdù ìgbà kan tí a ó fi ránṣẹ́ nípasẹ̀ SMS ń bọ̀ láìpẹ́.",
       },
       {
         q: "Báwo ni owó mi ṣe wà láìléwu nígbà tí mo bá gba òṣìṣẹ́?",
-        a: `Nígbà ìdánwò, ${brand.name} kò ní gba, mú tàbí san owó kankan. Ẹ ó jọ fẹnu kò lórí iye owó, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà (owó ní ọwọ́ tàbí nípasẹ̀ báńkì), ẹ̀yin méjèèjì yóò sì sàmì sí i pé a ti sanwó. Bí nǹkan bá dàrú, sọ fún wa nínú áàpù, ẹgbẹ́ wa yóò sì ràn ọ́ lọ́wọ́. Ìsanwó tó ní ààbò, tí alábàáṣiṣẹ́ ìsanwó tí ó ní ìwé-àṣẹ yóò mú dúró títí o fi fìdí iṣẹ́ múlẹ̀, ń bọ̀ lẹ́yìn àyẹ̀wò òfin; a ó sọ fún ọ kí ó tó bẹ̀rẹ̀.`,
+        a: `Nígbà ìdánwò, ${brand.name} kò ní gba, mú tàbí san owó kankan fún iṣẹ́ tí o gbà. Ẹ ó jọ fẹnu kò lórí iye owó, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà (owó ní ọwọ́ tàbí nípasẹ̀ báńkì), ẹ̀yin méjèèjì yóò sì sàmì sí i pé a ti sanwó. Bí nǹkan bá dàrú, sọ fún wa nínú áàpù, ẹgbẹ́ wa yóò sì ràn ọ́ lọ́wọ́. Ìsanwó tó ní ààbò, tí alábàáṣiṣẹ́ ìsanwó tí ó ní ìwé-àṣẹ yóò mú dúró títí o fi fìdí iṣẹ́ múlẹ̀, ń bọ̀ lẹ́yìn àyẹ̀wò òfin; a ó sọ fún ọ kí ó tó bẹ̀rẹ̀.`,
       },
       {
         q: "Èló ni ó máa ná mi?",

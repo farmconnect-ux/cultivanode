@@ -33,9 +33,9 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     badge: "Critical Severity",
     subsystem: "Weather & Agronomy Engine",
     time: "14:12 WAT (18m ago)",
-    autoTag: "NiMet Doppler Auto-Trigger",
+    autoTag: "Weather Forecast Auto-Trigger",
     title: "Flash Squall & Heavy Downpour Alert: Plot M2 & M4 Nitrogen Leaching Hazard",
-    body: "NiMet Saki Doppler radar indicates 48mm/hr precipitation inbound within 3 hours over the Iseyin Cluster (Maize V4 Stage). Nitrogen top-dressing holding lock has been automatically triggered to prevent nutrient runoff and economic loss.",
+    body: "The weather forecast indicates 48mm/hr precipitation inbound within 3 hours over the Iseyin Cluster (Maize V4 Stage). Nitrogen top-dressing holding lock has been automatically triggered to prevent nutrient runoff and economic loss.",
     meta: [
       { icon: "location_on", text: "Affected: Plot M2 (14.2 Ha) & Plot M4 (8.1 Ha)" },
       { icon: "water_drop", text: "Projected Soil Saturation: 94%" },
@@ -47,13 +47,13 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     category: "escrow",
     severity: "warning",
     badge: "Escrow SLA Warning",
-    subsystem: "Machinery & Escrow PoW",
+    subsystem: "Escrow (not live — waiting for a licensed payment partner)",
     time: "14:02 WAT (28m ago)",
     autoTag: "Cutoff: 18:30 WAT (2h remaining)",
     title: "Escrow Auto-Release Window Closing: Booking #BKG-2026-0492 Rotary Weeding",
-    body: "Contractor Muritala Lawal submitted GPS Proof-of-Work polygon (18.5 Ha completed). Statutory 48-hour counterparty review window lapses today. Unless an extension is filed, smart contract escrow releases ₦95,000.00 to the operator bank account.",
+    body: "Sample: contractor submitted GPS proof-of-work polygon (18.5 Ha completed). 48-hour review window lapses today. Escrow and proof of work are not live yet; in the pilot you pay the provider directly.",
     meta: [
-      { icon: "badge", text: "Syndicate Operator: Muritala Lawal (Verified Tier-2)" },
+      { icon: "badge", text: "Syndicate Operator: Sample operator (Verified Tier-2)" },
       { icon: "polyline", text: "PoW Boundary Match: 99.1% verified" },
       { icon: "payments", text: "Escrow Locked: ₦95,000.00", highlight: true },
     ],
@@ -77,13 +77,13 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     category: "ops",
     severity: "warning",
     badge: "Fleet Telemetry Alarm",
-    subsystem: "Asset CAN-Bus Telematics",
+    subsystem: "Asset Telematics (planned)",
     time: "10:18 WAT (4h 12m ago)",
     autoTag: "102°C Overheat",
     title: "MF 375 Tractor Overheat & Boundary Breach: Asset #TRC-04 at Saki West Parcel",
     body: "CAN-Bus diagnostic sensor logged coolant temp of 102°C under heavy tillage load. Concurrently, GPS telemetry marks machine operating 120m outside cadastral boundary of designated Farm Service contract zone.",
     meta: [
-      { icon: "person", text: "Syndicate Driver: Babatunde Lawal" },
+      { icon: "person", text: "Syndicate Driver: Sample driver" },
       { icon: "warning", text: "Geofence Deviation: 120m East" },
       { icon: "sensors", text: "CAN-Bus RPM: 2,150 (Idle recommended)", highlight: true },
     ],
@@ -96,8 +96,8 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     subsystem: "Security & Legal (§11.7)",
     time: "09:30 WAT",
     autoTag: "28 Days Remaining",
-    title: "DSAR Data Export Request Pending Review: Folake Ibironke (#DSAR-2026-006)",
-    body: "Farmer Folake Ibironke lodged formal Nigerian Data Protection Act (NDPA 2023) portability request for verified soil test results, farm ledger accounting records, and satellite NDVI historical records. Automated PII sanitization pre-pass completed.",
+    title: "DSAR Data Export Request Pending Review: Sample Farmer (#DSAR-2026-006)",
+    body: "A farmer lodged a Nigerian Data Protection Act (NDPA 2023) portability request for verified soil test results, farm ledger accounting records, and satellite NDVI historical records. Automated PII sanitization pre-pass completed.",
     meta: [
       { icon: "security", text: "Masking Protocol: SHA-256 BVN/NIN redact pass" },
       { icon: "verified", text: "Identity Verification: Level 2 Confirmed", highlight: true },
@@ -108,11 +108,11 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     category: "ai",
     severity: "advisory",
     badge: "AI Advisory",
-    subsystem: "CultivaNode Intelligence",
+    subsystem: "Farm Assistant (photo diagnosis coming soon)",
     time: "08:15 WAT",
     autoTag: "Confidence 88.4%",
     title: "Fall Armyworm Early Windowing Symptom Detected: Plot B1 Border Zone",
-    body: "Mobile Edge Computer Vision confirmed early instar Spodoptera frugiperda foliar pinhole damage from photo uploaded by Field Agent Quadri Olapade during morning transect walk. Immediate biological or targeted chemical spray recommended within 48h.",
+    body: "Sample: early instar Spodoptera frugiperda foliar pinhole damage reported by Quadri Olapade during a morning field walk. Immediate biological or targeted chemical spray recommended within 48h.",
     meta: [
       { icon: "eco", text: "Crop: Maize / Sweet Potato Buffer (Plot B1)" },
       { icon: "science", text: "Recommended Rx: Emamectin Benzoate 5% SG", highlight: true },
@@ -164,11 +164,11 @@ export function NotificationCentre({ slots }: ScreenProps<NotificationCentreSlot
 
   const handleExportDSAR = () => {
     const dsarPackage = `CULTIVANODE NDPA 2023 DSAR PORTABILITY EXPORT
-Subject: Folake Ibironke (#DSAR-2026-006)
+Subject: Sample Farmer (#DSAR-2026-006)
 Date: ${new Date().toISOString()}
 Compliance Hash: 0x9d4e...82bc
 
-1. VERIFIED SOIL TEST RESULTS (IITA Savanna Node):
+1. SOIL TEST RESULTS (sample):
 - Nitrogen: 0.14% (Adequate)
 - Phosphorus: 12.8 ppm (Optimal)
 - Potassium: 0.42 cmol/kg
@@ -185,8 +185,8 @@ Compliance Hash: 0x9d4e...82bc
 
 SHA-256 Signature Sealed by CultivaNode Security Subsystem.
 `;
-    downloadFile(dsarPackage, "DSAR-Export-Folake-Ibironke-Encrypted.txt", "text/plain");
-    showScreenToast("Encrypted DSAR ZIP archive generated and downloaded.");
+    downloadFile(dsarPackage, "DSAR-Export-Sample-Farmer.txt", "text/plain");
+    showScreenToast("DSAR export generated and downloaded.");
   };
 
   // Emergency dispatch modal
@@ -291,11 +291,11 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
             </div>
             <div className="flex items-center gap-space-xs bg-surface-container-lowest px-space-sm py-1 rounded text-label-sm font-label-sm shadow-sm">
               <Icon name="verified_user" className="text-primary text-[15px]" />
-              <span className="text-on-surface font-semibold">NDPA 2023 Masking: Active</span>
+              <span className="text-on-surface font-semibold">Masked ID Numbers (NDPA 2023)</span>
             </div>
             <div className="flex items-center gap-space-xs bg-secondary-container px-space-sm py-1 rounded text-on-secondary-container text-label-sm font-label-sm font-bold">
               <Icon name="sync_saved_locally" className="text-[15px]" />
-              <span>PowerSync Engine SQLite Synced</span>
+              <span>Offline Sync: Coming Soon</span>
             </div>
           </div>
         </div>
@@ -310,7 +310,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
               </span>
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant mt-0.5">
-              Real-time multi-channel broadcast engine servicing 42.5 Ha Iseyin Agronomic Cluster, syndicate machinery CAN-bus, and escrow release telemetry.
+              Real-time multi-channel broadcast engine servicing 42.5 Ha Iseyin Agronomic Cluster, syndicate machinery CAN-bus, and escrow (not live — waiting for a licensed payment partner).
             </p>
           </div>
           {slot(
@@ -393,7 +393,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
             </div>
             <div className="bg-surface-container-lowest p-space-md rounded-lg shadow-sm flex flex-col justify-between">
               <div className="flex items-start justify-between mb-space-xs">
-                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Escrow SLA Response</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Escrow SLA (not live)</span>
                 <span className="p-1.5 rounded-md bg-surface-container-low text-primary">
                   <Icon name="timer" className="text-[18px]" />
                 </span>
@@ -403,7 +403,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                   <span className="font-metric-num text-metric-num text-on-surface font-bold">18.2m</span>
                   <span className="font-label-sm text-label-sm text-secondary font-bold">Fast</span>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Under 45m statutory SLA limit</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Under 45m target</p>
               </div>
               <div className="w-full bg-surface-container h-1.5 rounded-full mt-space-sm overflow-hidden">
                 <div className="bg-primary h-full" style={{ width: "40.4%" }} />
@@ -673,18 +673,18 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                           <span>Notify Workers via SMS</span>
                         </button>
                         <button
-                          onClick={() => handleAction("NiMet Doppler Radar: 48mm front tracked moving NE at 22 km/h.")}
+                          onClick={() => handleAction("Weather forecast: 48mm front moving NE at 22 km/h.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-primary px-space-md py-1.5 rounded-lg font-label-sm text-label-sm transition-colors"
                           type="button"
                         >
                           <Icon name="radar" className="text-[16px]" />
-                          <span>View Doppler Radar</span>
+                          <span>View Forecast</span>
                         </button>
                       </>
                     ) : notif.id === "notif-2" ? (
                       <>
                         <button
-                          onClick={() => handleAction("Escrow payment ₦95,000 authorized and released to Muritala Lawal.")}
+                          onClick={() => handleAction("Escrow is not live yet. In the pilot, pay the provider directly.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 bg-primary text-on-primary hover:bg-primary-container px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold shadow-sm transition-colors"
                           type="button"
                         >
@@ -711,7 +711,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                     ) : notif.id === "notif-3" ? (
                       <>
                         <button
-                          onClick={() => handleAction("Requisition PO created for 18 bags NPK 15:15:15 to Indorama dealer.")}
+                          onClick={() => handleAction("Requisition PO created for 18 bags NPK 15:15:15 to an agro-dealer.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 bg-primary text-on-primary hover:bg-primary-container px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold shadow-sm transition-colors"
                           type="button"
                         >
@@ -738,7 +738,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                     ) : notif.id === "notif-4" ? (
                       <>
                         <button
-                          onClick={() => handleAction("USSD priority alert pinged to driver Babatunde Lawal (+234 803 *** 1922).")}
+                          onClick={() => handleAction("Priority alert sent to the driver (sample).")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 bg-primary text-on-primary hover:bg-primary-container px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold shadow-sm transition-colors"
                           type="button"
                         >
@@ -751,10 +751,10 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                           type="button"
                         >
                           <Icon name="my_location" className="text-[18px]" />
-                          <span>Live CAN-Bus &amp; GPS</span>
+                          <span>CAN-Bus &amp; GPS (planned)</span>
                         </button>
                         <button
-                          onClick={() => handleAction("Workshop dispatch ticket assigned to Lead Mechanic Salami.")}
+                          onClick={() => handleAction("Workshop dispatch ticket assigned to the workshop lead.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-primary px-space-md py-1.5 rounded-lg font-label-sm text-label-sm transition-colors"
                           type="button"
                         >
@@ -773,7 +773,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                           <span>Generate Encrypted ZIP</span>
                         </button>
                         <button
-                          onClick={() => handleAction("PII Masking Audit passed: All BVN/NIN fields cryptographically hashed.")}
+                          onClick={() => handleAction("PII masking check: BVN/NIN fields are masked.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 bg-surface-container-low text-on-surface hover:bg-surface-container-high px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-colors"
                           type="button"
                         >
@@ -792,7 +792,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                           <span>Approve Spray Protocol</span>
                         </button>
                         <button
-                          onClick={() => handleAction("AI Diagnosis confidence 88.4%: Verified against IITA Spodoptera database.")}
+                          onClick={() => handleAction("Sample result. Photo diagnosis is coming soon.")}
                           className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 bg-surface-container-low text-on-surface hover:bg-surface-container-high px-space-md py-2 rounded-lg font-label-md text-label-md font-semibold transition-colors"
                           type="button"
                         >
@@ -823,7 +823,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                   <h3 className="font-headline-md text-headline-md text-on-surface tracking-tight font-bold">
                     Notification Channel Matrix &amp; Dispatch Rules (§12.1)
                   </h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Statutory failover tiers and multi-channel delivery profiles across rural Nigeria.</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Failover tiers and multi-channel delivery profiles across rural Nigeria.</p>
                 </div>
                 <span className="px-space-sm py-1 rounded bg-surface-container-low text-primary font-label-sm text-label-sm font-semibold">
                   Cluster Policy: Savanna Fallback
@@ -849,7 +849,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                         </div>
                       </td>
                       <td className="py-3 px-space-sm">
-                        <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold">Instant (SQLite Sync)</span>
+                        <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold">Instant</span>
                       </td>
                       <td className="py-3 px-space-sm">
                         <span className="text-on-surface-variant font-label-sm text-label-sm">Daily Digest (06:00 WAT)</span>
@@ -867,7 +867,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                       <td className="py-3 px-space-sm font-semibold text-on-surface">
                         <div className="flex items-center gap-1.5">
                           <Icon name="lock_clock" className="text-[18px] text-tertiary-container" />
-                          <span>Escrow &amp; Dispute Timers</span>
+                          <span>Escrow (not live) &amp; Dispute Timers</span>
                         </div>
                       </td>
                       <td className="py-3 px-space-sm">
@@ -903,7 +903,7 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                       <td className="py-3 px-space-sm text-on-surface font-label-sm text-label-sm">
                         <span className="px-1.5 py-0.5 bg-surface-container rounded mr-1">EN</span>
                         <span className="px-1.5 py-0.5 bg-surface-container rounded mr-1">YOR</span>
-                        <span className="px-1.5 py-0.5 bg-surface-container rounded">HAU</span>
+                        <span className="px-1.5 py-0.5 bg-surface-container rounded">PID</span>
                       </td>
                     </tr>
                     <tr className="hover:bg-surface-container-lowest transition-colors">
@@ -1054,14 +1054,14 @@ SHA-256 Signature Sealed by CultivaNode Security Subsystem.
                 <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
                 <div className="flex flex-col">
                   <span className="font-label-sm text-label-sm text-on-surface font-bold leading-tight">Supabase Realtime WebSockets</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant leading-tight">38ms ping · SQLite PowerSync offline cached</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant leading-tight">38ms ping · offline mode coming soon</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant shrink-0">
               <Icon name="fingerprint" className="text-[16px] text-primary" />
               <span>Ledger Hash: <code className="bg-surface-container px-1 py-0.5 rounded text-on-surface font-mono">0x9d4e...82bc</code></span>
-              <span className="text-secondary font-bold">Audited NDPA §11.7</span>
+              <span className="text-secondary font-bold">Spec §11.7</span>
             </div>
           </div>
         )}

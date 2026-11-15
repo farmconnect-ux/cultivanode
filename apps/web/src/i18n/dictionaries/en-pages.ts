@@ -7,13 +7,13 @@ const enPages = {
     title: `How ${brand.name} works`,
     intro: "One app for everyone on the farm. Pick your role to see the steps.",
     moneyTitle: "How payment works in the pilot",
-    moneyIntro: `During the pilot ${brand.name} does not hold or move money. The app keeps a clear record so both sides know what was agreed.`,
+    moneyIntro: `During the pilot ${brand.name} does not hold or move money for hires. The app keeps a clear record so both sides know what was agreed.`,
     money: [
       { title: "Find", body: "Choose a verified provider near your farm and see their prices." },
       { title: "Agree", body: "Request the job in the app for a date, at the listed price. The provider accepts or declines, and you both get an SMS." },
       { title: "Work is done", body: "The provider does the job. Check-in and photo proof in the app are coming next." },
       { title: "Pay directly", body: "You pay the provider directly, by cash or transfer. Pay only for work that was done." },
-      { title: "Both confirm", body: "Both of you mark the job as paid and rate each other. Problems? Tell us and our team will help." },
+      { title: "Both confirm", body: "Both of you mark the job as paid. Ratings are coming soon. Problems? Tell us and our team will help." },
     ],
     moneyNote: "Protected payments, held by a licensed payment partner until you confirm the job, are planned after legal review. We will tell you before they start.",
   },
@@ -24,15 +24,15 @@ const enPages = {
     benefitsTitle: "What you get",
     benefits: [
       { soon: true, title: "A season plan for each crop", body: "Land preparation to harvest, worked out from your planting date, your zone and the season." },
-      { soon: true, title: "Fertiliser and spray amounts", body: "How much to buy and apply for your farm size, from standards reviewed by agronomists." },
-      { soon: true, title: "Weather for your farm", body: "14-day forecast and warnings for heavy rain, dry spells, heat and strong wind." },
+      { soon: true, title: "Fertiliser and spray amounts", body: "How much to buy and apply for your farm size, based on written standards for your crop, zone and season." },
+      { soon: true, title: "Weather for your farm", body: "10-day forecast and warnings for heavy rain, dry spells, heat and strong wind." },
       { soon: true, title: "Your store", body: "Seeds, fertiliser and chemicals in stock, with warnings before you run short or a product expires." },
       { soon: true, title: "Farm books", body: "Costs and sales per planting, so you know your cost per hectare and your profit." },
-      { soon: true, title: "Farm assistant", body: "Ask in English, Pidgin or Yorùbá, or send a photo of a sick plant." },
+      { soon: true, title: "Farm assistant", body: "Ask in English, Pidgin or Yorùbá. Photo diagnosis of a sick plant is coming." },
     ],
     stepsTitle: "Getting started",
     helpTitle: "No smartphone? No problem.",
-    helpBody: `A ${brand.name} field agent can register you and your farm. You confirm with a code sent to your phone, and important alerts come by SMS.`,
+    helpBody: `A ${brand.name} field agent can help register you and your farm, and important alerts come by SMS.`,
   },
   machineryPage: {
     badge: "For machinery owners",
@@ -54,7 +54,7 @@ const enPages = {
     stepsTitle: "Getting started",
     requirementsTitle: "What you need",
     requirements: [
-      "A phone number for sign-in",
+      "An email address for sign-in (phone sign-in is coming soon)",
       "Your NIN, BVN and a bank account in your name (checked before you can list)",
       "Proof that you own or manage the equipment",
     ],
@@ -76,7 +76,7 @@ const enPages = {
     stepsTitle: "Getting started",
     requirementsTitle: "What you need",
     requirements: [
-      "A phone number for sign-in",
+      "An email address for sign-in (phone sign-in is coming soon)",
       "Your NIN, BVN and a bank account in your name",
       "A certificate or licence where your service needs one (for example spraying or vet work)",
     ],
@@ -98,12 +98,12 @@ const enPages = {
     ],
     standardsTitle: "Recommendations you can trace",
     standardsBody:
-      "Every plan and fertiliser or spray amount comes from a written standard for that crop, zone and season, reviewed and approved by agronomists. The app shows which standard it used, so you and your extension agent can check it.",
+      "Fertiliser and spray amounts (coming soon) will come from a written standard for that crop, zone and season. The app will show which standard it used, so you and your extension agent can check it.",
   },
   partnersPage: {
     title: "Partner with us",
     intro: "We work with organisations that serve farmers. Together we can reach more farms with good advice, fair hiring and better records.",
-    typesTitle: "Who we work with",
+    typesTitle: "Who we would like to work with",
     types: [
       { title: "Cooperatives and farmer groups", body: "Register members, plan together and book machinery for the group." },
       { title: "Government and ADPs", body: "Extension support, farmer registration and programme delivery." },
@@ -122,7 +122,7 @@ const enPages = {
     intro: `Be first to hear when ${brand.name} Market opens for buying and selling produce, seeds and farm inputs.`,
   },
   legal: {
-    draftNotice: "Draft for the pilot. This document is being reviewed by our lawyers and may change before launch.",
+    draftNotice: "Draft for the pilot. This document may change before launch.",
     versionLabel: "Version",
     updatedLabel: "Last updated",
     contactLine: "Questions about this document? Contact us through the contact page.",
@@ -133,13 +133,13 @@ const enPages = {
         {
           heading: "Who we are",
           body: [
-            `${brand.name} is a farm management and hiring platform being piloted in South-West Nigeria. The company responsible for your data (the data controller) will be named here before launch.`,
+            `${brand.name} is a farm management and hiring platform being piloted in South-West Nigeria. ${brand.name} is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission. Excel Palace Global Concept is the data controller responsible for your data.`,
           ],
         },
         {
           heading: "What we collect",
           body: [
-            "Account details: your phone number, name, preferred language, state and LGA, and email if you give it.",
+            "Account details: your email address, name, preferred language, state and LGA, and phone number if you give it.",
             "Farm records: farm locations and boundaries, plots, soil tests, plantings, work done, stock, costs and sales.",
             "Verification: results of NIN, BVN and CAC checks. We keep only masked numbers (for example *******4417), never the full number. For payouts we keep your bank name, account name and the last four digits of the account.",
             "Documents and photos you upload, such as proof of equipment ownership or photos of crops and completed work.",
@@ -207,7 +207,7 @@ const enPages = {
         {
           heading: "Your account",
           body: [
-            "Sign in with your own phone number and keep your one-time codes private. One person or business has one account.",
+            "Sign in with your own email address and keep your sign-in details private. Phone sign-in is coming soon. One person or business has one account.",
             "Business staff each use their own login; never share a login.",
             "Give true information. Roles such as machinery owner or service provider are approved only after checks.",
           ],
@@ -215,15 +215,15 @@ const enPages = {
         {
           heading: "Farm advice",
           body: [
-            "Plans and fertiliser or spray amounts come from standards for your crop, zone and season, but every farm is different. Use them as guidance and confirm with an agronomist or extension agent when unsure.",
+            "Plans (and, once the planner is ready, fertiliser and spray amounts) are based on your crop, zone and season, but every farm is different. Use them as guidance and confirm with an agronomist or extension agent when unsure.",
             "Always follow the product label and safety instructions when using agrochemicals.",
-            "The farm assistant can be wrong. Photo diagnoses show how confident they are and are not a professional diagnosis.",
+            "The farm assistant can be wrong and is not a professional diagnosis. Photo diagnosis is coming; when it is ready it will show how confident it is.",
           ],
         },
         {
           heading: "Hiring and payments",
           body: [
-            `During the pilot ${brand.name} does not collect, hold or pay out money. The farmer pays the provider directly, and both mark the job as paid in the app. ${brand.name} is not a party to that payment.`,
+            `During the pilot ${brand.name} does not collect, hold or pay out money for hires. The farmer pays the provider directly, and both mark the job as paid in the app. ${brand.name} is not a party to that payment.`,
             "There is no commission during the pilot. Any future commission and cancellation fees will be shown before you book or accept a job.",
             "Protected payments through a licensed payment partner are planned after legal review. We will update these terms and tell you before they start.",
           ],

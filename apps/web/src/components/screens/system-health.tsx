@@ -40,7 +40,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                 <p className="font-body-md text-body-md text-on-surface-variant">Global platform telemetry, multi-tenant cluster orchestration, integration uptime, verification backlogs, and tamper-evident administrative audit controls.</p>
               </div>
               <div className="flex flex-wrap items-center gap-space-xs shrink-0">
-                <button onClick={() => showScreenToast("Diagnostic sweep executed: 14 node microservices healthy, 99.98% telemetry uptime.")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-health-diagnostic" type="button">
+                <button onClick={() => showScreenToast("Diagnostic sweep (sample data): services responding.")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg shadow-sm transition-all duration-150" id="btn-health-diagnostic" type="button">
                   <Icon name="vital_signs" className="text-secondary text-base" />
                   <span>Run Diagnostics</span>
                 </button>
@@ -84,31 +84,31 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                   <div className="flex items-start justify-between">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Mapped PostGIS Cadastre</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Mapped Farm Pins (sample)</span>
                     <Icon name="crop_free" className="text-primary text-lg" />
                   </div>
                   <div className="my-space-xs">
                     <div className="font-metric-num text-metric-num text-on-surface">38,450.5 <span className="text-label-md font-body-md text-on-surface-variant">Ha</span></div>
                     <div className="flex items-center gap-1 text-primary font-label-sm text-label-sm">
                       <Icon name="verified" className="text-sm" />
-                      <span>98.4% RTK verified</span>
+                      <span>Boundary walking coming soon</span>
                     </div>
                   </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Polygon bounds locked via PostGIS</p>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Farm locations stored with PostGIS</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                   <div className="flex items-start justify-between">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Escrow Volume (GMV)</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Escrow Volume (not live)</span>
                     <Icon name="payments" className="text-tertiary-container text-lg" />
                   </div>
                   <div className="my-space-xs">
-                    <div className="font-metric-num text-metric-num text-on-surface">₦142.68<span className="text-label-md font-body-md text-on-surface-variant">M</span></div>
+                    <div className="font-metric-num text-metric-num text-on-surface">₦0<span className="text-label-md font-body-md text-on-surface-variant">M</span></div>
                     <div className="flex items-center gap-1 text-on-secondary-container font-label-sm text-label-sm">
                       <Icon name="savings" className="text-sm" />
-                      <span>0% Platform Pilot</span>
+                      <span>No platform fee on hires</span>
                     </div>
                   </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">482 active dispatches secured</p>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Waiting for a licensed payment partner</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                   <div className="flex items-start justify-between">
@@ -122,7 +122,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <span>Avg res: 4.2 hrs</span>
                     </div>
                   </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">96.1% Auto NIN/BVN pass rate</p>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">NIN, BVN and bank checks (sample data)</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                   <div className="flex items-start justify-between">
@@ -136,11 +136,11 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <span>0.41% rate (&lt;5% SLA)</span>
                     </div>
                   </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">1 under proof-of-work review</p>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Proof of work coming soon</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                   <div className="flex items-start justify-between">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Service SLA &amp; Latency</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Service Uptime (sample)</span>
                     <Icon name="speed" className="text-secondary text-lg" />
                   </div>
                   <div className="my-space-xs">
@@ -150,7 +150,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <span>24ms avg query latency</span>
                     </div>
                   </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Supabase DB + Lagos Edge replicas</p>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant truncate">Supabase DB</p>
                 </div>
               </div>
             </section>
@@ -180,7 +180,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         </div>
                         <div>
                           <h3 className="font-headline-sm text-headline-sm text-on-surface">Supabase PostgreSQL &amp; PostGIS</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Core Spatial Engine · Host: eu-central (Edge replica: West Africa)</span>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">Core Spatial Engine · Supabase hosted</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Healthy</span>
@@ -217,30 +217,30 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           <Icon name="sync" className="text-secondary text-lg" />
                         </div>
                         <div>
-                          <h3 className="font-headline-sm text-headline-sm text-on-surface">PowerSync SQLite</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Offline Relay &amp; Mesh Sync</span>
+                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Offline Sync</h3>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">Coming soon (PowerSync planned)</span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Operational</span>
+                      <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Planned</span>
                     </div>
                     <div className="space-y-1.5 pt-space-xs font-body-sm text-body-sm">
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Active SQLite Nodes</span>
-                        <span className="font-semibold text-on-surface">1,842 Field Devices</span>
+                        <span className="text-on-surface-variant">Field Devices</span>
+                        <span className="font-semibold text-on-surface">Not live</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-on-surface-variant">Synced Mutations</span>
-                        <span className="font-semibold text-on-surface">420 / min</span>
+                        <span className="font-semibold text-on-surface">Not live</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-on-surface-variant">Conflict Resolution Rate</span>
-                        <span className="font-semibold text-secondary">0.02% (LWW auto)</span>
+                        <span className="font-semibold text-secondary">Not live</span>
                       </div>
                     </div>
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
-                    <span>Bucket Latency: 42ms</span>
-                    <span className="text-secondary font-medium">Auto-Reconcile OK</span>
+                    <span>Offline mode</span>
+                    <span className="text-secondary font-medium">Coming soon</span>
                   </div>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -251,19 +251,19 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           <Icon name="badge" className="text-primary text-lg" />
                         </div>
                         <div>
-                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Smile ID &amp; NIMC</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">NIN &amp; Biometric Gateway</span>
+                          <h3 className="font-headline-sm text-headline-sm text-on-surface">ID Check Provider</h3>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">NIN, BVN &amp; Bank Account Checks</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Online</span>
                     </div>
                     <div className="space-y-1.5 pt-space-xs font-body-sm text-body-sm">
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">NIN/vNIN Match Rate</span>
-                        <span className="font-semibold text-secondary">98.2% Auto</span>
+                        <span className="text-on-surface-variant">NIN Match Rate</span>
+                        <span className="font-semibold text-secondary">Sample data</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Biometric Handshake</span>
+                        <span className="text-on-surface-variant">Response Time</span>
                         <span className="font-semibold text-on-surface">1.1s avg</span>
                       </div>
                       <div className="flex justify-between">
@@ -274,7 +274,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
                     <span>SLA: 99.8%</span>
-                    <span className="text-primary font-medium">vNIN Decrypt Active</span>
+                    <span className="text-primary font-medium">Masked IDs Stored</span>
                   </div>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -285,8 +285,8 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           <Icon name="account_balance" className="text-primary text-lg" />
                         </div>
                         <div>
-                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Paystack &amp; NIBSS</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Automated Escrow &amp; Transfers</span>
+                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Paystack &amp; Flutterwave</h3>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">Marketplace Checkout (escrow not live)</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Operational</span>
@@ -297,8 +297,8 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <span className="font-semibold text-on-surface">99.95% (0 retry)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Escrow Verification</span>
-                        <span className="font-semibold text-secondary">Normal Handshake</span>
+                        <span className="text-on-surface-variant">Escrow</span>
+                        <span className="font-semibold text-secondary">Not live yet</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-on-surface-variant">Bank Payout Latency</span>
@@ -320,7 +320,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         </div>
                         <div>
                           <h3 className="font-headline-sm text-headline-sm text-on-surface">Termii Telecom Relay</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Multi-Channel SMS &amp; *384# USSD</span>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">SMS (USSD planned)</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Nominal</span>
@@ -335,14 +335,14 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <span className="font-semibold text-on-surface">3.4s</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">USSD Session Gateway</span>
-                        <span className="font-semibold text-secondary">Active (*384#)</span>
+                        <span className="text-on-surface-variant">USSD</span>
+                        <span className="font-semibold text-secondary">Planned</span>
                       </div>
                     </div>
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
                     <span>Air, MTN, Glo, 9mob</span>
-                    <span className="text-secondary font-medium">Route: DND Bypass</span>
+                    <span className="text-secondary font-medium">Route: DND</span>
                   </div>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -353,7 +353,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           <Icon name="cloudy_snowing" className="text-primary text-lg" />
                         </div>
                         <div>
-                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Open-Meteo &amp; NiMet</h3>
+                          <h3 className="font-headline-sm text-headline-sm text-on-surface">Open-Meteo Weather</h3>
                           <span className="font-label-sm text-label-sm text-on-surface-variant">Agro-Meteorological Stream</span>
                         </div>
                       </div>
@@ -375,7 +375,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                     </div>
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
-                    <span>NiMet Sync: Hourly</span>
+                    <span>Forecast Sync: Hourly</span>
                     <span className="text-secondary font-medium">WGS84 Aligned</span>
                   </div>
                 </div>
@@ -388,7 +388,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         </div>
                         <div>
                           <h3 className="font-headline-sm text-headline-sm text-on-surface">Agronomy Vision &amp; AI</h3>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">Gemini &amp; Fine-tuned ResNet</span>
+                          <span className="font-label-sm text-label-sm text-on-surface-variant">Farm assistant (photo diagnosis coming soon)</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Online</span>
@@ -399,8 +399,8 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <span className="font-semibold text-on-surface">420ms</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Diagnostic Accuracy</span>
-                        <span className="font-semibold text-secondary">94.2% Field-validated</span>
+                        <span className="text-on-surface-variant">Photo Diagnosis</span>
+                        <span className="font-semibold text-secondary">Coming soon</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-on-surface-variant">Safety Guardrails</span>
@@ -409,7 +409,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                     </div>
                   </div>
                   <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
-                    <span>Fall armyworm model v3</span>
+                    <span>Photo model planned</span>
                     <span className="text-primary font-medium">Read-Only Agent</span>
                   </div>
                 </div>
@@ -440,8 +440,8 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <tbody className="font-body-sm text-body-sm text-on-surface divide-y divide-surface-container-low">
                         <tr className="hover:bg-surface-container-low/40 transition-colors">
                           <td className="py-space-sm px-space-md">
-                            <div className="font-semibold text-on-surface">Alhaji Kazeem Tractor Syndicate</div>
-                            <div className="text-on-surface-variant font-label-sm text-label-sm">CAC RC-1849201 · Iseyin Hub</div>
+                            <div className="font-semibold text-on-surface">Sample Tractor Syndicate</div>
+                            <div className="text-on-surface-variant font-label-sm text-label-sm">CAC number (sample) · Iseyin Hub</div>
                           </td>
                           <td className="py-space-sm px-space-md">
                             <div className="flex items-center gap-1">
@@ -457,21 +457,21 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => showScreenToast("Inspecting Tractor Syndicate dossier: 4x Massey Ferguson units, Leadway insurance policy #LAD-2026-904 valid.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect</button>
+                              <button onClick={() => showScreenToast("Inspecting Tractor Syndicate dossier (sample): 4x Massey Ferguson units, insurance document uploaded.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect</button>
                               <button onClick={() => showScreenToast("Tractor Syndicate verified: Tier 2 Fleet Operator credentials unlocked.")} className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
                             </div>
                           </td>
                         </tr>
                         <tr className="hover:bg-surface-container-low/40 transition-colors">
                           <td className="py-space-sm px-space-md">
-                            <div className="font-semibold text-on-surface">Odo-Ogun Cassava Outgrowers Cooperative</div>
+                            <div className="font-semibold text-on-surface">Sample Cassava Outgrowers Cooperative</div>
                             <div className="text-on-surface-variant font-label-sm text-label-sm">82 Member Group · Oyo North</div>
                           </td>
                           <td className="py-space-sm px-space-md">
                             <div className="flex items-center gap-1">
                               <span className="px-1.5 py-0.5 rounded bg-primary-container/20 text-primary font-label-sm text-label-sm font-semibold">Tier 3 Offtaker</span>
                             </div>
-                            <div className="text-on-surface-variant font-label-sm text-label-sm">NIBSS Corporate BVN Passed</div>
+                            <div className="text-on-surface-variant font-label-sm text-label-sm">Director BVN Check Passed</div>
                           </td>
                           <td className="py-space-sm px-space-md">
                             <div className="flex items-center gap-1.5 text-tertiary-container font-label-sm text-label-sm font-medium">
@@ -481,14 +481,14 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => showScreenToast("Inspecting Odo-Ogun Cooperative documents: 82 members registered, CAC registration verified.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect Docs</button>
+                              <button onClick={() => showScreenToast("Inspecting cooperative documents (sample): 82 members registered, CAC registration checked.")} className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm transition-colors" type="button">Inspect Docs</button>
                             </div>
                           </td>
                         </tr>
                         <tr className="hover:bg-surface-container-low/40 transition-colors">
                           <td className="py-space-sm px-space-md">
-                            <div className="font-semibold text-on-surface">Dr. S. Adeyemi, DVM</div>
-                            <div className="text-on-surface-variant font-label-sm text-label-sm">NVMA Reg #8402 · Saki Outpost</div>
+                            <div className="font-semibold text-on-surface">Sample Vet</div>
+                            <div className="text-on-surface-variant font-label-sm text-label-sm">Vet licence (sample) · Saki Outpost</div>
                           </td>
                           <td className="py-space-sm px-space-md">
                             <div className="flex items-center gap-1">
@@ -504,7 +504,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           </td>
                           <td className="py-space-sm px-space-md text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => showScreenToast("Dr. S. Adeyemi approved: NVMA veterinary license #8402 verified with Saki outpost access.")} className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
+                              <button onClick={() => showScreenToast("Sample Vet approved (sample data): licence document checked.")} className="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">Approve</button>
                             </div>
                           </td>
                         </tr>
@@ -512,7 +512,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                     </table>
                   </div>
                   <div className="p-space-sm bg-surface-container-low/40 flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-                    <span>Smile ID Automated verification bypassed for Tier 3 corporate documents</span>
+                    <span>Automated ID checks do not cover Tier 3 corporate documents</span>
                     <span className="font-medium text-primary">SLA Max Threshold: 12 Hours</span>
                   </div>
                 </div>
@@ -532,25 +532,25 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <span className="font-headline-sm text-headline-sm text-on-surface">Case #DSP-2026-014</span>
                         <span className="px-1.5 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-semibold">Tillage &amp; Weeding</span>
                       </div>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant">Escrow Job #BKG-2026-0482 · Dispute Logged: 3h ago</p>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant">Job #BKG-2026-0482 · Dispute Logged: 3h ago</p>
                     </div>
-                    <span className="font-label-lg text-label-lg font-bold text-on-surface">₦47,000 In Escrow</span>
+                    <span className="font-label-lg text-label-lg font-bold text-on-surface">₦47,000 Agreed Fee</span>
                   </div>
                   <div className="p-space-sm rounded bg-surface-container-low flex flex-col gap-1.5 font-body-sm text-body-sm">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-on-surface">Farmer Claim: Gbadamosi Lateef</span>
+                      <span className="font-semibold text-on-surface">Farmer Claim: Sample Farmer</span>
                       <span className="text-on-surface-variant font-label-sm">Plot M3 (4.5 Ha Contracted)</span>
                     </div>
                     <p className="text-on-surface-variant text-xs">Farmer states operator abandoned work early, leaving 0.7 Ha uncleared in the north sector.</p>
                     <div className="flex justify-between items-center pt-1">
-                      <span className="font-semibold text-on-surface">Operator Defense: Muritala Lawal</span>
-                      <span className="text-on-surface-variant font-label-sm">CAN-Bus Telemetry Logged</span>
+                      <span className="font-semibold text-on-surface">Operator Defense: Sample operator</span>
+                      <span className="text-on-surface-variant font-label-sm">Photos Submitted</span>
                     </div>
                     <p className="text-on-surface-variant text-xs">Operator logged impassable natural granite boulder outcrop. Unworked boundary confirmed as hazardous to tractor implement.</p>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between font-label-sm text-label-sm">
-                      <span className="text-on-surface-variant flex items-center gap-1"><Icon name="pin_drop" className="text-sm text-primary" /> RTK Tractor Telemetry vs PostGIS Polygon</span>
+                      <span className="text-on-surface-variant flex items-center gap-1"><Icon name="pin_drop" className="text-sm text-primary" /> Reported Work vs Plot Area (sample)</span>
                       <span className="font-semibold text-secondary">3.82 Ha Logged (85% of plot)</span>
                     </div>
                     <div className="w-full bg-surface-container-low h-2.5 rounded-full overflow-hidden flex">
@@ -565,7 +565,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                   <div className="p-space-sm rounded bg-surface-container flex flex-col gap-2">
                     <div className="flex items-center justify-between font-label-sm text-label-sm">
                       <span className="font-bold text-on-surface">Algorithmically Prorated Settlement</span>
-                      <span className="text-secondary font-semibold">Strict Proof of Work</span>
+                      <span className="text-secondary font-semibold">Proof of work coming soon</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 font-body-sm text-body-sm">
                       <div className="p-1.5 rounded bg-surface-container-lowest text-center">
@@ -577,9 +577,9 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                         <div className="font-bold text-secondary">₦7,100</div>
                       </div>
                     </div>
-                    <button onClick={() => showScreenToast("Escrow settlement executed via Paystack: ₦39,900 released to operator, ₦7,100 refunded to farmer.")} className="w-full mt-1 py-2 px-3 rounded bg-secondary text-on-secondary font-label-lg text-label-lg font-semibold hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center gap-1.5" id="btn-arbitrate-action" type="button">
+                    <button onClick={() => showScreenToast("Split recorded (sample): ₦39,900 to operator, ₦7,100 not payable. Escrow is not live; the farmer pays the operator directly.")} className="w-full mt-1 py-2 px-3 rounded bg-secondary text-on-secondary font-label-lg text-label-lg font-semibold hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center gap-1.5" id="btn-arbitrate-action" type="button">
                       <Icon name="task_alt" className="text-base" />
-                      <span>Authorize Prorated Release (Paystack Escrow)</span>
+                      <span>Record Prorated Split (escrow not live)</span>
                     </button>
                   </div>
                 </div>
@@ -618,7 +618,7 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <tr className="hover:bg-surface-container-low/40 transition-colors">
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">2026-04-20 09:58:12</td>
                         <td className="py-space-sm px-space-md">
-                          <div className="font-semibold text-on-surface">sysadmin@cultivanode.io</div>
+                          <div className="font-semibold text-on-surface">sysadmin</div>
                           <div className="text-secondary font-label-sm text-label-sm">YubiKey 5C FIDO2</div>
                         </td>
                         <td className="py-space-sm px-space-md">
@@ -626,27 +626,27 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                           <div className="text-on-surface-variant font-label-sm text-label-sm">farms PostGIS bounding index rebuild</div>
                         </td>
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm">Global Table: `public.farms`</td>
-                        <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant">AWS CloudTrail Signed · Cloudflare Edge</td>
+                        <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant">Audit log entry (sample)</td>
                         <td className="py-space-sm px-space-md text-right font-label-sm text-label-sm font-mono text-on-surface-variant">0x8f2a...c89e</td>
                       </tr>
                       <tr className="hover:bg-surface-container-low/40 transition-colors">
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">2026-04-20 09:32:05</td>
                         <td className="py-space-sm px-space-md">
-                          <div className="font-semibold text-on-surface">verification.officer@cultivanode.io</div>
+                          <div className="font-semibold text-on-surface">verification.officer</div>
                           <div className="text-on-surface-variant font-label-sm text-label-sm">TOTP Verified</div>
                         </td>
                         <td className="py-space-sm px-space-md">
                           <span className="px-1.5 py-0.5 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Tier 3 CAC Verification Approved</span>
-                          <div className="text-on-surface-variant font-label-sm text-label-sm">CAC Document RC-1940822-OYO</div>
+                          <div className="text-on-surface-variant font-label-sm text-label-sm">CAC document (sample)</div>
                         </td>
-                        <td className="py-space-sm px-space-md font-label-sm text-label-sm">Agro-Syndicate #RC-1940822-OYO</td>
-                        <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant">Smile ID Biometric Face-Match 98.4%</td>
+                        <td className="py-space-sm px-space-md font-label-sm text-label-sm">Sample Agro-Syndicate</td>
+                        <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant">NIN check passed (sample)</td>
                         <td className="py-space-sm px-space-md text-right font-label-sm text-label-sm font-mono text-on-surface-variant">0x4e1b...902a</td>
                       </tr>
                       <tr className="hover:bg-surface-container-low/40 transition-colors">
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">2026-04-20 08:45:30</td>
                         <td className="py-space-sm px-space-md">
-                          <div className="font-semibold text-on-surface">platform.ops@cultivanode.io</div>
+                          <div className="font-semibold text-on-surface">platform.ops</div>
                           <div className="text-on-surface-variant font-label-sm text-label-sm">Automated Health Robot</div>
                         </td>
                         <td className="py-space-sm px-space-md">
@@ -660,11 +660,11 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                       <tr className="hover:bg-surface-container-low/40 transition-colors">
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">2026-04-20 07:15:00</td>
                         <td className="py-space-sm px-space-md">
-                          <div className="font-semibold text-on-surface">quadri.olapade@cultivanode.io</div>
+                          <div className="font-semibold text-on-surface">Quadri Olapade (Founder)</div>
                           <div className="text-secondary font-label-sm text-label-sm">Hardware Token Signed</div>
                         </td>
                         <td className="py-space-sm px-space-md">
-                          <span className="px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm font-semibold">Escrow Manual Hold Override</span>
+                          <span className="px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm font-semibold">Escrow Manual Hold Override (not live)</span>
                           <div className="text-on-surface-variant font-label-sm text-label-sm">Pending Field Surveyor report</div>
                         </td>
                         <td className="py-space-sm px-space-md font-label-sm text-label-sm">Job #BKG-2026-0482</td>
@@ -678,10 +678,10 @@ export function SystemHealth({ slots }: ScreenProps<SystemHealthSlot>) {
                   <div className="flex items-center gap-2">
                     <Icon name="lock_clock" className="text-secondary text-base" />
                     <span className="font-label-sm text-label-sm text-on-surface font-semibold">Zero-Trust Root Architecture:</span>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">Supabase Service-Role key restricted strictly to Cloudflare Workers · Separation of Duties Protocol (§11.1) Active</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">Supabase service-role key used only on the server · Separation of Duties Protocol (§11.1) Active</span>
                   </div>
                   <div className="flex items-center gap-space-md text-on-surface-variant font-label-sm text-label-sm shrink-0">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" /> NDPA 2023 Compliant (Automated PII Masking)</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" /> Masked ID Numbers (NDPA 2023)</span>
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" /> Merkle Tree Depth: 24</span>
                   </div>
                 </div>

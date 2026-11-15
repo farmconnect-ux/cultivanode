@@ -23,25 +23,25 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-end mb-space-xl">
               <div className="lg:col-span-8 flex flex-col gap-space-sm">
                 <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight max-w-4xl">{tYo("Architecting Verifiable Digital Infrastructure for African Agriculture")}</h1>
-                <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl leading-relaxed">{tYo("Bridging the critical trust, mechanization, and liquidity deficit across South-West Nigeria with sub-meter cadastral GIS, tamper-evident double-entry ledgers, and CBN-regulated partner escrow.")}</p>
+                <p className="font-body-lg text-body-lg text-on-surface-variant max-w-3xl leading-relaxed">{tYo("Helping farmers in South-West Nigeria hire machinery and farm hands, plan their crops and keep their farm books. Built with farmers in the pilot.")}</p>
               </div>
               <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-space-sm justify-end">
                 <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-space-sm">
                     <Icon name="verified" className="text-secondary text-[24px]" />
                     <div>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Pilot Protocol Status")}</p>
-                      <p className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("Phase II Active Mesh")}</p>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Pilot Status")}</p>
+                      <p className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("South-West Pilot")}</p>
                     </div>
                   </div>
-                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-semibold">{tYo("Live")}</span>
+                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-semibold">{tYo("Open")}</span>
                 </div>
                 <div className="p-space-md rounded-xl bg-surface-container shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-space-sm">
                     <Icon name="gavel" className="text-primary text-[24px]" />
                     <div>
-                      <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Compliance Boundary")}</p>
-                      <p className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("NDPA 2023 Audited")}</p>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Data Protection")}</p>
+                      <p className="font-headline-sm text-headline-sm text-primary font-bold">{tYo("We Follow NDPA 2023")}</p>
                     </div>
                   </div>
                   <Icon name="check_circle" className="text-secondary text-[20px]" />
@@ -51,14 +51,14 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-space-md pt-space-md">
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-sm">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Field Deployment")}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">{tYo("Who It Is For")}</span>
                   <Icon name="groups" className="text-secondary text-[20px]" />
                 </div>
                 <div>
-                  <span className="font-metric-num text-metric-num text-primary font-bold block">300+</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Verified Pilot Producers")}</span>
+                  <span className="font-metric-num text-metric-num text-primary font-bold block">{tYo("Farmers")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Smallholders, machinery owners and farm hands")}</span>
                 </div>
-                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="trending_up" className="text-[16px]" />{tYo(" Cadastral Mapped")}</div>
+                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="trending_up" className="text-[16px]" />{tYo(" Join the pilot")}</div>
               </div>
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-sm">
@@ -78,9 +78,9 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                 </div>
                 <div>
                   <span className="font-metric-num text-metric-num text-primary font-bold block">{tYo("15 Crops")}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Agro-Calibrated Varieties")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("In the crop calendar")}</span>
                 </div>
-                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="science" className="text-[16px]" />{tYo(" Phenology Tracked")}</div>
+                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="science" className="text-[16px]" />{tYo(" Planting to harvest")}</div>
               </div>
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-space-sm">
@@ -89,9 +89,9 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                 </div>
                 <div>
                   <span className="font-metric-num text-metric-num text-primary font-bold block">{tYo("₦0 Fee")}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Platform Cut on Pilot Hires")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("No platform fee on hires during the pilot")}</span>
                 </div>
-                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="check_circle" className="text-[16px]" />{tYo(" 100% Escrow Integrity")}</div>
+                <div className="mt-space-sm pt-space-xs text-secondary font-label-sm text-label-sm flex items-center gap-1"><Icon name="check_circle" className="text-[16px]" />{tYo(" You pay the provider directly")}</div>
               </div>
             </div>
           </div>
@@ -101,22 +101,22 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
             <div className="rounded-xl overflow-hidden shadow-sm h-64 bg-surface-container-low relative">
               <img className="w-full h-full object-cover" data-alt="An expansive aerial drone shot over green agricultural fields in Oyo North, Nigeria, showcasing neatly organized cassava and maize plots with precise geographic borders under soft early morning golden light." src="/images/screens/cda877cfe8af.webp" alt="" loading="lazy" decoding="async" />
               <div className="absolute bottom-0 inset-x-0 p-space-md bg-gradient-to-t from-primary/90 to-transparent">
-                <p className="font-label-md text-label-md text-on-primary">{tYo("Oyo North Cadastral Corridors")}</p>
-                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Saki West & Iseyin Plot Mappings")}</p>
+                <p className="font-label-md text-label-md text-on-primary">{tYo("Pilot Area: Oyo North")}</p>
+                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Saki West & Iseyin farms")}</p>
               </div>
             </div>
             <div className="rounded-xl overflow-hidden shadow-sm h-64 bg-surface-container-low relative">
               <img className="w-full h-full object-cover" data-alt="Close up of an agricultural officer and smallholder farmer in Ogun state inspecting healthy maize stalks with a rugged tablet displaying geographic polygons in daylight." src="/images/screens/5f4645bdd62e.webp" alt="" loading="lazy" decoding="async" />
               <div className="absolute bottom-0 inset-x-0 p-space-md bg-gradient-to-t from-primary/90 to-transparent">
-                <p className="font-label-md text-label-md text-on-primary">{tYo("Field-Level Proof of Work")}</p>
-                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Multi-spectral Telemetry Verification")}</p>
+                <p className="font-label-md text-label-md text-on-primary">{tYo("Proof of Work (Coming Soon)")}</p>
+                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Check-in and photos with location and time")}</p>
               </div>
             </div>
             <div className="rounded-xl overflow-hidden shadow-sm h-64 bg-surface-container-low relative">
               <img className="w-full h-full object-cover" data-alt="A modern green tractor working on expansive red soil farmland in South-West Nigeria with mechanized tillage implements under bright equatorial sunlight." src="/images/screens/d738cb67290b.webp" alt="" loading="lazy" decoding="async" />
               <div className="absolute bottom-0 inset-x-0 p-space-md bg-gradient-to-t from-primary/90 to-transparent">
-                <p className="font-label-md text-label-md text-on-primary">{tYo("Syndicate Tractor Mobilization")}</p>
-                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Zero Deadhead Transit Optimization")}</p>
+                <p className="font-label-md text-label-md text-on-primary">{tYo("Hire Tractors Near Your Farm")}</p>
+                <p className="font-body-sm text-body-sm text-surface-container-high">{tYo("Verified machinery owners in the pilot")}</p>
               </div>
             </div>
           </div>
@@ -139,17 +139,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Fleet Inefficiency")}</span>
                   </div>
                   <h3 className="font-headline-md text-headline-md text-primary font-semibold mb-space-sm">{tYo("The Mechanization Trap & Deadhead Crisis")}</h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Smallholders face extortionate broker surcharges of up to 40% alongside constant tractor syndicates reneging on plowing windows. Simultaneously, commercial fleet owners incur catastrophic non-revenue deadhead transit costs and high defaults across dispersed smallholders.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Smallholders often pay middlemen extra for tractor hire, and tractors do not always come when the rains start. Machinery owners lose money driving long distances between small farms.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
                   <div className="flex items-center justify-between font-label-sm text-label-sm">
-                    <span className="text-on-surface-variant">{tYo("Smallholder Fleet Deficit")}</span>
-                    <span className="font-bold text-error">{tYo("7.1 Tractors / 100km²")}</span>
+                    <span className="text-on-surface-variant">{tYo("Tractors for smallholders")}</span>
+                    <span className="font-bold text-error">{tYo("Too few")}</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                     <div className="bg-error h-full rounded-full" style={{ width: "22%" }} />
                   </div>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("CultivaNode coordinates clusters to drop deadhead transit by 68%.")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("CultivaNode helps you find verified machinery owners near your farm.")}</span>
                 </div>
               </div>
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -162,17 +162,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Credit Ineligibility")}</span>
                   </div>
                   <h3 className="font-headline-md text-headline-md text-primary font-semibold mb-space-sm">{tYo("The Paperwork & Land Tenure Void")}</h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Over 82% of regional agrarian producers hold informal customary land titles lacking sub-meter cadastral demarcations. Absent audited yield logs, smallholders remain permanently unbankable for Tier-1 agro-credit, forced into predatory micro-debt.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Many farmers hold land under customary title with no survey plan, and keep no written farm records. Without records, getting a farm loan is hard.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
                   <div className="flex items-center justify-between font-label-sm text-label-sm">
-                    <span className="text-on-surface-variant">{tYo("Commercial Ag-Credit Denial")}</span>
-                    <span className="font-bold text-error">{tYo("91.4% Rejection Rate")}</span>
+                    <span className="text-on-surface-variant">{tYo("Access to farm loans")}</span>
+                    <span className="font-bold text-error">{tYo("Limited")}</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                     <div className="bg-error h-full rounded-full" style={{ width: "91%" }} />
                   </div>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("PostGIS boundary proofs and double-entry yield books unlock formal credit.")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Farm books and farm locations in CultivaNode give you a record of your work.")}</span>
                 </div>
               </div>
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -185,17 +185,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Market Exploitation")}</span>
                   </div>
                   <h3 className="font-headline-md text-headline-md text-primary font-semibold mb-space-sm">{tYo("Adulterated Inputs & Farmgate Cartels")}</h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Up to 35% of agrochemicals and certified seeds entering rural hubs are diluted or counterfeit, slashing yields mid-season. Concurrently, predatory cartels depress harvest farmgate pricing by 25–45% during peak regional flush.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">{tYo("Fake or diluted seeds and agrochemicals are a common problem, and farmgate prices often drop at harvest when everyone sells at once.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
                   <div className="flex items-center justify-between font-label-sm text-label-sm">
-                    <span className="text-on-surface-variant">{tYo("Circulating Fake Agrochemicals")}</span>
-                    <span className="font-bold text-error">{tYo("35% Adulterated")}</span>
+                    <span className="text-on-surface-variant">{tYo("Fake and diluted inputs")}</span>
+                    <span className="font-bold text-error">{tYo("A common problem")}</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                     <div className="bg-error h-full rounded-full" style={{ width: "35%" }} />
                   </div>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Batch-tracked input manifests coupled with structured buyer forward contracts.")}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Store and inventory records now; a fertiliser and spray planner is coming soon.")}</span>
                 </div>
               </div>
             </div>
@@ -208,7 +208,7 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                 <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{tYo("Engineering Foundations")}</span>
                 <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold mt-1">{tYo("Our Core Product Philosophy & Tenets")}</h2>
               </div>
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-md">{tYo("Built for the reality of rural African field logistics, without speculative abstractions or ungrounded claims.")}</p>
+              <p className="font-body-md text-body-md text-on-surface-variant max-w-md">{tYo("Built for the reality of farming in rural South-West Nigeria.")}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md">
               <div className="lg:col-span-6 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -219,17 +219,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     </div>
                     <div>
                       <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Tenet 01")}</span>
-                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Trust Through Tangible Proof (PoW)")}</h3>
+                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Trust Through Checks and Proof")}</h3>
                     </div>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("We reject self-reported agrarian claims. Every tractor hectare, seed bag application, and crop harvest is substantiated through PostGIS telemetry polygons, hardware cryptographic time-stamps, and physical extension agent confirmations.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account. Proof of work (check-in and photos with location and time) is coming soon.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container flex items-center justify-between">
                   <div className="flex items-center gap-space-sm">
                     <Icon name="layers" className="text-secondary text-[20px]" />
-                    <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Double-Entry Spatial Ledger Protocol")}</span>
+                    <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Proof of work: check-in + photos")}</span>
                   </div>
-                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded bg-surface-container-highest text-primary">{tYo("Immutable Trace")}</span>
+                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded bg-surface-container-highest text-primary">{tYo("Coming Soon")}</span>
                 </div>
               </div>
               <div className="lg:col-span-6 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -240,17 +240,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     </div>
                     <div>
                       <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Tenet 02")}</span>
-                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Farmer Sovereignty & NDPA 2023 Compliance")}</h3>
+                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Your Data, Your Consent")}</h3>
                     </div>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("Agrarian data belongs unconditionally to the producer. No corporate syndicate, governmental board, or predatory financier can view telemetry, yield totals, or boundaries without explicit, revocable consent keys held by the farmer.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container flex items-center justify-between">
                   <div className="flex items-center gap-space-sm">
                     <Icon name="lock" className="text-secondary text-[20px]" />
-                    <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Zero Unconsented Telemetry Extraction")}</span>
+                    <span className="font-label-sm text-label-sm text-on-surface font-semibold">{tYo("Consent before ID checks")}</span>
                   </div>
-                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded bg-surface-container-highest text-primary">{tYo("NDPC Certified")}</span>
+                  <span className="font-label-sm text-label-sm px-space-sm py-0.5 rounded bg-surface-container-highest text-primary">{tYo("Download or delete")}</span>
                 </div>
               </div>
               <div className="lg:col-span-6 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -261,14 +261,14 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     </div>
                     <div>
                       <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Tenet 03")}</span>
-                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Open Agrarian Mesh Architecture")}</h3>
+                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Built for Rural Networks")}</h3>
                     </div>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("Constructed on resilient open PostgreSQL/PostGIS engines and offline-first delta synchronizers. Remote farm operators in Oke-Ogun or Ijebu manage field rosters, dispatch machinery, and log yields without live 4G GSM network reliance.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("Records are kept in a Postgres database (Supabase) with PostGIS for farm locations and row-level security. Offline mode, for farms with weak network, is coming soon.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Local SQLite-to-Postgres Event Bus")}</span>
-                  <span className="font-label-sm text-label-sm text-secondary font-bold">{tYo("100% Offline Capable")}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Offline mode")}</span>
+                  <span className="font-label-sm text-label-sm text-secondary font-bold">{tYo("Coming Soon")}</span>
                 </div>
               </div>
               <div className="lg:col-span-6 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
@@ -279,14 +279,14 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                     </div>
                     <div>
                       <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">{tYo("Tenet 04")}</span>
-                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Regulated Financial Custody")}</h3>
+                      <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Honest Payments")}</h3>
                     </div>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("CultivaNode never operates as an unregulated digital wallet or shadow bank. All tractor hire, off-take escrow, and input disbursements are custodied in CBN-regulated settlement vaults with Providus and Wema Bank.")}</p>
+                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-space-md">{tYo("When you hire in the pilot, you pay the tractor owner or farm hand directly. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed.")}</p>
                 </div>
                 <div className="p-space-md rounded-lg bg-surface-container-low flex items-center justify-between">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("CBN Escrow Compliance Tier 1")}</span>
-                  <span className="font-label-sm text-label-sm text-secondary font-bold">{tYo("Providus & Wema Secured")}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Escrow partner")}</span>
+                  <span className="font-label-sm text-label-sm text-secondary font-bold">{tYo("Not signed yet")}</span>
                 </div>
               </div>
             </div>
@@ -297,13 +297,13 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg mb-space-xl items-end">
               <div className="lg:col-span-8">
                 <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{tYo("Pilot Geography")}</span>
-                <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold mt-1">{tYo("Regional Focus: The South-West Agrarian Pilot Mesh")}</h2>
-                <p className="font-body-lg text-body-lg text-on-surface-variant mt-space-xs">{tYo("South-West Nigeria represents one of West Africa's richest dual-biome agrarian matrices. CultivaNode adapts to two distinct micro-climates across 28 operational clusters.")}</p>
+                <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold mt-1">{tYo("Regional Focus: The South-West Pilot")}</h2>
+                <p className="font-body-lg text-body-lg text-on-surface-variant mt-space-xs">{tYo("South-West Nigeria has two main farming belts with different rains and crops. CultivaNode is built with farmers in both.")}</p>
               </div>
               <div className="lg:col-span-4 flex items-center lg:justify-end gap-space-sm">
                 <div className="p-space-sm px-space-md rounded-lg bg-surface-container-lowest shadow-sm flex items-center gap-space-xs">
                   <Icon name="hub" className="text-secondary text-[20px]" />
-                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("28 Active ADP Clusters")}</span>
+                  <span className="font-label-sm text-label-sm font-semibold text-primary">{tYo("6 Pilot States")}</span>
                 </div>
                 <div className="p-space-sm px-space-md rounded-lg bg-surface-container-lowest shadow-sm flex items-center gap-space-xs">
                   <Icon name="layers" className="text-primary text-[20px]" />
@@ -316,17 +316,17 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                 <div className="p-space-md bg-surface-container flex items-center justify-between">
                   <div className="flex items-center gap-space-xs">
                     <Icon name="public" className="text-secondary text-[20px]" />
-                    <span className="font-label-md text-label-md text-primary font-bold">{tYo("South-West Nigeria Geo-Cadastral Mesh (Oyo, Ogun, Osun, Ondo, Ekiti, Lagos)")}</span>
+                    <span className="font-label-md text-label-md text-primary font-bold">{tYo("South-West Nigeria Pilot Area (Oyo, Ogun, Osun, Ondo, Ekiti, Lagos)")}</span>
                   </div>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Live Spatial Coordinates")}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Illustrative map")}</span>
                 </div>
                 <div className="w-full h-80 bg-cover bg-center" data-location="Ibadan, Oyo State, Nigeria" style={{ backgroundImage: "url('/images/screens/9107876e6c7f.webp')" }} />
                 <div className="p-space-md flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-lowest">
                   <div className="flex items-center gap-space-md font-label-sm text-label-sm">
-                    <span className="flex items-center gap-1.5 text-primary font-semibold"><span className="w-2.5 h-2.5 rounded-full bg-primary" />{tYo(" Savanna Cluster")}</span>
-                    <span className="flex items-center gap-1.5 text-secondary font-semibold"><span className="w-2.5 h-2.5 rounded-full bg-secondary" />{tYo(" Forest Belt Cluster")}</span>
+                    <span className="flex items-center gap-1.5 text-primary font-semibold"><span className="w-2.5 h-2.5 rounded-full bg-primary" />{tYo(" Savanna Belt")}</span>
+                    <span className="flex items-center gap-1.5 text-secondary font-semibold"><span className="w-2.5 h-2.5 rounded-full bg-secondary" />{tYo(" Forest Belt")}</span>
                   </div>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Coordinating with ADP Extension Field Stations")}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Built with farmers in both belts")}</span>
                 </div>
               </div>
               <div className="lg:col-span-5 flex flex-col gap-space-md justify-between">
@@ -352,7 +352,7 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
                   </div>
                   <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Rainforest & Coastal Forest Belt")}</h3>
                   <p className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Ogun (Ijebu/Sagamu), Osun, Ondo (Akure/Owo), Ekiti, Lagos")}</p>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("High ambient moisture, organic-rich loams. Specialized operational rails for Tree Crop Telemetry (Cocoa, Oil Palm), Commercial Plantain groves, High-Value Vegetables, and Agro-Forestry management.")}</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("High moisture and rich loam soils. Suited to tree crops (cocoa, oil palm), plantain, vegetables and agro-forestry.")}</p>
                   <div className="flex flex-wrap gap-1.5 pt-space-xs">
                     <span className="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-low text-primary">{tYo("Fine Cocoa")}</span>
                     <span className="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-low text-primary">{tYo("Oil Palm")}</span>
@@ -368,53 +368,20 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
           <div className="max-w-7xl mx-auto px-margin-desktop">
             <div className="max-w-3xl mb-space-xl">
               <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{tYo("Field & Systems Governance")}</span>
-              <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold mt-1">{tYo("Leadership & Agronomic Advisory Council")}</h2>
-              <p className="font-body-lg text-body-lg text-on-surface-variant mt-space-xs">{tYo("Built by agricultural systems engineers, veteran extension directors, geospatial scientists, and supply chain operators rooted in Nigerian soils.")}</p>
+              <h2 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold mt-1">{tYo("The Team")}</h2>
+              <p className="font-body-lg text-body-lg text-on-surface-variant mt-space-xs">{tYo("CultivaNode is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission.")}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
               <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="w-16 h-16 rounded-xl overflow-hidden mb-space-md bg-surface-container">
-                    <img className="w-full h-full object-cover" data-alt="Professional studio portrait of Quadri Olapade, a Nigerian agritech systems architect and founder wearing modern business attire with clean background." src="/images/screens/48822b2e1bac.webp" alt="" loading="lazy" decoding="async" />
+                    <img className="w-full h-full object-cover" data-alt="Portrait for Quadri Olapade, founder of CultivaNode." src="/images/screens/48822b2e1bac.webp" alt="" loading="lazy" decoding="async" />
                   </div>
                   <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Quadri Olapade")}</h3>
-                  <p className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider mb-space-sm">{tYo("Founder & Systems Architect")}</p>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Specialist in high-scale agricultural enterprise software, distributed spatial computing, and transactional proof protocols across emerging markets.")}</p>
+                  <p className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider mb-space-sm">{tYo("Founder")}</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Founder of CultivaNode, building it with farmers in the South-West pilot.")}</p>
                 </div>
-                <div className="mt-space-md pt-space-sm text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1"><Icon name="code" className="text-[16px] text-secondary" />{tYo(" Distributed Spatial Ledger")}</div>
-              </div>
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-16 h-16 rounded-xl overflow-hidden mb-space-md bg-surface-container">
-                    <img className="w-full h-full object-cover" data-alt="Portrait of Engr Babatunde Ogunlesi, an experienced Nigerian agronomist wearing field khaki vest in front of green agricultural foliage." src="/images/screens/ca85b5d3721a.webp" alt="" loading="lazy" decoding="async" />
-                  </div>
-                  <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Engr. B. Ogunlesi")}</h3>
-                  <p className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider mb-space-sm">{tYo("Chief Agronomist & Extension Dir.")}</p>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Former Oyo State ADP Director and NCRI collaborator. 28+ years steering large-scale regional tractorization and seed distribution across the South-West.")}</p>
-                </div>
-                <div className="mt-space-md pt-space-sm text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1"><Icon name="domain" className="text-[16px] text-secondary" />{tYo(" Fmr Oyo ADP Director")}</div>
-              </div>
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-16 h-16 rounded-xl overflow-hidden mb-space-md bg-surface-container">
-                    <img className="w-full h-full object-cover" data-alt="Professional portrait of Dr Folashade Adeyemi, a Nigerian female geospatial researcher and soil scientist in professional research attire." src="/images/screens/380533cd4077.webp" alt="" loading="lazy" decoding="async" />
-                  </div>
-                  <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Dr. F. Adeyemi")}</h3>
-                  <p className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider mb-space-sm">{tYo("Geospatial & Soil Science Lead")}</p>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("PhD Remote Sensing (UI Ibadan). Led multi-spectral mapping of sub-Saharan soil cation exchange capacity and NDVI regional calibration for arable savanna.")}</p>
-                </div>
-                <div className="mt-space-md pt-space-sm text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1"><Icon name="satellite_alt" className="text-[16px] text-secondary" />{tYo(" PhD Remote Sensing, UI")}</div>
-              </div>
-              <div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-16 h-16 rounded-xl overflow-hidden mb-space-md bg-surface-container">
-                    <img className="w-full h-full object-cover" data-alt="Professional portrait of Olumide Bakare, a Nigerian logistics and supply chain operations executive in crisp smart attire." src="/images/screens/63555b4c09b7.webp" alt="" loading="lazy" decoding="async" />
-                  </div>
-                  <h3 className="font-headline-md text-headline-md text-primary font-bold">{tYo("Olumide Bakare")}</h3>
-                  <p className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider mb-space-sm">{tYo("Head of Ops & Syndicate Relations")}</p>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{tYo("Veteran agro-logistics lead specializing in heavy machinery utilization, Interstate transit escrow, and high-volume grain aggregation depots.")}</p>
-                </div>
-                <div className="mt-space-md pt-space-sm text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1"><Icon name="local_shipping" className="text-[16px] text-secondary" />{tYo(" Regional Fleet Corridors")}</div>
+                <div className="mt-space-md pt-space-sm text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1"><Icon name="code" className="text-[16px] text-secondary" />{tYo(" Building CultivaNode")}</div>
               </div>
             </div>
           </div>
@@ -422,35 +389,15 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
         <section className="w-full py-space-xl bg-surface-container-low">
           <div className="max-w-7xl mx-auto px-margin-desktop">
             <div className="text-center max-w-2xl mx-auto mb-space-lg">
-              <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{tYo("Institutional Anchors")}</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary font-bold mt-1">{tYo("Accredited Partner Ecosystem")}</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-1">{tYo("Working directly alongside official state agricultural organs and Central Bank of Nigeria regulated financial rails.")}</p>
+              <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{tYo("Partners")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary font-bold mt-1">{tYo("Our Partners")}</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant mt-1">{tYo("We only name an organisation here after a written agreement.")}</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-space-md items-center">
+            <div className="grid grid-cols-1 gap-space-md items-center">
               <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center text-center gap-space-xs">
-                <Icon name="shield" className="text-primary text-[32px]" />
-                <span className="font-label-md text-label-md text-primary font-bold">{tYo("OYSADEP")}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Oyo State ADP Extension")}</span>
-              </div>
-              <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center text-center gap-space-xs">
-                <Icon name="spa" className="text-primary text-[32px]" />
-                <span className="font-label-md text-label-md text-primary font-bold">{tYo("OGADEP")}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Ogun State ADP Network")}</span>
-              </div>
-              <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center text-center gap-space-xs">
-                <Icon name="account_balance" className="text-secondary text-[32px]" />
-                <span className="font-label-md text-label-md text-primary font-bold">{tYo("Providus Bank")}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Escrow Settlement Trustee")}</span>
-              </div>
-              <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center text-center gap-space-xs">
-                <Icon name="payments" className="text-secondary text-[32px]" />
-                <span className="font-label-md text-label-md text-primary font-bold">{tYo("Wema Bank")}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Agri-Desk Custody Partner")}</span>
-              </div>
-              <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center text-center gap-space-xs col-span-2 md:col-span-1">
-                <Icon name="gavel" className="text-primary text-[32px]" />
-                <span className="font-label-md text-label-md text-primary font-bold">{tYo("NDPC Validated")}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("Data Privacy Compliance")}</span>
+                <Icon name="handshake" className="text-primary text-[32px]" />
+                <span className="font-label-md text-label-md text-primary font-bold">{tYo("No partners listed yet")}</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant">{tYo("We will list partners here once agreements are signed.")}</span>
               </div>
             </div>
           </div>
@@ -460,9 +407,9 @@ export function AboutPage({ lang = "en" }: ScreenProps) {
             <div className="p-space-xl rounded-xl bg-primary-container text-on-primary shadow-md relative overflow-hidden">
               <div className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-secondary opacity-20 filter blur-3xl pointer-events-none" />
               <div className="relative z-10 max-w-3xl">
-                <div className="inline-flex items-center gap-space-xs px-space-sm py-1 rounded bg-primary font-label-sm text-label-sm text-on-primary mb-space-md"><span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed" />{tYo(" Open Onboarding Window")}</div>
-                <h2 className="font-display-lg text-headline-xl-mobile sm:text-headline-xl lg:text-display-lg font-bold text-on-primary leading-tight mb-space-sm">{tYo("Join the Pilot Mesh or Partner With Us")}</h2>
-                <p className="font-body-lg text-body-lg text-surface-container-high leading-relaxed mb-space-xl">{tYo("Whether you cultivate 20 hectares in Kisi, operate an 8-tractor fleet in Sagamu, or direct agricultural extension for state government, CultivaNode establishes your verified operational presence.")}</p>
+                <div className="inline-flex items-center gap-space-xs px-space-sm py-1 rounded bg-primary font-label-sm text-label-sm text-on-primary mb-space-md"><span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed" />{tYo(" Pilot Sign-ups Open")}</div>
+                <h2 className="font-display-lg text-headline-xl-mobile sm:text-headline-xl lg:text-display-lg font-bold text-on-primary leading-tight mb-space-sm">{tYo("Join the Pilot or Partner With Us")}</h2>
+                <p className="font-body-lg text-body-lg text-surface-container-high leading-relaxed mb-space-xl">{tYo("Whether you farm in Kisi, own tractors in Sagamu, or work in agricultural extension, you can join the pilot or talk to us about working together.")}</p>
                 <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-space-md">
                   <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-surface-container-lowest text-primary hover:bg-surface-container transition-colors shadow-sm" href={`/${lang}/sign-up`}><Icon name="how_to_reg" className="mr-space-xs text-[20px]" />{tYo(" Apply to Join Pilot (Farmers & Fleets)")}</Link>
                   <Link className="inline-flex items-center justify-center font-label-lg text-label-lg font-bold px-space-lg py-space-sm rounded-lg bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm" href={`/${lang}/contact`}><Icon name="handshake" className="mr-space-xs text-[20px]" />{tYo(" Institutional & State Partnerships")}</Link>

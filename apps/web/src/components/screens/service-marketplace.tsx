@@ -46,7 +46,7 @@ const LISTINGS: ServiceListing[] = [
     distance: "6km away",
     rating: 4.9,
     powCount: 34,
-    description: "Ideal for primary ploughing and heavy virgin brush breakups. Includes certified operator and auxiliary fuel cache.",
+    description: "Ideal for primary ploughing and heavy virgin brush breakups. Includes a verified operator and fuel.",
     capacityLabel: "Daily Capacity:",
     capacityValue: "12–15 Hectares",
     extraLabel: "Settlement Mode:",
@@ -86,15 +86,15 @@ const LISTINGS: ServiceListing[] = [
     category: "drone",
     image: "/images/screens/3f820cefce69.webp",
     alt: "A high tech commercial agricultural octocopter drone resting on a tripod ground pad",
-    status: "Dispatched w/ Pilot",
+    status: "Planned",
     distance: "18km away",
     rating: 5.0,
     powCount: 19,
-    description: "High resolution crop stress, water deficit, and canopy health analytics with same-day shapefile upload to CultivaNode.",
+    description: "High resolution crop stress, water deficit, and canopy health maps. Drone services are planned and not bookable in the pilot yet.",
     capacityLabel: "Turnaround:",
     capacityValue: "Same-day Orthomosaic",
     extraLabel: "Pilot License:",
-    extraValue: "NCAA Registered",
+    extraValue: "Ask the provider",
     rate: 8500,
     rateUnit: "/ Hectare",
     rateSub: "Min. 5 Ha",
@@ -162,12 +162,12 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
   };
 
   const handleConfirmDirectSettlement = () => {
-    showScreenToast("Proof-of-Work Approved! Direct payment voucher #SET-2026-0492 sent to Babatunde Gbadamosi.");
+    showScreenToast("Job approved (sample). Pay the provider directly.");
     setShowPowDrawer(false);
   };
 
   const handleRaiseDispute = () => {
-    showScreenToast("Dispute logged for job BKG-2026-0492. Oyo ADP Arbiter assigned to inspect geofence.");
+    showScreenToast("Dispute logged for job BKG-2026-0492. Our support team will contact both sides.");
     setShowPowDrawer(false);
   };
 
@@ -179,19 +179,19 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
   const handlePostNeedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const needRef = "NEED-RFQ-" + Math.floor(1000 + Math.random() * 9000);
-    showScreenToast(`Machinery request posted to 14 regional syndicates. Ref: ${needRef}`);
+    showScreenToast(`Machinery request posted to nearby providers. Ref: ${needRef}`);
     setShowPostNeedModal(false);
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    showScreenToast("Equipment registration received. Telematics onboarding team will contact you within 24h.");
+    showScreenToast("Equipment registration received. We will check your NIN, BVN and bank account before you can take jobs.");
     setShowRegisterModal(false);
   };
 
   const handleConfirmBooking = () => {
     if (!bookingItem) return;
-    showScreenToast(`Direct engagement initiated with ${bookingItem.name}. Operator dispatched with zero platform fee.`);
+    showScreenToast(`Direct engagement initiated with ${bookingItem.name}. No platform fee on hires in the pilot; pay the provider directly.`);
     setBookingItem(null);
   };
 
@@ -209,7 +209,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md mb-space-sm shadow-sm">
                 <Icon name="verified" filled className="text-sm" />
-                <span>0% COMMISSION IN THE PILOT · PAY THE PROVIDER DIRECTLY</span>
+                <span>NO PLATFORM FEE ON HIRES IN THE PILOT · PAY THE PROVIDER DIRECTLY</span>
               </div>
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-primary font-bold tracking-tight">Hire machinery and farm help</h1>
               <p className="font-body-md text-body-md text-on-primary-container mt-1 max-w-2xl">Find tractor owners, operators and farm hands who travel to your farm. In the pilot you pay the provider directly after the job. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed.</p>
@@ -260,7 +260,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                   <option value="all">All Equipment (28)</option>
                   <option value="tillage">Heavy Tractors (70+ HP)</option>
                   <option value="sprayer">Boom Sprayers &amp; Drones</option>
-                  <option value="mechanic">Certified Mechanics</option>
+                  <option value="mechanic">Verified Mechanics</option>
                 </select>
               </div>
               <div className="md:col-span-2">
@@ -285,7 +285,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <div className="font-metric-num text-metric-num text-on-surface mt-1">4 <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">Jobs live</span></div>
                 <div className="flex items-center gap-1 mt-1 text-secondary font-label-sm text-label-sm">
                   <span className="w-2 h-2 rounded-full bg-secondary-container animate-ping" />
-                  <span>2 with active GPS telemetry</span>
+                  <span>GPS tracking coming soon</span>
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
@@ -299,7 +299,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <div className="font-metric-num text-metric-num text-on-surface mt-1">28 <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">Units</span></div>
                 <div className="flex items-center gap-1 mt-1 text-secondary font-label-sm text-label-sm">
                   <Icon name="verified" className="text-xs" />
-                  <span>100% audited telematics</span>
+                  <span>Owners checked with NIN, BVN and bank account</span>
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
@@ -309,11 +309,11 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
 
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
               <div>
-                <div className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Proof-of-Work Completed</div>
-                <div className="font-metric-num text-metric-num text-on-surface mt-1">142 <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">Hectares</span></div>
+                <div className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Proof of Work (coming soon)</div>
+                <div className="font-metric-num text-metric-num text-on-surface mt-1">0 <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">Hectares</span></div>
                 <div className="flex items-center gap-1 mt-1 text-secondary font-label-sm text-label-sm">
                   <Icon name="handshake" className="text-xs" />
-                  <span>₦0 commission levied</span>
+                  <span>No platform fee on hires</span>
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
@@ -344,7 +344,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-secondary">
                   <span className="w-1.5 h-1.5 rounded-full bg-surface-container-lowest animate-ping" />
                 </span>
-                <span className="font-headline-sm text-headline-sm text-on-surface font-bold">Live Execution &amp; PoW Tracker</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface font-bold">Job Tracker (sample · proof of work coming soon)</span>
                 <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">In Progress (Plot A1)</span>
               </div>
               <div className="flex items-center gap-space-sm">
@@ -368,16 +368,16 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                     <div className="text-right">
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Direct Settlement Fee</span>
                       <div className="font-metric-num text-metric-num text-primary font-bold">₦95,000</div>
-                      <span className="font-label-sm text-label-sm text-secondary font-medium">₦0 Platform Escrow Levy</span>
+                      <span className="font-label-sm text-label-sm text-secondary font-medium">No platform fee in the pilot</span>
                     </div>
                   </div>
 
                   <div className="mt-space-md p-space-sm bg-surface-container-low rounded-lg flex items-center justify-between">
                     <div className="flex items-center gap-space-sm">
-                      <img className="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="Babatunde Gbadamosi operator photo" src="/images/screens/47ca5be3ef95.webp" alt="" loading="lazy" decoding="async" />
+                      <img className="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="Sample operator photo" src="/images/screens/47ca5be3ef95.webp" alt="" loading="lazy" decoding="async" />
                       <div>
-                        <div className="font-label-md text-label-md text-on-surface font-bold">Babatunde Gbadamosi</div>
-                        <div className="font-body-sm text-body-sm text-on-surface-variant">Alhaji Kazeem Syndicate (Verified Provider) · ★ 4.95 (48 jobs)</div>
+                        <div className="font-label-md text-label-md text-on-surface font-bold">Sample operator</div>
+                        <div className="font-body-sm text-body-sm text-on-surface-variant">Sample Tractor Syndicate (Verified Provider) · ★ 4.95 (48 jobs)</div>
                       </div>
                     </div>
                     <a className="px-3 py-1.5 bg-surface-container-lowest text-primary rounded-lg font-label-sm text-label-sm shadow-sm hover:bg-surface-container-high flex items-center gap-1 transition-colors" href="tel:08000000000">
@@ -389,7 +389,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                   <div className="mt-space-md space-y-space-sm">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Hectare Work Done (GPS Polygons Logged)</span>
+                        <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Hectare Work Done (sample; GPS logging planned)</span>
                         <span className="font-label-md text-label-md text-primary font-bold">6.2 Ha of 9.0 Ha (68.8%)</span>
                       </div>
                       <div className="w-full h-3 bg-surface-container rounded-full overflow-hidden">
@@ -440,7 +440,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                     type="button"
                   >
                     <Icon name="route" className="text-base" />
-                    <span>Inspect Real-Time GPS Track</span>
+                    <span>Inspect GPS Track (planned)</span>
                   </button>
                   <button
                     onClick={() => setShowFlagIssueModal(true)}
@@ -463,7 +463,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                   <div className="absolute top-3 left-3 bg-surface-container-lowest/90 backdrop-blur-md p-2 rounded-lg shadow-sm text-xs font-mono space-y-0.5">
                     <div className="flex items-center gap-1 text-primary font-bold">
                       <span className="w-2 h-2 rounded-full bg-secondary" />
-                      <span>GPS FIX: RTK ACCURACY (±2.5cm)</span>
+                      <span>GPS TRACK: PLANNED (SAMPLE VIEW)</span>
                     </div>
                     <div className="text-on-surface-variant">LAT: 7.9621° N · LON: 3.5932° E</div>
                     <div className="text-on-surface-variant">BOUNDS: PLOT A1 (POLY-9812-CULTIVA)</div>
@@ -485,7 +485,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
               <div>
                 <h2 className="font-headline-md text-headline-md text-on-surface font-bold">Verified Machinery &amp; Technical Services Near You</h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">All equipment vetted with physical frame inspection, calibration reports, and verified operator credentials.</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">Everyone who lists equipment is checked with their NIN, BVN and bank account.</p>
               </div>
               <div className="flex items-center gap-space-sm">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">Sort by:</span>
@@ -566,7 +566,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
       {showPowDrawer && (
         <ScreenDialog
           title="Proof-of-Work Inspection: Job #BKG-2026-0492"
-          subtitle="Pilot Zero-Custody Direct Settlement Policy"
+          subtitle="Pilot: Pay the Provider Directly"
           onClose={() => setShowPowDrawer(false)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
@@ -574,8 +574,8 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <div className="flex items-start gap-space-sm">
                   <Icon name="handshake" className="text-secondary text-2xl shrink-0" />
                   <div>
-                    <h4 className="font-label-lg text-label-lg text-on-surface font-bold">Pilot Zero-Custody Direct Settlement Policy</h4>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">CultivaNode charges 0% fees and holds zero escrow funds. Review the automated boundary logs and proof photos below. If satisfied, confirm settlement and pay the operator directly via your preferred bank transfer or cash.</p>
+                    <h4 className="font-label-lg text-label-lg text-on-surface font-bold">Pilot: Pay the Provider Directly</h4>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">In the pilot there is no platform fee on hires and CultivaNode does not hold your money. Proof of work (check-in and photos with location and time) is coming soon; this is a sample view. If satisfied, confirm settlement and pay the operator directly via your preferred bank transfer or cash.</p>
                   </div>
                 </div>
               </div>
@@ -591,7 +591,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 </div>
                 <div className="flex items-center justify-between font-body-sm text-body-sm">
                   <span className="text-on-surface-variant flex items-center gap-1.5"><Icon name="check_circle" className="text-sm text-secondary" /> Recorded Swath Trajectory:</span>
-                  <span className="font-mono font-semibold text-primary font-bold">6.2 Ha Verified Logged</span>
+                  <span className="font-mono font-semibold text-primary font-bold">6.2 Ha Logged (sample)</span>
                 </div>
               </div>
 
@@ -616,15 +616,15 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold">Direct Settlement Bank Details</span>
                 <div className="flex justify-between items-center pt-1 font-body-sm text-body-sm">
                   <span className="text-on-surface-variant">Bank Name:</span>
-                  <span className="font-semibold text-on-surface">First Bank of Nigeria</span>
+                  <span className="font-semibold text-on-surface">Provider's bank (sample)</span>
                 </div>
                 <div className="flex justify-between items-center font-body-sm text-body-sm">
                   <span className="text-on-surface-variant">Account Number:</span>
-                  <span className="font-mono font-bold text-primary tracking-wider">3098741029</span>
+                  <span className="font-mono font-bold text-primary tracking-wider">••••••1029</span>
                 </div>
                 <div className="flex justify-between items-center font-body-sm text-body-sm">
                   <span className="text-on-surface-variant">Account Name:</span>
-                  <span className="font-semibold text-on-surface">Alhaji Kazeem Syndicate Ent.</span>
+                  <span className="font-semibold text-on-surface">Sample Tractor Syndicate</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 font-headline-sm text-headline-sm">
                   <span className="font-bold text-on-surface">Net Agreed Fee:</span>
@@ -660,7 +660,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
       {showPostNeedModal && (
         <ScreenDialog
           title="Post Machinery Request"
-          subtitle="Broadcast to 28 vetted tractor syndicates within your cluster"
+          subtitle="Broadcast to verified tractor owners near your farm"
           onClose={() => setShowPostNeedModal(false)}
           panel={
             <form onSubmit={handlePostNeedSubmit} className="flex flex-col gap-space-md p-space-md">
@@ -711,7 +711,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
               <div className="flex justify-end gap-space-sm pt-space-xs">
                 <ScreenDialogClose onClick={() => setShowPostNeedModal(false)}>Cancel</ScreenDialogClose>
                 <button type="submit" className="px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md font-bold cursor-pointer">
-                  Broadcast Request (0% Commission)
+                  Broadcast Request (no platform fee)
                 </button>
               </div>
             </form>
@@ -723,7 +723,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
       {showRegisterModal && (
         <ScreenDialog
           title="Register Equipment Syndicate"
-          subtitle="Onboard tractors and implements with automated PoW geofencing"
+          subtitle="List tractors and implements (proof of work coming soon)"
           onClose={() => setShowRegisterModal(false)}
           panel={
             <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-space-md p-space-md">
@@ -797,9 +797,9 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
               <div className="p-space-sm bg-surface-container-low rounded-xl">
                 <span className="font-label-md font-bold text-on-surface">Participating Farms in this Cluster:</span>
                 <ul className="text-body-sm space-y-1 text-on-surface-variant mt-1">
-                  <li>• Afolabi Organic Farm (12 Ha) — Confirmed</li>
-                  <li>• Kasali Grain Hub (8 Ha) — Confirmed</li>
-                  <li>• Alade Ridge Farm (7 Ha) — Confirmed</li>
+                  <li>• Farm 1 (12 Ha) — Confirmed</li>
+                  <li>• Farm 2 (8 Ha) — Confirmed</li>
+                  <li>• Farm 3 (7 Ha) — Confirmed</li>
                   <li>• Your Farm Sector (9 Ha) — Ready to Lock</li>
                 </ul>
               </div>
@@ -828,8 +828,8 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
       {/* Real-time GPS Track Modal */}
       {showGpsTrackModal && (
         <ScreenDialog
-          title="Real-Time GPS Swath Trajectory"
-          subtitle="Plot A1 RTK Satellite Breadcrumbs (±2.5cm Precision)"
+          title="GPS Swath Trajectory (planned)"
+          subtitle="Plot A1 sample view · GPS tracking is planned"
           onClose={() => setShowGpsTrackModal(false)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
@@ -841,7 +841,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                       Swath Passes: 14 of 18 Completed
                     </span>
                     <span className="bg-surface-container-lowest/90 px-2 py-1 rounded text-secondary font-mono text-xs font-bold">
-                      RTK FIX: 100%
+                      SAMPLE DATA
                     </span>
                   </div>
                 </div>
@@ -858,7 +858,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
       {showFlagIssueModal && (
         <ScreenDialog
           title="Flag Issue / Boundary Alert"
-          subtitle="Notify syndicate operator and local extension agent of an impediment"
+          subtitle="Notify the operator and our support team of an impediment"
           onClose={() => setShowFlagIssueModal(false)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
@@ -871,7 +871,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <ScreenDialogClose onClick={() => setShowFlagIssueModal(false)}>Cancel</ScreenDialogClose>
                 <button
                   onClick={() => {
-                    showScreenToast("Boundary alert broadcast to operator and OYSADEP hub.");
+                    showScreenToast("Boundary alert sent to the operator and our support team.");
                     setShowFlagIssueModal(false);
                   }}
                   className="px-space-md py-2.5 rounded-lg bg-error text-on-error font-label-md font-bold cursor-pointer"

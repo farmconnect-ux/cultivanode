@@ -39,7 +39,7 @@ const INITIAL_PLOTS: PlotRecord[] = [
     soil: "Sandy Loam",
     soilSub: "pH 6.4 · Slope 2%",
     tenure: "Family Lease (25y)",
-    supervisor: "Adeleke O.",
+    supervisor: "Supervisor 1",
     supervisorRole: "Agronomist II",
   },
   {
@@ -54,7 +54,7 @@ const INITIAL_PLOTS: PlotRecord[] = [
     soil: "Sandy Loam",
     soilSub: "pH 6.3 · Slope 1.8%",
     tenure: "Family Lease (25y)",
-    supervisor: "Adeleke O.",
+    supervisor: "Supervisor 1",
     supervisorRole: "Agronomist II",
   },
   {
@@ -69,7 +69,7 @@ const INITIAL_PLOTS: PlotRecord[] = [
     soil: "Loamy Alluvial",
     soilSub: "pH 6.6 · Borehole #2",
     tenure: "Freehold Title",
-    supervisor: "Fashola K.",
+    supervisor: "Supervisor 2",
     supervisorRole: "Hort Specialist",
   },
   {
@@ -84,7 +84,7 @@ const INITIAL_PLOTS: PlotRecord[] = [
     soil: "Red Ferruginous Loam",
     soilSub: "pH 6.1 · Rainfed",
     tenure: "Syndicate Lease",
-    supervisor: "Babatunde T.",
+    supervisor: "Supervisor 3",
     supervisorRole: "Field Officer",
   },
   {
@@ -99,7 +99,7 @@ const INITIAL_PLOTS: PlotRecord[] = [
     soil: "Sandy Loam",
     soilSub: "pH 6.5 · Bio-N plot",
     tenure: "Syndicate Lease",
-    supervisor: "Adeleke O.",
+    supervisor: "Supervisor 1",
     supervisorRole: "Agronomist II",
   },
 ];
@@ -148,8 +148,8 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
       null,
       2
     );
-    downloadFile(geojson, `CultivaNode-Cadastral-Survey-${new Date().toISOString().slice(0, 10)}.geojson`, "application/geo+json");
-    showScreenToast("Cadastral Survey GeoJSON downloaded successfully.");
+    downloadFile(geojson, `CultivaNode-Plot-Map-${new Date().toISOString().slice(0, 10)}.geojson`, "application/geo+json");
+    showScreenToast("Plot map GeoJSON downloaded (sample boundaries, not a survey).");
   };
 
   // Modal: Add New Field
@@ -184,11 +184,11 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
             soil: "Sandy Clay Loam",
             soilSub: "pH 6.5 · Slope 1.5%",
             tenure: "Syndicate Lease",
-            supervisor: "Adeleke O.",
+            supervisor: "Supervisor 1",
             supervisorRole: "Agronomist II",
           };
           setPlots([...plots, newPlot]);
-          showScreenToast("New plot demarcated and synchronized to PostGIS cadastral registry!");
+          showScreenToast("New plot added to your farm records.");
         }}
         className="p-space-lg space-y-space-md text-left"
       >
@@ -257,7 +257,7 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
                   Zone 4A: Drier Derived Savanna
                 </span>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm">
-                  Total Mapped Area: 42.5 Hectares
+                  Sample Area: 42.5 Hectares
                 </span>
               </div>
             )}
@@ -278,7 +278,7 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
                 type="button"
               >
                 <Icon name="picture_as_pdf" className="text-base text-error" />
-                <span>Export Cadastral Survey</span>
+                <span>Export Plot Map</span>
               </button>
               <button
                 onClick={() => showScreenToast("KML/GeoJSON import ready: Drag and drop files or browse to upload coordinates.")}
@@ -314,7 +314,7 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-secondary font-label-sm text-label-sm font-semibold">
                   <Icon name="verified" className="text-sm" />
-                  <span>100% cadastral boundaries polygon-locked</span>
+                  <span>Farm pin saved · boundary walking coming soon</span>
                 </div>
               </div>
             </div>
@@ -470,7 +470,7 @@ export function FarmRegistry({ slots }: ScreenProps<FarmRegistrySlot>) {
               </div>
               <div className="p-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm">
                 <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Showing {filteredPlots.length} of {plots.length} demarcated plots • Certified Area: 42.5 Hectares
+                  Showing {filteredPlots.length} of {plots.length} demarcated plots • Sample Area: 42.5 Hectares
                 </span>
                 <div className="flex items-center gap-2">
                   <button onClick={() => showScreenToast("Already on the first page of demarcated plots.")} className="px-3 py-1.5 rounded bg-surface-container-lowest text-on-surface-variant font-label-sm text-label-sm shadow-sm" disabled type="button">

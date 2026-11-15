@@ -27,8 +27,8 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                   <Icon name="task_alt" className="text-[20px]" />
                 </div>
                 <div>
-                  <div className="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">Audit Confidence</div>
-                  <div className="font-headline-sm text-headline-sm text-primary font-bold">100% Validated</div>
+                  <div className="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">Review Status</div>
+                  <div className="font-headline-sm text-headline-sm text-primary font-bold">All Steps Complete</div>
                 </div>
               </div>
             </div>
@@ -93,8 +93,8 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                   <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col justify-between">
                     <div>
                       <div className="font-label-sm text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-space-xs">Registered Producer</div>
-                      <div className="font-headline-sm text-headline-sm text-on-surface font-bold">Adebayo K. Alabi</div>
-                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">+234 803 942 8110</div>
+                      <div className="font-headline-sm text-headline-sm text-on-surface font-bold">Sample Farmer</div>
+                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">+234 ••• ••• ••••</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
                       <span className="font-label-sm text-label-sm text-on-surface-variant">BVN Tier 1</span>
@@ -103,13 +103,13 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                   </div>
                   <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col justify-between">
                     <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-space-xs">NIMC Verified Token</div>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-space-xs">NIN Check</div>
                       <div className="font-headline-sm text-headline-sm text-on-surface font-mono font-bold tracking-wider">2489••••0194</div>
-                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Biometric Facematch 98.4%</div>
+                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Checked through a licensed verification provider</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">NDPA 2023 Shield</span>
-                      <span className="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> SHA-256 Valid</span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">Stored Masked</span>
+                      <span className="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Masked</span>
                     </div>
                   </div>
                   <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col justify-between">
@@ -119,7 +119,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <div className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Deed: BAALE-ISY-2024-082</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">Iseyin Traditional Council</span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">Traditional Council (sample)</span>
                       <span className="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Attested</span>
                     </div>
                   </div>
@@ -149,7 +149,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                         <span className="font-label-sm text-label-sm uppercase tracking-wider font-semibold bg-primary/80 px-2 py-0.5 rounded">Centroid: 8.2140° N, 3.5820° E</span>
                         <span className="font-label-sm text-label-sm bg-secondary px-2 py-0.5 rounded font-bold">12.4 Hectares (124,000 m²)</span>
                       </div>
-                      <div className="text-on-primary font-body-sm text-body-sm mt-1">Oluwaseun Agro-Ventures Perimeter: 1,780 meters</div>
+                      <div className="text-on-primary font-body-sm text-body-sm mt-1">Farm Perimeter: 1,780 meters</div>
                     </div>
                   </div>
                   <div className="md:col-span-6 flex flex-col gap-space-sm">
@@ -216,7 +216,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                     <div className="mt-space-md pt-space-sm bg-surface-container-lowest p-space-sm rounded">
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="font-label-sm text-label-sm text-on-surface-variant">Yield Projection Index</span>
-                        <span className="font-label-sm text-label-sm text-primary font-bold">4.8 MT / Ha (+18% Cluster Avg)</span>
+                        <span className="font-label-sm text-label-sm text-primary font-bold">4.8 MT / Ha (target)</span>
                       </div>
                       <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
                         <div className="bg-secondary h-full rounded-full" style={{ width: "82%" }} />
@@ -283,7 +283,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <span className="font-label-sm text-label-sm text-on-surface-variant">South-West Machinery &amp; Input Aggregation Pool</span>
                     </div>
                   </div>
-                  <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-xs font-bold">0% Pilot Commission</span>
+                  <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-xs font-bold">No platform fee on hires during the pilot</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
                   <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col justify-between">
@@ -297,19 +297,19 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                       <div className="font-body-sm text-body-sm text-primary font-semibold mt-1">₦18,500 / Hectare</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">Operator: Jimoh Rasaq</span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">Operator: Verified operator</span>
                       <span className="font-label-sm text-label-sm text-secondary font-bold">Linked</span>
                     </div>
                   </div>
                   <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-label-sm text-label-sm text-on-surface-variant font-bold">CERTIFIED SEEDS &amp; STEMS</span>
+                        <span className="font-label-sm text-label-sm text-on-surface-variant font-bold">SEEDS &amp; STEMS</span>
                         <Icon name="inventory_2" className="text-[18px] text-secondary" />
                       </div>
                       <div className="font-headline-sm text-headline-sm text-on-surface font-bold">18 Bags SAMMAZ-15</div>
                       <div className="font-body-sm text-body-sm text-on-surface-variant mt-1">+ TMS Stem Bundles</div>
-                      <div className="font-body-sm text-body-sm text-primary font-semibold mt-1">Premier Seeds IITA Spec</div>
+                      <div className="font-body-sm text-body-sm text-primary font-semibold mt-1">Seed dealer (sample)</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Dealer: Oyo-Ogun Hub</span>
@@ -322,13 +322,13 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                         <span className="font-label-sm text-label-sm text-on-surface-variant font-bold">EXTENSION AGENT</span>
                         <Icon name="school" className="text-[18px] text-secondary" />
                       </div>
-                      <div className="font-headline-sm text-headline-sm text-on-surface font-bold">Engr. B. Ogunlesi</div>
-                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-1">Oyo State ADP Agronomist</div>
-                      <div className="font-body-sm text-body-sm text-primary font-semibold mt-1">Iseyin Zonal Office</div>
+                      <div className="font-headline-sm text-headline-sm text-on-surface font-bold">Not assigned yet</div>
+                      <div className="font-body-sm text-body-sm text-on-surface-variant mt-1">Extension support is planned</div>
+                      <div className="font-body-sm text-body-sm text-primary font-semibold mt-1">We will list partners once agreements are signed</div>
                     </div>
                     <div className="mt-space-sm pt-space-sm flex items-center justify-between">
                       <span className="font-label-sm text-label-sm text-on-surface-variant">Zone Inspection</span>
-                      <span className="font-label-sm text-label-sm text-secondary font-bold">Assigned</span>
+                      <span className="font-label-sm text-label-sm text-secondary font-bold">Planned</span>
                     </div>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                 </div>
                 <div className="space-y-space-sm mb-space-md">
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="flex items-center gap-space-xs text-on-surface-variant font-medium"><Icon name="verified" className="text-[16px] text-secondary" /> NIN Biometric Match</span>
+                    <span className="flex items-center gap-space-xs text-on-surface-variant font-medium"><Icon name="verified" className="text-[16px] text-secondary" /> NIN Check</span>
                     <span className="font-label-sm text-label-sm text-secondary font-bold">Passed</span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
@@ -359,15 +359,15 @@ export function OnboardingReview({ lang = "en" }: ScreenProps) {
                     <span className="font-label-sm text-label-sm text-secondary font-bold">Deed Bound</span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="flex items-center gap-space-xs text-on-surface-variant font-medium"><Icon name="verified" className="text-[16px] text-secondary" /> Pilot Mechanization Escrow</span>
-                    <span className="font-label-sm text-label-sm text-secondary font-bold">₦0.00 Pre-fee</span>
+                    <span className="flex items-center gap-space-xs text-on-surface-variant font-medium"><Icon name="verified" className="text-[16px] text-secondary" /> Escrow (not live)</span>
+                    <span className="font-label-sm text-label-sm text-secondary font-bold">Pay provider directly</span>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    const cert = `CULTIVANODE AGRARIAN CADASTRE CERTIFICATE
+                    const cert = `CULTIVANODE FARM SUMMARY (NOT A CERTIFICATE)
 Reference: CN-AGR-OYO-08492
-Producer: Adebayo K. Alabi (BVN Verified)
+Producer: Sample Farmer
 Cluster: Oke-Ogun Savanna Basin Cluster · Iseyin LGA, Oyo State
 Centroid: 8.2140° N, 3.5820° E
 Total Hectarage: 12.4 Ha (124,000 m²)
@@ -375,28 +375,28 @@ Tenancy Deed: Baale Customary Attestation (Perpetual Usufruct)
 Soil Assay: Sandy Clay Loam (pH 6.4, CEC 14.8 cmol/kg)
 Season 2026 Production Slate:
 - Maize (SAMMAZ-15 Hybrid): 7.2 Ha (58%)
-- Yellow Cassava (TME-419 Certified): 5.2 Ha (42%)
-Regulatory Endorsement: Oyo State Agricultural Development Programme (Oyo ADP)
-Cryptographic Seal: SHA256-CN-OYO-08492-CADASTRAL-2026`;
+- Yellow Cassava (TME-419): 5.2 Ha (42%)
+Operator: Excel Palace Global Concept (BN 7455859)
+Note: This summary is not a land title or survey certificate.`;
                     const blob = new Blob([cert], { type: "text/plain;charset=utf-8" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = "Farm-Cadastral-Certificate-CN-AGR-OYO-08492.txt";
+                    a.download = "Farm-Summary-CN-AGR-OYO-08492.txt";
                     a.click();
                     URL.revokeObjectURL(url);
-                    showScreenToast("Farm Cadastral Certificate downloaded successfully.");
+                    showScreenToast("Farm summary downloaded.");
                   }}
                   className="w-full mb-space-md flex items-center justify-center gap-space-xs bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors py-2.5 px-space-md rounded-lg font-label-md text-label-md"
                   type="button"
                 >
                   <Icon name="picture_as_pdf" className="text-[18px] text-secondary" />
-                  <span>Download Farm Cadastral Certificate</span>
+                  <span>Download Farm Summary</span>
                 </button>
                 <div className="bg-surface-container-low p-space-md rounded-lg mb-space-md">
                   <label className="flex items-start gap-space-sm cursor-pointer select-none">
                     <input defaultChecked className="mt-0.5 w-4 h-4 rounded text-primary-container focus:ring-secondary accent-primary-container cursor-pointer" id="consentCheckbox" type="checkbox" />
-                    <span className="font-body-sm text-body-sm text-on-surface-variant leading-tight">I hereby attest that all submitted cadastral boundaries, land tenancy rights, and variety selections for Oluwaseun Agro-Ventures are authentic under the <strong>South-West Agricultural Pilot Framework</strong> and governed under the <strong>Nigeria Data Protection Act (NDPA 2023)</strong>.</span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant leading-tight">I hereby attest that all submitted cadastral boundaries, land tenancy rights, and variety selections for this farm are correct to the best of my knowledge, for the <strong>South-West pilot</strong>, and that my data is handled under the <strong>Nigeria Data Protection Act (NDPA 2023)</strong>.</span>
                   </label>
                 </div>
                 <div className="flex flex-col gap-space-sm">
@@ -404,27 +404,27 @@ Cryptographic Seal: SHA256-CN-OYO-08492-CADASTRAL-2026`;
                     <span>Confirm &amp; Launch Farm Operations Hub</span>
                     <Icon name="arrow_forward" className="text-[18px]" />
                   </Link>
-                  <button onClick={() => showScreenToast("Onboarding draft saved to local SQLite cache and synchronized with cloud node.")} className="w-full flex items-center justify-center gap-space-xs bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-space-md rounded-lg font-label-md text-label-md transition-colors" type="button">
+                  <button onClick={() => showScreenToast("Onboarding draft saved.")} className="w-full flex items-center justify-center gap-space-xs bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-space-md rounded-lg font-label-md text-label-md transition-colors" type="button">
                     <Icon name="save" className="text-[16px]" />
                     <span>Save as Draft &amp; Return Later</span>
                   </button>
                 </div>
                 <div className="mt-space-lg pt-space-md bg-surface-container-low -mx-space-lg -mb-space-lg p-space-md rounded-b-xl">
-                  <div className="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-2 text-center">Regulatory &amp; Financial Partners</div>
+                  <div className="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-2 text-center">Partners</div>
                   <div className="flex items-center justify-center gap-space-md text-on-surface-variant">
                     <div className="flex items-center gap-1">
                       <Icon name="shield" className="text-[16px] text-secondary" />
-                      <span className="font-label-sm text-label-sm font-semibold">Oyo ADP</span>
+                      <span className="font-label-sm text-label-sm font-semibold">Listed once agreements are signed</span>
                     </div>
                     <span className="text-outline-variant">•</span>
                     <div className="flex items-center gap-1">
                       <Icon name="lock" className="text-[16px] text-secondary" />
-                      <span className="font-label-sm text-label-sm font-semibold">Providus Escrow</span>
+                      <span className="font-label-sm text-label-sm font-semibold">Escrow: not live yet</span>
                     </div>
                     <span className="text-outline-variant">•</span>
                     <div className="flex items-center gap-1">
                       <Icon name="gavel" className="text-[16px] text-secondary" />
-                      <span className="font-label-sm text-label-sm font-semibold">NDPA 2023</span>
+                      <span className="font-label-sm text-label-sm font-semibold">Follows NDPA 2023</span>
                     </div>
                   </div>
                 </div>
@@ -449,7 +449,7 @@ Cryptographic Seal: SHA256-CN-OYO-08492-CADASTRAL-2026`;
                   </div>
                   <div className="flex justify-between">
                     <span>ESCROW FACILITY:</span>
-                    <span className="font-semibold text-secondary">Zero-Commission Pilot</span>
+                    <span className="font-semibold text-secondary">Not live yet</span>
                   </div>
                 </div>
               </div>

@@ -9,316 +9,291 @@ export async function GET(
   const download = url.searchParams.get("download") === "1";
   const dateStr = new Date().toISOString().slice(0, 10);
 
-  // CSV Exports
-  if (type === "contracts-registry") {
-    const csvContent = [
-      "Contract_ID,Counterparty_Enterprise,Outgrower_Cluster,Crop_Variety,Hectares_Committed,Target_Volume_MT,Pricing_Formula,Escrow_Agent,SLA_Status,Effective_Date",
-      "AGR-CTR-2026-081,Psaltry International PLC,Ado-Awaye Outgrowers (480 Farmers),Cassava (TME 419),1200.0,30000.0,₦95000/MT + Starch Premium,Providus Bank Escrow Trust,Active SLA Valid,2026-02-15",
-      "AGR-CTR-2026-082,Premier Feed Mills (FMN),Iseyin Maize Syndicate (310 Farmers),Yellow Maize (SAMMAZ-15),850.0,4250.0,₦580000/MT Floor Price,Wema Bank Agri-Desk,Active SLA Valid,2026-03-01",
-      "AGR-CTR-2026-083,Nestle Nigeria PLC,Ogun Valley Cocoa Syndicate,Cocoa (TC-1 Seedlings),450.0,675.0,ICCO Index + ₦120000/MT Rainforest Cert,Providus Bank Escrow Trust,Active SLA Valid,2026-01-20",
-      "AGR-CTR-2026-084,Olam Agri Nigeria,Saki Soybean Cluster (195 Farmers),Soybean (TGX-1448-2E),620.0,1550.0,₦720000/MT Guaranteed Offtake,Wema Bank Agri-Desk,Active SLA Valid,2026-04-10",
-    ].join("\n");
+  // Every file this route serves is a draft for the pilot. Earlier versions carried invented contracts,
+  // bank partners, registrations and stamps; those were removed on 15 Nov 2026 (see the claims register).
+  const COMPANY_LINE =
+    "CultivaNode is run by Excel Palace Global Concept (BN 7455859), a business name registered with the Corporate Affairs Commission.";
+  const DRAFT = "Draft — not a signed or certified document";
 
-    return new Response(csvContent, {
+  // CSV exports (kept so existing links work; they hold no records yet)
+  const csv = (rows: string[], filename: string) =>
+    new Response(rows.join("\n"), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="cultivanode-contracts-registry-${dateStr}.csv"`,
+        "Content-Disposition": `attachment; filename="${filename}-${dateStr}.csv"`,
         "Cache-Control": "private, no-cache",
       },
     });
+
+  if (type === "contracts-registry") {
+    return csv(
+      [
+        "Status,Note",
+        `"${DRAFT}","No supply or offtake contracts have been signed. This register will list them once agreements exist."`,
+      ],
+      "cultivanode-contracts-registry",
+    );
   }
 
   if (type === "waybills") {
-    const csvContent = [
-      "Waybill_Number,Dispatch_Date,Source_Depot,Destination_Cluster,Transporter,Driver_Name,Cargo_Description,Quantity_Bags,Net_Weight_KG,Carrier_Plate,Escrow_Release_Code,Delivery_Status",
-      "WB-2026-00912,2026-04-02,Ibadan Central Agrarian Depot,Iseyin Cluster Gate 3,Kolawole Heavy Haulage,Adeyemi Sunday,Certified NPK 15-15-15 Fertilizer,600,30000,OY-882-APP,ESC-9921-OK,Delivered & Verified",
-      "WB-2026-00913,2026-04-05,Sagamu Agro-Chemical Hub,Abeokuta North Syndicate,SwiftTransit Logistics,Musa Ibrahim,Glyphosate Herbicide (20L Jerrycans),150,3000,OG-412-SMK,ESC-9922-OK,In Transit GPS Monitored",
-      "WB-2026-00914,2026-04-08,Akure Grain Terminal,Ondo Cocoa Station,Ondo State Fleet Corp,Babatunde Rotimi,Fungicide Copper Hydroxide (1kg),400,400,OD-102-AKR,ESC-9923-OK,Delivered & Verified",
-    ].join("\n");
-
-    return new Response(csvContent, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="cultivanode-supplier-waybills-${dateStr}.csv"`,
-        "Cache-Control": "private, no-cache",
-      },
-    });
+    return csv(
+      [
+        "Status,Note",
+        `"${DRAFT}","CultivaNode does not track deliveries or waybills yet. This export will hold real records once that feature is built."`,
+      ],
+      "cultivanode-supplier-waybills",
+    );
   }
 
   if (type === "nibss") {
-    const csvContent = [
-      "Beneficiary_Account_Number,Beneficiary_Bank_Code,Beneficiary_Name,Amount_NGN,Narration,Payment_Reference,Mandate_Code",
-      "0123456789,101,Ado-Awaye Tractor Syndicate,840000.00,Tillage Booking Settlement #BK-8821,CN-NIBSS-2026-001,MND-PROV-901",
-      "0987654321,035,Saki Agro-Input Merchant Ltd,425000.00,Urea Fertilizer Delivery #WB-914,CN-NIBSS-2026-002,MND-WEMA-902",
-      "0112233445,101,Ogun Valley Cocoa Outgrowers,1250000.00,Milestone 2 Harvest Escrow Disbursement,CN-NIBSS-2026-003,MND-PROV-903",
-    ].join("\n");
-
-    return new Response(csvContent, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="cultivanode-nibss-transfer-batch-${dateStr}.csv"`,
-        "Cache-Control": "private, no-cache",
-      },
-    });
+    return csv(
+      [
+        "Status,Note",
+        `"${DRAFT}","CultivaNode does not make bank transfers during the pilot. When you hire, you pay the provider directly."`,
+      ],
+      "cultivanode-transfer-batch",
+    );
   }
 
   if (type === "json-ld-proofs") {
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": "DataFeed",
+      name: "CultivaNode records feed",
+      description: `${DRAFT}. This feed is a placeholder and holds no records yet.`,
       publisher: {
         "@type": "Organization",
-        name: "CultivaNode Infrastructure Ltd",
+        name: "Excel Palace Global Concept",
+        brand: "CultivaNode",
         url: "https://cultivanode.com",
-        taxID: "RC-78192301",
+        description: COMPANY_LINE,
       },
-      auditDate: new Date().toISOString(),
-      merkleRoot: "0x7f9a2b881c20e14d9b43e8876a5210bc",
-      chainHeight: 184209,
-      escrowCustodyRails: ["Providus Bank PLC", "Wema Bank ALAT Agri-Desk"],
-      dataPrivacyStandard: "Nigeria Data Protection Act (NDPA 2023) SEC 24(1)-(3)",
-      proofVerified: true,
+      dateModified: new Date().toISOString(),
+      dataFeedElement: [],
     };
 
     return new Response(JSON.stringify(jsonLd, null, 2), {
       headers: {
         "Content-Type": "application/ld+json; charset=utf-8",
-        "Content-Disposition": `attachment; filename="cultivanode-merkle-proofs-${dateStr}.jsonld"`,
+        "Content-Disposition": `attachment; filename="cultivanode-records-feed-${dateStr}.jsonld"`,
         "Cache-Control": "private, no-cache",
       },
     });
   }
 
-  // Document definitions (PDF-ready, printable HTML layouts)
-  const documents: Record<
-    string,
-    { title: string; subtitle: string; ref: string; bodyHtml: string }
-  > = {
+  // Shown on documents that cannot exist honestly yet.
+  const notYet = (what: string) => `
+        <h3>Not published yet</h3>
+        <p>${what}</p>
+        <p>We will publish this document here when it exists. Until then, nothing on this page is a signed agreement, certificate or report.</p>
+        <p>Questions? Use the contact page on cultivanode.com.</p>
+      `;
+
+  // Document definitions (printable HTML layouts)
+  const documents: Record<string, { title: string; subtitle: string; bodyHtml: string }> = {
     whitepaper: {
-      title: "CultivaNode Technical Whitepaper",
-      subtitle: "Verifiable Agrarian Mesh & Digital Rail Operating System (v2.4)",
-      ref: "CN-ENG-WP-2026.4",
+      title: "CultivaNode Technical Overview",
+      subtitle: "How the pilot app works and what is still being built",
       bodyHtml: `
-        <h3>1. Executive Overview</h3>
-        <p>CultivaNode bridges structural coordination failures in African agriculture through high-precision cadastral GIS polygon delineation, degree-day thermal phenology engines, cryptographic double-entry ledgers, and deadhead-minimized tractor fleet dispatch.</p>
-        <h3>2. Cadastral Spatial Geometry</h3>
-        <p>Plot delineations adhere to the WGS-84 coordinate reference ellipsoid. Sub-meter GNSS perimeter walks are verified for closure tolerance (&epsilon; &lt; 1.5m) and zero tenure overlap before certificate issuance.</p>
-        <h3>3. Escrow Settlement Protocol</h3>
-        <p>Tripartite clearing rails administer 100% principal segregation in Providus Bank PLC and Wema Bank ALAT trust vaults. Automatic 48-hour mechanical force majeure reversals ensure full farmer restitution if syndicates fail to mobilize.</p>
-        <h3>4. Statutory Data Governance</h3>
-        <p>CultivaNode guarantees absolute farmer data sovereignty under the Nigeria Data Protection Act (NDPA 2023). Biometric records and farm cadastre coordinates remain uncommercialized and unencumbered.</p>
+        <h3>1. What CultivaNode is</h3>
+        <p>CultivaNode is a farm management and hiring app, in a pilot with farmers in South-West Nigeria (Oyo, Ogun, Osun, Ondo, Ekiti and Lagos). ${COMPANY_LINE}</p>
+        <p>In the pilot you can use: a crop calendar for 15 common South-West crops; hiring of verified machinery owners and farm hands near your farm; a 10-day weather forecast for your farm; store and inventory; farm books; and a farm assistant in English, Pidgin or Yorùbá (photo diagnosis is coming).</p>
+        <h3>2. Farms and records</h3>
+        <p>You add your farm by dropping a pin with your phone. Walking the boundary comes later. Records are kept in a Postgres database (Supabase) with PostGIS for farm locations, and row-level security so each account can only reach its own records.</p>
+        <h3>3. Payments</h3>
+        <p>When you hire in the pilot, you pay the tractor owner or farm hand directly. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed. On the marketplace, buyers pay at checkout by card, bank transfer or USSD through a licensed payment provider.</p>
+        <h3>4. Your data</h3>
+        <p>We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.</p>
+        <h3>5. Coming soon</h3>
+        <ul>
+          <li>Fertiliser and spray planner</li>
+          <li>Offline mode</li>
+          <li>Proof of work (check-in and photos with location and time)</li>
+          <li>Ratings on completed jobs</li>
+          <li>Boundary walking</li>
+        </ul>
       `,
     },
     "institutional-whitepaper": {
-      title: "Institutional & Sovereign Partner Whitepaper",
-      subtitle: "State ADP Integration, Escrow Governance, and Agricultural Corridor Rails",
-      ref: "CN-GOV-WP-2026.1",
+      title: "Information for Partners",
+      subtitle: "For organisations that want to work with the CultivaNode pilot",
       bodyHtml: `
-        <h3>1. Sovereign Partnership Mandate</h3>
-        <p>Designed for collaboration with State Agricultural Development Programmes (OYSADEP, OGADEP, OSSADEP) and the Central Bank of Nigeria (CBN), CultivaNode establishes transparent digital rails for outgrower monitoring, subsidized tractor dispatch, and zero-leakage input distribution.</p>
-        <h3>2. Audited Escrow Oversight</h3>
-        <p>Funds are locked in segregated bank custody accounts administered by CBN-licensed financial institutions. All disbursements require two-factor field verification: geotagged proof-of-work (GIS boundary overlap &ge; 95%) and encrypted beneficiary confirmation.</p>
-        <h3>3. Extension Agent Accreditation</h3>
-        <p>Accredited civil service extension enumerators utilize CultivaNode offline tablets to conduct cadastral mapping, soil sampling, and pest scouting, receiving instant compensation into regulated wallets.</p>
+        <h3>1. Who we are</h3>
+        <p>${COMPANY_LINE} We are running a pilot with farmers in South-West Nigeria.</p>
+        <h3>2. What the pilot does</h3>
+        <p>Farmers plan their crops, hire verified machinery owners and farm hands near their farm, check a 10-day weather forecast and keep their store and farm books. Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account.</p>
+        <h3>3. Partners</h3>
+        <p>We will list partners here once agreements are signed. If your organisation would like to talk to us, use the contact page on cultivanode.com.</p>
       `,
     },
     handbook: {
-      title: "Participant Operations Handbook",
-      subtitle: "Field Manual for Smallholders, Machinery Syndicates, and Extension Agents",
-      ref: "CN-OPS-HB-2026.2",
+      title: "Participant Handbook",
+      subtitle: "Getting started in the pilot: farmers, machinery owners and farm hands",
       bodyHtml: `
-        <h3>1. Onboarding & Cadastral Delineation</h3>
-        <p>Step-by-step guidance on walking farm parcel perimeters with accredited ADP agents. Requirements include valid NIN, mobile phone number, and contiguous plot boundary access.</p>
-        <h3>2. Tractor Hire & Service Booking</h3>
-        <p>How to book mechanized tillage, ridging, planting, or spraying with zero broker fees. Explains the 3-stage escrow payment release and proof-of-work sign-off process.</p>
-        <h3>3. Offline Field Operations</h3>
-        <p>Using CultivaNode in areas without cellular coverage: local SQLite database caching, delayed synchronization, and SMS notification fallbacks.</p>
+        <h3>1. Sign up and add your farm</h3>
+        <p>Sign up with your email address. Phone sign-in is coming soon. Add your farm by dropping a pin with your phone; walking the boundary comes later. Choose your crops and the app builds your season plan.</p>
+        <h3>2. Hiring a tractor or farm hands</h3>
+        <p>Find verified machinery owners and farm hands near your farm, with their price shown before you hire. In the pilot you pay the provider directly, and there is no platform fee on hires. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed.</p>
+        <h3>3. Listing equipment or services</h3>
+        <p>Everyone who lists equipment or receives payments is checked with their NIN, BVN and bank account, through a licensed verification provider. We ask for your consent before the check and store only masked ID numbers.</p>
+        <h3>4. Poor network</h3>
+        <p>Offline mode is coming soon. For now the app needs a network connection to save your work.</p>
       `,
     },
     "pest-poster": {
-      title: "Pest & Disease Field Identification Guide",
-      subtitle: "Diagnostic Protocols & Threshold Actions for South-West Agrarian Belts",
-      ref: "CN-AGRO-ID-2026.3",
+      title: "Pest & Disease Field Guide",
+      subtitle: "Common problems in South-West farms: what to look for and what to do",
       bodyHtml: `
-        <h3>Key Priority Pests & Crop Pathogens</h3>
+        <p>General guidance only. Ask an extension worker if you are unsure, and always follow the product label.</p>
+        <h3>Common pests and diseases</h3>
         <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;margin-top:12px;">
           <thead>
             <tr style="background:#f0f7f2;text-align:left;">
               <th>Crop</th>
               <th>Pest / Disease</th>
-              <th>Field Symptoms</th>
-              <th>Intervention Threshold</th>
+              <th>What you see</th>
+              <th>What to do</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><strong>Cassava</strong></td>
               <td>Cassava Mosaic Disease (CMD)</td>
-              <td>Distorted, chlorotic leaves; stunted growth</td>
-              <td>Uproot & burn infected cuttings; use TME-419 resistant stem</td>
+              <td>Distorted, yellow-patched leaves; stunted growth</td>
+              <td>Uproot and burn infected plants; plant clean stems of a resistant variety</td>
             </tr>
             <tr>
               <td><strong>Maize</strong></td>
               <td>Fall Armyworm (Spodoptera frugiperda)</td>
-              <td>Window-pane leaf feeding; frass in whorl</td>
-              <td>10% infected plants; apply registered bio-pesticide early morning</td>
+              <td>Window-pane holes in leaves; sawdust-like droppings in the whorl</td>
+              <td>Check your field every week; act early with a registered product, sprayed in the early morning</td>
             </tr>
             <tr>
               <td><strong>Cocoa</strong></td>
               <td>Black Pod (Phytophthora palmivora)</td>
-              <td>Brown rotting lesions on pods; fungal white mycelium</td>
-              <td>Remove mummified pods; copper hydroxide spray at onset of rains</td>
+              <td>Brown rotting patches on pods; white fungal growth</td>
+              <td>Remove infected and dried pods; copper-based spray as the rains start</td>
             </tr>
             <tr>
               <td><strong>Tomato</strong></td>
-              <td>Tuta absoluta (Leaf Miner)</td>
-              <td>Silvery blotch leaf mines; fruit bore holes</td>
-              <td>Pheromone trap count &gt; 3 moths/night; bacillus thuringiensis spray</td>
+              <td>Tuta absoluta (leaf miner)</td>
+              <td>Silvery blotches in leaves; holes in fruit</td>
+              <td>Use pheromone traps to watch numbers; remove damaged leaves and fruit; use a registered product</td>
             </tr>
           </tbody>
         </table>
       `,
     },
     "scout-logbook": {
-      title: "Offline Field Scout & Soil Observation Logbook",
-      subtitle: "Standardized Ground Observation Grid for Cadastral Surveyors",
-      ref: "CN-AGRO-LOG-2026.1",
+      title: "Field Scouting Logbook",
+      subtitle: "A blank sheet to print for your weekly farm walk",
       bodyHtml: `
-        <h3>Plot Observation Template</h3>
-        <p>Record observations during weekly farm perimeter transects:</p>
+        <h3>Farm walk record</h3>
+        <p>Write down what you see each time you walk your farm:</p>
         <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%;margin-top:12px;">
           <thead>
             <tr style="background:#f0f7f2;text-align:left;">
               <th>Date</th>
-              <th>Parcel ID</th>
-              <th>Scout GPS Coord</th>
-              <th>Soil Moisture (%)</th>
-              <th>Crop Stage</th>
-              <th>Observed Stress / Pests</th>
-              <th>Sign-off</th>
+              <th>Farm / plot</th>
+              <th>Location (optional)</th>
+              <th>Soil</th>
+              <th>Crop stage</th>
+              <th>Pests or problems seen</th>
+              <th>Checked by</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>____/____</td><td>PLT-____</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Optimal [ ] Waterlogged</td><td>Vegetative / Tuber</td><td>__________________</td><td>______</td></tr>
-            <tr><td>____/____</td><td>PLT-____</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Optimal [ ] Waterlogged</td><td>Vegetative / Tuber</td><td>__________________</td><td>______</td></tr>
-            <tr><td>____/____</td><td>PLT-____</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Optimal [ ] Waterlogged</td><td>Vegetative / Tuber</td><td>__________________</td><td>______</td></tr>
+            <tr><td>____/____</td><td>__________</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Moist [ ] Waterlogged</td><td>__________</td><td>__________________</td><td>______</td></tr>
+            <tr><td>____/____</td><td>__________</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Moist [ ] Waterlogged</td><td>__________</td><td>__________________</td><td>______</td></tr>
+            <tr><td>____/____</td><td>__________</td><td>Lat: ____, Lng: ____</td><td>[ ] Dry [ ] Moist [ ] Waterlogged</td><td>__________</td><td>__________________</td><td>______</td></tr>
           </tbody>
         </table>
       `,
     },
     "outgrower-covenant": {
-      title: "Master Outgrower Agricultural Production Covenant",
-      subtitle: "Structured Supply, Quality Underwriting, and Escrow Commitment Terms",
-      ref: "CN-LEGAL-COV-2026.7",
-      bodyHtml: `
-        <h3>1. Parties & Commercial Purpose</h3>
-        <p>This master agreement governs structured production contracts executed between off-takers and cooperative outgrower clusters across Oyo, Osun, Ogun, and Ondo agricultural corridors.</p>
-        <h3>2. Delivery & Quality Grading Specifications</h3>
-        <p>Produce delivered under this covenant must satisfy calibrated moisture, purity, and grading thresholds. Inspection occurs at accredited aggregation depots with certified electronic weighbridges.</p>
-        <h3>3. Escrow Custody & Automatic Payouts</h3>
-        <p>All buyer purchase payments are sequestered in partner bank escrow. Upon automated weighbridge and moisture certification, escrow disbursements execute within 4 hours directly to grower accounts.</p>
-      `,
+      title: "Outgrower Agreement",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("CultivaNode does not run outgrower or offtake contracts during the pilot, so there is no outgrower agreement."),
     },
     "escrow-rules": {
-      title: "Machinery Escrow & Cancellation Code",
-      subtitle: "Operational Terms, Force Majeure, and Refund Schedules (&sect;4.19)",
-      ref: "CN-LEGAL-ESC-2026.4",
+      title: "Escrow & Cancellation Rules",
+      subtitle: "Not in force: escrow has not started",
       bodyHtml: `
-        <h3>Clause 4.1: Escrow Protection Principle</h3>
-        <p>To eliminate booking defaults and tractor operator abandonment, all machinery hire fees remain locked in designated escrow trustee clearing accounts until telemetry proof of work is verified.</p>
-        <h3>Clause 4.2: Cancellation & Refund Ladder</h3>
-        <ul>
-          <li><strong>&gt; 48 Hours Prior Notice:</strong> 100% full refund to the farmer.</li>
-          <li><strong>24 &ndash; 48 Hours Prior Notice:</strong> 90% refund (10% transit mobilization allowance).</li>
-          <li><strong>&lt; 24 Hours Prior Notice:</strong> 75% refund (25% operator transit compensation).</li>
-          <li><strong>Force Majeure / Mechanical Breakdown:</strong> 100% immediate full refund settled via Providus Bank escrow rails.</li>
-        </ul>
+        <h3>How paying works in the pilot</h3>
+        <p>When you hire in the pilot, you pay the tractor owner or farm hand directly. CultivaNode does not collect, hold or pay out money for hires, so there is no escrow and no refund schedule yet.</p>
+        <h3>Cancelling</h3>
+        <p>Agree any cancellation with the provider directly. If something goes wrong, tell us in the app and our team will help.</p>
+        <h3>When escrow comes</h3>
+        <p>Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed. The rules, including cancellation and refunds, will be published here before it starts.</p>
       `,
     },
     "dispute-procedure": {
-      title: "Syndicate Dispute Arbitration Framework",
-      subtitle: "Rapid 48-Hour Agricultural Mediation & Resolution Guidelines",
-      ref: "CN-LEGAL-ARB-2026.2",
+      title: "If Something Goes Wrong with a Job",
+      subtitle: "How we help during the pilot",
       bodyHtml: `
-        <h3>1. Scope of Arbitration</h3>
-        <p>Applies to all contested tillage depth disputes, non-germination claims, contaminated input allegations, and transport delay damages.</p>
-        <h3>2. 48-Hour Evidentiary Resolution</h3>
-        <p>Independent ADP agronomy officers inspect the physical parcel, reviewing GNSS tractor telemetry logs and soil records to issue a binding determination within 48 hours.</p>
+        <h3>1. Tell us</h3>
+        <p>If a job was not done, was done badly or was not paid, tell us in the app or through the contact page. Give the job, the date and what happened.</p>
+        <h3>2. What we do</h3>
+        <p>Our team will listen to both sides and help you reach an agreement. Because you pay the provider directly in the pilot, we cannot move or refund money.</p>
+        <h3>3. Later</h3>
+        <p>A fuller dispute process will be published when escrow and proof of work are live.</p>
       `,
     },
     "privacy-charter": {
-      title: "Data Privacy Charter & NDPA 2023 Compliance",
-      subtitle: "Statutory Farmer Data Sovereignty & Protection Rights",
-      ref: "CN-LEGAL-NDPA-2026.1",
+      title: "Data Privacy Summary",
+      subtitle: "How we handle your information in the pilot",
       bodyHtml: `
-        <h3>1. Absolute Ownership</h3>
-        <p>All cadastral GIS boundaries, crop harvest metrics, soil health telemetry, and financial transaction records remain the sole property of the registered producer.</p>
-        <h3>2. Prohibited Exploitation</h3>
-        <p>CultivaNode Infrastructure Ltd does not sell, lease, or monetize individual farmer data. Aggregated analytics are restricted to agricultural research and state food security planning.</p>
+        <h3>1. Who is responsible</h3>
+        <p>${COMPANY_LINE}</p>
+        <h3>2. How we protect your data</h3>
+        <p>We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.</p>
+        <h3>3. Your farm records are yours</h3>
+        <p>We never share your farm records with lenders, buyers or investors without your permission. The full privacy policy is on the Privacy page of cultivanode.com.</p>
       `,
     },
     "legal-pack": {
-      title: "CultivaNode Consolidated Legal & Governance Pack",
-      subtitle: "Master Terms, Outgrower Covenants, Escrow Code, and Privacy Charters",
-      ref: "CN-LEGAL-PACK-2026.COMPLETE",
+      title: "CultivaNode Legal Documents",
+      subtitle: "What exists today and what is still to come",
       bodyHtml: `
-        <h3>Consolidated Legal Standard</h3>
-        <p>This document contains the complete legal suite governing CultivaNode operations, including the Master Terms of Service (Ref: 02-TOS-2025), Outgrower Production Covenants (&sect;6.7), Machinery Escrow Code (&sect;4.19), and NDPA 2023 Compliance Charter.</p>
+        <h3>Available now</h3>
+        <ul>
+          <li>Terms of use: the Terms page on cultivanode.com</li>
+          <li>Privacy policy: the Privacy page on cultivanode.com</li>
+        </ul>
+        <h3>Not written yet</h3>
+        <p>Escrow rules, outgrower agreements and other contracts do not exist yet. They will be added here when they do.</p>
+        <p>${COMPANY_LINE}</p>
       `,
     },
     "escrow-guarantee": {
-      title: "Tripartite Escrow Guarantee Agreement",
-      subtitle: "Settlement Protocol Executed with Providus Bank PLC & Wema Bank ALAT",
-      ref: "CN-FIN-ESG-2026.881",
-      bodyHtml: `
-        <h3>Financial Guarantee Covenants</h3>
-        <p>Confirms institutional ring-fencing of all agricultural transactions within regulated partner trust pools. Payouts are non-commingled and protected against unilateral cancellation.</p>
-      `,
+      title: "Escrow Agreement",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("No escrow agreement has been signed. Escrow is coming once a licensed payment partner is signed; we will name the partner here then."),
     },
     "coop-ratification": {
-      title: "Cooperative General Assembly Ratification Minutes",
-      subtitle: "Official Resolution Adopting CultivaNode Cadastral Registry & Offtake SLAs",
-      ref: "CN-COOP-RAT-2026.04",
-      bodyHtml: `
-        <h3>Ratification Resolution</h3>
-        <p>Unanimously ratified by the General Assembly of participating agricultural cooperatives across Oyo and Osun states, establishing collective bargaining and cadastral group certification.</p>
-      `,
+      title: "Cooperative Resolutions",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("No cooperative has passed a resolution about CultivaNode."),
     },
     "supplier-certificate": {
-      title: "Accredited Agricultural Merchant Certificate",
-      subtitle: "Verified Supplier Accreditation for Certified Seeds, Agrochemicals & Equipment",
-      ref: "CN-CERT-MERCH-2026.104",
-      bodyHtml: `
-        <h3>Accreditation Verification</h3>
-        <p>Certifies that the merchant has passed mandatory regulatory verification with the National Agricultural Seeds Council (NASC) and NAFDAC for registered agricultural inputs.</p>
-      `,
+      title: "Supplier Certificate",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("CultivaNode does not issue supplier certificates or accreditation. Sellers of seed and farm inputs are responsible for their own approvals."),
     },
     "compliance-audit": {
-      title: "Statutory Compliance Audit Report",
-      subtitle: "Quarterly Evaluation of NDPA 2023, KYC/AML Tiers, and Platform Escrow Operations",
-      ref: "CN-AUDIT-REP-2026.Q1",
-      bodyHtml: `
-        <h3>Audit Summary</h3>
-        <p>Evaluation confirms zero security breaches, full NDPA 2023 statutory adherence, 100% cryptographic ledger balance reconciliation, and 0% unverified escrow disbursements.</p>
-      `,
+      title: "Compliance Audit Report",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("No compliance audit of CultivaNode has been carried out."),
     },
     "agronomy-dossier": {
-      title: "Regional Agronomic Research Dossier",
-      subtitle: "Empirical Crop Calibrations & Degree-Day Phenology Across South-West Agro-Ecological Zones",
-      ref: "CN-RES-DOSSIER-2026.3",
-      bodyHtml: `
-        <h3>Research Findings</h3>
-        <p>Compiled in partnership with IITA and regional ADPs, documenting verified thermal baselines, water requirements, and optimal sowing dates for Cassava, Maize, Soybean, and Cocoa.</p>
-      `,
+      title: "Crop Calendar Notes",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("We have not published a research dossier. The crop calendar in the app covers 15 common South-West crops, for both rainy seasons and dry-season vegetables; when we publish the sources behind it, they will appear here."),
     },
     "sop-repository": {
-      title: "Standard Operating Procedures (SOP) Repository",
-      subtitle: "Standardized Protocols for Land Preparation, Mechanized Tillage, and Chemical Application",
-      ref: "CN-SOP-PACK-2026.ALL",
-      bodyHtml: `
-        <h3>Operational Standard Operating Procedures</h3>
-        <p>Comprehensive standard procedures for calibration of tractor disc plows, boom sprayers, safe agrochemical handling, and grain post-harvest drying.</p>
-      `,
+      title: "Standard Operating Procedures",
+      subtitle: "Not available yet",
+      bodyHtml: notYet("Standard operating procedures for land preparation, tillage and spraying have not been written yet."),
     },
   };
 
@@ -330,7 +305,7 @@ export async function GET(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${doc.title} · CultivaNode</title>
+  <title>${doc.title} · CultivaNode (${DRAFT})</title>
   <style>
     @page { size: A4; margin: 20mm; }
     body {
@@ -463,13 +438,12 @@ export async function GET(
     <div class="header">
       <div>
         <div class="brand">CultivaNode</div>
-        <div class="tagline">Agricultural Operating System &middot; South-West Nigeria Mesh</div>
+        <div class="tagline">Farm management and hiring &middot; Pilot in South-West Nigeria</div>
       </div>
       <div class="meta-box">
-        <span class="badge">OFFICIAL DOCUMENT</span>
-        <div>REF: ${doc.ref}</div>
+        <span class="badge">DRAFT &mdash; NOT SIGNED OR CERTIFIED</span>
         <div>DATE: ${dateStr}</div>
-        <div>STATUS: VALIDATED</div>
+        <div>STATUS: Draft for the pilot</div>
       </div>
     </div>
 
@@ -481,8 +455,8 @@ export async function GET(
     </div>
 
     <div class="footer">
-      <div>CultivaNode Infrastructure Ltd &middot; NDPA 2023 Compliant</div>
-      <div>Settlement Conduits: Providus Bank PLC &middot; Wema Bank ALAT</div>
+      <div>${COMPANY_LINE}</div>
+      <div>${DRAFT}</div>
     </div>
   </div>
   ${download ? "<script>window.addEventListener('load', () => window.print());</script>" : ""}

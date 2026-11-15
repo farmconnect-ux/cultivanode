@@ -175,7 +175,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
   // Handler: Confirm Proof of Work
   const handleConfirmPoW = () => {
     setPowConfirmed(true);
-    showScreenToast("Proof of Work verified! Escrow payment ₦95,000 scheduled for Alhaji Kazeem Syndicate.");
+    showScreenToast("Job marked complete (sample). Pay the provider directly; proof of work is coming soon.");
   };
 
   // Modals content definition
@@ -259,7 +259,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
           <Icon name="precision_manufacturing" className="text-primary text-2xl" />
           <div>
             <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Book Machinery (Direct Syndicate)</h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">0% Commission Pilot · Direct escrow lock & telemetry verification</p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">No platform fee on hires in the pilot · Pay the provider directly</p>
           </div>
         </div>
         <ScreenDialogClose>
@@ -271,7 +271,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          showScreenToast("Machinery booking locked! Escrow created and provider notified.");
+          showScreenToast("Machinery booking sent. The provider has been notified.");
         }}
         className="p-space-lg space-y-space-md text-left"
       >
@@ -297,12 +297,12 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
         </div>
         <div className="p-space-md rounded-lg bg-surface-container-low border border-surface-container space-y-1">
           <div className="flex justify-between font-label-md text-label-md">
-            <span className="text-on-surface-variant">Estimated Escrow Lock:</span>
+            <span className="text-on-surface-variant">Estimated Job Fee:</span>
             <span className="font-bold text-primary">₦225,000 (9 Ha @ ₦25k)</span>
           </div>
           <div className="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
-            <span>Platform Commission:</span>
-            <span className="text-secondary font-semibold">₦0 (0% Pilot Rate)</span>
+            <span>Platform Fee:</span>
+            <span className="text-secondary font-semibold">None on hires in the pilot</span>
           </div>
         </div>
         <div className="pt-space-md flex items-center justify-end gap-space-sm border-t border-surface-container-high">
@@ -313,7 +313,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
           </ScreenDialogClose>
           <ScreenDialogClose>
             <button onClick={() => {}} className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-semibold" type="submit">
-              Lock Escrow & Dispatch
+              Send Booking Request
             </button>
           </ScreenDialogClose>
         </div>
@@ -394,8 +394,8 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
         <div className="flex items-center gap-space-xs">
           <Icon name="thunderstorm" className="text-tertiary-container text-2xl" />
           <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">NiMet Agro-Met Weather Guardrail</h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">Iseyin Weather Station #04 · Synchronized 06:00 WAT</p>
+            <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Weather Guardrail (10-day forecast)</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Forecast for your farm · Updated 06:00 WAT (sample)</p>
           </div>
         </div>
         <ScreenDialogClose>
@@ -461,7 +461,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                     </span>
                     <span className="text-outline-variant">•</span>
                     <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                      <Icon name="verified" className="text-sm text-secondary" /> NiMet Agro-Met Synced (06:00 WAT)
+                      <Icon name="verified" className="text-sm text-secondary" /> Forecast Synced (06:00 WAT)
                     </span>
                   </div>
                 )}
@@ -571,10 +571,10 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                 <span className="px-1.5 py-0.5 rounded bg-error text-on-error font-label-sm text-[0.625rem] font-bold uppercase">Priority 1 · Weather Guardrail</span>
                 <span className="font-label-sm text-label-sm text-on-surface-variant">Plot B1 (Tomato)</span>
               </div>
-              <p className="font-label-md text-label-md text-on-surface font-semibold mt-2">NiMet 42mm Heavy Rain Frontal Warning</p>
+              <p className="font-label-md text-label-md text-on-surface font-semibold mt-2">42mm Heavy Rain Forecast</p>
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Mancozeb chemical sprays held 48h to prevent wash-off &amp; waterway run-off.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
-                <span className="font-label-sm text-label-sm text-secondary font-medium">NiMet Sync 06:00 WAT</span>
+                <span className="font-label-sm text-label-sm text-secondary font-medium">Forecast 06:00 WAT</span>
                 <ScreenDialog title="Mancozeb Protocol" side="center" panel={modalWeatherDetails}>
                   <button onClick={() => {}} className="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold transition-colors" type="button">
                     View Protocol
@@ -590,7 +590,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
               <p className="font-label-md text-label-md text-on-surface font-semibold mt-2">Split-Nitrogen Top-Dressing Due (Urea 46%)</p>
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Side-placement 5cm from stalk required in 48-hour pre-rain window.</p>
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
-                <span className="font-label-sm text-label-sm text-secondary font-medium">IITA Savanna Standard</span>
+                <span className="font-label-sm text-label-sm text-secondary font-medium">Crop calendar</span>
                 <button
                   onClick={() => showScreenToast("Crew of 4 field hands dispatched to Plot A2 for Urea side-placement.")}
                   className="px-2 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold hover:bg-primary-container transition-colors"
@@ -610,7 +610,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
               <div className="mt-3 pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">Iseyin Agro-Dealer</span>
                 <button
-                  onClick={() => showScreenToast("Dispatched instant replenishment PO for 14 bags Indorama Urea to Iseyin Dealer.")}
+                  onClick={() => showScreenToast("Reorder note created for 14 bags of urea (sample).")}
                   className="px-2 py-1 rounded bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold hover:bg-primary transition-colors"
                   type="button"
                 >
@@ -752,7 +752,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                     <span className="text-tertiary flex items-center gap-1 font-medium"><Icon name="handshake" className="text-sm" /> Active Service Bookings:</span>
                     <span className="font-label-md text-label-md text-tertiary-container font-bold">₦320,000</span>
                   </div>
-                  <span className="text-[0.625rem] text-secondary font-medium mt-0.5">Direct Settlement · 0% Commission Pilot</span>
+                  <span className="text-[0.625rem] text-secondary font-medium mt-0.5">Direct Settlement · No platform fee on hires</span>
                 </div>
               </div>
             </div>
@@ -768,10 +768,10 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                     <Icon name="psychiatry" className="text-secondary" />
                     <h2 className="font-headline-md text-headline-md text-on-surface">Active Crop Cycles &amp; Phenology</h2>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Synchronized with IITA Savanna Protocols • Growing Degree Days Tracking</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Crop calendar for South-West crops • Growing Degree Days Tracking</p>
                 </div>
                 <div className="flex items-center gap-space-xs">
-                  <span className="px-space-sm py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-bold">Derived Savanna Early Rains 2025</span>
+                  <span className="px-space-sm py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-bold">Derived Savanna Early Rains (sample)</span>
                 </div>
               </div>
               <div className="mt-space-md space-y-space-md">
@@ -786,7 +786,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                           <h3 className="font-headline-sm text-headline-sm text-on-surface">Maize DMR-LSR-Y</h3>
                           <span className="px-space-xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-[0.625rem]">Plot A1 &amp; A2 • 18 Ha</span>
                         </div>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant">Planted 24 days ago (18 Feb) • Target Yield: <strong className="text-on-surface">4.8 MT/Ha</strong> <span className="text-secondary">(+50% vs regional avg)</span></p>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant">Planted 24 days ago (18 Feb) • Target Yield: <strong className="text-on-surface">4.8 MT/Ha</strong></p>
                       </div>
                     </div>
                     <div className="flex items-center gap-space-sm md:text-right">
@@ -809,7 +809,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                       <span>Split-Nitrogen Top-Dressing (Urea 46%) triggers in 48 hours for Plot A2.</span>
                     </div>
                     <button
-                      onClick={() => showScreenToast("Displaying IITA Nitrogen Protocol: Apply 60 kg N/ha side-dressed 5cm away from root crown.")}
+                      onClick={() => showScreenToast("Nitrogen guide: Apply 60 kg N/ha side-dressed 5cm away from root crown.")}
                       className="text-secondary hover:text-primary font-label-sm text-label-sm font-semibold"
                       type="button"
                     >
@@ -1133,13 +1133,13 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                   <Icon name="precision_manufacturing" className="text-secondary" />
                   <h2 className="font-headline-md text-headline-md text-on-surface">Machinery &amp; Equipment</h2>
                 </div>
-                <span className="px-space-xs py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[0.625rem] font-bold uppercase">0% Comm. Pilot</span>
+                <span className="px-space-xs py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[0.625rem] font-bold uppercase">No Platform Fee</span>
               </div>
               <div className="mt-space-md p-space-md rounded-xl bg-surface-container-low space-y-space-sm">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-headline-sm text-headline-sm text-on-surface font-semibold">John Deere 5075E (75 HP)</div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">Alhaji Kazeem Syndicate • Oyo North</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">Sample Tractor Syndicate • Oyo North</p>
                   </div>
                   <span className="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
                     {powConfirmed ? "Verified Done" : "In Field"}
@@ -1151,8 +1151,8 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                     <p className="font-headline-sm text-headline-sm text-primary font-bold">₦95,000</p>
                   </div>
                   <div className="p-space-sm bg-surface-container-lowest rounded-lg">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">Telemetry Status</span>
-                    <p className="font-label-md text-label-md text-secondary flex items-center gap-1 mt-0.5"><span className="h-2 w-2 rounded-full bg-secondary" /> 1,420 RPM Active</p>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">Machine Tracking</span>
+                    <p className="font-label-md text-label-md text-secondary flex items-center gap-1 mt-0.5"><span className="h-2 w-2 rounded-full bg-secondary" /> Planned</p>
                   </div>
                 </div>
                 <div className="pt-space-xs">
@@ -1164,10 +1164,10 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                     <div className="h-full bg-secondary rounded-full" style={{ width: powConfirmed ? "100%" : "68%" }} />
                   </div>
                 </div>
-                <p className="font-label-sm text-label-sm text-on-surface-variant italic">Direct settlement between farmer &amp; provider. Proof of Work (GPS boundary &amp; photos) verified before milestone signoff.</p>
+                <p className="font-label-sm text-label-sm text-on-surface-variant italic">Direct settlement between farmer &amp; provider. Proof of work (check-in and photos with location and time) is coming soon.</p>
                 <div className="flex items-center gap-space-xs pt-space-xs">
                   <button
-                    onClick={() => showScreenToast("GPS Route telemetry: 14 swaths completed at 1.8m spacing. Geofence bounds respected 100%.")}
+                    onClick={() => showScreenToast("GPS route tracking is planned. Sample view only.")}
                     className="flex-1 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md text-center transition-colors"
                     type="button"
                   >
@@ -1255,7 +1255,7 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                 </div>
                 <div>
                   <div className="flex items-center justify-between font-label-md text-label-md mb-1">
-                    <span className="text-on-surface font-medium">Granular Urea 46% (Indorama)</span>
+                    <span className="text-on-surface font-medium">Granular Urea 46%</span>
                     <span className="text-on-tertiary-container font-bold">6 Bags (Low Stock)</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden">
@@ -1273,12 +1273,12 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
                   </div>
                 </div>
                 <button
-                  onClick={() => showScreenToast("Redirecting to Iseyin Verified Dealer: Batch order created for 14 bags Indorama Urea.")}
+                  onClick={() => showScreenToast("Reorder note created for 14 bags of urea (sample).")}
                   className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md text-center transition-all flex items-center justify-center gap-2 font-semibold"
                   type="button"
                 >
                   <Icon name="local_shipping" className="text-base" />
-                  <span>Order from Verified Iseyin Agro-Dealer</span>
+                  <span>Order from an Agro-Dealer</span>
                 </button>
               </div>
             </div>
@@ -1291,11 +1291,11 @@ export function ExecutiveDashboard({ lang = "en", slots, operations }: Executive
           <div className="mt-space-xl p-space-md rounded-xl bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm text-body-sm font-body-sm text-on-surface-variant">
             <div className="flex items-center gap-space-sm">
               <span className="h-2.5 w-2.5 rounded-full bg-secondary animate-ping" />
-              <span className="font-label-md text-label-md text-on-surface font-semibold">Local SQLite Engine Active:</span>
-              <span>1,842 plot records synced with cloud master • Zero packet loss</span>
+              <span className="font-label-md text-label-md text-on-surface font-semibold">Offline Mode:</span>
+              <span>Coming soon • Records are saved online</span>
             </div>
             <div className="flex items-center gap-space-md text-label-sm font-label-sm">
-              <span>Latency: 42ms (MTN 4G / Iseyin Tower)</span>
+              <span>Sample data</span>
               <span>•</span>
               <span className="text-secondary font-bold">CultivaNode OS v2.4.1 (Derived Savanna Build)</span>
             </div>

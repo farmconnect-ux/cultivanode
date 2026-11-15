@@ -30,17 +30,17 @@ const TICKETS: Ticket[] = [
   {
     id: "TIC-0582",
     ref: "#TIC-2026-0582",
-    title: "Escrow Settlement Delayed: MF 375 Rotary Weeding halted by unmapped rocks",
+    title: "Job Settlement Delayed: MF 375 Rotary Weeding halted by unmapped rocks",
     category: "urgent",
     priority: "P1 Critical",
     priorityClass: "bg-error-container text-error",
     slaTime: "18m SLA",
-    requester: "Lateef Gbadamosi",
+    requester: "Sample Farmer",
     location: "Iseyin Savanna, Plot M3",
     channel: "In-App (Termii SMS Synced)",
     assignee: "Quadri O.",
     bookingRef: "#BKG-2026-0492",
-    description: "Muritala stopped the Massey Ferguson tractor after clearing 3.82 Ha of Plot M3. Granite rocks under the surface prevented full cultivation.",
+    description: "The operator stopped the Massey Ferguson tractor after clearing 3.82 Ha of Plot M3. Granite rocks under the surface prevented full cultivation.",
     escrowTotal: 95000,
     operatorPayout: 80645.5,
     farmerRefund: 14354.5,
@@ -48,17 +48,17 @@ const TICKETS: Ticket[] = [
   {
     id: "TIC-0579",
     ref: "#TIC-2026-0579",
-    title: "NIMC vNIN Biometric Verification Timed Out during assisted onboarding",
+    title: "NIN check timed out during assisted onboarding",
     category: "kyc",
     priority: "P2 Oper.",
     priorityClass: "bg-surface-container text-on-tertiary-container",
     slaTime: "1h 40m left",
-    requester: "FA: Folake Ibironke",
+    requester: "Field agent (sample)",
     location: "Ogbomoso Central Hub",
     channel: "Agent Tablet",
     assignee: "Unassigned",
     bookingRef: "#ONB-2026-1102",
-    description: "NIMC gateway returned HTTP 504 Gateway Timeout during fingerprint biometric capture for cooperative member onboarding.",
+    description: "The ID-check provider returned HTTP 504 Gateway Timeout during a NIN check for cooperative member onboarding.",
     escrowTotal: 0,
     operatorPayout: 0,
     farmerRefund: 0,
@@ -66,17 +66,17 @@ const TICKETS: Ticket[] = [
   {
     id: "TIC-0574",
     ref: "#TIC-2026-0574",
-    title: "NPK 15:15:15 Requisition PO sync conflict on SQLite PowerSync",
+    title: "NPK 15:15:15 Requisition PO stock count conflict (sample)",
     category: "agro",
     priority: "P2 Oper.",
     priorityClass: "bg-surface-container text-on-surface-variant",
     slaTime: "2h 15m left",
-    requester: "Babatunde Lawal",
+    requester: "Input dealer (sample)",
     location: "Abeokuta North Input Depot",
-    channel: "PowerSync Offline Hub",
-    assignee: "Seyi B.",
+    channel: "Agent Tablet",
+    assignee: "Staff member",
     bookingRef: "#PO-2026-8831",
-    description: "Conflict between offline stock decrement and central inventory ledger during fertilizer bag dispatch.",
+    description: "Conflict between two stock updates in the inventory ledger during fertilizer bag dispatch.",
     escrowTotal: 420000,
     operatorPayout: 420000,
     farmerRefund: 0,
@@ -84,12 +84,12 @@ const TICKETS: Ticket[] = [
   {
     id: "TIC-0568",
     ref: "#TIC-2026-0568",
-    title: "Off-taker Weighbridge moisture deduction query (15.2% vs 14.0% std)",
+    title: "Off-taker moisture deduction query (15.2% vs 14.0% std)",
     category: "escrow",
     priority: "P3 Normal",
     priorityClass: "bg-secondary-container text-on-secondary-container",
     slaTime: "4h 30m left",
-    requester: "Psaltry Outgrowers Coop",
+    requester: "Outgrowers coop (sample)",
     location: "Ado-Awaye Intake Station",
     channel: "Web Portal",
     assignee: "Pending Customer",
@@ -107,7 +107,7 @@ export function SupportDesk(_props: ScreenProps) {
   const [selectedTicket, setSelectedTicket] = useState<Ticket>(TICKETS[0]);
   const [replyMode, setReplyMode] = useState<"public" | "private">("public");
   const [replyText, setReplyText] = useState(
-    "Dear Mr. Gbadamosi & Mr. Lawal,\n\nOur Lead Agronomist has completed the satellite NDVI boundary and tractor telemetry review for Booking #BKG-2026-0492 (Plot M3). \n\nUnder CultivaNode Platform Terms §5.4 (Sub-surface Geological Obstacles), work was lawfully halted after 3.82 Ha of the total 4.50 Ha plot was executed cleanly:\n\n1. Operator Disbursement: ₦80,645.50 (84.89% prorated service fee) is cleared for immediate disbursement to Muritala Lawal's syndicate account.\n2. Farmer Escrow Refund: ₦14,354.50 (15.11% unworked portion) is released back to Lateef Gbadamosi's primary wallet instantly.\n\nBoth parties please confirm agreement below or reply via Termii SMS with 'ACCEPT 0582'."
+    "Dear customer,\n\nOur support team has reviewed Booking #BKG-2026-0492 (Plot M3). This is a sample case.\n\nUnder our draft dispute guideline §5.4 (Sub-surface Geological Obstacles), work stopped after 3.82 Ha of the total 4.50 Ha plot was done cleanly:\n\n1. Operator share: ₦80,645.50 (84.89% of the agreed fee) for the work done.\n2. Unworked portion: ₦14,354.50 (15.11%) is not payable.\n\nIn the pilot the farmer pays the operator directly; escrow is not live yet. Both parties please confirm agreement below or reply by SMS with 'ACCEPT 0582'."
   );
 
   // Modals
@@ -133,34 +133,34 @@ export function SupportDesk(_props: ScreenProps) {
   const handleInsertDraft = (type: "prorated" | "policy" | "math") => {
     if (type === "prorated") {
       setReplyText((prev) =>
-        prev + "\n\n[Prorated Settlement Clause]: Under §5.4, 3.82 Ha executed cleanly (84.89% pro-rata fee). Locked funds will be partitioned accordingly."
+        prev + "\n\n[Prorated Settlement Clause]: Under §5.4, 3.82 Ha executed cleanly (84.89% pro-rata fee). The agreed fee will be split accordingly (paid directly; escrow not live)."
       );
       showScreenToast("Inserted Prorated Settlement Draft into reply composer.");
     } else if (type === "policy") {
       setReplyText((prev) =>
-        prev + "\n\n[ToS §5.4 Sub-surface Impediment Policy]: When unforeseen bedrock prevents implement penetration, operator is excused from breach and compensated for verified acreage logged by RTK telemetry."
+        prev + "\n\n[ToS §5.4 Sub-surface Impediment Policy]: When unforeseen bedrock prevents implement penetration, operator is excused from breach and paid for the acreage both parties confirm."
       );
       showScreenToast("Attached ToS §5.4 Policy into reply composer.");
     } else if (type === "math") {
       setReplyText((prev) =>
-        prev + "\n\n[Escrow Math Breakdown]:\n• Total Escrow Deposit: ₦95,000.00\n• 3.82 Ha / 4.50 Ha = 84.89%\n• Operator Payout: ₦80,645.50\n• Farmer Refund: ₦14,354.50"
+        prev + "\n\n[Fee Split Breakdown]:\n• Agreed Job Fee: ₦95,000.00\n• 3.82 Ha / 4.50 Ha = 84.89%\n• Operator Payout: ₦80,645.50\n• Farmer Refund: ₦14,354.50"
       );
-      showScreenToast("Inserted Escrow Math Breakdown into reply composer.");
+      showScreenToast("Inserted Fee Split Breakdown into reply composer.");
     }
   };
 
   const handleMarkResolved = () => {
-    showScreenToast(`Ticket ${selectedTicket.ref} marked as RESOLVED. Settlement deed finalized.`);
+    showScreenToast(`Ticket ${selectedTicket.ref} marked as RESOLVED.`);
   };
 
   const handleSaveDraft = () => {
-    showScreenToast("Resolution draft saved to Supabase offline cache.");
+    showScreenToast("Resolution draft saved.");
   };
 
   const handleSendResolution = () => {
-    const payoutRef = "PAY-ESC-" + Math.floor(100000 + Math.random() * 900000);
+    const payoutRef = "RES-" + Math.floor(100000 + Math.random() * 900000);
     showScreenToast(
-      `Resolution dispatched via Termii SMS & App! Escrow split triggered: ₦${selectedTicket.operatorPayout.toLocaleString()} to operator, ₦${selectedTicket.farmerRefund.toLocaleString()} refund to farmer. Ref: ${payoutRef}`
+      `Resolution sent by SMS & App. Agreed split (paid directly; escrow not live): ₦${selectedTicket.operatorPayout.toLocaleString()} to operator, ₦${selectedTicket.farmerRefund.toLocaleString()} not payable by the farmer. Ref: ${payoutRef}`
     );
   };
 
@@ -178,7 +178,7 @@ export function SupportDesk(_props: ScreenProps) {
           <div className="flex flex-wrap items-center justify-between gap-space-md">
             <div className="flex flex-col">
               <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Customer Support &amp; SLA Resolution Desk (§12.3)</h1>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Realtime multi-tier agro-enterprise helpdesk, dispute triage &amp; escrow resolution engine</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Realtime multi-tier agro-enterprise helpdesk, dispute triage &amp; resolution (escrow not live yet)</p>
             </div>
             <div className="flex flex-wrap items-center gap-space-xs">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm shadow-sm">
@@ -187,7 +187,7 @@ export function SupportDesk(_props: ScreenProps) {
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low text-primary font-label-sm text-label-sm shadow-sm">
                 <Icon name="cell_tower" className="text-[15px] text-primary" />
-                <span>Termii SMS / USSD Gateway</span>
+                <span>Termii SMS Gateway</span>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low text-on-surface font-label-sm text-label-sm shadow-sm">
                 <Icon name="timer" className="text-[15px] text-secondary" />
@@ -195,7 +195,7 @@ export function SupportDesk(_props: ScreenProps) {
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm shadow-sm">
                 <Icon name="verified_user" className="text-[15px] text-outline" />
-                <span>NDPA 2023 Compliant PII Masking</span>
+                <span>Masked ID Numbers (NDPA 2023)</span>
               </div>
             </div>
           </div>
@@ -277,15 +277,15 @@ export function SupportDesk(_props: ScreenProps) {
             </div>
             <div className="w-full flex h-2 rounded-full overflow-hidden mt-3 bg-surface-container">
               <div className="bg-primary h-full" style={{ width: "42%" }} title="In-App 42%" />
-              <div className="bg-secondary h-full" style={{ width: "31%" }} title="Termii SMS/USSD 31%" />
+              <div className="bg-secondary h-full" style={{ width: "31%" }} title="Termii SMS 31%" />
               <div className="bg-on-tertiary-container h-full" style={{ width: "18%" }} title="Field Agent 18%" />
-              <div className="bg-outline h-full" style={{ width: "9%" }} title="Voice IVR 9%" />
+              <div className="bg-outline h-full" style={{ width: "9%" }} title="Phone call 9%" />
             </div>
             <div className="grid grid-cols-2 gap-1 mt-2 font-label-sm text-label-sm text-on-surface-variant">
               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> App: 42%</span>
               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary" /> SMS: 31%</span>
               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-on-tertiary-container" /> Agent: 18%</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-outline" /> IVR: 9%</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-outline" /> Call: 9%</span>
             </div>
           </div>
         </div>
@@ -323,7 +323,7 @@ export function SupportDesk(_props: ScreenProps) {
                   className={`px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap cursor-pointer ${filterCategory === "escrow" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container"}`}
                   type="button"
                 >
-                  Escrow
+                  Payments
                 </button>
                 <button
                   onClick={() => setFilterCategory("kyc")}
@@ -353,7 +353,7 @@ export function SupportDesk(_props: ScreenProps) {
               </div>
 
               <div className="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant bg-surface-container-low px-2.5 py-1.5 rounded-lg">
-                <span className="truncate">Category: Machinery &amp; Escrow Disputes</span>
+                <span className="truncate">Category: Machinery &amp; Payment Disputes</span>
                 <Icon name="expand_more" className="text-[16px]" />
               </div>
 
@@ -460,7 +460,7 @@ export function SupportDesk(_props: ScreenProps) {
                       <span className="font-bold text-on-surface">CultivaNode Automated Escalation Engine</span>
                       <span className="text-on-surface-variant">42m ago</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">Ticket automatically provisioned from in-field operator pause signal on Booking {selectedTicket.bookingRef}. Telemetry flagged zero tractor velocity for 45 minutes on uncultivated perimeter.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">Ticket automatically provisioned from in-field operator pause signal on Booking {selectedTicket.bookingRef}. The operator paused the job in the app.</p>
                   </div>
                 </div>
 
@@ -490,7 +490,7 @@ export function SupportDesk(_props: ScreenProps) {
                       </div>
                       <span className="font-label-sm text-label-sm text-on-surface-variant">28m ago</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface leading-relaxed">Reviewed IoT tractor CAN-bus telemetry and operator PoW photos. Disc plough struck an unmapped granite outcrop at Lat 7.9732° N, Long 3.5901° E. Under ToS §5.4 (Geological Impassability), operator is entitled to prorated 84.89% payout (₦80,645.50), and farmer gets instant escrow refund of ₦14,354.50.</p>
+                    <p className="font-body-sm text-body-sm text-on-surface leading-relaxed">Reviewed the operator's photos. Disc plough struck an unmapped granite outcrop at Lat 7.9732° N, Long 3.5901° E. Under ToS §5.4 (Geological Impassability), operator is entitled to prorated 84.89% payout (₦80,645.50), and the farmer does not pay the unworked ₦14,354.50 (paid directly; escrow not live).</p>
                   </div>
                 </div>
 
@@ -499,10 +499,10 @@ export function SupportDesk(_props: ScreenProps) {
                   <div className="flex-1 bg-surface-container-lowest rounded-xl p-space-sm shadow-sm flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-label-md text-label-md font-semibold text-on-surface">Muritala Lawal</span>
+                        <span className="font-label-md text-label-md font-semibold text-on-surface">Sample operator</span>
                         <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-surface-container text-on-surface-variant">Tractor Operator / Syndicate #04</span>
                       </div>
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">22m ago via Termii USSD</span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">22m ago via Termii SMS</span>
                     </div>
                     <p className="font-body-md text-body-md text-on-surface leading-relaxed">&quot;Attached 2x PoW photos of broken hydraulic shear pin and granite boundary. We did 3.82 Ha clean work before striking bedrock. We request quick payout for completed 3.82 Ha so we can replace pin at Iseyin central depot.&quot;</p>
                     <div className="grid grid-cols-2 gap-2 mt-1">
@@ -595,7 +595,7 @@ export function SupportDesk(_props: ScreenProps) {
                     className="px-2 py-1 rounded bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-sm text-label-sm shadow-sm flex items-center gap-1 cursor-pointer"
                     type="button"
                   >
-                    <Icon name="calculate" className="text-[14px] text-on-tertiary-container" /> Escrow Math Breakdown
+                    <Icon name="calculate" className="text-[14px] text-on-tertiary-container" /> Fee Split Breakdown
                   </button>
                 </div>
 
@@ -630,7 +630,7 @@ export function SupportDesk(_props: ScreenProps) {
                       type="button"
                     >
                       <Icon name="send" className="text-[18px]" />
-                      <span>Send Resolution &amp; Trigger Payout Draft</span>
+                      <span>Send Resolution</span>
                     </button>
                   </div>
                 </div>
@@ -641,8 +641,8 @@ export function SupportDesk(_props: ScreenProps) {
           <div className="col-span-12 xl:col-span-3 flex flex-col gap-space-md">
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
               <div className="flex items-center justify-between pb-1 border-b border-surface-container">
-                <span className="font-headline-sm text-headline-sm text-on-surface">Escrow &amp; Counterparties</span>
-                <span className="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-bold">Zenith Bank</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">Payment &amp; Counterparties</span>
+                <span className="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-bold">Escrow not live</span>
               </div>
               <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
                 <div className="flex items-center gap-2">
@@ -658,15 +658,15 @@ export function SupportDesk(_props: ScreenProps) {
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-on-secondary font-bold text-label-sm">ML</div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-label-md text-label-md font-bold text-on-surface truncate">Muritala Lawal (Syn. #04)</span>
-                    <span className="font-label-sm text-label-sm text-outline">Tier 2 BVN · Leadway Insured</span>
+                    <span className="font-label-md text-label-md font-bold text-on-surface truncate">Sample operator (Syn. #04)</span>
+                    <span className="font-label-sm text-label-sm text-outline">Tier 2 BVN</span>
                   </div>
                 </div>
                 <span className="font-label-sm text-label-sm font-bold text-secondary">4.95★</span>
               </div>
               <div className="flex flex-col gap-1.5 p-space-sm rounded-lg bg-surface-container-high/40">
                 <div className="flex items-center justify-between font-label-sm text-label-sm">
-                  <span className="text-on-surface-variant">Escrow Principal Locked:</span>
+                  <span className="text-on-surface-variant">Agreed Job Fee:</span>
                   <span className="font-bold text-on-surface">₦{selectedTicket.escrowTotal.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between font-label-sm text-label-sm text-secondary">
@@ -674,7 +674,7 @@ export function SupportDesk(_props: ScreenProps) {
                   <span className="font-bold">+₦{selectedTicket.operatorPayout.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between font-label-sm text-label-sm text-primary">
-                  <span>Farmer Refund (15.11%):</span>
+                  <span>Unworked Portion (15.11%):</span>
                   <span className="font-bold">₦{selectedTicket.farmerRefund.toLocaleString()}</span>
                 </div>
                 <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden flex mt-1">
@@ -686,8 +686,8 @@ export function SupportDesk(_props: ScreenProps) {
 
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
               <div className="flex items-center justify-between">
-                <span className="font-headline-sm text-headline-sm text-on-surface">Cadastral Telemetry</span>
-                <span className="font-label-sm text-label-sm text-secondary font-bold">GPS Verified</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface">Plot Map (sample)</span>
+                <span className="font-label-sm text-label-sm text-secondary font-bold">GPS tracking planned</span>
               </div>
               <div className="relative w-full h-40 rounded-lg overflow-hidden bg-surface-container flex items-center justify-center">
                 <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('/images/screens/963b7b4c7be9.webp')" }} />
@@ -720,7 +720,7 @@ export function SupportDesk(_props: ScreenProps) {
               </div>
               <div
                 onClick={() => {
-                  setReplyText((prev) => prev + "\n\n[Clause #AGR-TOS-54 Applied]: Impassable Terrain & Geological Obstacles Resolution Protocol authorizes immediate pro-rata compensation based on verifiable GPS telemetry.");
+                  setReplyText((prev) => prev + "\n\n[Clause #AGR-TOS-54 Applied]: Impassable Terrain & Geological Obstacles Resolution Protocol authorizes immediate pro-rata compensation based on photos and GPS-tagged evidence.");
                   showScreenToast("Clause #AGR-TOS-54 inserted into reply composer.");
                 }}
                 className="p-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors flex flex-col gap-1"
@@ -730,7 +730,7 @@ export function SupportDesk(_props: ScreenProps) {
                   <span className="px-1.5 py-0.2 rounded bg-secondary-container text-on-secondary-container text-[10px] font-bold">98.4% Match</span>
                 </div>
                 <p className="font-label-md text-label-md font-semibold text-on-surface leading-tight">Impassable Terrain &amp; Geological Obstacles Resolution Protocol</p>
-                <p className="font-body-sm text-body-sm text-outline line-clamp-2 text-[12px]">Authorizes immediate pro-rata compensation based on verifiable GPS telemetry if bedrock prevents implement penetration.</p>
+                <p className="font-body-sm text-body-sm text-outline line-clamp-2 text-[12px]">Authorizes immediate pro-rata compensation based on photos and GPS-tagged evidence if bedrock prevents implement penetration.</p>
                 <button className="mt-1 text-left font-label-sm text-label-sm text-primary font-bold hover:underline flex items-center gap-0.5" type="button">
                   <span>Insert clause into reply</span>
                   <Icon name="arrow_forward" className="text-[13px]" />
@@ -738,7 +738,7 @@ export function SupportDesk(_props: ScreenProps) {
               </div>
               <div
                 onClick={() => {
-                  setReplyText((prev) => prev + "\n\n[Clause #FIN-ESC-09 Applied]: Partial Proof-of-Work Escrow Disbursement Workflow authorizes locked funds split between contractor wallet and farmer refund account.");
+                  setReplyText((prev) => prev + "\n\n[Clause #FIN-ESC-09 Applied]: Partial Proof-of-Work Escrow Disbursement Workflow (not live; escrow waits for a licensed payment partner) describes how an agreed fee would be split.");
                   showScreenToast("Clause #FIN-ESC-09 inserted into reply composer.");
                 }}
                 className="p-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors flex flex-col gap-1"
@@ -747,8 +747,8 @@ export function SupportDesk(_props: ScreenProps) {
                   <span className="font-label-sm text-label-sm font-bold text-on-surface-variant">#FIN-ESC-09</span>
                   <span className="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant text-[10px] font-bold">95.1% Match</span>
                 </div>
-                <p className="font-label-md text-label-md font-semibold text-on-surface leading-tight">Partial Proof-of-Work (PoW) Escrow Disbursement Workflow</p>
-                <p className="font-body-sm text-body-sm text-outline line-clamp-2 text-[12px]">Step-by-step guideline for splitting locked funds between contractor wallet and farmer refund account.</p>
+                <p className="font-label-md text-label-md font-semibold text-on-surface leading-tight">Partial Proof-of-Work (PoW) Escrow Workflow (not live)</p>
+                <p className="font-body-sm text-body-sm text-outline line-clamp-2 text-[12px]">Draft guideline for splitting an agreed fee. Escrow is not live yet.</p>
                 <button className="mt-1 text-left font-label-sm text-label-sm text-primary font-bold hover:underline flex items-center gap-0.5" type="button">
                   <span>Insert clause into reply</span>
                   <Icon name="arrow_forward" className="text-[13px]" />
@@ -766,12 +766,12 @@ export function SupportDesk(_props: ScreenProps) {
                 </div>
                 <div className="flex flex-col relative pt-1">
                   <span className="absolute -left-[21px] top-2 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary-container" />
-                  <span className="font-bold text-primary">Level 2: Lead Agronomist Investigation</span>
+                  <span className="font-bold text-primary">Level 2: Staff Investigation</span>
                   <span className="text-on-surface-variant text-[11px]">In progress · {selectedTicket.assignee} (36m elapsed)</span>
                 </div>
                 <div className="flex flex-col relative pt-1 opacity-50">
                   <span className="absolute -left-[21px] top-2 w-2.5 h-2.5 rounded-full bg-outline" />
-                  <span className="font-bold text-on-surface">Level 3: Formal Arbitration Board (§11.3)</span>
+                  <span className="font-bold text-on-surface">Level 3: Formal Review (§11.3)</span>
                   <span className="text-on-surface-variant text-[11px]">Escalates if unresolved in 18m 42s</span>
                 </div>
               </div>
@@ -783,7 +783,7 @@ export function SupportDesk(_props: ScreenProps) {
           <div className="flex flex-wrap items-center gap-space-md">
             <div className="flex items-center gap-1.5">
               <Icon name="lock_clock" className="text-secondary text-[16px]" />
-              <span>NDPA 2023 Compliant Masking Active (NIN/BVN Tokenized)</span>
+              <span>Masked NIN/BVN numbers (NDPA 2023)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Icon name="fingerprint" className="text-outline text-[16px]" />
@@ -793,7 +793,7 @@ export function SupportDesk(_props: ScreenProps) {
           <div className="flex flex-wrap items-center gap-space-md">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-secondary" />
-              <span>SQLite PowerSync Sync Latency: <strong className="text-on-surface">28ms</strong></span>
+              <span>Offline Sync: <strong className="text-on-surface">Coming soon</strong></span>
             </div>
             <div className="flex items-center gap-1.5">
               <Icon name="sim_card" className="text-primary text-[16px]" />
@@ -814,10 +814,10 @@ export function SupportDesk(_props: ScreenProps) {
               <div className="flex flex-col gap-space-xs">
                 <label className="font-label-sm text-on-surface font-semibold">Select Support Agent</label>
                 <select className="h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-sm">
-                  <option>Quadri Olapade (Lead Agronomist)</option>
-                  <option>Folake Ibironke (Field Extension Specialist)</option>
-                  <option>Seyi Balogun (Fintech &amp; Escrow Officer)</option>
-                  <option>Engr. Tunde Adeleke (Mechanization Lead)</option>
+                  <option>Quadri Olapade (Founder)</option>
+                  <option>Staff member (Field Extension)</option>
+                  <option>Staff member (Payments)</option>
+                  <option>Staff member (Mechanization)</option>
                 </select>
               </div>
               <div className="flex justify-end gap-space-sm pt-space-xs">
@@ -841,25 +841,25 @@ export function SupportDesk(_props: ScreenProps) {
       {/* Arbitration Modal */}
       {showArbitrationModal && (
         <ScreenDialog
-          title="Escalate to Formal Arbitration Board (§11.3)"
-          subtitle="Independent Agricultural Development Programme (ADP) Statutory Tribunal"
+          title="Escalate to Formal Review (§11.3)"
+          subtitle="Independent review panel (not set up yet)"
           onClose={() => setShowArbitrationModal(false)}
           panel={
             <div className="flex flex-col gap-space-md p-space-md">
               <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-2">
                 <span className="font-label-md font-bold text-on-surface">Arbitration Dossier Inclusions:</span>
                 <ul className="text-body-sm space-y-1 text-on-surface-variant">
-                  <li>• High-resolution NDVI multi-spectral satellite polygon comparison</li>
-                  <li>• CAN-bus CAN-ID 0x18FEE400 engine torque curve logs</li>
+                  <li>• Plot map and boundary notes</li>
+                  <li>• Job check-in records (proof of work coming soon)</li>
                   <li>• Operator submitted georeferenced bedrock outcrop photos</li>
-                  <li>• Providus Bank escrow lock statement (₦95,000.00)</li>
+                  <li>• Agreed fee record (₦95,000.00; escrow not live)</li>
                 </ul>
               </div>
               <div className="flex justify-end gap-space-sm pt-space-xs">
                 <ScreenDialogClose onClick={() => setShowArbitrationModal(false)}>Cancel</ScreenDialogClose>
                 <button
                   onClick={() => {
-                    showScreenToast("Tribunal arbitration packet logged with South-West ADP Arbitration Board.");
+                    showScreenToast("Review packet saved (sample). The review panel is not set up yet.");
                     setShowArbitrationModal(false);
                   }}
                   className="px-space-md py-2 rounded-lg bg-tertiary text-on-tertiary font-label-md font-bold cursor-pointer"
@@ -890,11 +890,11 @@ export function SupportDesk(_props: ScreenProps) {
                 type="button"
               >
                 <span className="font-bold text-primary font-label-md">Macro #01: Standard Prorated Settlement</span>
-                <span className="text-body-sm text-on-surface-variant">Applies §5.4 geological obstacle terms and calculates 84.89% operator / 15.11% farmer escrow release.</span>
+                <span className="text-body-sm text-on-surface-variant">Applies §5.4 geological obstacle terms and calculates the 84.89% operator / 15.11% unworked split (paid directly; escrow not live).</span>
               </button>
               <button
                 onClick={() => {
-                  setReplyText((prev) => prev + "\n\n[Macro #02: Request Field Agronomist Visit]: An accredited Oyo ADP field scout has been dispatched to perform in-person cadastral verification.");
+                  setReplyText((prev) => prev + "\n\n[Macro #02: Request Field Agronomist Visit]: A field visit has been requested to check the plot boundary in person.");
                   showScreenToast("Macro #02 applied.");
                   setShowMacroModal(false);
                 }}
@@ -902,7 +902,7 @@ export function SupportDesk(_props: ScreenProps) {
                 type="button"
               >
                 <span className="font-bold text-primary font-label-md">Macro #02: Dispatch Field Extension Scout</span>
-                <span className="text-body-sm text-on-surface-variant">Dispatches local ADP extension agent to inspect plot boundary within 4 hours.</span>
+                <span className="text-body-sm text-on-surface-variant">Requests a field visit to inspect the plot boundary.</span>
               </button>
               <div className="flex justify-end pt-space-xs">
                 <ScreenDialogClose onClick={() => setShowMacroModal(false)}>Close</ScreenDialogClose>

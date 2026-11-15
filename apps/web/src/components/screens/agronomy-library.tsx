@@ -34,61 +34,61 @@ const GUIDES: GuideItem[] = [
     id: "g1",
     category: "crop-production",
     title: "SAMMAZ-15 Hybrid White Maize Production Protocol",
-    author: "Engr. B. Ogunlesi (Oyo ADP) · Feb 2025",
-    badge: "NCRI Calibrated v2.4",
+    author: "CultivaNode field guide · Draft",
+    badge: "General guide (draft)",
     badgeColor: "text-primary",
     description: "Optimal spacing (75cm x 25cm, 53,333 plants/Ha), 2-stage split NPK 15-15-15 + Urea top-dressing calendar, and fall armyworm (Spodoptera frugiperda) IPM scouting thresholds.",
-    statLabel: "Standard Yield",
+    statLabel: "Typical Yield",
     statValue: "4.8–6.2 MT/Ha",
-    pages: "37 Pgs",
+    pages: "Text guide",
     image: "/images/screens/6c9b888a0e0d.webp",
     alt: "Maize crops in Oyo state savanna",
-    fullContent: "SAMMAZ-15 HYBRID MAIZE PRODUCTION PROTOCOL\nCalibrated for South-West Nigeria Savanna Ecological Zone\n\n1. Land Preparation: Disc plowing followed by harrowing 7-10 days later to break clods.\n2. Plant Population: 53,333 plants/Ha at 75cm between rows and 25cm within row (1 plant/stand).\n3. Basal Fertilizer: 6 bags NPK 15:15:15 at 10-14 DAP band-applied 5cm from stalk.\n4. Top-Dressing: 4 bags Urea 46% at 30-35 DAP side-dressed before rain.\n5. Pest Scouting: Emamectin benzoate at 0.4g/L upon 5% whorl feeding signs.",
+    fullContent: "SAMMAZ-15 HYBRID MAIZE PRODUCTION PROTOCOL\nGeneral guide for the South-West Nigeria savanna zone\n\n1. Land Preparation: Disc plowing followed by harrowing 7-10 days later to break clods.\n2. Plant Population: 53,333 plants/Ha at 75cm between rows and 25cm within row (1 plant/stand).\n3. Basal Fertilizer: 6 bags NPK 15:15:15 at 10-14 DAP band-applied 5cm from stalk.\n4. Top-Dressing: 4 bags Urea 46% at 30-35 DAP side-dressed before rain.\n5. Pest Scouting: Emamectin benzoate at 0.4g/L upon 5% whorl feeding signs.",
   },
   {
     id: "g2",
     category: "crop-production",
     title: "TME-419 Cassava Propagation & Weed Suppression",
-    author: "Dr. F. Adeyemi · Jan 2025",
-    badge: "IITA Calibrated Standard",
+    author: "CultivaNode field guide · Draft",
+    badge: "General guide (draft)",
     badgeColor: "text-secondary",
     description: "Mechanical ridge formation vs flat planting, selective pre-emergence herbicide calibration, and optimal 10–12 month harvest timing targeting 28% dry matter industrial starch extraction.",
     statLabel: "Extract Target",
     statValue: "28% Starch",
-    pages: "24 Pgs",
+    pages: "Text guide",
     image: "/images/screens/59a5fa59c6f0.webp",
     alt: "Industrial cassava stem cuttings and ridge mounds",
-    fullContent: "TME-419 CASSAVA PROPAGATION & WEED SUPPRESSION\nIITA Savanna Standard Protocol\n\n1. Stem Selection: Hardwood stems, 20-25cm long with 5-7 viable nodes.\n2. Ridge Spacing: 1m x 1m ridges (10,000 stands/Ha).\n3. Weed Management: Pre-emergence Atrazine 500 SC within 24h of planting.\n4. Target Harvest: 10-12 months for 28% dry matter starch yield.",
+    fullContent: "TME-419 CASSAVA PROPAGATION & WEED SUPPRESSION\nGeneral guide for the savanna zone\n\n1. Stem Selection: Hardwood stems, 20-25cm long with 5-7 viable nodes.\n2. Ridge Spacing: 1m x 1m ridges (10,000 stands/Ha).\n3. Weed Management: Pre-emergence Atrazine 500 SC within 24h of planting.\n4. Target Harvest: 10-12 months for 28% dry matter starch yield.",
   },
   {
     id: "g3",
     category: "crop-production",
     title: "Tomato & Tatashe Dry Season Drip Irrigation Manual",
-    author: "CultivaNode Extension Team · Nov 2024",
-    badge: "Horticultural Master Guide",
+    author: "CultivaNode field guide · Draft",
+    badge: "Vegetable guide (draft)",
     badgeColor: "text-tertiary",
     description: "Precision water budgeting in derived savanna, bacterial wilt (Ralstonia) prophylaxis, and foliar calcium nitrate injection protocols during rapid fruit enlargement stages.",
     statLabel: "Daily Budget",
     statValue: "3.5L / Plant",
-    pages: "42 Pgs",
+    pages: "Text guide",
     image: "/images/screens/29659391a7a1.webp",
     alt: "Drip irrigation lines watering high-yield crops",
-    fullContent: "TOMATO & TATASHE DRY SEASON DRIP IRRIGATION MANUAL\nNIHORT Production Guidelines\n\n1. Drip Line Spacing: 1.2m beds with inline drippers spaced 30cm apart.\n2. Daily Irrigation: 2.5L to 3.5L per plant depending on evapotranspiration.\n3. Fertigation Schedule: Calcium nitrate 5g/plant/week during fruit set.",
+    fullContent: "TOMATO & TATASHE DRY SEASON DRIP IRRIGATION MANUAL\nGeneral guide for dry-season vegetables\n\n1. Drip Line Spacing: 1.2m beds with inline drippers spaced 30cm apart.\n2. Daily Irrigation: 2.5L to 3.5L per plant depending on evapotranspiration.\n3. Fertigation Schedule: Calcium nitrate 5g/plant/week during fruit set.",
   },
   {
     id: "g4",
     category: "machinery",
     title: "Tractor Syndicate Maintenance & Cold-Start Checklist",
-    author: "Mechanization Fleet Lead · Jan 2025",
-    badge: "Mechanization Fleet Guideline",
+    author: "CultivaNode field guide · Draft",
+    badge: "Machinery guide (draft)",
     badgeColor: "text-primary",
     description: "Fuel sediment purging, secondary air-cleaner cyclone blowout, three-point hitch hydraulic pressures, and disc plow bearing grease intervals in abrasive tropical ferruginous soils.",
     statLabel: "Grease Interval",
     statValue: "10 Ops Hrs",
-    pages: "19 Pgs",
+    pages: "Text guide",
     image: "/images/screens/d31fcf9dbd9f.webp",
     alt: "Heavy agricultural tractor on ferruginous soil",
-    fullContent: "TRACTOR SYNDICATE OPERATOR MAINTENANCE CHECKLIST\nMechanization Standards §4.8\n\n1. Daily Pre-Ignition: Engine oil dipstick, coolant level, fuel water-trap drain.\n2. Air Filter: Blow out cyclone dust bowl every 8 operating hours.\n3. Greasing: All 3-point linkage ball joints and disc plow hubs every 10 hours.",
+    fullContent: "TRACTOR SYNDICATE OPERATOR MAINTENANCE CHECKLIST\nGeneral operator checklist\n\n1. Daily Pre-Ignition: Engine oil dipstick, coolant level, fuel water-trap drain.\n2. Air Filter: Blow out cyclone dust bowl every 8 operating hours.\n3. Greasing: All 3-point linkage ball joints and disc plow hubs every 10 hours.",
   },
 ];
 
@@ -193,18 +193,18 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               </nav>
               <div className="inline-flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-lowest rounded-full shadow-sm text-secondary">
                 <span className="w-2 h-2 rounded-full bg-secondary" />
-                <span className="uppercase tracking-wider font-semibold">{tYo("IITA & NCRI Calibrated Standards")}</span>
+                <span className="uppercase tracking-wider font-semibold">{tYo("Draft Guides for the Pilot")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-space-sm max-w-4xl">
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Agro-Ecological Extension Series · Document 2 §4.13")}</span>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Farm Guides for the South-West Pilot")}</span>
               <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-primary font-bold tracking-tight">
                 {tYo(selectedLanguage === "yo"
                   ? "Àwọn Ìwé Ìtọ́sọ́nà Iṣẹ́ Àgbẹ̀, Ètò Àkókò àti Ìmọ̀ Ẹ̀kọ́"
                   : "Agricultural Resources, Field Guides & Operational Knowledge")}
               </h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant">{tYo("Production protocols, phenological calendars, crop protection spray schedules, and official CultivaNode platform guidelines calibrated for South-West Nigeria agro-ecological zones (Oyo, Ogun, Ondo, and Osun).")}</p>
+              <p className="font-body-lg text-body-lg text-on-surface-variant">{tYo("Crop guides, planting calendars, spray safety notes and answers about how CultivaNode works, written for farms in South-West Nigeria (Oyo, Ogun, Ondo and Osun).")}</p>
             </div>
 
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
@@ -216,7 +216,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full h-11 pl-10 pr-4 bg-surface-container-low text-on-surface placeholder:text-on-surface-variant/70 rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20"
                     id="resourceSearchInput"
-                    placeholder={tYo("Search 85+ guides, crop standards, or operational FAQs (e.g., SAMMAZ-15, Escrow, PostGIS)...")}
+                    placeholder={tYo("Search guides, crops or questions (e.g., SAMMAZ-15, maize, cassava)...")}
                     type="text"
                   />
                 </div>
@@ -248,12 +248,12 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
 
               <div className="flex items-center gap-space-xs overflow-x-auto pb-1" id="filterPillsContainer">
                 {[
-                  { key: "all", label: "All Technical Guides (85)" },
-                  { key: "crop-production", label: "Crop Production Standards (32)" },
-                  { key: "machinery", label: "Tractor & Mechanization (18)" },
-                  { key: "soil", label: "Soil & Pedology (12)" },
-                  { key: "escrow", label: "Financial & Escrow (11)" },
-                  { key: "faq", label: "Platform Operations & NDPA (12)" },
+                  { key: "all", label: "All Guides" },
+                  { key: "crop-production", label: "Crop Production" },
+                  { key: "machinery", label: "Tractor & Mechanization" },
+                  { key: "soil", label: "Soil" },
+                  { key: "escrow", label: "Payments" },
+                  { key: "faq", label: "Platform & Data" },
                 ].map((item) => (
                   <button
                     key={item.key}
@@ -279,10 +279,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
           <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-sm">
               <div>
-                <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Document 2 §4.13 Repository")}</span>
-                <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Featured Extension Master Protocols")}</h2>
+                <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Guide Library")}</span>
+                <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Featured Field Guides")}</h2>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">{tYo("Peer-reviewed field standards deployed across Iseyin, Saki, Sagamu, and Akure commercial agronomy clusters.")}</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md">{tYo("General field guides for South-West farms. These are drafts, not official standards. Check with a local extension officer before you act on them.")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md" id="featuredGuidesGrid">
@@ -332,7 +332,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <button
                       onClick={() => handleDownloadGuide(guide)}
                       className="inline-flex items-center justify-center p-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
-                      title={tYo("Download PDF")}
+                      title={tYo("Download guide")}
                       type="button"
                     >
                       <Icon name="download" className="text-[18px]" />
@@ -351,10 +351,10 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div>
                 <div className="flex items-center gap-space-xs">
                   <Icon name="calendar_month" className="text-secondary text-[20px]" />
-                  <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Agro-Ecological Telemetry Calendar")}</span>
+                  <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Planting Calendar")}</span>
                 </div>
                 <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Seasonal Phenology & Seeding Matrix")}</h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Calibrated for derived savanna and rainforest transition zones in Oyo, Ogun, Osun & Ondo.")}</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("General planting windows for the derived savanna and rainforest transition zones in Oyo, Ogun, Osun & Ondo.")}</p>
               </div>
               <div className="flex items-center bg-surface-container-lowest p-1 rounded-xl shadow-sm border border-outline-variant/30">
                 <button
@@ -417,8 +417,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               </div>
               <div className="p-space-md bg-surface-container-low flex flex-col md:flex-row items-center justify-between gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
                 <div className="flex items-center gap-space-xs">
-                  <Icon name="verified" className="text-[16px] text-secondary" />
-                  <span>{tYo("Rainfall distribution telemetry cross-referenced with NIMET 2025 Seasonal Climate Prediction for Oyo, Ogun, Ondo, and Osun.")}</span>
+                  <Icon name="calendar_month" className="text-[16px] text-secondary" />
+                  <span>{tYo("Planting windows are general guides. Check the 10-day weather forecast for your farm before you plant.")}</span>
                 </div>
                 <button
                   onClick={handleDownloadPhenologySchedule}
@@ -435,9 +435,9 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
         <section className="w-full px-margin md:px-margin-tablet lg:px-margin-desktop py-space-xl">
           <div className="max-w-7xl mx-auto flex flex-col gap-space-xl">
             <div className="flex flex-col gap-space-xs">
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Document 2 §4.15 Inquiries & Protocols")}</span>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Questions & Answers")}</span>
               <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Frequently Addressed Field & Platform Inquiries")}</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">{tYo("Detailed operational resolutions regarding boundary walking, offline sync in remote bushland, Providus escrow settlements, and seed certification verification.")}</p>
+              <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">{tYo("Answers about farm locations, using CultivaNode with weak network, paying for hires, checking seed and your data.")}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
@@ -445,7 +445,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="polyline" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar A: Boundary Delineation & Field Connectivity")}</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar A: Farm Location & Network")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupA">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -454,13 +454,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>{tYo("How does CultivaNode measure farm boundaries without a licensed surveyor?")}</span>
+                      <span>{tYo("How does CultivaNode record where my farm is?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.a1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.a1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>{tYo("CultivaNode utilizes the ")}<strong>{tYo("PostGIS GeoDjango spatial extension engine")}</strong>{tYo(". Extension officers walk the perimeter with mobile GNSS devices utilizing multi-constellation RTK correction where available, generating an enclosed polygon centroid with sub-meter spatial accuracy.")}</p>
-                        <p>{tYo("To secure community validity in agrarian nodes like Saki and Ibarapa, boundary walks are counter-signed via digital signature or thumbprint by the cluster's traditional Baale or Land Holding Committee, fully aligned with the Oyo & Ogun Agricultural Land Administration guidelines.")}</p>
+                        <p>{tYo("Today, CultivaNode saves ")}<strong>{tYo("a pin for your farm location")}</strong>{tYo(", stored in our database with PostGIS. Boundary walking (walking the edge of your farm with your phone to draw its shape) is coming later.")}</p>
+                        <p>{tYo("A farm pin on CultivaNode is a record for your own planning. It does not replace a survey plan or a land title.")}</p>
                       </div>
                     )}
                   </div>
@@ -477,8 +477,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     {openAccordions.a2 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
                         <p>
-                          <strong>{tYo("No.")}</strong>{tYo(" CultivaNode mobile field units operate on an asynchronous ")}<strong>{tYo("Local SQLite Queue Architecture")}</strong>{tYo(". Spray records, fuel fill logs, yield tallies, and worker attendance can be entered without cellular coverage.")}</p>
-                        <p>{tYo("Once the supervisor or farmer returns to 2G/3G coverage at a market town, the device automatically synchronizes transactional diffs via encrypted REST payloads with automated conflict resolution.")}</p>
+                          <strong>{tYo("For now, yes.")}</strong>{tYo(" CultivaNode needs a network connection to save your records. ")}<strong>{tYo("Offline mode")}</strong>{tYo(" is coming soon, so you can enter spray records, fuel logs, yields and worker attendance without network.")}</p>
+                        <p>{tYo("Until then, note the work on paper and enter it when you are back in network coverage.")}</p>
                       </div>
                     )}
                   </div>
@@ -489,7 +489,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="payments" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar B: Machinery Escrow & Operator Settlement")}</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar B: Paying for Hires")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupB">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -498,13 +498,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>{tYo("How does the 0% pilot commission escrow mechanism work?")}</span>
+                      <span>{tYo("How do I pay for a tractor or farm hand in the pilot?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.b1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.b1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>{tYo("When you book tractor plowing or harrowing, 100% of the calculated cost is deposited into an institutional escrow vault hosted at ")}<strong>{tYo("Providus Bank PLC")}</strong>{tYo(" under CBN oversight. The tractor operator receives a mobilization token guaranteeing payment upon successful delivery.")}</p>
-                        <p>{tYo("Upon work completion, the farmer inspects the hectares and enters their PIN, or the system auto-settles after 48 hours in the absence of a dispute. During the current South-West pilot rollout, CultivaNode charges 0% platform intermediary commission.")}</p>
+                        <p>{tYo("When you hire in the pilot, you pay the tractor owner or farm hand directly. ")}<strong>{tYo("Escrow (money held until you confirm the job)")}</strong>{tYo(" is coming once a licensed payment partner is signed.")}</p>
+                        <p>{tYo("There is no platform fee on hires during the pilot.")}</p>
                       </div>
                     )}
                   </div>
@@ -520,8 +520,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     </button>
                     {openAccordions.b2 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>{tYo("CultivaNode calculates the exact completed acreage utilizing the tractor operator's onboard GPS telemetry or phone polygon tracker. The completed fraction is logged.")}</p>
-                        <p>{tYo("The system then offers two immediate escrow remedies: (1) Relief tractor dispatch from the nearest Syndicate cluster within 24 hours, or (2) Instant pro-rata escrow balance refund credited back to the farmer's mobile wallet or bank account.")}</p>
+                        <p>{tYo("In the pilot you pay the provider directly, so agree with the tractor owner before the job starts how part-finished work will be paid.")}</p>
+                        <p>{tYo("Proof of work (check-in and photos with location and time) is coming soon. Escrow refunds for part-finished jobs are planned for when escrow is live.")}</p>
                       </div>
                     )}
                   </div>
@@ -532,7 +532,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="verified_user" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar C: Quality Verification & Seed Integrity")}</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar C: Seed & Input Quality")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupC">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -541,13 +541,13 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                       className="w-full p-space-md text-left flex items-center justify-between gap-space-sm font-headline-sm text-headline-sm text-on-surface hover:text-primary transition-colors accordion-toggle"
                       type="button"
                     >
-                      <span>{tYo("How are certified seeds differentiated from counterfeit grain?")}</span>
+                      <span>{tYo("How can I avoid fake seed?")}</span>
                       <Icon name="expand_more" className={`text-outline transition-transform duration-200 ${openAccordions.c1 ? "rotate-180" : ""}`} />
                     </button>
                     {openAccordions.c1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
-                        <p>{tYo("All inputs cataloged on CultivaNode are authenticated with the ")}<strong>{tYo("National Agricultural Seeds Council (NASC) SEEDCODEX verification tags")}</strong>{tYo(". Each bag features a tamper-proof scratch-off QR code verified directly against the NASC national database.")}</p>
-                        <p>{tYo("Furthermore, agro-dealers listed on our directory are physically audited and verified by IITA/NCRI accredited field officers across Ibadan, Abeokuta, and Akure.")}</p>
+                        <p>{tYo("CultivaNode does not check seed bags today. ")}<strong>{tYo("Buy from dealers you know and trust")}</strong>{tYo(", and keep the bag label and your receipt.")}</p>
+                        <p>{tYo("You can record the seed and inputs you buy in your CultivaNode store and inventory, so you know which batch you used.")}</p>
                       </div>
                     )}
                   </div>
@@ -558,7 +558,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
               <div className="flex flex-col gap-space-md">
                 <div className="flex items-center gap-space-xs pb-space-xs border-b border-surface-container-high">
                   <Icon name="gavel" className="text-secondary" />
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar D: Statutory Compliance & NDPA 2023")}</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">{tYo("Pillar D: Your Data")}</h3>
                 </div>
                 <div className="flex flex-col gap-space-sm" id="accordionGroupD">
                   <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
@@ -573,8 +573,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     {openAccordions.d1 && (
                       <div className="px-space-md pb-space-md text-on-surface-variant font-body-sm text-body-sm flex flex-col gap-2">
                         <p>
-                          <strong>{tYo("Absolutely not without your explicit, auditable opt-in consent.")}</strong>{tYo(" CultivaNode operates strictly under the ")}<strong>{tYo("Nigeria Data Protection Act (NDPA 2023)")}</strong>{tYo(" and NITDA statutory guidelines.")}</p>
-                        <p>{tYo("Your farm telemetry, financial volumes, and harvest yields are encrypted. When applying for agricultural credit, you explicitly generate a revocable 30-day \"Lender Token\" that shares only the specific data fields required for credit scoring.")}</p>
+                          <strong>{tYo("Not without your consent.")}</strong>{tYo(" We follow the ")}<strong>{tYo("Nigeria Data Protection Act 2023")}</strong>{tYo(": we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.")}</p>
+                        <p>{tYo("Sharing your records with a lender is not a feature yet. If we add it, you will choose what to share.")}</p>
                       </div>
                     )}
                   </div>
@@ -588,8 +588,8 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
         <section className="w-full px-margin md:px-margin-tablet lg:px-margin-desktop py-space-xl bg-surface-container-low">
           <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
             <div>
-              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Offline Extension Toolkits")}</span>
-              <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Official Field Operational Manuals & Printables")}</h2>
+              <span className="font-label-md text-label-md tracking-wider uppercase text-secondary">{tYo("Printable Toolkits")}</span>
+              <h2 className="font-headline-lg text-headline-lg text-primary">{tYo("Field Manuals & Printables")}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
               <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-outline-variant/30 flex flex-col justify-between">
@@ -598,16 +598,16 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="menu_book" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("PDF Document · 68 Pages · 14.2 MB")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Text file · Draft outline")}</span>
                     <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Pilot Farm Operations Handbook (Oyo & Ogun Edition)")}</h3>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Comprehensive reference guide covering cooperative formation, cluster delineation standards, dispute management protocols, and multi-crop spraying schedules.")}</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Outline of a planned handbook: farmer groups, booking machinery, safe use of farm chemicals and keeping farm records. The full handbook is not written yet.")}</p>
                 </div>
                 <div className="pt-space-md mt-auto">
                   <button
                     onClick={() => {
                       downloadFile(
-                        "CULTIVANODE PILOT FARM OPERATIONS HANDBOOK (OYO & OGUN EDITION)\nDocument 2 §4.13 Extension Release\n\nChapter 1: Cooperative Delineation & Agrarian Governance\nChapter 2: Mechanization Booking & Escrow Protection\nChapter 3: Agrochemical Safety and Standard Application Rates\nChapter 4: Offline SQLite Synchronization and PowerSync Mesh\n",
+                        "CULTIVANODE PILOT FARM OPERATIONS HANDBOOK (OYO & OGUN EDITION)\nDraft outline - the full handbook is not written yet.\n\nChapter 1: Farmer Groups and Working Together\nChapter 2: Booking Machinery and Paying Providers in the Pilot\nChapter 3: Agrochemical Safety and Standard Application Rates\nChapter 4: Keeping Farm Records\n",
                         "CultivaNode-Pilot-Farm-Operations-Handbook.txt",
                         "text/plain"
                       );
@@ -616,7 +616,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors"
                     type="button"
                   >
-                    <Icon name="download" className="text-[18px]" />{tYo(" Download Master Handbook")}</button>
+                    <Icon name="download" className="text-[18px]" />{tYo(" Download Handbook Outline")}</button>
                 </div>
               </div>
 
@@ -626,16 +626,16 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="file_open" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Wall Poster PDF · High-Res Print · 8.4 MB")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Text file · Draft chart")}</span>
                     <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("South-West Agrochemical Safety & Waiting Times Chart")}</h3>
                   </div>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Laminated field-office poster detailing active ingredient safety classes, PPE standards, and Pre-Harvest Intervals (PHI) for common pesticides and fungicides.")}</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Chart of safety classes, protective equipment (PPE) and pre-harvest intervals (PHI) for common pesticides and fungicides. Always follow the label on your product.")}</p>
                 </div>
                 <div className="pt-space-md mt-auto">
                   <button
                     onClick={() => {
                       downloadFile(
-                        "SOUTH-WEST AGROCHEMICAL SAFETY & WAITING TIMES CHART\nNAFDAC & WHO Toxicity Classification Guide\n\n1. Mancozeb 80 WP: Class III (Caution) - PHI: 7 Days - PPE: Gloves & Face Mask\n2. Emamectin Benzoate: Class II (Warning) - PHI: 14 Days - PPE: Respirator Level 3\n3. Atrazine 500 SC: Class III (Caution) - Pre-emergence Only - REI: 48 Hours\n4. Lambda-cyhalothrin: Class II (Warning) - PHI: 21 Days - Spray at dusk\n",
+                        "SOUTH-WEST AGROCHEMICAL SAFETY & WAITING TIMES CHART\nGeneral guide only. Always read and follow the label on your product.\n\n1. Mancozeb 80 WP: Class III (Caution) - PHI: 7 Days - PPE: Gloves & Face Mask\n2. Emamectin Benzoate: Class II (Warning) - PHI: 14 Days - PPE: Respirator Level 3\n3. Atrazine 500 SC: Class III (Caution) - Pre-emergence Only - REI: 48 Hours\n4. Lambda-cyhalothrin: Class II (Warning) - PHI: 21 Days - Spray at dusk\n",
                         "South-West-Agrochemical-Safety-Chart.txt",
                         "text/plain"
                       );
@@ -644,7 +644,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-colors"
                     type="button"
                   >
-                    <Icon name="download" className="text-[18px]" />{tYo(" Download Wall Poster")}</button>
+                    <Icon name="download" className="text-[18px]" />{tYo(" Download Safety Chart")}</button>
                 </div>
               </div>
 
@@ -654,7 +654,7 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                     <Icon name="agriculture" className="text-[28px]" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Printable Template (A4) · 2.1 MB")}</span>
+                    <span className="font-label-sm text-label-sm text-secondary font-semibold">{tYo("Text file · Printable template")}</span>
                     <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">{tYo("Tractor Syndicate Operator Daily Logbook")}</h3>
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">{tYo("Field-ready daily log sheets for equipment operators: recording hour-meter reads, diesel consumption, implement wear, hectare counters, and farm manager sign-offs.")}</p>
@@ -686,9 +686,9 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
             <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-lg">
               <div className="flex flex-col gap-space-xs max-w-2xl">
                 <div className="inline-flex items-center gap-space-xs text-secondary-container font-label-sm text-label-sm uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" />{tYo(" Live Agronomy Desk & Field Support")}</div>
+                  <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" />{tYo(" Farm Assistant & Support")}</div>
                 <h2 className="font-headline-lg text-headline-lg font-bold text-on-primary">{tYo("Have an unidentified crop symptom or need an on-farm extension consultation?")}</h2>
-                <p className="font-body-md text-body-md text-on-primary/80">{tYo("Connect immediately with CultivaNode AI Agronomist, or route your geo-tagged farm photos directly to state ADP extension specialists in Ibadan, Abeokuta, Akure, or Osogbo.")}</p>
+                <p className="font-body-md text-body-md text-on-primary/80">{tYo("Ask the CultivaNode farm assistant in English, Pidgin or Yorùbá (photo diagnosis coming), or send us your question.")}</p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm shrink-0 w-full lg:w-auto">
                 <Link
@@ -696,13 +696,6 @@ export function AgronomyLibrary({ lang }: ScreenProps) {
                   href={`/${lang}/account/assistant`}
                 >
                   <Icon name="smart_toy" className="text-[20px]" />{tYo(" Consult AI Farm Assistant")}</Link>
-                <a
-                  className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md font-semibold hover:bg-surface transition-colors shadow-sm"
-                  href="https://wa.me/2348000000000"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icon name="chat" className="text-[20px]" />{tYo(" ADP WhatsApp Desk")}</a>
                 <Link
                   className="inline-flex items-center justify-center gap-2 py-3 px-space-md rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-secondary transition-colors border border-outline-variant/20"
                   href={`/${lang}/contact`}

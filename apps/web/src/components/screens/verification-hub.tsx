@@ -29,7 +29,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
 
   const handleApproveDossier = () => {
     setActiveDossierStatus("approved");
-    showScreenToast("Alhaji Kazeem Agro-Tractor Syndicate approved for Tier 3 Corporate (₦50M Escrow Authority).");
+    showScreenToast("Sample Tractor Syndicate approved for Tier 3 Corporate.");
   };
 
   const handleRejectDossier = () => {
@@ -39,7 +39,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
 
   const handleRequestResubmission = () => {
     setActiveDossierStatus("resubmission");
-    showScreenToast("Resubmission requested via Termii SMS & Email for Dossier #KYC-2026-0884.");
+    showScreenToast("Resubmission requested via SMS & Email for Dossier #KYC-2026-0884.");
   };
 
   const handleEscalateDossier = () => {
@@ -48,11 +48,11 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
   };
 
   const handleManualBatch = () => {
-    showScreenToast("Manual verification batch executed for 18 queued applications. Smile ID & NIMC synced.");
+    showScreenToast("Manual verification batch executed for 18 queued applications (sample).");
   };
 
   const handleReverificationPolicy = () => {
-    showScreenToast("Re-Verification Policy: Annual 365-day certificate cycle under NDPA 2023 §11.2.");
+    showScreenToast("Re-Verification Policy: yearly re-check (draft, §11.2).");
   };
 
   return (
@@ -71,11 +71,11 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
             <div className="flex flex-wrap items-center gap-space-xs">
               <div className="flex items-center gap-1.5 px-space-sm py-1 rounded bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                <span>Smile ID &amp; NIMC Biometric Gateway Live (98.2% Auto-Match)</span>
+                <span>ID checks through a licensed verification provider</span>
               </div>
               <div className="flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
                 <Icon name="verified_user" className="text-[14px] text-primary" />
-                <span>NDPA 2023 Compliant PII Masking Active</span>
+                <span>Masked ID numbers (NDPA 2023)</span>
               </div>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 href="/api/documents/compliance-audit"
               >
                 <Icon name="download" className="text-[18px] text-on-surface-variant" />
-                <span>Export Compliance Audit</span>
+                <span>Export Verification Summary</span>
               </a>
               <button
                 onClick={handleManualBatch}
@@ -156,7 +156,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   <span className="font-label-md text-label-md text-secondary">Pass</span>
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span>Smile ID AI Biometrics &amp; NIMC auto-cleared</span>
+                  <span>Auto-cleared by the verification provider</span>
                 </div>
               </div>
               <div className="mt-space-sm w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
@@ -177,7 +177,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-secondary font-label-sm text-label-sm">
                   <Icon name="check_circle" className="text-[14px]" />
-                  <span>Within 12-hour statutory SLA target</span>
+                  <span>Within 12-hour target</span>
                 </div>
               </div>
               <div className="mt-space-sm pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
@@ -229,12 +229,12 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                       : "Active Review: Dossier #KYC-2026-0884"}
                   </span>
                 </div>
-                <span className="font-headline-md text-headline-md text-on-surface font-bold">Alhaji Kazeem Agro-Tractor Syndicate Ltd</span>
+                <span className="font-headline-md text-headline-md text-on-surface font-bold">Sample Tractor Syndicate</span>
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold">
                   <Icon name="shield_person" className="text-[14px]" />
                   <span>Target: Tier 3 — Corporate Syndicate</span>
                 </div>
-                <div className="px-2 py-0.5 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">₦50,000,000 Escrow Clearance Authority</div>
+                <div className="px-2 py-0.5 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Escrow (not live — waiting for a licensed payment partner)</div>
               </div>
               <div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low px-3 py-1.5 rounded-lg">
                 <Icon name="schedule" className="text-[16px] text-primary" />
@@ -258,16 +258,16 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">CAC Business Registration</span>
                     <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold"><Icon name="verified" className="text-[14px]" /> CAC API Valid</span>
                   </div>
-                  <div className="font-label-lg text-label-lg text-on-surface">RC-1849201</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Alhaji Kazeem Agro-Tractor Syndicate Limited<br /> Incorporated: 12 Oct 2021 · Oyo State, Nigeria</div>
+                  <div className="font-label-lg text-label-lg text-on-surface">RC ••••••• (sample)</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">Sample Tractor Syndicate<br /> Sample record · Oyo State, Nigeria</div>
                 </div>
                 <div className="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-1.5 shadow-sm">
                   <div className="flex justify-between items-center">
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Managing Director (vNIN Check)</span>
-                    <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold"><Icon name="fingerprint" className="text-[14px]" /> NIMC Match</span>
+                    <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold"><Icon name="fingerprint" className="text-[14px]" /> NIN Match</span>
                   </div>
-                  <div className="font-label-lg text-label-lg text-on-surface">Alhaji Kazeem Olalekan Gbadamosi</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">vNIN: <span className="font-mono text-on-surface font-semibold">4829-••••-1902</span><br /> DOB: 14 Aug 1974 · State of Origin: Oyo State</div>
+                  <div className="font-label-lg text-label-lg text-on-surface">Managing Director (sample)</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">vNIN: <span className="font-mono text-on-surface font-semibold">4829-••••-1902</span><br /> DOB: •• ••• •••• · State of Origin: Oyo State</div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="px-1.5 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-sm text-label-sm font-semibold">Phone Match: +234 803 ••• 4192</span>
                   </div>
@@ -277,8 +277,8 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Commercial Settlement (BVN)</span>
                     <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold"><Icon name="account_balance" className="text-[14px]" /> 100% Name Match</span>
                   </div>
-                  <div className="font-label-lg text-label-lg text-on-surface">Zenith Bank Plc · Tier-3 Corporate</div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">Acc No: <span className="font-mono text-on-surface font-semibold">1018492019</span><br /> Account Title: Alhaji Kazeem Agro-Tractor Syndicate Ltd<br /> BVN Masked: <span className="font-mono text-on-surface font-semibold">2219••••840</span></div>
+                  <div className="font-label-lg text-label-lg text-on-surface">Bank (sample) · Tier-3 Corporate</div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">Acc No: <span className="font-mono text-on-surface font-semibold">••••••2019</span><br /> Account Title: Sample Tractor Syndicate<br /> BVN Masked: <span className="font-mono text-on-surface font-semibold">2219••••840</span></div>
                 </div>
               </div>
 
@@ -315,7 +315,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                           <div className="font-body-sm text-body-sm text-on-surface-variant">Hydraulic 12m Boom · Calibration: 2026-Q1</div>
                         </div>
                       </div>
-                      <span className="px-1.5 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-sm text-label-sm">Certified</span>
+                      <span className="px-1.5 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-sm text-label-sm">Checked</span>
                     </div>
                   </div>
                 </div>
@@ -324,7 +324,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Machinery &amp; Liability Insurance</span>
                     <span className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold"><Icon name="health_and_safety" className="text-[14px]" /> Policy Active</span>
                   </div>
-                  <div className="font-label-lg text-label-lg text-on-surface">Leadway Assurance Agricultural Policy</div>
+                  <div className="font-label-lg text-label-lg text-on-surface">Insurer (sample) · Agricultural Policy</div>
                   <div className="font-body-sm text-body-sm text-on-surface-variant">Policy #: <span className="font-mono text-on-surface font-semibold">AGR-2026-9812-OYS</span><br /> Valid Through: 31 Jan 2027 · Indemnity: ₦120,000,000<br /> Coverage: Accidental Damage, Fire, Theft &amp; Operator Liability</div>
                 </div>
                 <div className="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-2 shadow-sm">
@@ -359,21 +359,21 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 </div>
                 <div className="bg-surface-container-lowest p-space-sm rounded-lg shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Smile ID 3D Liveness vs NIMC Archive</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Liveness Check vs ID Record</span>
                     <span className="text-secondary font-label-sm text-label-sm font-bold">Passive Liveness: PASS</span>
                   </div>
                   <div className="grid grid-cols-2 gap-space-sm">
                     <div className="flex flex-col items-center">
                       <div className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-surface-container-high">
-                        <img className="w-full h-full object-cover" data-alt="Portrait of Alhaji Kazeem" src="/images/screens/c82e0f541791.webp" alt="Live Selfie" loading="lazy" decoding="async" />
+                        <img className="w-full h-full object-cover" data-alt="Portrait of applicant" src="/images/screens/c82e0f541791.webp" alt="Live Selfie" loading="lazy" decoding="async" />
                         <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary/80 text-on-primary rounded font-label-sm text-label-sm">Live Selfie</span>
                       </div>
                       <span className="font-label-sm text-label-sm text-on-surface-variant mt-1">Captured 09:12 WAT</span>
                     </div>
                     <div className="flex flex-col items-center">
                       <div className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-surface-container-high">
-                        <img className="w-full h-full object-cover" data-alt="NIMC database photo" src="/images/screens/438aef7c9074.webp" alt="NIMC Record" loading="lazy" decoding="async" />
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-secondary/80 text-on-secondary rounded font-label-sm text-label-sm">NIMC Database</span>
+                        <img className="w-full h-full object-cover" data-alt="ID record photo" src="/images/screens/438aef7c9074.webp" alt="ID Record" loading="lazy" decoding="async" />
+                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-secondary/80 text-on-secondary rounded font-label-sm text-label-sm">ID Record</span>
                       </div>
                       <span className="font-label-sm text-label-sm text-on-surface-variant mt-1">vNIN Record #1902</span>
                     </div>
@@ -394,7 +394,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
                     <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="receipt_long" className="text-[16px] text-primary" />
-                      <span className="font-label-sm text-label-sm text-on-surface truncate">Zenith_Bank_Statement.pdf</span>
+                      <span className="font-label-sm text-label-sm text-on-surface truncate">Bank_Statement.pdf</span>
                     </a>
                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
                     <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
@@ -404,7 +404,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- downloads a file from an API route, not a page */}
                     <a className="flex items-center gap-1.5 p-2 rounded bg-surface-container-low hover:bg-surface-container text-left transition-colors" href="/api/documents/compliance-audit">
                       <Icon name="security" className="text-[16px] text-primary" />
-                      <span className="font-label-sm text-label-sm text-on-surface truncate">Leadway_Policy_Cert.pdf</span>
+                      <span className="font-label-sm text-label-sm text-on-surface truncate">Insurance_Policy.pdf</span>
                     </a>
                   </div>
                 </div>
@@ -413,7 +413,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Sanctions &amp; AML Triage</span>
                     <span className="text-secondary font-label-sm text-label-sm font-bold">CLEAN</span>
                   </div>
-                  <div className="font-body-sm text-body-sm text-on-surface-variant">PEP (Politically Exposed Person): <span className="text-on-surface font-semibold">Negative</span><br /> NFIU / EFCC Watchlist Scan: <span className="text-on-surface font-semibold">Clear</span> · Disputed Escrows: <span className="text-on-surface font-semibold">0</span></div>
+                  <div className="font-body-sm text-body-sm text-on-surface-variant">PEP (Politically Exposed Person): <span className="text-on-surface font-semibold">Negative</span><br /> Watchlist Scan: <span className="text-on-surface font-semibold">Not set up yet</span> · Disputed Jobs: <span className="text-on-surface font-semibold">0</span></div>
                 </div>
               </div>
             </div>
@@ -485,7 +485,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                     </span>
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                    Applicant: <span className="font-semibold text-on-surface">Babatunde Lawal</span> (Machinery Operator Applicant · Ido Local Govt, Ibadan Cluster). NIN identity returned <span className="font-mono text-on-surface">&quot;Babatunde G. Lawal&quot;</span>, while NIBSS BVN returned <span className="font-mono text-on-surface">&quot;Gbadamosi Babatunde Lawal&quot;</span> (Levenshtein Name Distance: 18%).
+                    Applicant: <span className="font-semibold text-on-surface">Applicant B (sample)</span> (Machinery Operator Applicant · Ido Local Govt, Ibadan Cluster). NIN identity returned <span className="font-mono text-on-surface">&quot;Name variant A (sample)&quot;</span>, while the BVN check returned <span className="font-mono text-on-surface">&quot;Name variant B (sample)&quot;</span> (Levenshtein Name Distance: 18%).
                   </p>
                 </div>
               </div>
@@ -493,7 +493,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 <button
                   onClick={() => {
                     setAlertStatus("declined");
-                    showScreenToast("Payout Tier 2 declined for Babatunde Lawal due to name divergence.");
+                    showScreenToast("Payout Tier 2 declined for Applicant B (sample) due to name divergence.");
                   }}
                   className="px-space-sm py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors"
                   type="button"
@@ -503,7 +503,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 <button
                   onClick={() => {
                     setAlertStatus("affidavit_requested");
-                    showScreenToast("Affidavit request dispatched to Babatunde Lawal via Termii SMS & Email.");
+                    showScreenToast("Affidavit request dispatched to Applicant B (sample) via SMS & Email.");
                   }}
                   className="px-space-sm py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors"
                   type="button"
@@ -513,7 +513,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                 <button
                   onClick={() => {
                     setAlertStatus("approved_secondary");
-                    showScreenToast("Approved with voter's card secondary ID. Tier 2 unlocked for Babatunde Lawal.");
+                    showScreenToast("Approved with voter's card secondary ID. Tier 2 unlocked for Applicant B (sample).");
                   }}
                   className="px-space-md py-1.5 rounded-lg bg-secondary-container text-on-secondary-container hover:bg-secondary-fixed-dim transition-colors font-label-sm text-label-sm font-semibold flex items-center gap-1"
                   type="button"
@@ -640,7 +640,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                           <div>
-                            <div className="font-label-md text-label-md text-on-surface">Alhaji Kazeem Agro-Tractor Ltd</div>
+                            <div className="font-label-md text-label-md text-on-surface">Sample Tractor Syndicate</div>
                             <div className="font-body-sm text-body-sm text-on-surface-variant font-mono">+234 803 ••• 4192 · 04 May 2026</div>
                           </div>
                         </div>
@@ -649,7 +649,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                         <span className="px-2 py-0.5 rounded bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold">Machinery Syndicate</span>
                       </td>
                       <td className="py-3 px-space-sm">
-                        <span className="px-2 py-0.5 rounded bg-tertiary-container/15 text-tertiary-container font-label-sm text-label-sm font-semibold">Tier 3 (CAC + Escrow)</span>
+                        <span className="px-2 py-0.5 rounded bg-tertiary-container/15 text-tertiary-container font-label-sm text-label-sm font-semibold">Tier 3 (CAC)</span>
                       </td>
                       <td className="py-3 px-space-sm">
                         <div className="flex items-center gap-1">
@@ -679,7 +679,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                           onClick={() => {
                             const elem = document.getElementById("activeReviewDossier");
                             if (elem) elem.scrollIntoView({ behavior: "smooth" });
-                            showScreenToast("Viewing dossier for Alhaji Kazeem Agro-Tractor Syndicate.");
+                            showScreenToast("Viewing dossier for Sample Tractor Syndicate.");
                           }}
                           className="px-3 py-1 rounded bg-primary-container text-on-primary font-label-sm text-label-sm hover:bg-primary transition-colors font-semibold"
                           type="button"
@@ -694,7 +694,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   {(triageFilter === "all" || triageFilter === "tier3") && (
                     <tr className="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
                       <td className="py-3 px-space-md text-on-surface">
-                        <div className="font-label-md text-label-md font-semibold text-on-surface">Oluwaseun Adewale Agrochemicals</div>
+                        <div className="font-label-md text-label-md font-semibold text-on-surface">Sample Agrochemicals Dealer</div>
                         <div className="font-body-sm text-body-sm text-on-surface-variant font-mono">+234 814 ••• 9901 · 04 May 2026</div>
                       </td>
                       <td className="py-3 px-space-sm">
@@ -721,7 +721,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                       </td>
                       <td className="py-3 px-space-md text-right">
                         <button
-                          onClick={() => showScreenToast("Dossier opened for Oluwaseun Adewale Agrochemicals (NAFDAC Cert #04-8921 Validated).")}
+                          onClick={() => showScreenToast("Dossier opened for Sample Agrochemicals Dealer (NAFDAC document attached).")}
                           className="px-3 py-1 rounded bg-surface-container-low text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors"
                           type="button"
                         >
@@ -735,7 +735,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   {(triageFilter === "all" || triageFilter === "tier1") && (
                     <tr className="bg-surface-container-low/20 hover:bg-surface-container-low transition-colors">
                       <td className="py-3 px-space-md text-on-surface">
-                        <div className="font-label-md text-label-md font-semibold text-on-surface">Folake Ibironke (Ilesa Maize Coop)</div>
+                        <div className="font-label-md text-label-md font-semibold text-on-surface">Sample Farmer (Maize Coop)</div>
                         <div className="font-body-sm text-body-sm text-on-surface-variant font-mono">+234 705 ••• 1120 · 04 May 2026</div>
                       </td>
                       <td className="py-3 px-space-sm">
@@ -765,7 +765,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                         <button
                           onClick={() => {
                             setFolakeApproved(true);
-                            showScreenToast("Quick approved Folake Ibironke for Tier 1 Smallholder membership.");
+                            showScreenToast("Quick approved Sample Farmer for Tier 1 Smallholder membership.");
                           }}
                           className="px-3 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm hover:bg-secondary-fixed transition-colors font-semibold"
                           type="button"
@@ -783,7 +783,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                         <div className="flex items-center gap-2">
                           <Icon name="error" className="text-[16px] text-tertiary-container" />
                           <div>
-                            <div className="font-label-md text-label-md font-semibold text-on-surface">Babatunde Lawal</div>
+                            <div className="font-label-md text-label-md font-semibold text-on-surface">Applicant B (sample)</div>
                             <div className="font-body-sm text-body-sm text-on-surface-variant font-mono">+234 812 ••• 3311 · 04 May 2026</div>
                           </div>
                         </div>
@@ -813,7 +813,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                       <td className="py-3 px-space-md text-right">
                         <button
                           onClick={() => {
-                            showScreenToast("Viewing investigation alert for Babatunde Lawal.");
+                            showScreenToast("Viewing investigation alert for Applicant B (sample).");
                           }}
                           className="px-3 py-1 rounded bg-tertiary-container text-on-tertiary font-label-sm text-label-sm hover:opacity-90 transition-opacity font-semibold"
                           type="button"
@@ -828,7 +828,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   {(triageFilter === "all" || triageFilter === "tier3") && (
                     <tr className="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
                       <td className="py-3 px-space-md text-on-surface">
-                        <div className="font-label-md text-label-md font-semibold text-on-surface">Dr. Adekunle Jimoh (DVM)</div>
+                        <div className="font-label-md text-label-md font-semibold text-on-surface">Sample Vet (DVM)</div>
                         <div className="font-body-sm text-body-sm text-on-surface-variant font-mono">+234 802 ••• 8844 · 03 May 2026</div>
                       </td>
                       <td className="py-3 px-space-sm">
@@ -847,7 +847,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                       <td className="py-3 px-space-sm">
                         <div className="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold">
                           <Icon name="verified" className="text-[16px]" />
-                          <span>VCN Active #2019/881</span>
+                          <span>VCN Reg (sample)</span>
                         </div>
                       </td>
                       <td className="py-3 px-space-sm">
@@ -855,7 +855,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                       </td>
                       <td className="py-3 px-space-md text-right">
                         <button
-                          onClick={() => showScreenToast("Opened accreditation docket for Dr. Adekunle Jimoh (Veterinary Council of Nigeria ID Verified).")}
+                          onClick={() => showScreenToast("Opened accreditation docket for Sample Vet (VCN document attached).")}
                           className="px-3 py-1 rounded bg-surface-container-low text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors"
                           type="button"
                         >
@@ -939,7 +939,7 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   <Icon name="history_edu" className="text-[20px] text-primary" />
                   <h2 className="font-headline-sm text-headline-sm text-on-surface">Append-Only KYC Audit Log &amp; Checksum Proof</h2>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Every automated and manual identity accreditation is cryptographically stamped into SQLite PowerSync replication with SHA-256 integrity proofs.</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Every automated and manual identity accreditation is stamped into the audit log with SHA-256 integrity proofs.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded bg-surface-container-low text-on-surface font-mono font-label-sm text-label-sm">Chain Block: #048,291 · Sync Active</span>
@@ -961,8 +961,8 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   <tr className="hover:bg-surface-container-low/30 transition-colors">
                     <td className="py-2.5 px-space-md font-mono text-on-surface-variant">04 May 2026 09:18:22</td>
                     <td className="py-2.5 px-space-sm font-semibold text-on-surface">Quadri Olapade (FIDO2)</td>
-                    <td className="py-2.5 px-space-sm text-on-surface">Alhaji Kazeem Agro-Tractor Syndicate</td>
-                    <td className="py-2.5 px-space-sm text-on-surface-variant">Smile ID Biometrics v3.4</td>
+                    <td className="py-2.5 px-space-sm text-on-surface">Sample Tractor Syndicate</td>
+                    <td className="py-2.5 px-space-sm text-on-surface-variant">Verification provider (biometrics)</td>
                     <td className="py-2.5 px-space-sm">
                       <span className="px-2 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-sm text-label-sm font-semibold">Dossier Inspection Initiated</span>
                     </td>
@@ -971,8 +971,8 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   <tr className="hover:bg-surface-container-low/30 transition-colors">
                     <td className="py-2.5 px-space-md font-mono text-on-surface-variant">04 May 2026 09:12:04</td>
                     <td className="py-2.5 px-space-sm text-on-surface-variant">Autonomous Daemon #03</td>
-                    <td className="py-2.5 px-space-sm text-on-surface">Folake Ibironke (Farmer #9912)</td>
-                    <td className="py-2.5 px-space-sm text-on-surface-variant">NIMC vNIN Gateway (Dojah API)</td>
+                    <td className="py-2.5 px-space-sm text-on-surface">Sample Farmer (Farmer #9912)</td>
+                    <td className="py-2.5 px-space-sm text-on-surface-variant">Verification provider (NIN)</td>
                     <td className="py-2.5 px-space-sm">
                       <span className="px-2 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-sm text-label-sm font-semibold">Automated Tier 1 Approved</span>
                     </td>
@@ -981,8 +981,8 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
                   <tr className="hover:bg-surface-container-low/30 transition-colors">
                     <td className="py-2.5 px-space-md font-mono text-on-surface-variant">04 May 2026 08:55:40</td>
                     <td className="py-2.5 px-space-sm text-on-surface-variant">Autonomous Daemon #01</td>
-                    <td className="py-2.5 px-space-sm text-on-surface">Babatunde Lawal (Operator #104)</td>
-                    <td className="py-2.5 px-space-sm text-on-surface-variant">NIBSS BVN API (Prembly)</td>
+                    <td className="py-2.5 px-space-sm text-on-surface">Applicant B (sample) (Operator #104)</td>
+                    <td className="py-2.5 px-space-sm text-on-surface-variant">Verification provider (BVN)</td>
                     <td className="py-2.5 px-space-sm">
                       <span className="px-2 py-0.5 rounded bg-tertiary-container/20 text-tertiary-container font-label-sm text-label-sm font-semibold">Mismatch Flag Raised</span>
                     </td>
@@ -1001,13 +1001,13 @@ export function VerificationHub({ slots }: ScreenProps<VerificationHubSlot>) {
               <Icon name="verified" className="text-[24px]" />
             </div>
             <div>
-              <div className="font-label-lg text-label-lg text-on-surface font-bold">Nigeria Data Protection Act (NDPA) 2023 &amp; CBN Regulated Vault</div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Biometric selfies, raw NIN numbers, and BVN hashes are encrypted using AES-256 at rest. Zero unmasked PII is rendered across public logs.</p>
+              <div className="font-label-lg text-label-lg text-on-surface font-bold">Nigeria Data Protection Act (NDPA) 2023</div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">We follow the Nigeria Data Protection Act 2023: we ask for consent before ID checks, store only masked ID numbers, and you can ask to download or delete your data.</p>
             </div>
           </div>
           <div className="flex items-center gap-space-xs shrink-0">
-            <span className="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm font-semibold shadow-sm">ISO/IEC 27001 Certified</span>
-            <span className="px-2.5 py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Tier-3 Encrypted Storage</span>
+            <span className="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm font-semibold shadow-sm">Masked ID Numbers</span>
+            <span className="px-2.5 py-1 rounded bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm font-semibold">Consent Before ID Checks</span>
           </div>
         </div>
       </div>
