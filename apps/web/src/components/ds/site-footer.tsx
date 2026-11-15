@@ -8,14 +8,15 @@ import { Icon } from "./icon";
 export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["footer"]; nav: Dictionary["nav"] }) {
   const year = new Date().getFullYear();
   const y = (en: string, yo: string) => (lang === "yo" ? yo : en);
+  // Plain labels only: no escrow, regulator or office claims (see the 15 Nov claims clean-up).
   const cols: { title: string; links: { href: string; label: string }[] }[] = [
     {
       title: y("Solutions", "Ojútùú"),
       links: [
-        { href: `/${lang}/platform`, label: y("Platform & architecture", "Pèpéle àti ètò rẹ̀") },
-        { href: `/${lang}/whitepaper`, label: y("Technical whitepaper", "Ìwé àlàyé ìmọ̀ ẹ̀rọ") },
+        { href: `/${lang}/platform`, label: y("What is in the app", "Ohun tó wà nínú áàpù") },
+        { href: `/${lang}/whitepaper`, label: y("How it is built", "Bí a ṣe kọ́ ọ") },
         { href: `/${lang}/solutions`, label: y("Solutions by role", "Ojútùú fún iṣẹ́ kọ̀ọ̀kan") },
-        { href: `/${lang}/marketplace`, label: y("Escrow marketplace", "Ọjà owó ìdógò ààbò") },
+        { href: `/${lang}/marketplace`, label: nav.marketplace },
         { href: `/${lang}/machinery`, label: y("Machinery & services", "Ẹ̀rọ oko àti iṣẹ́") },
         { href: `/${lang}/farmers`, label: nav.farmers },
         { href: `/${lang}/service-providers`, label: nav.providers },
@@ -25,9 +26,9 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
       title: y("Pilot & network", "Ìdánwò àkọ́kọ́ àti nẹ́tíwọ̀ọ̀kì"),
       links: [
         { href: `/${lang}/download`, label: y("Download Android APK", "Gba Àpù Android (APK)") },
-        { href: `/${lang}/waitlist`, label: y("Join the South-West pilot", "Darapọ̀ mọ́ ìdánwò Gúúsù Ìwọ̀-Oòrùn") },
+        { href: `/${lang}/waitlist`, label: nav.waitlist },
         { href: `/${lang}/how-it-works`, label: nav.how },
-        { href: `/${lang}/resources`, label: y("Agronomy library", "Ilé ìkàwé ìmọ̀ oko") },
+        { href: `/${lang}/resources`, label: y("Guides and help", "Ìtọ́sọ́nà àti ìrànlọ́wọ́") },
         { href: `/${lang}/crops`, label: nav.crops },
         { href: `/${lang}/partners`, label: nav.partners },
       ],
@@ -43,7 +44,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
     {
       title: t.legal,
       links: [
-        { href: `/${lang}/legal`, label: y("Governance & NDPA 2023", "Ìṣàkóso àti NDPA 2023") },
+        { href: `/${lang}/legal`, label: y("Legal documents", "Àwọn ìwé òfin") },
         { href: `/${lang}/privacy`, label: nav.privacy },
         { href: `/${lang}/terms`, label: nav.terms },
       ],
@@ -58,7 +59,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
             <p className="max-w-sm text-body-md text-on-surface-variant">{t.tagline} {t.madeIn}</p>
             <p className="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
               <span className="size-2 rounded-full bg-secondary" />
-              {y("Regional operations: Ibadan, Oyo State & Lagos", "Iṣẹ́ agbègbè: Ìbàdàn, Ìpínlẹ̀ Ọ̀yọ́ àti Èkó")}
+              {y("Pilot: South-West Nigeria", "Ìdánwò: Gúúsù-Ìwọ̀ Oòrùn Nàìjíríà")}
             </p>
             <div className="flex flex-col gap-1 text-body-sm">
               {site.contact.phone && site.contact.phoneHref && (
@@ -86,7 +87,7 @@ export function SiteFooter({ lang, t, nav }: { lang: Locale; t: Dictionary["foot
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
           <p className="text-body-sm text-on-surface-variant">
-            © {year} {site.name}. {t.rights} Data handled under NDPA 2023.
+            © {year} {site.name}. {t.rights}
           </p>
           <div className="flex items-center gap-2">
             {site.contact.whatsappUrl && (

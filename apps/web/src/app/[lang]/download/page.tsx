@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/download">
     "/download",
     isYo ? "Gba Àpù CultivaNode fún Android (APK)" : "Download CultivaNode Android App (APK)",
     isYo
-      ? "Gba àpù alágbèéká CultivaNode fún foonu Android rẹ. Ṣiṣẹ́ láìsí intanẹẹti, ya àwòrán ààlà oko, kí o sì lo AI fún àyẹ̀wò àrùn ohun ọ̀gbìn."
-      : "Download the official CultivaNode Android APK for offline farm management, GPS field boundary mapping, crop disease AI diagnosis, and agricultural equipment hire."
+      ? "Gba àpù alágbèéká CultivaNode fún foonu Android rẹ. Ṣe àkọsílẹ̀ iṣẹ́ oko, ya ààlà oko pẹ̀lú GPS, kí o sì béèrè lọ́wọ́ olùrànlọ́wọ́ oko."
+      : "Download the CultivaNode Android app (APK) to record your farm work, map your farm with GPS, ask the farm assistant and find equipment for hire."
   );
 }
 
@@ -41,8 +41,8 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
 
         <p className="max-w-2xl text-lg text-on-surface-variant sm:text-xl">
           {isYo
-            ? "Ṣiṣẹ́ lórí oko láìsí nẹtiwọ́ọ̀kì intanẹẹti. Ṣe àkọsílẹ̀ iṣẹ́ ogbin, ya ààlà oko pẹ̀lú GPS, ki o sì lo AI láti ṣàyẹ̀wò àrùn ohun ọ̀gbìn tààrà lórí foonu rẹ."
-            : "Operate offline in the field without internet coverage. Record daily farm operations, map farm boundaries with GPS, and diagnose crop diseases with AI directly on your phone."}
+            ? "Ṣe àkọsílẹ̀ iṣẹ́ ogbin, ya ààlà oko pẹ̀lú GPS, kí o sì béèrè lọ́wọ́ olùrànlọ́wọ́ oko nípa ohun ọ̀gbìn tó ń ṣàìsàn, tààrà lórí foonu rẹ."
+            : "Record your farm work, map your farm with GPS, and ask the farm assistant about sick crops, directly on your phone."}
         </p>
 
         {/* Primary Download Call to Action Card */}
@@ -56,9 +56,7 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
               <span className="text-sm font-semibold text-on-surface-variant">~45 MB</span>
             </div>
             <p className="text-xs text-on-surface-variant">
-              {isYo
-                ? "Fún foonu Android 8.0 sí òkè. A fi kọ́kọ́rọ́ aabo CultivaNode fọwọ́si i."
-                : "Compatible with Android 8.0 and higher. Cryptographically signed with official CultivaNode release key."}
+              {isYo ? "Fún foonu Android 8.0 sí òkè." : "Works on Android 8.0 and higher."}
             </p>
           </div>
 
@@ -149,9 +147,10 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
               {isYo ? "Tẹ 'Install' Kí O Sí Wọlé" : "Tap Install & Sign In"}
             </h3>
             <p className="text-sm leading-relaxed text-on-surface-variant">
+              {/* Phone sign-in is switched off until an SMS provider is set up (feature switch phone_sign_in). */}
               {isYo
-                ? "Tẹ 'Install' (Fi sí foonu). Nígbà tí ó bá parí, ṣí CultivaNode kí o sì wọlé pẹ̀lú nọ́mbà foonu rẹ. Àwọn àkọsílẹ̀ oko rẹ yóò bẹ̀rẹ̀ sí ní ṣiṣẹ́ láìsí intanẹẹti."
-                : "Tap 'Install'. Once completed, tap 'Open'. Sign in with your phone number via SMS OTP. Your plots, offline sync queue, and agronomic AI assistant are now ready."}
+                ? "Tẹ 'Install' (Fi sí foonu). Nígbà tí ó bá parí, ṣí CultivaNode kí o sì wọlé pẹ̀lú àdírẹ́sì ímeèlì rẹ. Wíwọlé pẹ̀lú nọ́mbà foonu ń bọ̀ láìpẹ́."
+                : "Tap 'Install'. Once completed, tap 'Open' and sign in with your email address. Signing in with a phone number is coming soon."}
             </p>
           </Card>
         </div>
@@ -159,18 +158,18 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
 
       {/* Field Features Highlight */}
       <Section
-        title={isYo ? "Àwọn Àǹfààní Àpù Alágbèéká CultivaNode" : "Why Nigerian Farmers Use the Mobile App"}
+        title={isYo ? "Àwọn Àǹfààní Àpù Alágbèéká CultivaNode" : "What You Can Do in the Mobile App"}
       >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="p-5">
             <span className="text-3xl">📡</span>
             <h4 className="mt-3 font-bold text-primary">
-              {isYo ? "100% Ṣiṣẹ́ Láìsí Nẹtiwọ́ọ̀kì" : "100% Offline Capable"}
+              {isYo ? "Ṣiṣẹ́ Níbi Tí Nẹtiwọ́ọ̀kì Kò Ti Dára" : "Save Work Without Signal"}
             </h4>
             <p className="mt-1 text-xs text-on-surface-variant">
               {isYo
-                ? "Kọ gbogbo iṣẹ́ oko rẹ sílẹ̀ lórí oko níbi tí nẹtiwọ́ọ̀kì kò sí. Ó máa gbé e jáde fúnra rẹ̀ nígbà tí o bá padà sí ilé."
-                : "Record scouting, farm operations, and expenses even deep in remote rural fields. Automatically syncs when you reach cellular signal."}
+                ? "Kọ iṣẹ́ oko rẹ sílẹ̀ lórí oko níbi tí nẹtiwọ́ọ̀kì kò sí. Yóò wọ inú àkọọ́lẹ̀ rẹ nígbà tí nẹtiwọ́ọ̀kì bá padà."
+                : "Record scouting, farm work and expenses where there is no signal. They are sent to your account when you are back in signal."}
             </p>
           </Card>
 
@@ -181,20 +180,20 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
             </h4>
             <p className="mt-1 text-xs text-on-surface-variant">
               {isYo
-                ? "Rìn yíká oko rẹ láti mọ iye hektari gangan pẹ̀lú GPS foonu rẹ, láìsí lílo owó lórí surveyor."
-                : "Walk the perimeter of your farmland to generate verified polygon boundaries and exact acreage directly from your phone's hardware GPS."}
+                ? "Rìn yíká oko rẹ láti mọ ààlà rẹ̀ àti iye hektari rẹ̀ pẹ̀lú GPS foonu rẹ."
+                : "Walk around your farm to map its boundary and estimate its size with your phone's GPS."}
             </p>
           </Card>
 
           <Card className="p-5">
             <span className="text-3xl">📸</span>
             <h4 className="mt-3 font-bold text-primary">
-              {isYo ? "Àyẹ̀wò Àrùn pẹ̀lú AI" : "AI Crop Photo Diagnosis"}
+              {isYo ? "Fi Àwòrán Ohun Ọ̀gbìn Ránṣẹ́" : "Crop Photo Check"}
             </h4>
             <p className="mt-1 text-xs text-on-surface-variant">
               {isYo
-                ? "Ya àwòrán ewé tàbí kòkòrò tí ó ń jẹ ohun ọ̀gbìn rẹ kí AI fi han ọ irú oògùn tí a fọwọ́si tí o lè lò."
-                : "Snap a photo of damaged leaves or pests to identify armyworms, blight, or nutrient deficiencies with verified GAP treatments."}
+                ? "Ya àwòrán ewé tàbí kòkòrò tí ó ń jẹ ohun ọ̀gbìn rẹ kí olùrànlọ́wọ́ oko fún ọ ní ìmọ̀ràn. Ó lè ṣàṣìṣe, nítorí náà bi òṣìṣẹ́ ìgbaniníyànjú àgbẹ̀ léèrè tí o kò bá dá ọ lójú."
+                : "Take a photo of damaged leaves or pests and get advice from the farm assistant. It can be wrong, so check with an extension agent when you are unsure."}
             </p>
           </Card>
 
@@ -205,8 +204,8 @@ export default async function DownloadPage({ params }: PageProps<"/[lang]/downlo
             </h4>
             <p className="mt-1 text-xs text-on-surface-variant">
               {isYo
-                ? "Bá àwọn olùpèsè tirakito, ridger, àti afọ́n-oògùn sọ̀rọ̀ láti wá ṣiṣẹ́ lórí oko rẹ ní àkókò tó tọ́."
-                : "Book tractors, ridgers, and verified spraying operators near your local cluster with transparent escrow guarantees."}
+                ? "Bá àwọn olùpèsè tirakito, ridger, àti afọ́n-oògùn sọ̀rọ̀ láti wá ṣiṣẹ́ lórí oko rẹ ní àkókò tó tọ́. Nínú ìdánwò, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà."
+                : "Request tractors, ridgers and spraying operators near your farm. In the pilot you pay the provider directly."}
             </p>
           </Card>
         </div>
