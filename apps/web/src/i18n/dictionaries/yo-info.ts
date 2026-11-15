@@ -84,8 +84,8 @@ const yoInfo: InfoDictionary = {
         body: "Tí a bá ṣàyẹ̀wò NIN, BVN tàbí àkọọ́lẹ̀ báńkì, nọ́ńbà tí a ti bò mọ́lẹ̀ nìkan ni a ń tọ́jú, kì í ṣe gbogbo nọ́ńbà náà.",
       },
       {
-        title: "Pèpéle kò mú owó dúró",
-        body: "Nígbà ìdánwò, pèpéle náà kò ní mú tàbí gbé owó kankan. Ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà. Ìsanwó tí a ó mú dúró títí o fi fìdí iṣẹ́ múlẹ̀ ń bọ̀, lẹ́yìn tí a bá ti fọwọ́ sí àdéhùn pẹ̀lú alábàáṣiṣẹ́ ìsanwó tó ní ìwé-àṣẹ.",
+        title: "Ìsanwó fún iṣẹ́ tí o gbà",
+        body: "Nígbà tí o bá gba ẹnìkan síṣẹ́ nínú ìdánwò, ìwọ yóò san owó fún olùpèsè iṣẹ́ ní tààràtà; pèpéle kò mú owó náà dúró. Ìsanwó tí a ó mú dúró títí o fi fìdí iṣẹ́ múlẹ̀ ń bọ̀, lẹ́yìn tí a bá ti fọwọ́ sí àdéhùn pẹ̀lú alábàáṣiṣẹ́ ìsanwó tó ní ìwé-àṣẹ.",
       },
       {
         title: "Ibi tí a ń tọ́jú àkọsílẹ̀ sí",

@@ -83,8 +83,8 @@ const enInfo = {
         body: "When we check a NIN, BVN or bank account, we keep only a masked number, never the full number.",
       },
       {
-        title: "No money held by the platform",
-        body: "In the pilot the platform does not hold or move money. You pay the provider directly. Escrow is planned once a licensed payment partner is signed.",
+        title: "Paying for a hire",
+        body: "When you hire in the pilot, you pay the provider directly; the platform does not hold that money. Escrow (money held until you confirm the job) is coming once a licensed payment partner is signed.",
       },
       {
         title: "Where data is stored",
