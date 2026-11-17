@@ -82,9 +82,7 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
       Alert.alert('Checked In!', 'Arrived at farm. GPS coordinates recorded.');
       onJobUpdated();
     } else {
-      // In pilot or demo, permit local check-in
-      setIsCheckedIn(true);
-      Alert.alert('Checked In', 'Arrived at farm. Location logged.');
+      Alert.alert('Check-In Failed', res.error || 'Could not record GPS check-in. Please verify you are at the farm and try again.');
     }
   }
 

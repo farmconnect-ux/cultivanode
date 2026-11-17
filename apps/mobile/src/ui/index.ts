@@ -8,4 +8,5 @@ export { Notice } from './Notice';
 export { Screen } from './Screen';
 export { SelectField } from './SelectField';
 export { Icon, type IconName } from './Icon';
+export { PromptModal } from './PromptModal';
 export { Chips, Empty, Header, Loading, Pill, Progress, Row, SectionTitle, Steps, Tile } from './Parts';

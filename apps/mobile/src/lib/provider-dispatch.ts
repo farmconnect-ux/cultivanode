@@ -1,5 +1,4 @@
-import { supabase } from './supabase';
-import { sessionStorage } from './supabase';
+import { supabase, sessionStorage } from './supabase';
 import type { GpsAccuracyReading } from './gps-tracker';
 
 export type BookingStatus =
@@ -60,207 +59,175 @@ export interface ProviderAvailabilityCalendarDay {
   jobs: ProviderJob[];
 }
 
+export type DispatchFailureKind = 'unauthenticated' | 'forbidden' | 'network' | 'database' | 'invalid';
+
+export type DispatchLoadResult<T> =
+  | { ok: true; data: T[] }
+  | { ok: false; kind: DispatchFailureKind; message: string };
+
+export type DispatchSingleResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; kind: DispatchFailureKind | 'not_found'; message: string };
+
 const AVAILABILITY_STORAGE_KEY = 'cultivanode_provider_maintenance_dates';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Loads provider jobs from Supabase my_bookings() or fallback demo data
- */
-export async function loadProviderJobs(): Promise<ProviderJob[]> {
-  try {
-    const { data, error } = await supabase.rpc('my_bookings', { p_limit: 100 });
+export function isValidJobId(jobId: unknown): jobId is string {
+  return typeof jobId === 'string' && UUID_RE.test(jobId.trim());
+}
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      // Filter for jobs where user is provider
-      const providerRows = data.filter((row: any) => row.my_side === 'provider');
-      if (providerRows.length > 0) {
-        return providerRows.map((row: any) => ({
-          id: row.id,
-          status: row.status as BookingStatus,
-          title: row.title || 'Agricultural Machinery Service',
-          kind: row.kind || 'equipment',
-          equipmentType: row.equipment_type,
-          providerType: row.provider_type,
-          jobDate: row.job_date,
-          unit: row.unit || 'hectare',
-          quantity: Number(row.quantity) || 1,
-          rateKobo: Number(row.rate_kobo) || 0,
-          totalKobo: Number(row.total_kobo) || 0,
-          distanceKm: Number(row.distance_km) || 0,
-          farmName: row.farm_name || 'Farm Plot',
-          jobState: row.job_state,
-          jobLga: row.job_lga,
-          farmerName: row.other_name || 'Farmer Client',
-          proofsCount: 0,
-          createdAt: row.created_at,
-          expiresAt: row.expires_at,
-        }));
-      }
-    }
-  } catch {
-    // network or rpc fallback
+export function hasProviderAccess(
+  roles: ReadonlyArray<{ role: string }> | null | undefined
+): boolean {
+  if (!Array.isArray(roles)) return false;
+  return roles.some((r) => r.role === 'equipment_provider' || r.role === 'service_provider');
+}
+
+export function validateDeclineReason(reason: string): { valid: true; trimmed: string } | { valid: false; error: string } {
+  const trimmed = reason.trim();
+  if (trimmed.length < 3) {
+    return { valid: false, error: 'Please enter a brief reason (at least 3 characters).' };
   }
+  if (trimmed.length > 300) {
+    return { valid: false, error: 'Reason must be 300 characters or fewer.' };
+  }
+  return { valid: true, trimmed };
+}
 
-  // Fallback realistic provider demo jobs for South-West Nigeria pilot
-  return [
-    {
-      id: 'job-req-001',
-      status: 'requested',
-      title: 'Heavy Tractor Ploughing & Harrowing',
-      kind: 'equipment',
-      equipmentType: 'tractor' as any,
-      jobDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
-      unit: 'hectare',
-      quantity: 5.5,
-      rateKobo: 4500000, // ₦45,000 per ha
-      totalKobo: 24750000, // ₦247,500
-      distanceKm: 8.4,
-      farmName: 'Oluwaseun Green Acres',
-      jobState: 'Oyo',
-      jobLga: 'Iseyin',
-      farmerName: 'Adeolu Babatunde',
-      farmerPhone: '+2348031234567',
-      farmerNote: 'Soil is moderately dry sandy-loam. We need disc ploughing done before the rain starts on Thursday.',
-      proofsCount: 0,
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-    },
-    {
-      id: 'job-act-002',
-      status: 'accepted',
-      title: 'Boom Sprayer Crop Protection',
-      kind: 'equipment',
-      equipmentType: 'boom_sprayer' as any,
-      jobDate: new Date().toISOString().slice(0, 10), // Today
-      unit: 'hectare',
-      quantity: 3.0,
-      rateKobo: 2500000, // ₦25,000 per ha
-      totalKobo: 7500000, // ₦75,000
-      distanceKm: 4.1,
-      farmName: 'Abeokuta Maize Valley',
-      jobState: 'Ogun',
-      jobLga: 'Obafemi Owode',
-      farmerName: 'Folashade Ajayi',
-      farmerPhone: '+2348029876543',
-      farmerNote: 'Foliar nutrition application. Water point is directly accessible at the farm entrance.',
-      proofsCount: 0,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-    },
-    {
-      id: 'job-inp-003',
-      status: 'in_progress',
-      title: 'Multi-Crop Mechanical Planter',
-      kind: 'equipment',
-      equipmentType: 'planter' as any,
-      jobDate: new Date().toISOString().slice(0, 10), // Today
-      unit: 'hectare',
-      quantity: 8.0,
-      rateKobo: 3800000, // ₦38,000 per ha
-      totalKobo: 30400000, // ₦304,000
-      distanceKm: 12.0,
-      farmName: 'Oyo Farm Settlement Plot 14',
-      jobState: 'Oyo',
-      jobLga: 'Afijio',
-      farmerName: 'Ibrahim Danjuma',
-      farmerPhone: '+2348051122334',
-      farmerNote: 'Planter calibrated for 75cm row spacing maize.',
-      checkedInAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      checkInDistanceM: 85,
-      proofsCount: 1,
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-    },
-    {
-      id: 'job-cmp-004',
-      status: 'confirmed',
-      title: 'Combine Harvester Service',
-      kind: 'equipment',
-      equipmentType: 'harvester' as any,
-      jobDate: new Date(Date.now() - 86400000 * 4).toISOString().slice(0, 10),
-      unit: 'hectare',
-      quantity: 12.0,
-      rateKobo: 6000000,
-      totalKobo: 72000000, // ₦720,000
-      distanceKm: 15.5,
-      farmName: 'Kwara Grain Basin',
-      jobState: 'Kwara',
-      jobLga: 'Moro',
-      farmerName: 'Tunde Adeleke',
-      farmerPhone: '+2348076543210',
-      proofsCount: 3,
-      hectaresDone: 12.0,
-      createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-      expiresAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-    },
-  ];
+export function classifyDispatchError(err: { code?: string; message?: string; status?: number } | null | undefined): {
+  kind: DispatchFailureKind;
+  message: string;
+} {
+  const code = err?.code ?? '';
+  const msg = (err?.message ?? '').toLowerCase();
+  const status = err?.status;
+
+  if (status === 401 || code === 'PGRST301' || msg.includes('jwt') || msg.includes('not authenticated') || msg.includes('sign in')) {
+    return { kind: 'unauthenticated', message: 'Your session expired. Please sign in again.' };
+  }
+  if (status === 403 || code === '42501' || msg.includes('permission denied') || msg.includes('not allowed') || msg.includes('policy')) {
+    return { kind: 'forbidden', message: 'Your account does not have provider access to these records.' };
+  }
+  if (!code && (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout') || msg.includes('failed to fetch'))) {
+    return { kind: 'network', message: 'Could not reach CultivaNode. Check your signal and try again.' };
+  }
+  if (!code && !msg) {
+    return { kind: 'network', message: 'Could not reach CultivaNode. Check your signal and try again.' };
+  }
+  return { kind: 'database', message: err?.message || 'Could not load provider records. Please try again.' };
+}
+
+function mapProviderJobRow(row: Record<string, unknown>): ProviderJob {
+  return {
+    id: String(row.id),
+    status: (row.status as BookingStatus) || 'requested',
+    title: typeof row.title === 'string' && row.title ? row.title : 'Agricultural Machinery Service',
+    kind: row.kind === 'service' ? 'service' : 'equipment',
+    equipmentType: (row.equipment_type as string | null) ?? null,
+    providerType: (row.provider_type as string | null) ?? null,
+    jobDate: String(row.job_date ?? ''),
+    unit: (row.unit as ProviderJob['unit']) || 'hectare',
+    quantity: Number(row.quantity) || 1,
+    rateKobo: Number(row.rate_kobo) || 0,
+    totalKobo: Number(row.total_kobo) || 0,
+    distanceKm: Number(row.distance_km) || 0,
+    farmName: typeof row.farm_name === 'string' && row.farm_name ? row.farm_name : 'Farm Plot',
+    jobState: (row.job_state as string | null) ?? null,
+    jobLga: (row.job_lga as string | null) ?? null,
+    farmerName: typeof row.other_name === 'string' && row.other_name ? row.other_name : 'Farmer Client',
+    farmerPhone: (row.other_phone as string | null) ?? null,
+    farmerNote: (row.notes as string | null) ?? null,
+    checkedInAt: (row.checked_in_at as string | null) ?? null,
+    checkInDistanceM: row.check_in_distance_m != null ? Number(row.check_in_distance_m) : null,
+    workSubmittedAt: (row.work_submitted_at as string | null) ?? null,
+    hectaresDone: row.hectares_done != null ? Number(row.hectares_done) : null,
+    proofsCount: Number(row.proofs_count) || 0,
+    createdAt: String(row.created_at ?? ''),
+    expiresAt: String(row.expires_at ?? ''),
+  };
 }
 
 /**
- * Loads provider equipment fleet
+ * Loads live provider jobs from Supabase my_bookings() without demo fallbacks.
  */
-export async function loadMachineryFleet(userId?: string): Promise<MachineryItem[]> {
+export async function loadProviderJobs(): Promise<DispatchLoadResult<ProviderJob>> {
   try {
-    if (userId) {
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('owner_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        return data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          category: item.category,
-          pricingUnit: item.pricing_unit,
-          rateKobo: Number(item.rate_kobo) || 0,
-          serviceRadiusKm: Number(item.service_radius_km) || 30,
-          status: item.status,
-          operatorIncluded: item.operator_included ?? true,
-          totalBookingsCompleted: 6,
-        }));
-      }
+    const { data, error } = await supabase.rpc('my_bookings', { p_limit: 100 });
+    if (error) {
+      const classified = classifyDispatchError(error);
+      return { ok: false, ...classified };
     }
-  } catch {
-    // fallback
+    if (!Array.isArray(data)) {
+      return { ok: false, kind: 'invalid', message: 'Received an unexpected booking response from the server.' };
+    }
+    const providerRows = data.filter(
+      (row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object' && (row as Record<string, unknown>).my_side === 'provider'
+    );
+    return { ok: true, data: providerRows.map(mapProviderJobRow) };
+  } catch (err) {
+    const classified = classifyDispatchError(err as { code?: string; message?: string; status?: number });
+    return { ok: false, ...classified };
   }
+}
 
-  // Realistic default equipment fleet for demo/pilot
-  return [
-    {
-      id: 'machinery-01',
-      title: 'John Deere 5075E Utility Tractor (75 HP)',
-      category: 'tractor',
-      pricingUnit: 'hectare',
-      rateKobo: 4500000, // ₦45,000/ha
-      serviceRadiusKm: 40,
-      status: 'active',
-      operatorIncluded: true,
-      totalBookingsCompleted: 14,
-    },
-    {
-      id: 'machinery-02',
-      title: 'Baldan 4-Row Precision Planter',
-      category: 'planter',
-      pricingUnit: 'hectare',
-      rateKobo: 3800000, // ₦38,000/ha
-      serviceRadiusKm: 35,
-      status: 'active',
-      operatorIncluded: true,
-      totalBookingsCompleted: 8,
-    },
-    {
-      id: 'machinery-03',
-      title: 'Jacto 600L Boom Sprayer (12m Swath)',
-      category: 'boom_sprayer',
-      pricingUnit: 'hectare',
-      rateKobo: 2500000, // ₦25,000/ha
-      serviceRadiusKm: 25,
-      status: 'active',
-      operatorIncluded: true,
-      totalBookingsCompleted: 11,
-    },
-  ];
+/**
+ * Loads a single provider job by UUID for direct navigation / deep-linking.
+ */
+export async function loadProviderJobById(jobId: string): Promise<DispatchSingleResult<ProviderJob>> {
+  if (!isValidJobId(jobId)) {
+    return { ok: false, kind: 'invalid', message: 'Invalid job reference.' };
+  }
+  const result = await loadProviderJobs();
+  if (!result.ok) {
+    return result;
+  }
+  const match = result.data.find((j) => j.id === jobId.trim());
+  if (!match) {
+    return { ok: false, kind: 'not_found', message: 'This job was not found on your provider account.' };
+  }
+  return { ok: true, data: match };
+}
+
+/**
+ * Loads live provider equipment listings owned by the authenticated user without demo fallbacks.
+ */
+export async function loadMachineryFleet(userId?: string): Promise<DispatchLoadResult<MachineryItem>> {
+  if (!userId) {
+    return { ok: false, kind: 'unauthenticated', message: 'Please sign in to view your registered equipment.' };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('listings')
+      .select('id, title, category, pricing_unit, rate_kobo, service_radius_km, status, operator_included')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const classified = classifyDispatchError(error);
+      return { ok: false, ...classified };
+    }
+    if (!Array.isArray(data)) {
+      return { ok: false, kind: 'invalid', message: 'Received an unexpected equipment list from the server.' };
+    }
+
+    return {
+      ok: true,
+      data: data.map((item) => ({
+        id: String(item.id),
+        title: String(item.title),
+        category: String(item.category),
+        pricingUnit: (item.pricing_unit as MachineryItem['pricingUnit']) || 'hectare',
+        rateKobo: Number(item.rate_kobo) || 0,
+        serviceRadiusKm: Number(item.service_radius_km) || 30,
+        status: (item.status as MachineryItem['status']) || 'draft',
+        operatorIncluded: item.operator_included ?? true,
+        totalBookingsCompleted: 0,
+      })),
+    };
+  } catch (err) {
+    const classified = classifyDispatchError(err as { code?: string; message?: string; status?: number });
+    return { ok: false, ...classified };
+  }
 }
 
 /**
@@ -273,8 +240,8 @@ export async function acceptJob(bookingId: string): Promise<{ success: boolean; 
       return { success: false, error: error.message };
     }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network error' };
+  } catch (err) {
+    return { success: false, error: (err as Error)?.message || 'Network error' };
   }
 }
 
@@ -285,17 +252,21 @@ export async function declineJob(
   bookingId: string,
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
+  const checked = validateDeclineReason(reason);
+  if (!checked.valid) {
+    return { success: false, error: checked.error };
+  }
   try {
     const { error } = await supabase.rpc('decline_booking', {
       p_booking: bookingId,
-      p_reason: reason || 'Provider unavailable on this date',
+      p_reason: checked.trimmed,
     });
     if (error) {
       return { success: false, error: error.message };
     }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network error' };
+  } catch (err) {
+    return { success: false, error: (err as Error)?.message || 'Network error' };
   }
 }
 
@@ -316,8 +287,8 @@ export async function checkInJob(
       return { success: false, error: error.message };
     }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network error' };
+  } catch (err) {
+    return { success: false, error: (err as Error)?.message || 'Network error' };
   }
 }
 
@@ -332,29 +303,29 @@ export async function submitWorkProofPhoto(
   hectares?: number
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
-    const { data: userRes } = await supabase.auth.getUser();
-    const userId = userRes?.user?.id || 'demo-provider-user';
+    const { data: userRes, error: authErr } = await supabase.auth.getUser();
+    const userId = userRes?.user?.id;
+    if (authErr || !userId) {
+      return { success: false, error: 'Please sign in again to upload work proof.' };
+    }
     const filename = `${Date.now()}-${kind}.jpg`;
     const storagePath = `${bookingId}/${userId}/${filename}`;
 
-    // Prepare upload payload
     const formData = new FormData();
     formData.append('file', {
       uri: fileUri,
       name: filename,
       type: 'image/jpeg',
-    } as any);
+    } as unknown as Blob);
 
     const { error: uploadError } = await supabase.storage
       .from('booking-proofs')
       .upload(storagePath, formData, { contentType: 'image/jpeg' });
 
     if (uploadError) {
-      // In local demo or offline, continue with virtual storage path
-      console.warn('Proof upload fallback:', uploadError.message);
+      return { success: false, error: uploadError.message || 'Could not upload proof photo.' };
     }
 
-    // Call submit_proof RPC
     const { error: rpcError } = await supabase.rpc('submit_proof', {
       p_booking: bookingId,
       p_path: storagePath,
@@ -370,8 +341,8 @@ export async function submitWorkProofPhoto(
     }
 
     return { success: true, path: storagePath };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Error uploading proof' };
+  } catch (err) {
+    return { success: false, error: (err as Error)?.message || 'Error uploading proof' };
   }
 }
 
@@ -391,8 +362,8 @@ export async function finishJobWork(
       return { success: false, error: error.message };
     }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network error' };
+  } catch (err) {
+    return { success: false, error: (err as Error)?.message || 'Network error' };
   }
 }
 
@@ -406,7 +377,7 @@ export async function loadProviderMaintenanceDates(): Promise<string[]> {
       return JSON.parse(stored);
     }
   } catch {
-    // fallback
+    // ignore storage read error
   }
   return [];
 }
@@ -418,6 +389,6 @@ export async function saveProviderMaintenanceDates(dates: string[]): Promise<voi
   try {
     await sessionStorage.setItem(AVAILABILITY_STORAGE_KEY, JSON.stringify(dates));
   } catch {
-    // ignore
+    // ignore storage write error
   }
 }

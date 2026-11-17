@@ -1,8 +1,8 @@
 import { colors, formatNaira, radius, space } from '@cultivanode/shared';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import { acceptJob, declineJob } from '../../lib/provider-dispatch';
-import { Button, Card, Screen, Text } from '../../ui';
+import { acceptJob, declineJob, validateDeclineReason, type ProviderJob } from '../../lib/provider-dispatch';
+import { Button, Card, Notice, PromptModal, Screen, Text } from '../../ui';
 import { useProvider } from './_layout';
 import { useRouter } from 'expo-router';
 
@@ -10,11 +10,13 @@ type JobFilter = 'all' | 'requested' | 'accepted' | 'in_progress' | 'completed';
 
 export default function InboxRoute() {
   const router = useRouter();
-  const { jobs, setJobs } = useProvider();
+  const { jobs, jobsError, setJobs, refresh } = useProvider();
   const [filter, setFilter] = useState<JobFilter>('all');
   const [processingJobId, setProcessingJobId] = useState<string | null>(null);
+  const [declineTarget, setDeclineTarget] = useState<ProviderJob | null>(null);
 
-  async function handleAccept(job: any) {
+  async function handleAccept(job: ProviderJob) {
+    if (processingJobId) return;
     Alert.alert(
       'Accept Job Request',
       `Accept ${job.title} for ${job.farmerName} on ${job.jobDate}?`,
@@ -28,6 +30,8 @@ export default function InboxRoute() {
             setProcessingJobId(null);
             if (res.success) {
               setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: 'accepted' } : j)));
+            } else {
+              Alert.alert('Could not accept job', res.error || 'Please try again.');
             }
           },
         },
@@ -35,18 +39,23 @@ export default function InboxRoute() {
     );
   }
 
-  function handleDecline(job: any) {
-    Alert.prompt(
-      'Decline Job Request',
-      'Reason:',
-      async (reason) => {
-        if (!reason) return;
-        setProcessingJobId(job.id);
-        await declineJob(job.id, reason);
-        setProcessingJobId(null);
-        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: 'declined' } : j)));
-      }
-    );
+  function handleDecline(job: ProviderJob) {
+    if (processingJobId) return;
+    setDeclineTarget(job);
+  }
+
+  async function submitDecline(reason: string) {
+    if (!declineTarget || processingJobId) return;
+    const job = declineTarget;
+    setProcessingJobId(job.id);
+    const res = await declineJob(job.id, reason);
+    setProcessingJobId(null);
+    if (res.success) {
+      setDeclineTarget(null);
+      setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: 'declined' } : j)));
+    } else {
+      Alert.alert('Could not decline job', res.error || 'Please try again.');
+    }
   }
 
   const filteredJobs = useMemo(() => {
@@ -57,8 +66,9 @@ export default function InboxRoute() {
 
   const pendingCount = jobs.filter((j) => j.status === 'requested').length;
   const activeCount = jobs.filter((j) => j.status === 'accepted' || j.status === 'in_progress').length;
-  const completedCount = jobs.filter((j) => j.status === 'confirmed' || j.status === 'completed').length;
-  const totalEarningsKobo = jobs.filter((j) => j.status === 'confirmed' || j.status === 'completed').reduce((sum, j) => sum + j.totalKobo, 0);
+  const totalEarningsKobo = jobs
+    .filter((j) => j.status === 'confirmed' || j.status === 'completed')
+    .reduce((sum, j) => sum + j.totalKobo, 0);
 
   return (
     <Screen>
@@ -106,9 +116,23 @@ export default function InboxRoute() {
       </View>
 
       <View style={styles.inboxContainer}>
-        {filteredJobs.length === 0 ? (
+        {jobsError ? (
           <Card style={styles.emptyCard}>
-            <Text variant="caption" muted style={styles.center}>No jobs found.</Text>
+            <Notice tone={jobsError.kind === 'forbidden' ? 'danger' : 'warn'}>{jobsError.message}</Notice>
+            <View style={styles.retryRow}>
+              {jobsError.kind === 'unauthenticated' ? (
+                <Button title="Sign in" variant="primary" onPress={() => router.replace('/(auth)/signIn')} />
+              ) : jobsError.kind !== 'forbidden' ? (
+                <Button title="Retry" variant="primary" onPress={refresh} />
+              ) : null}
+            </View>
+          </Card>
+        ) : filteredJobs.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <Text variant="label" color={colors.leaf[900]} style={styles.center}>No jobs yet</Text>
+            <Text variant="caption" muted style={styles.center}>
+              New equipment and service booking requests from farmers will appear here.
+            </Text>
           </Card>
         ) : (
           filteredJobs.map((job) => {
@@ -149,8 +173,20 @@ export default function InboxRoute() {
                 <View style={styles.jobActionsRow}>
                   {isRequested && (
                     <>
-                      <Button title="✓ Accept" variant="primary" onPress={() => handleAccept(job)} loading={isProcessing} />
-                      <Button title="✕ Decline" variant="secondary" onPress={() => handleDecline(job)} loading={isProcessing} />
+                      <Button
+                        title="✓ Accept"
+                        variant="primary"
+                        onPress={() => handleAccept(job)}
+                        loading={isProcessing}
+                        disabled={Boolean(processingJobId)}
+                      />
+                      <Button
+                        title="✕ Decline"
+                        variant="secondary"
+                        onPress={() => handleDecline(job)}
+                        loading={isProcessing}
+                        disabled={Boolean(processingJobId)}
+                      />
                     </>
                   )}
                   {isActive && (
@@ -162,6 +198,22 @@ export default function InboxRoute() {
           })
         )}
       </View>
+
+      <PromptModal
+        visible={Boolean(declineTarget)}
+        title="Decline Job Request"
+        description={declineTarget ? `Let ${declineTarget.farmerName} know why you cannot take ${declineTarget.title}.` : undefined}
+        label="Reason for declining"
+        placeholder="e.g. Tractor scheduled for maintenance on this date"
+        confirmLabel="Decline Job"
+        cancelLabel="Keep Request"
+        submitting={Boolean(declineTarget && processingJobId === declineTarget.id)}
+        validate={validateDeclineReason}
+        onCancel={() => {
+          if (!processingJobId) setDeclineTarget(null);
+        }}
+        onConfirm={submitDecline}
+      />
     </Screen>
   );
 }
@@ -178,7 +230,8 @@ const styles = StyleSheet.create({
   filterPill: { paddingHorizontal: space[2], paddingVertical: 4, borderRadius: radius.full, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line },
   filterPillActive: { backgroundColor: '#123D27', borderColor: '#123D27' },
   inboxContainer: { gap: space[3] },
-  emptyCard: { padding: space[5], alignItems: 'center', backgroundColor: colors.white },
+  emptyCard: { padding: space[5], alignItems: 'center', gap: space[3], backgroundColor: colors.white },
+  retryRow: { width: '100%', marginTop: space[1] },
   center: { textAlign: 'center' },
   jobCard: { padding: space[4], gap: space[3], backgroundColor: colors.white, borderColor: colors.line },
   jobHeader: { flexDirection: 'row', justifyContent: 'space-between' },
