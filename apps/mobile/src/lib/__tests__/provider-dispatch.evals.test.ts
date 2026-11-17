@@ -50,7 +50,7 @@ describe('provider dispatch acceptance evaluations', () => {
     });
 
     it('accepts and trims the minimum valid reason', () => {
-      expect(validateDeclineReason('  No  ')).toEqual({ valid: true, trimmed: 'No' });
+      expect(validateDeclineReason('  Yes  ')).toEqual({ valid: true, trimmed: 'Yes' });
     });
 
     it('accepts a reason of exactly 300 characters', () => {
