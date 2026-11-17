@@ -199,6 +199,8 @@ const yoAccount: typeof enAccount = {
     },
     welcome: "Káàbọ̀, {name}",
     welcomeNew: "Àkọọ́lẹ̀ rẹ ti ṣetán.",
+    marketplaceOrdersAlert: "O ní àṣẹ ọjà tuntun {count} tí ó ń dúró de ìgbésẹ̀ rẹ.",
+    marketplaceOrdersAction: "Ṣàyẹ̀wò àwọn àṣẹ",
     tierTitle: "Ìpele ìfìdímúlẹ̀",
     tiers: [
       "Ìpele 0: a ti forúkọ sílẹ̀",
@@ -678,7 +680,9 @@ const yoAccount: typeof enAccount = {
       marked: "A ti sàmì sí gbogbo rẹ̀.",
       unread: "Tuntun",
       open: "Ṣí iṣẹ́ náà",
+      openOrder: "Wo àṣẹ ọjà",
       kinds: {
+        marketplace_order_placed: "Àṣẹ tuntun {order_number} láti ọ̀dọ̀ {name}: {title}. Ṣàyẹ̀wò ìsanwó kí o sì pèsè àṣẹ náà.",
         booking_requested: "{name} béèrè fún {title} ní {date}.",
         booking_accepted: "{name} ti gba ìbéèrè rẹ fún {title} ní {date}.",
         booking_declined: "{name} kò lè ṣe {title} ní {date}.",

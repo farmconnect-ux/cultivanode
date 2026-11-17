@@ -197,6 +197,8 @@ const enAccount = {
     },
     welcome: "Welcome, {name}",
     welcomeNew: "Your account is ready.",
+    marketplaceOrdersAlert: "You have {count} new marketplace order(s) waiting for your attention.",
+    marketplaceOrdersAction: "Review orders",
     tierTitle: "Verification level",
     tiers: [
       "Level 0: registered",
@@ -676,7 +678,9 @@ const enAccount = {
       marked: "All marked as read.",
       unread: "New",
       open: "Open booking",
+      openOrder: "View order",
       kinds: {
+        marketplace_order_placed: "New order {order_number} from {name}: {title}. Review payment and prepare the order.",
         booking_requested: "{name} asked for {title} on {date}.",
         booking_accepted: "{name} accepted your request for {title} on {date}.",
         booking_declined: "{name} cannot do {title} on {date}.",
