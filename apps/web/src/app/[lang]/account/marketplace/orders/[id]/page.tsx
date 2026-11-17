@@ -103,7 +103,7 @@ export default async function OrderDetailPage({
     payouts = new Map(((data ?? []) as Payout[]).map((p) => [p.seller_id, p]));
   }
   const isPaid = ["paid", "escrowed", "released"].includes(order.payment_status);
-  const allDispatched = fulfilments.length > 0 && fulfilments.every((f) => (["dispatched", "in_transit"].includes(f.status) && Boolean(f.dispatched_at)) || ["delivered", "accepted"].includes(f.status));
+  const allDispatched = fulfilments.length > 0 && fulfilments.every((f) => Boolean(f.dispatched_at) || Boolean(f.delivered_at) || (f.status === "accepted" && Boolean(f.confirmed_at)));
   const allReceived = fulfilments.length > 0 && fulfilments.every((f) => Boolean(f.confirmed_at) && ["delivered", "accepted"].includes(f.status));
 
   return (
@@ -191,7 +191,7 @@ export default async function OrderDetailPage({
             }`}>
               {allDispatched ? '✓' : '3'}
             </div>
-            <span className="font-bold text-ink">Dispatched</span>
+            <span className="font-bold text-ink">Handed over</span>
           </div>
           <div className="flex flex-col items-center">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold mb-1 ${
