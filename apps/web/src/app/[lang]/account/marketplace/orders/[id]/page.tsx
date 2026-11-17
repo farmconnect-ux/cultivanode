@@ -69,6 +69,7 @@ export default async function OrderDetailPage({
         notes,
         dispatched_at,
         delivered_at,
+        confirmed_at,
         marketplace_sellers ( business_name )
       )
     `)
