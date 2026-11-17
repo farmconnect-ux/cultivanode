@@ -681,6 +681,10 @@ const enAccount = {
       openOrder: "View order",
       kinds: {
         marketplace_order_placed: "New order {order_number} from {name}: {title}. Review payment and prepare the order.",
+        marketplace_order_dispatched: "Order {order_number} has been dispatched. Delivery reference: {tracking}.",
+        marketplace_order_in_transit: "Order {order_number} is on its way. Delivery reference: {tracking}.",
+        marketplace_order_delivered: "The seller marked order {order_number} as delivered. Please confirm receipt when it arrives.",
+        marketplace_order_accepted: "Receipt of order {order_number} has been confirmed.",
         booking_requested: "{name} asked for {title} on {date}.",
         booking_accepted: "{name} accepted your request for {title} on {date}.",
         booking_declined: "{name} cannot do {title} on {date}.",

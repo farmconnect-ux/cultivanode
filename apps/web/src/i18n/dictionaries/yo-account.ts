@@ -683,6 +683,10 @@ const yoAccount: typeof enAccount = {
       openOrder: "Wo àṣẹ ọjà",
       kinds: {
         marketplace_order_placed: "Àṣẹ tuntun {order_number} láti ọ̀dọ̀ {name}: {title}. Ṣàyẹ̀wò ìsanwó kí o sì pèsè àṣẹ náà.",
+        marketplace_order_dispatched: "A ti fi àṣẹ {order_number} ránṣẹ́. Àlàyé ìtọ́pinpin: {tracking}.",
+        marketplace_order_in_transit: "Àṣẹ {order_number} ti ń bọ̀ wá. Àlàyé ìtọ́pinpin: {tracking}.",
+        marketplace_order_delivered: "Olùtajà ti sàmì sí àṣẹ {order_number} pé a ti fi jíṣẹ́. Jọ̀wọ́ fìdí gbígbà rẹ múlẹ̀ nígbà tí ó bá dé.",
+        marketplace_order_accepted: "A ti fìdí gbígbà àṣẹ {order_number} múlẹ̀.",
         booking_requested: "{name} béèrè fún {title} ní {date}.",
         booking_accepted: "{name} ti gba ìbéèrè rẹ fún {title} ní {date}.",
         booking_declined: "{name} kò lè ṣe {title} ní {date}.",

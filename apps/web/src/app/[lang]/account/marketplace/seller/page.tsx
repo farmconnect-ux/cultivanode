@@ -283,7 +283,7 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
                           to === "rejected"
                             ? [{ name: "note", label: "Reason", type: "textarea", required: true, placeholder: "e.g. Out of stock until next harvest" }]
                             : [
-                                { name: "tracking", label: "Tracking / vehicle number" },
+                                { name: "tracking", label: "Tracking number, vehicle registration or delivery contact", required: true, hint: "Required for dispatch so the buyer can identify and follow the delivery." },
                                 { name: "note", label: "Note to buyer", type: "textarea", placeholder: "e.g. Arriving Thursday afternoon" },
                               ]
                         }
