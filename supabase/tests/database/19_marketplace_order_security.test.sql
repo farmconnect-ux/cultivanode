@@ -7,7 +7,7 @@
 --        single-settlement-per-order (rejects second distinct reference), DB-level unique
 --        escrow/ledger constraints, and legitimate retry after a failed payment.
 begin;
-select plan(24);
+select plan(31);
 
 -- 1. Seed users, seller, category, listing, and pre-existing orders (as postgres)
 insert into auth.users (id, phone) values
@@ -283,6 +283,61 @@ select is(
   (select data->>'order_number' from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
   (select order_number from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
   'Test 7c: Seller notification carries the correct order reference'
+);
+
+
+-- 7d: Fulfilment lifecycle, tracking requirement, buyer notification, and order completion.
+reset role;
+create temp table lifecycle_fulfilment as
+  select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.placed_order) limit 1;
+update public.marketplace_orders
+   set payment_mode = 'direct', payment_status = 'paid', paid_at = now()
+ where id = (select id from pg_temp.placed_order);
+update public.marketplace_fulfilments
+   set direct_payment_status = 'confirmed', seller_confirmed_paid_at = now()
+ where id = (select id from pg_temp.lifecycle_fulfilment);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'confirmed');
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'preparing');
+select throws_ok(
+  $select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'dispatched', null, null)$,
+  '22023',
+  'Add a tracking number, vehicle registration or delivery contact before dispatch.',
+  'Test 7d: Seller cannot dispatch seller-delivery fulfilment without tracking information'
+);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'dispatched', 'Leaving the farm', 'TEST-VAN-001');
+reset role;
+select ok(
+  (select dispatched_at is not null and tracking_number = 'TEST-VAN-001' from public.marketplace_fulfilments where id = (select id from pg_temp.lifecycle_fulfilment)),
+  'Test 7e: Dispatch records timestamp and tracking reference'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'delivered', 'Delivered to customer', null);
+reset role;
+select ok(
+  (select delivered_at is not null from public.marketplace_fulfilments where id = (select id from pg_temp.lifecycle_fulfilment)),
+  'Test 7f: Seller delivery action records delivered_at'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
+select public.buyer_confirm_direct_delivery((select id from pg_temp.lifecycle_fulfilment));
+reset role;
+select is(
+  (select status from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'completed',
+  'Test 7g: Parent order becomes completed after buyer confirms the only fulfilment'
+);
+select ok(
+  (select completed_at is not null from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'Test 7h: Parent order completion timestamp is recorded'
+);
+select is(
+  (select count(*)::integer from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000001' and kind = 'marketplace_order_dispatched' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  1,
+  'Test 7i: Dispatch creates a buyer notification'
 );
 
 -- Test 8: Payment webhook security, idempotency, duplicate-settlement protection & retry
