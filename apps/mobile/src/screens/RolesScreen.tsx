@@ -1,4 +1,4 @@
-import type { AppRole, ProviderType } from '@cultivanode/shared';
+import { PROVIDER_TYPE_LABELS, type AppRole, type ProviderType } from '@cultivanode/shared';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
@@ -18,16 +18,11 @@ import {
 } from '../lib/account';
 import { useSession } from '../lib/session';
 import { color as c, space } from '../theme';
-import { Button, Card, Header, Loading, Notice, Pill, SectionTitle, SelectField, Text, TextField } from '../ui';
+import { Button, Card, Header, Loading, Notice, Pill, Screen, SectionTitle, SelectField, Text, TextField } from '../ui';
 
-const PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
-  { value: 'agronomist', label: 'Agronomist' },
-  { value: 'veterinarian', label: 'Veterinarian' },
-  { value: 'soil_tester', label: 'Soil tester' },
-  { value: 'tractor_operator', label: 'Tractor operator' },
-  { value: 'sprayer_team', label: 'Sprayer team' },
-  { value: 'extension_worker', label: 'Extension worker' },
-];
+const PROVIDER_TYPES: { value: ProviderType; label: string }[] = (
+  Object.entries(PROVIDER_TYPE_LABELS) as [ProviderType, string][]
+).map(([value, label]) => ({ value, label }));
 
 const DOC_TYPES: { value: VerificationDocumentType; label: string }[] = [
   { value: 'national_id', label: 'National ID (NIN slip)' },
@@ -187,8 +182,8 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
   if (loading) {
     return (
       <Screen>
-        <Header title="Roles & Documents" onBack={onBack} />
-        <Loading />
+        <Header title="Roles & Documents" onBack={onBack} backLabel="Back" />
+        <Loading label="Loading roles and documents..." />
       </Screen>
     );
   }
@@ -197,7 +192,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <Screen>
-      <Header title="Roles & Documents" onBack={onBack} />
+      <Header title="Roles & Documents" onBack={onBack} backLabel="Back" />
 
       {feedback ? <Notice tone={feedback.tone}>{feedback.text}</Notice> : null}
       {loadError ? (
@@ -207,7 +202,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
         </Card>
       ) : null}
 
-      <SectionTitle>Active roles</SectionTitle>
+      <SectionTitle title="Active roles" />
       <Card>
         <View style={styles.pills}>
           {(account?.roles ?? []).map((r) => (
@@ -220,10 +215,12 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
 
       {requestable.length > 0 ? (
         <>
-          <SectionTitle>Request another role</SectionTitle>
+          <SectionTitle title="Request another role" />
           <Card>
             <SelectField
               label="Role"
+              placeholder="Select a role"
+              closeLabel="Close"
               value={selectedRole}
               options={requestable.map((r) => ({
                 value: r.role,
@@ -234,6 +231,8 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
             {selectedRole === 'service_provider' ? (
               <SelectField
                 label="Service speciality"
+                placeholder="Select speciality"
+                closeLabel="Close"
                 value={providerType}
                 options={PROVIDER_TYPES}
                 onChange={(v) => setProviderType(v as ProviderType)}
@@ -265,7 +264,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
         </>
       ) : null}
 
-      <SectionTitle>Role requests ({requests.length})</SectionTitle>
+      <SectionTitle title={`Role requests (${requests.length})`} />
       {requests.length === 0 ? (
         <Card>
           <Text variant="caption" muted>No role requests submitted yet.</Text>
@@ -302,6 +301,8 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
                 <View style={styles.uploadBox}>
                   <SelectField
                     label="Document type"
+                    placeholder="Select document type"
+                    closeLabel="Close"
                     value={docType}
                     options={DOC_TYPES}
                     onChange={(v) => setDocType(v as VerificationDocumentType)}

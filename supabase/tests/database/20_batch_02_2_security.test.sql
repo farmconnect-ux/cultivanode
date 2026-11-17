@@ -136,10 +136,10 @@ select is(
 -- 3. Role Requests & Verification Documents Tests
 select set_config('request.jwt.claims', '{"sub":"c6000000-0000-0000-0000-000000000001"}', true);
 insert into public.role_requests (id, role, details)
-values ('c6000000-0000-0000-0000-0000000000c1', 'equipment_provider', '{"note":"2 tractors"}'::jsonb);
+values ('c6000000-0000-0000-0000-0000000000c1', 'machinery_owner', '{"note":"2 tractors"}'::jsonb);
 
 select throws_ok(
-  $$insert into public.role_requests (role) values ('equipment_provider')$$,
+  $$insert into public.role_requests (role) values ('machinery_owner')$$,
   '23505',
   null,
   'Test 8: Duplicate pending role request is rejected'
