@@ -490,7 +490,7 @@ export function SupportDesk(_props: ScreenProps) {
                       </div>
                       <span className="font-label-sm text-label-sm text-on-surface-variant">28m ago</span>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface leading-relaxed">Reviewed the operator's photos. Disc plough struck an unmapped granite outcrop at Lat 7.9732° N, Long 3.5901° E. Under ToS §5.4 (Geological Impassability), operator is entitled to prorated 84.89% payout (₦80,645.50), and the farmer does not pay the unworked ₦14,354.50 (paid directly; escrow not live).</p>
+                    <p className="font-body-sm text-body-sm text-on-surface leading-relaxed">Reviewed the operator&apos;s photos. Disc plough struck an unmapped granite outcrop at Lat 7.9732° N, Long 3.5901° E. Under ToS §5.4 (Geological Impassability), operator is entitled to prorated 84.89% payout (₦80,645.50), and the farmer does not pay the unworked ₦14,354.50 (paid directly; escrow not live).</p>
                   </div>
                 </div>
 

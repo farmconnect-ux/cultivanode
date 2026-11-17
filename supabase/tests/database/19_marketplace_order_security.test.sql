@@ -49,7 +49,7 @@ insert into public.marketplace_listings (
 ) on conflict (id) do nothing;
 
 insert into public.marketplace_inventory_lots (
-  id, listing_id, batch_number, physical_quantity, reserved_quantity, allocated_quantity
+  id, listing_id, lot_number, physical_quantity, reserved_quantity, allocated_quantity
 ) values (
   'b5000000-0000-0000-0000-000000000041',
   'b5000000-0000-0000-0000-000000000040',
