@@ -275,7 +275,9 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
               label: "",
               cell: (f) => (
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  {(NEXT_STEPS[f.status] ?? []).map(([to, text]) =>
+                  {(f.status === "ready_for_pickup" && f.delivery_method !== "pickup"
+                    ? [["dispatched", "Dispatch"] as [string, string]]
+                    : NEXT_STEPS[f.status] ?? []).map(([to, text]) =>
                     to === "rejected" || to === "dispatched" ? (
                       <ActionDialog
                         key={to}
