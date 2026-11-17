@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/make-icons.mjs",
     "eas-build-post-install": "npm run icons",
-    "prebuild:android": "npm run icons && expo prebuild -p android --clean"
+    "prebuild:android": "npm run icons && expo prebuild -p android --clean",
+    "test": "vitest run"
   },
   "dependencies": {
     "@cultivanode/shared": "*",
@@ -48,6 +49,7 @@
     "@types/aes-js": "^3.1.4",
     "@types/react": "~19.2.2",
     "sharp": "^0.35.4",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
   }
 }

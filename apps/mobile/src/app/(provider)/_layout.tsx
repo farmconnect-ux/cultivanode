@@ -1,15 +1,29 @@
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { colors } from '@cultivanode/shared';
-import { View, ActivityIndicator, type ColorValue } from 'react-native';
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { loadProviderJobs, loadMachineryFleet, loadProviderMaintenanceDates, type ProviderJob, type MachineryItem } from '../../lib/provider-dispatch';
+import { View, ActivityIndicator } from 'react-native';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import {
+  loadProviderJobs,
+  loadMachineryFleet,
+  loadProviderMaintenanceDates,
+  type DispatchFailureKind,
+  type ProviderJob,
+  type MachineryItem,
+} from '../../lib/provider-dispatch';
 import { supabase } from '../../lib/supabase';
 import Feather from '@expo/vector-icons/Feather';
+
+export type DispatchErrorState = {
+  kind: DispatchFailureKind;
+  message: string;
+} | null;
 
 export const ProviderContext = createContext<{
   jobs: ProviderJob[];
   fleet: MachineryItem[];
   maintenanceDates: string[];
+  jobsError: DispatchErrorState;
+  fleetError: DispatchErrorState;
   setJobs: React.Dispatch<React.SetStateAction<ProviderJob[]>>;
   setMaintenanceDates: React.Dispatch<React.SetStateAction<string[]>>;
   refresh: () => Promise<void>;
@@ -26,24 +40,56 @@ export default function ProviderTabsLayout() {
   const [jobs, setJobs] = useState<ProviderJob[]>([]);
   const [fleet, setFleet] = useState<MachineryItem[]>([]);
   const [maintenanceDates, setMaintenanceDates] = useState<string[]>([]);
+  const [jobsError, setJobsError] = useState<DispatchErrorState>(null);
+  const [fleetError, setFleetError] = useState<DispatchErrorState>(null);
 
   const loadData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user.id;
-    if (!userId) return;
-
     setLoading(true);
     try {
-      const [jobsData, fleetData, maintData] = await Promise.all([
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      const userId = session?.user.id;
+      if (sessErr || !userId) {
+        const authErr: DispatchErrorState = {
+          kind: 'unauthenticated',
+          message: 'Please sign in to view your provider workspace.',
+        };
+        setJobs([]);
+        setFleet([]);
+        setJobsError(authErr);
+        setFleetError(authErr);
+        return;
+      }
+
+      const [jobsRes, fleetRes, maintData] = await Promise.all([
         loadProviderJobs(),
         loadMachineryFleet(userId),
         loadProviderMaintenanceDates(),
       ]);
-      setJobs(jobsData);
-      setFleet(fleetData);
+
+      if (jobsRes.ok) {
+        setJobs(jobsRes.data);
+        setJobsError(null);
+      } else {
+        setJobs([]);
+        setJobsError({ kind: jobsRes.kind, message: jobsRes.message });
+      }
+
+      if (fleetRes.ok) {
+        setFleet(fleetRes.data);
+        setFleetError(null);
+      } else {
+        setFleet([]);
+        setFleetError({ kind: fleetRes.kind, message: fleetRes.message });
+      }
+
       setMaintenanceDates(maintData);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      const fallbackErr: DispatchErrorState = {
+        kind: 'network',
+        message: 'Could not load provider workspace. Check your signal and try again.',
+      };
+      setJobsError(fallbackErr);
+      setFleetError(fallbackErr);
     } finally {
       setLoading(false);
     }
@@ -62,7 +108,18 @@ export default function ProviderTabsLayout() {
   }
 
   return (
-    <ProviderContext.Provider value={{ jobs, fleet, maintenanceDates, setJobs, setMaintenanceDates, refresh: loadData }}>
+    <ProviderContext.Provider
+      value={{
+        jobs,
+        fleet,
+        maintenanceDates,
+        jobsError,
+        fleetError,
+        setJobs,
+        setMaintenanceDates,
+        refresh: loadData,
+      }}
+    >
       <Tabs
         screenOptions={{
           headerShown: false,
