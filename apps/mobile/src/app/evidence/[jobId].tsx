@@ -21,7 +21,7 @@ type LoadError = {
 export default function EvidenceRoute() {
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const router = useRouter();
-  const { session, account, loadFailed } = useSession();
+  const { session, account, loadFailed, refresh } = useSession();
   const [loading, setLoading] = useState(true);
   const [job, setJob] = useState<ProviderJob | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
@@ -95,7 +95,7 @@ export default function EvidenceRoute() {
       <Screen>
         <Card style={styles.card}>
           <Notice tone="warn">Could not verify your account permissions. Check your connection and try again.</Notice>
-          <Button title="Retry" variant="primary" onPress={fetchJob} />
+          <Button title="Retry" variant="primary" onPress={refresh} />
           <Button title="Back" variant="outline" onPress={handleBack} />
         </Card>
       </Screen>

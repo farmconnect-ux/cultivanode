@@ -77,6 +77,7 @@ describe('provider dispatch (no demo fallbacks)', () => {
     } as never);
 
     const res = await loadProviderJobs();
+    expect(supabase.rpc).toHaveBeenCalledWith('my_bookings', { p_limit: 100 });
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.data).toHaveLength(1);
@@ -123,6 +124,7 @@ describe('provider dispatch (no demo fallbacks)', () => {
 
     mockOrder.mockResolvedValueOnce({ data: [], error: null });
     expect(await loadMachineryFleet(USER_ID)).toEqual({ ok: true, data: [] });
+    expect(supabase.from).toHaveBeenCalledWith('listings');
     expect(mockEq).toHaveBeenCalledWith('owner_id', USER_ID);
 
     mockOrder.mockResolvedValueOnce({
@@ -173,6 +175,27 @@ describe('provider dispatch (no demo fallbacks)', () => {
     });
     expect(uploadFail).toEqual({ success: false, error: 'Storage upload failed' });
     expect(supabase.rpc).not.toHaveBeenCalled();
+
+    vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({ data: { user: { id: USER_ID } }, error: null } as never);
+    mockUpload.mockResolvedValueOnce({ error: null });
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ error: null } as never);
+    const okProof = await submitWorkProofPhoto(
+      VALID_JOB_ID,
+      'file://photo.jpg',
+      'before',
+      { latitude: 7.37, longitude: 3.94, accuracy: 5, timestamp: 1700000000000 },
+      2.5
+    );
+    expect(okProof.success).toBe(true);
+    expect(okProof.path).toContain(`${VALID_JOB_ID}/${USER_ID}/`);
+    expect(supabase.storage.from).toHaveBeenCalledWith('booking-proofs');
+    expect(supabase.rpc).toHaveBeenCalledWith('submit_proof', expect.objectContaining({
+      p_booking: VALID_JOB_ID,
+      p_kind: 'before',
+      p_lat: 7.37,
+      p_lng: 3.94,
+      p_hectares: 2.5,
+    }));
   });
 
   it('validates decline reasons cross-platform and blocks invalid submissions', async () => {
