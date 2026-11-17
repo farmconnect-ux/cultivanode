@@ -616,7 +616,7 @@ export function ServiceMarketplace({ lang = "en", slots }: ScreenProps<ServiceMa
                 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold">Direct Settlement Bank Details</span>
                 <div className="flex justify-between items-center pt-1 font-body-sm text-body-sm">
                   <span className="text-on-surface-variant">Bank Name:</span>
-                  <span className="font-semibold text-on-surface">Provider's bank (sample)</span>
+                  <span className="font-semibold text-on-surface">Provider&apos;s bank (sample)</span>
                 </div>
                 <div className="flex justify-between items-center font-body-sm text-body-sm">
                   <span className="text-on-surface-variant">Account Number:</span>

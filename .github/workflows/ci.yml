@@ -14,11 +14,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      # Uses the lockfile once it is committed; falls back to a fresh install before that.
-      - run: npm ci || npm install
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      - run: npm run build
 
   database:
     name: Database migrations and RLS tests
