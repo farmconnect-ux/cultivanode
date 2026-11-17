@@ -12,13 +12,13 @@
 |---|---|---|---|
 | **Node version is 22** | `node-version-file: .nvmrc` (`.nvmrc` = `22`) | **Pass** | None |
 | **npm compatible with `npm@10.9.7`** | Node 22 ships npm `10.9.x` | **Pass** | None |
-| **Install from `package-lock.json`** | `npm ci \|\| npm install` (line 18) | **Gap** | Change to `npm ci` so lockfile drift fails CI instead of silently falling back. |
-| **Typecheck runs** | `npm run typecheck` (line 19) | **Pass** | None |
-| **Lint runs** | `npm run lint` (line 20) | **Pass** | None |
-| **Unit tests run** | `npm run test` (line 21) | **Partial** | `apps/web` has no test files; `apps/mobile` has 3 Vitest files but no `test` script in `apps/mobile/package.json`. |
-| **Production build runs** | Not present in `ci.yml` (`next.config.ts:37` also sets `ignoreBuildErrors: true`) | **Missing** | Add `- run: npm run build` after `npm run test` in `apps` job (and remove `ignoreBuildErrors: true` in `next.config.ts` in Batch 02). |
-| **Supabase DB tests run** | `supabase/setup-cli@v1` + `supabase db start` + `supabase test db` (lines 28–43) | **Pass** | None (replays all migrations including `20261117080000` and runs pgTAP `01`–`19`). |
-| **Edge Function Deno tests** | Not present in `ci.yml` | **Missing** | Add a job/step using `denoland/setup-deno` running `deno test supabase/functions/_shared/__tests__/`. |
+| **Install from `package-lock.json`** | `npm ci` (strict, fallback removed) | **Pass (updated in PR #6)** | — |
+| **Typecheck runs** | `npm run typecheck` (line 18) | **Pass** | None |
+| **Lint runs** | `npm run lint` (line 19) | **Pass** | None |
+| **Unit tests run** | `npm run test` (line 20; includes `packages/shared`, 7 Edge Function Vitest suites, and 3 mobile pure-module suites via `packages/shared/vitest.config.mts`) | **Pass** | `apps/web` has no unit test files yet (Batch 02). |
+| **Production build runs** | `npm run build` added to `ci.yml`; `ignoreBuildErrors: true` removed from `apps/web/next.config.ts` | **Pass (updated in PR #6)** | — |
+| **Supabase DB tests run** | `supabase/setup-cli@v1` + `supabase db start` + `supabase test db` (Suites `01`–`19`) | **Pass** | None |
+| **Edge Function tests** | Covered by `npm run test` via `packages/shared/vitest.config.mts` (`supabase/functions/**/__tests__/*.test.ts` import `vitest`, not Deno) | **Pass** | No separate Deno step required. |
 
 ---
 

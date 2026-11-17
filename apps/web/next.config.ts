@@ -32,10 +32,6 @@ const nextConfig: NextConfig = {
   // The shared package ships TypeScript source; let Next compile it.
   transpilePackages: ["@cultivanode/shared"],
   poweredByHeader: false,
-  typescript: {
-    // Type checking is managed across the monorepo via `turbo run typecheck` / `npm run typecheck`
-    ignoreBuildErrors: true,
-  },
   experimental: {
     // ID documents and equipment photos up to 5 MB are uploaded through a server action (see actions/account.ts).
     serverActions: { bodySizeLimit: "6mb" },

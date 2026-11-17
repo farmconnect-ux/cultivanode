@@ -7,7 +7,7 @@
 --        single-settlement-per-order (rejects second distinct reference), DB-level unique
 --        escrow/ledger constraints, and legitimate retry after a failed payment.
 begin;
-select plan(20);
+select plan(21);
 
 -- 1. Seed users, seller, category, listing, and pre-existing orders (as postgres)
 insert into auth.users (id, phone) values
@@ -53,7 +53,7 @@ insert into public.marketplace_inventory_lots (
 ) values (
   'b5000000-0000-0000-0000-000000000041',
   'b5000000-0000-0000-0000-000000000040',
-  'LOT-SEC-01', 20, 0, 0
+  'LOT-SEC-01', 20, 2, 0
 ) on conflict (id) do nothing;
 
 -- Order 1: for tampering + duplicate-settlement tests
@@ -115,6 +115,53 @@ insert into public.marketplace_payments (
 ) values (
   'b5000000-0000-0000-0000-0000000000d2', 'REF-FAILED-1', 'paystack', 2800000, 'failed'
 ) on conflict (payment_reference) do nothing;
+
+-- Order 3: for insufficient reserved inventory rollback test (uses listing 0042 with 0 reserved_quantity)
+insert into public.marketplace_listings (
+  id, seller_id, category_id, listing_type, title, unit, price_model,
+  base_price_kobo, min_order_quantity, available_quantity, location, location_state, status
+) values (
+  'b5000000-0000-0000-0000-000000000042',
+  'b5000000-0000-0000-0000-000000000020',
+  'b5000000-0000-0000-0000-000000000030',
+  'input', 'Urea 46% Bag 50kg', 'bag', 'fixed',
+  2500000, 1, 10,
+  extensions.st_geogfromtext('SRID=4326;POINT(3.9470 7.3775)'), 'Oyo', 'active'
+) on conflict (id) do nothing;
+
+insert into public.marketplace_inventory_lots (
+  id, listing_id, lot_number, physical_quantity, reserved_quantity, allocated_quantity
+) values (
+  'b5000000-0000-0000-0000-000000000043',
+  'b5000000-0000-0000-0000-000000000042',
+  'LOT-SEC-02', 10, 0, 0
+) on conflict (id) do nothing;
+
+insert into public.marketplace_orders (
+  id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+  platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+) values (
+  'b5000000-0000-0000-0000-0000000000d3', 'ORD-SEC-003',
+  'b5000000-0000-0000-0000-000000000001', 'retail',
+  2500000, 300000, 0, 2800000,
+  'payment_pending', 'pending', 'escrow', '{"line":"1 Farm Rd","state":"Oyo","phone":"08000000001"}'::jsonb
+) on conflict (id) do nothing;
+
+insert into public.marketplace_order_items (
+  id, order_id, listing_id, seller_id, title, unit, quantity,
+  unit_price_kobo, subtotal_kobo, commission_bps, commission_kobo, seller_earnings_kobo
+) values (
+  'b5000000-0000-0000-0000-0000000000e3', 'b5000000-0000-0000-0000-0000000000d3',
+  'b5000000-0000-0000-0000-000000000042', 'b5000000-0000-0000-0000-000000000020',
+  'Urea 46% Bag 50kg', 'bag', 1, 2500000, 2500000, 500, 125000, 2375000
+) on conflict (id) do nothing;
+
+insert into public.marketplace_fulfilments (
+  id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method
+) values (
+  'b5000000-0000-0000-0000-0000000000f3', 'b5000000-0000-0000-0000-0000000000d3',
+  'b5000000-0000-0000-0000-000000000020', 'ORD-SEC-003-F1', 'placed', 2500000, 300000, 'seller_delivery'
+) on conflict (id) do nothing;
 
 -- 2. Negative tests as authenticated Buyer 1
 set local role authenticated;
@@ -307,6 +354,14 @@ select is(
   (select status from public.marketplace_payments where payment_reference = 'REF-FAILED-1'),
   'failed',
   'Test 8j: Prior failed payment record REF-FAILED-1 is preserved without overwrite'
+);
+
+-- 8k: Settlement fails and rolls back when reserved inventory is insufficient
+select throws_ok(
+  $$select public.process_payment_webhook('REF-NOSTOCK-3', 'paystack', 2800000::bigint, 'b5000000-0000-0000-0000-0000000000d3')$$,
+  'P0001',
+  'INSUFFICIENT_RESERVED_INVENTORY: Item b5000000-0000-0000-0000-0000000000e3 (listing b5000000-0000-0000-0000-000000000042) has 1.00 unreserved units remaining',
+  'Test 8k: process_payment_webhook() fails and rolls back when reserved inventory is insufficient'
 );
 
 select * from finish();

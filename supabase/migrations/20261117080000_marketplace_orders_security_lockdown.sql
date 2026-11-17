@@ -155,6 +155,11 @@ begin
         v_qty_to_deduct := v_qty_to_deduct - v_lot_deduct;
       end;
     end loop;
+
+    if v_qty_to_deduct > 0 then
+      raise exception 'INSUFFICIENT_RESERVED_INVENTORY: Item % (listing %) has % unreserved units remaining',
+        v_item.id, v_item.listing_id, v_qty_to_deduct;
+    end if;
   end loop;
 
   -- 8. Create Escrow records for each Fulfilment
