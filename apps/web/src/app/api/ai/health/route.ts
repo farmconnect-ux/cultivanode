@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireStaff } from "@/lib/admin/staff";
+import { createClient } from "@/lib/supabase/server";
 import { aiConfig } from "@/lib/ai-config";
 
 // Staff-only AI check: which keys this deployment can see, and a tiny live call to each provider with the
@@ -24,8 +24,11 @@ async function probe(provider: string, model: string, key: string | undefined, c
 }
 
 export async function GET() {
-  const staff = await requireStaff();
-  if (!staff) return NextResponse.json({ error: "Staff only" }, { status: 403 });
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: perms } = await supabase.rpc("my_permissions");
+  if (!perms || perms.length === 0) return NextResponse.json({ error: "Staff only" }, { status: 403 });
   const c = aiConfig();
   const signal = () => AbortSignal.timeout(20000);
   const checks = await Promise.all([

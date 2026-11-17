@@ -297,7 +297,10 @@ export async function GET(
     },
   };
 
-  const doc = documents[type] || documents["whitepaper"];
+  const doc = documents[type];
+  if (!doc) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
 
   // Render an official printable HTML document layout
   const html = `<!DOCTYPE html>

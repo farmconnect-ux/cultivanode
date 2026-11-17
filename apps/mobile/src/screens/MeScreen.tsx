@@ -10,10 +10,10 @@ import { siteLink } from '../lib/site';
 import { color as c, space } from '../theme';
 import { Button, Card, Icon, Notice, Pill, Row, Screen, Text } from '../ui';
 
-type Props = { onVerify: () => void; onOrders: () => void; onShop: () => void; onProvider: () => void };
+type Props = { onVerify: () => void; onRoles: () => void; onOrders: () => void; onShop: () => void; onProvider: () => void };
 
 /** Me: who you are, NIN status, your shop and orders, language, help and signing out. */
-export function MeScreen({ onVerify, onOrders, onShop, onProvider }: Props) {
+export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider }: Props) {
   const { t, lang, setLang } = useI18n();
   const me = t.me;
   const a = t.account;
@@ -78,6 +78,7 @@ export function MeScreen({ onVerify, onOrders, onShop, onProvider }: Props) {
       </Card>
 
       <Card>
+        <Row icon="shield" title="Roles & verification docs" onPress={onRoles} />
         <Row icon="package" title={me.myOrders} onPress={onOrders} />
         <Row icon="briefcase" title={me.myShop} onPress={onShop} />
         {provider ? <Row icon="inbox" title={me.provider} onPress={onProvider} /> : null}

@@ -1,91 +1,108 @@
 import { NextResponse } from "next/server";
-import {
-  askGroundedAiAssistant,
-  type FarmerContext,
-  type AppLanguage,
-} from "@cultivanode/shared";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseJs } from "@supabase/supabase-js";
+import { askGroundedAiAssistant, type FarmerContext } from "@cultivanode/shared";
 import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseEnv } from "@/lib/supabase/env";
 
-interface RequestPayload {
-  query: string;
-  context?: Partial<FarmerContext>;
-  language?: AppLanguage | "pcm";
-  imageBase64?: string;
-  imageMimeType?: string;
-}
+const AssistantBodySchema = z.object({
+  query: z.string().max(4000).optional(),
+  language: z.enum(["en", "yo", "pcm"]).optional(),
+  imageBase64: z.string().max(8_000_000).optional(),
+  imageMimeType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
+  context: z
+    .object({
+      cropId: z.string().max(80).optional(),
+      zone: z.string().max(80).optional(),
+      stageName: z.string().max(80).optional(),
+      daysAfterPlanting: z.number().int().min(0).max(3650).optional(),
+    })
+    .optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    // 1. Authenticate user via Supabase session or Bearer token
-    const authHeader = req.headers.get("Authorization");
-    const supabase = await createClient();
-
     let authenticatedUserId: string | null = null;
 
+    const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7).trim();
-      const { data, error } = await supabase.auth.getUser(token);
-      if (!error && data?.user) {
-        authenticatedUserId = data.user.id;
+      if (token) {
+        const { url, key } = supabaseEnv();
+        const client = createSupabaseJs(url, key, {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { headers: { Authorization: `Bearer ${token}` } },
+        });
+        const { data } = await client.auth.getUser(token);
+        if (data.user) authenticatedUserId = data.user.id;
       }
     }
 
     if (!authenticatedUserId) {
+      const supabase = await createClient();
       const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        authenticatedUserId = data.user.id;
-      }
+      if (data.user) authenticatedUserId = data.user.id;
     }
 
     if (!authenticatedUserId) {
       return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
     }
 
-    // 2. Parse request
-    const body = (await req.json()) as RequestPayload;
-    if (!body.query?.trim() && !body.imageBase64) {
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
+    }
+
+    const parsed = AssistantBodySchema.safeParse(raw);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Query or image is required." },
-        { status: 400 }
+        { error: parsed.error.issues[0]?.message || "Invalid request payload." },
+        { status: 400 },
       );
     }
 
-    const context: FarmerContext = {
-      farmerId: body.context?.farmerId || authenticatedUserId,
-      cropId: body.context?.cropId || "maize",
-      zone: body.context?.zone || "rainforest",
-      stageName: body.context?.stageName || "General",
-      daysAfterPlanting: body.context?.daysAfterPlanting,
-    };
+    const body = parsed.data;
+    if (!body.query?.trim() && !body.imageBase64) {
+      return NextResponse.json(
+        { error: "Please provide a question or attach a photo." },
+        { status: 400 },
+      );
+    }
 
-    const lang: AppLanguage | "pcm" = body.language || "en";
-
-    // 3. Run Grounded Assistant with Guardrails (keys and models from lib/ai-config)
+    const c = aiConfig();
     const result = await askGroundedAiAssistant({
-      query: body.query || "Analyze this crop image and recommend verified treatments.",
-      context,
-      language: lang,
+      query: body.query?.trim() || "Please examine this crop photo and advise what to do.",
+      // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
+      context: { ...(body.context ?? {}), farmerId: authenticatedUserId } as FarmerContext,
+      language: body.language ?? "en",
       imageBase64: body.imageBase64,
       imageMimeType: body.imageMimeType,
-      ...aiConfig(),
+      anthropicApiKey: c.anthropicApiKey,
+      claudeModels: c.claudeModels,
+      geminiApiKey: c.geminiApiKey,
+      openaiApiKey: c.openaiApiKey,
+      primaryModel: c.primaryModel,
+      fallbackModel: c.fallbackModel,
+      timeoutMs: c.timeoutMs,
     });
 
-    if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });
+    if (result.meta?.fallbackUsed) {
+      logger.warn("ai_assistant_fallback", {
+        provider: result.meta.provider,
+        attempts: result.meta.attempts,
+      });
+    } else {
+      logger.info("ai_assistant_ok", { provider: result.meta?.provider, model: result.meta?.model });
+    }
 
-    return NextResponse.json({
-      answer: result.answer,
-      language: result.language,
-      providerUsed: result.providerUsed,
-      passedSafetyGuardrail: result.passedSafetyGuardrail,
-      bannedChemicalsDetected: result.bannedChemicalsDetected,
-      approvedChemicalsDetected: result.approvedChemicalsDetected,
-      safetyAppendices: result.safetyAppendices,
-      sources: result.sources,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to process AI request.";
+    logger.error("ai_assistant_error", { message });
+    return NextResponse.json({ error: "Failed to process AI request." }, { status: 500 });
   }
 }
