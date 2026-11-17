@@ -11,11 +11,12 @@ export async function openMarketplaceOrderNotification(formData: FormData): Prom
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/${lang}/sign-in`);
   const { data: notification, error } = await supabase.from("notifications").select("kind, data").eq("id", notificationId).eq("profile_id", user.id).maybeSingle();
-  const orderId = notification?.kind === "marketplace_order_placed" ? (notification.data as { order_id?: unknown } | null)?.order_id : null;
+  const orderId = notification?.kind?.startsWith("marketplace_order_") ? (notification.data as { order_id?: unknown } | null)?.order_id : null;
   if (error || typeof orderId !== "string" || !/^[0-9a-f-]{36}$/i.test(orderId)) redirect(`/${lang}/account/inbox`);
   const { error: readError } = await supabase.rpc("mark_notifications_read", { p_ids: [notificationId] });
   if (readError) throw new Error("Could not mark this notification as read.");
   revalidatePath(`/${lang}/account/inbox`);
   revalidatePath(`/${lang}/account`);
+  if (notification?.kind === "marketplace_order_placed") redirect(`/${lang}/account/marketplace/seller?order=${orderId}`);
   redirect(`/${lang}/account/marketplace/orders/${orderId}`);
 }

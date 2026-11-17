@@ -160,7 +160,7 @@ export default async function InboxPage({
                           <p className={cn("text-body-md text-on-surface", !n.read_at && "font-semibold")}>{text}</p>
                         </div>
                       </div>
-                      {n.kind === "marketplace_order_placed" && n.data.order_id && (
+                      {n.kind.startsWith("marketplace_order_") && n.data.order_id && (
                         <form action={openMarketplaceOrderNotification}>
                           <input type="hidden" name="notification_id" value={n.id} />
                           <input type="hidden" name="lang" value={lang} />
