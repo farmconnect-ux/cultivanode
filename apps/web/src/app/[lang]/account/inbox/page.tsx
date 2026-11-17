@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarkAllRead } from "@/components/account/booking-forms";
+import { openMarketplaceOrderNotification } from "@/actions/notifications";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon, type IconName } from "@/components/ds/icon";
 import { MetricCard } from "@/components/live/metric-card";
@@ -20,7 +21,7 @@ type Note = {
   id: string;
   kind: string;
   booking_id: string | null;
-  data: { title?: string; job_date?: string; name?: string };
+  data: { title?: string; job_date?: string; name?: string; item_summary?: string; order_id?: string; order_number?: string };
   read_at: string | null;
   created_at: string;
 };
@@ -34,6 +35,7 @@ const CATEGORIES = [
 ] as const;
 
 function categoryOf(n: Note): string {
+  if (n.kind.includes("marketplace_order")) return "jobs";
   if (n.kind.includes("dispute")) return "disputes";
   if (n.kind.includes("payment") || n.kind.includes("payout")) return "payments";
   if (n.kind.includes("verification") || n.kind.includes("tier") || n.kind.includes("role")) return "verification";
@@ -130,7 +132,8 @@ export default async function InboxPage({
                 const look = LOOK[cat] ?? LOOK.system!;
                 const text = fill(m.kinds[n.kind as keyof typeof m.kinds], {
                   name: n.data.name || "—",
-                  title: n.data.title ?? "",
+                  title: n.data.item_summary ?? n.data.title ?? "",
+                  order_number: n.data.order_number ?? "",
                   date: n.data.job_date ? formatDay(n.data.job_date, lang) : "",
                 });
                 return (
@@ -157,6 +160,15 @@ export default async function InboxPage({
                           <p className={cn("text-body-md text-on-surface", !n.read_at && "font-semibold")}>{text}</p>
                         </div>
                       </div>
+                      {n.kind === "marketplace_order_placed" && n.data.order_id && (
+                        <form action={openMarketplaceOrderNotification}>
+                          <input type="hidden" name="notification_id" value={n.id} />
+                          <input type="hidden" name="lang" value={lang} />
+                          <button type="submit" className="inline-flex shrink-0 items-center gap-1 self-start rounded-lg bg-primary-container px-3 py-2 font-label-md text-label-md text-white hover:bg-primary">
+                            {m.openOrder} <Icon name="arrow_forward" className="text-base" />
+                          </button>
+                        </form>
+                      )}
                       {n.booking_id && (
                         <Link
                           href={`/${lang}/account/bookings/${n.booking_id}`}

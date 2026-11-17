@@ -7,7 +7,7 @@
 --        single-settlement-per-order (rejects second distinct reference), DB-level unique
 --        escrow/ledger constraints, and legitimate retry after a failed payment.
 begin;
-select plan(21);
+select plan(24);
 
 -- 1. Seed users, seller, category, listing, and pre-existing orders (as postgres)
 insert into auth.users (id, phone) values
@@ -267,6 +267,22 @@ select is(
   (select total_amount_kobo from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
   5300000::bigint,
   'Test 7: place_marketplace_order() computes server-side total (2 * 2,500,000 + 300,000 delivery = 5,300,000 kobo)'
+);
+
+reset role;
+select is(
+  (select count(*)::integer from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  1,
+  'Test 7a: New checkout creates exactly one notification for its seller'
+);
+select ok(
+  (select data->>'item_summary' like '%NPK 15-15-15 Bag 50kg%' from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  'Test 7b: Seller notification includes the purchased product and quantity summary'
+);
+select is(
+  (select data->>'order_number' from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  (select order_number from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'Test 7c: Seller notification carries the correct order reference'
 );
 
 -- Test 8: Payment webhook security, idempotency, duplicate-settlement protection & retry

@@ -16,6 +16,7 @@ import type { BookingSummary } from "@/lib/account/bookings";
 import { requireAccount } from "@/lib/account/session";
 import { resolveWorkspace } from "@/lib/account/workspace";
 import { stateCentroid } from "@/lib/state-centroids";
+import { fill } from "@/lib/text";
 import { createClient } from "@/lib/supabase/server";
 import { getFarmOperations } from "@/actions/farm-operations";
 import { loadOverviewPanels } from "@/components/live/overview-panels";
@@ -74,6 +75,15 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
   }
 
   // Farmer workspace
+  const { data: sellerShop } = await supabase
+    .from("marketplace_sellers")
+    .select("id")
+    .eq("profile_id", account.userId)
+    .maybeSingle();
+  const { count: pendingMarketplaceOrders } = sellerShop
+    ? await supabase.from("marketplace_fulfilments").select("id", { count: "exact", head: true }).eq("seller_id", sellerShop.id).eq("status", "placed")
+    : { count: 0 };
+
   const scope = [
     `owner_id.eq.${account.userId}`,
     ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
@@ -106,6 +116,17 @@ export default async function AccountHome({ params, searchParams }: PageProps<"/
   return (
     <>
       {welcomeAlert}
+      {(pendingMarketplaceOrders ?? 0) > 0 && (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">{fill(a.marketplaceOrdersAlert, { count: pendingMarketplaceOrders ?? 0 })}</p>
+            <p className="mt-0.5 text-sm">Review the order, check payment and prepare fulfilment.</p>
+          </div>
+          <Link href={`/${lang}/account/marketplace/seller`} className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-900 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800">
+            {a.marketplaceOrdersAction}
+          </Link>
+        </div>
+      )}
       <LiveStrip>
         <span className="text-on-surface-variant">
           Farms, operations, weather, alerts and bookings on this page come from your live records.
