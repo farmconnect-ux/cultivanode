@@ -1,4 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Keep this pure-logic evaluation isolated from the native Supabase/React Native runtime.
+vi.mock('../supabase', () => ({
+  sessionStorage: { getItem: vi.fn(), setItem: vi.fn() },
+  supabase: {},
+}));
+
 import {
   classifyDispatchError,
   hasProviderAccess,
