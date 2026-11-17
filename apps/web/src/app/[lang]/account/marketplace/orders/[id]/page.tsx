@@ -103,7 +103,7 @@ export default async function OrderDetailPage({
     payouts = new Map(((data ?? []) as Payout[]).map((p) => [p.seller_id, p]));
   }
   const isPaid = ["paid", "escrowed", "released"].includes(order.payment_status);
-  const allDispatched = fulfilments.length > 0 && fulfilments.every((f) => ["dispatched", "in_transit", "delivered", "accepted"].includes(f.status) && Boolean(f.dispatched_at));
+  const allDispatched = fulfilments.length > 0 && fulfilments.every((f) => (["dispatched", "in_transit"].includes(f.status) && Boolean(f.dispatched_at)) || ["delivered", "accepted"].includes(f.status));
   const allReceived = fulfilments.length > 0 && fulfilments.every((f) => Boolean(f.confirmed_at) && ["delivered", "accepted"].includes(f.status));
 
   return (
