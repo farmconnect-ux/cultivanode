@@ -118,7 +118,7 @@ export default function InboxRoute() {
       <View style={styles.inboxContainer}>
         {jobsError ? (
           <Card style={styles.emptyCard}>
-            <Notice tone={jobsError.kind === 'forbidden' ? 'danger' : 'warn'}>{jobsError.message}</Notice>
+            <Notice tone={jobsError.kind === 'forbidden' ? 'error' : 'warning'}>{jobsError.message}</Notice>
             <View style={styles.retryRow}>
               {jobsError.kind === 'unauthenticated' ? (
                 <Button title="Sign in" variant="primary" onPress={() => router.replace('/(auth)/signIn')} />

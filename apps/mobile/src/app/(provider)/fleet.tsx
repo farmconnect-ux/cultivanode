@@ -18,7 +18,7 @@ export default function FleetRoute() {
 
         {fleetError ? (
           <Card style={styles.emptyCard}>
-            <Notice tone={fleetError.kind === 'forbidden' ? 'danger' : 'warn'}>{fleetError.message}</Notice>
+            <Notice tone={fleetError.kind === 'forbidden' ? 'error' : 'warning'}>{fleetError.message}</Notice>
             {fleetError.kind === 'unauthenticated' ? (
               <Button title="Sign in" variant="primary" onPress={() => router.replace('/(auth)/signIn')} />
             ) : fleetError.kind !== 'forbidden' ? (

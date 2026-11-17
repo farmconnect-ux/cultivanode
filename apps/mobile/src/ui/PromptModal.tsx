@@ -117,7 +117,7 @@ export function PromptModal({
             <View style={styles.actionBtn}>
               <Button
                 title={cancelLabel}
-                variant="outline"
+                variant="secondary"
                 onPress={handleClose}
                 disabled={submitting}
               />

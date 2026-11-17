@@ -83,7 +83,7 @@ export default function EvidenceRoute() {
     return (
       <Screen>
         <Card style={styles.card}>
-          <Notice tone="warn">Please sign in to access provider work evidence.</Notice>
+          <Notice tone="warning">Please sign in to access provider work evidence.</Notice>
           <Button title="Sign in" variant="primary" onPress={() => router.replace('/(auth)/signIn')} />
         </Card>
       </Screen>
@@ -94,9 +94,9 @@ export default function EvidenceRoute() {
     return (
       <Screen>
         <Card style={styles.card}>
-          <Notice tone="warn">Could not verify your account permissions. Check your connection and try again.</Notice>
+          <Notice tone="warning">Could not verify your account permissions. Check your connection and try again.</Notice>
           <Button title="Retry" variant="primary" onPress={refresh} />
-          <Button title="Back" variant="outline" onPress={handleBack} />
+          <Button title="Back" variant="secondary" onPress={handleBack} />
         </Card>
       </Screen>
     );
@@ -107,7 +107,7 @@ export default function EvidenceRoute() {
       <Screen>
         <Card style={styles.card}>
           <Text variant="heading">Provider Access Required</Text>
-          <Notice tone="danger">
+          <Notice tone="error">
             Only accounts with an active equipment or service provider role can view and submit work evidence.
           </Notice>
           <Button title="Go to Home" variant="primary" onPress={() => router.replace('/(tabs)/home')} />
@@ -122,7 +122,7 @@ export default function EvidenceRoute() {
       <Screen>
         <Card style={styles.card}>
           <Text variant="heading">Unable to Open Job</Text>
-          <Notice tone={error?.kind === 'forbidden' ? 'danger' : 'warn'}>
+          <Notice tone={error?.kind === 'forbidden' ? 'error' : 'warning'}>
             {error?.message || 'This job could not be loaded.'}
           </Notice>
           {error?.kind === 'unauthenticated' ? (
@@ -130,7 +130,7 @@ export default function EvidenceRoute() {
           ) : canRetry ? (
             <Button title="Retry" variant="primary" onPress={fetchJob} />
           ) : null}
-          <Button title="Back to Inbox" variant="outline" onPress={handleBack} />
+          <Button title="Back to Inbox" variant="secondary" onPress={handleBack} />
         </Card>
       </Screen>
     );

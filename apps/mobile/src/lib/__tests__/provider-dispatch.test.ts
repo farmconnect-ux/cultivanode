@@ -29,6 +29,16 @@ vi.mock('../supabase', () => ({
 const VALID_JOB_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_JOB_ID = '22222222-2222-4222-8222-222222222222';
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const GPS_FIX = {
+  latitude: 7.37,
+  longitude: 3.94,
+  accuracy: 5,
+  altitude: null,
+  altitudeAccuracy: null,
+  heading: null,
+  speed: null,
+  timestamp: 1700000000000,
+};
 
 describe('provider dispatch (no demo fallbacks)', () => {
   beforeEach(() => {
@@ -132,12 +142,13 @@ describe('provider dispatch (no demo fallbacks)', () => {
         {
           id: '33333333-3333-4333-8333-333333333333',
           title: 'Massey Ferguson 375',
-          category: 'tractor',
-          pricing_unit: 'hectare',
-          rate_kobo: 4000000,
+          kind: 'equipment',
+          equipment_type: 'tractor',
+          provider_type: null,
           service_radius_km: 25,
           status: 'active',
           operator_included: true,
+          listing_rates: [{ unit: 'hectare', rate_kobo: 4000000 }],
         },
       ],
       error: null,
@@ -156,23 +167,13 @@ describe('provider dispatch (no demo fallbacks)', () => {
 
   it('requires authentication and successful storage upload before calling submit_proof', async () => {
     vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({ data: { user: null }, error: null } as never);
-    const noAuth = await submitWorkProofPhoto(VALID_JOB_ID, 'file://photo.jpg', 'before', {
-      latitude: 7.37,
-      longitude: 3.94,
-      accuracy: 5,
-      timestamp: Date.now(),
-    });
+    const noAuth = await submitWorkProofPhoto(VALID_JOB_ID, 'file://photo.jpg', 'before', GPS_FIX);
     expect(noAuth.success).toBe(false);
     expect(mockUpload).not.toHaveBeenCalled();
 
     vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({ data: { user: { id: USER_ID } }, error: null } as never);
     mockUpload.mockResolvedValueOnce({ error: { message: 'Storage upload failed' } });
-    const uploadFail = await submitWorkProofPhoto(VALID_JOB_ID, 'file://photo.jpg', 'before', {
-      latitude: 7.37,
-      longitude: 3.94,
-      accuracy: 5,
-      timestamp: Date.now(),
-    });
+    const uploadFail = await submitWorkProofPhoto(VALID_JOB_ID, 'file://photo.jpg', 'before', GPS_FIX);
     expect(uploadFail).toEqual({ success: false, error: 'Storage upload failed' });
     expect(supabase.rpc).not.toHaveBeenCalled();
 
@@ -183,7 +184,7 @@ describe('provider dispatch (no demo fallbacks)', () => {
       VALID_JOB_ID,
       'file://photo.jpg',
       'before',
-      { latitude: 7.37, longitude: 3.94, accuracy: 5, timestamp: 1700000000000 },
+      GPS_FIX,
       2.5
     );
     expect(okProof.success).toBe(true);

@@ -160,7 +160,7 @@ export async function loadProviderJobs(): Promise<DispatchLoadResult<ProviderJob
     if (!Array.isArray(data)) {
       return { ok: false, kind: 'invalid', message: 'Received an unexpected booking response from the server.' };
     }
-    const providerRows = data.filter(
+    const providerRows = (data as unknown[]).filter(
       (row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object' && (row as Record<string, unknown>).my_side === 'provider'
     );
     return { ok: true, data: providerRows.map(mapProviderJobRow) };
@@ -198,7 +198,7 @@ export async function loadMachineryFleet(userId?: string): Promise<DispatchLoadR
   try {
     const { data, error } = await supabase
       .from('listings')
-      .select('id, title, category, pricing_unit, rate_kobo, service_radius_km, status, operator_included')
+      .select('id, title, kind, equipment_type, provider_type, service_radius_km, status, operator_included, listing_rates(unit, rate_kobo)')
       .eq('owner_id', userId)
       .order('created_at', { ascending: false });
 
@@ -212,17 +212,21 @@ export async function loadMachineryFleet(userId?: string): Promise<DispatchLoadR
 
     return {
       ok: true,
-      data: data.map((item) => ({
-        id: String(item.id),
-        title: String(item.title),
-        category: String(item.category),
-        pricingUnit: (item.pricing_unit as MachineryItem['pricingUnit']) || 'hectare',
-        rateKobo: Number(item.rate_kobo) || 0,
-        serviceRadiusKm: Number(item.service_radius_km) || 30,
-        status: (item.status as MachineryItem['status']) || 'draft',
-        operatorIncluded: item.operator_included ?? true,
-        totalBookingsCompleted: 0,
-      })),
+      data: data.map((item) => {
+        const rates = Array.isArray(item.listing_rates) ? item.listing_rates : [];
+        const firstRate = rates[0] as { unit?: string; rate_kobo?: number } | undefined;
+        return {
+          id: String(item.id),
+          title: String(item.title),
+          category: String(item.equipment_type || item.provider_type || item.kind || 'equipment'),
+          pricingUnit: (firstRate?.unit as MachineryItem['pricingUnit']) || 'hectare',
+          rateKobo: Number(firstRate?.rate_kobo) || 0,
+          serviceRadiusKm: Number(item.service_radius_km) || 30,
+          status: (item.status === 'active' || item.status === 'paused' ? item.status : 'draft') as MachineryItem['status'],
+          operatorIncluded: item.operator_included ?? true,
+          totalBookingsCompleted: 0,
+        };
+      }),
     };
   } catch (err) {
     const classified = classifyDispatchError(err as { code?: string; message?: string; status?: number });
