@@ -105,31 +105,90 @@ async function main() {
   assert.equal(payoutCount.stdout, '1', `Expected 1 payout journal entry, got ${payoutCount.stdout}`);
   console.log('   PASS: Concurrent settlement race produced 1 completion, 1 rejection, and 1 payout entry.');
 
-  console.log('3. Testing genuinely concurrent support ticket transition...');
-  const seedTicket = await runPsql(`
-    INSERT INTO public.support_tickets (id, ticket_number, requester_id, subject, category, priority, status)
-    VALUES ('e8000000-0000-0000-0000-0000000000e1', 'TKT-CONC-1', 'e8000000-0000-0000-0000-000000000001', 'Concurrent ticket', 'account', 'normal', 'open')
-    ON CONFLICT (id) DO NOTHING;
-  `);
-  assert.equal(seedTicket.code, 0, seedTicket.stderr);
+  console.log('3a. Testing support ticket concurrency: resolved holds FOR UPDATE lock first -> pending MUST be rejected...');
+  const ticketA = 'e8000000-0000-0000-0000-0000000000e1';
+  const ticketB = 'e8000000-0000-0000-0000-0000000000e2';
+  const ticketC = 'e8000000-0000-0000-0000-0000000000e3';
 
-  const t1 = `
+  const seedTickets = await runPsql(`
+    DELETE FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id IN ('${ticketA}', '${ticketB}', '${ticketC}');
+    INSERT INTO public.support_tickets (id, ticket_number, requester_id, subject, category, priority, status) VALUES
+      ('${ticketA}', 'TKT-CONC-A', 'e8000000-0000-0000-0000-000000000001', 'Concurrent ticket A', 'account', 'normal', 'open'),
+      ('${ticketB}', 'TKT-CONC-B', 'e8000000-0000-0000-0000-000000000001', 'Concurrent ticket B', 'account', 'normal', 'open'),
+      ('${ticketC}', 'TKT-CONC-C', 'e8000000-0000-0000-0000-000000000001', 'Concurrent ticket C', 'account', 'normal', 'open')
+    ON CONFLICT (id) DO UPDATE SET status = 'open', priority = 'normal', resolved_at = NULL;
+  `);
+  assert.equal(seedTickets.code, 0, seedTickets.stderr);
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const ticketTx = (ticketId, status, priority, sleepSec = 0) => `
     BEGIN;
     SELECT set_config('request.jwt.claims', '{"sub":"e8000000-0000-0000-0000-000000000003"}', true);
-    SELECT public.admin_update_support_ticket('e8000000-0000-0000-0000-0000000000e1', 'resolved', 'high', 'e8000000-0000-0000-0000-000000000003');
-    SELECT pg_sleep(0.2);
+    SELECT public.admin_update_support_ticket('${ticketId}', '${status}', '${priority}', 'e8000000-0000-0000-0000-000000000003');
+    ${sleepSec > 0 ? `SELECT pg_sleep(${sleepSec});` : ''}
     COMMIT;
   `;
-  const t2 = `
-    BEGIN;
-    SELECT set_config('request.jwt.claims', '{"sub":"e8000000-0000-0000-0000-000000000003"}', true);
-    SELECT public.admin_update_support_ticket('e8000000-0000-0000-0000-0000000000e1', 'pending', 'normal', null);
-    COMMIT;
-  `;
-  const [tr1, tr2] = await Promise.all([runPsql(t1), runPsql(t2)]);
-  // One commits resolved first, the other blocks on FOR UPDATE and then fails resolved -> pending (22023) OR vice-versa if pending ran first
-  assert.ok(tr1.code === 0 || tr2.code === 0, 'At least one concurrent ticket update must succeed');
-  console.log(`   PASS: Concurrent ticket transitions completed safely (tx1=${tr1.code}, tx2=${tr2.code}).`);
+
+  // 3a: resolved acquires lock first and holds 0.3s; pending blocks and must fail resolved -> pending
+  const p3a1 = runPsql(ticketTx(ticketA, 'resolved', 'high', 0.3));
+  await sleep(75);
+  const p3a2 = runPsql(ticketTx(ticketA, 'pending', 'normal', 0));
+  const [r3a1, r3a2] = await Promise.all([p3a1, p3a2]);
+  assert.equal(r3a1.code, 0, `3a resolved tx failed: ${r3a1.stderr}`);
+  assert.notEqual(r3a2.code, 0, '3a competing pending tx should have been rejected after resolved committed');
+  assert.match(r3a2.stderr, /Cannot move ticket from resolved to pending/);
+
+  const stateA = await runPsql(`SELECT status FROM public.support_tickets WHERE id = '${ticketA}';`);
+  assert.equal(stateA.stdout, 'resolved');
+  const auditA = await runPsql(`
+    SELECT string_agg(action || ':' || reason, '|' ORDER BY created_at ASC, id ASC)
+    FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id = '${ticketA}';
+  `);
+  assert.equal(auditA.stdout, 'support_ticket_resolved:from=open, status=resolved, priority=high');
+  console.log('   PASS: 3a locked resolved first, rejected competing pending, zero orphan audit rows.');
+
+  // 3b: pending acquires lock first and holds 0.3s; resolved blocks and legitimately succeeds (pending -> resolved)
+  console.log('3b. Testing support ticket concurrency: pending holds FOR UPDATE lock first -> resolved succeeds via pending->resolved...');
+  const p3b1 = runPsql(ticketTx(ticketB, 'pending', 'normal', 0.3));
+  await sleep(75);
+  const p3b2 = runPsql(ticketTx(ticketB, 'resolved', 'high', 0));
+  const [r3b1, r3b2] = await Promise.all([p3b1, p3b2]);
+  assert.equal(r3b1.code, 0, `3b pending tx failed: ${r3b1.stderr}`);
+  assert.equal(r3b2.code, 0, `3b resolved tx should succeed after pending: ${r3b2.stderr}`);
+
+  const stateB = await runPsql(`SELECT status FROM public.support_tickets WHERE id = '${ticketB}';`);
+  assert.equal(stateB.stdout, 'resolved');
+  const auditB = await runPsql(`
+    SELECT string_agg(action || ':' || reason, '|' ORDER BY created_at ASC, id ASC)
+    FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id = '${ticketB}';
+  `);
+  assert.equal(
+    auditB.stdout,
+    'support_ticket_pending:from=open, status=pending, priority=normal|support_ticket_resolved:from=pending, status=resolved, priority=high',
+  );
+  console.log('   PASS: 3b serialised pending -> resolved with exact 2-step audit trail.');
+
+  // 3c: uncontrolled simultaneous race — accept only the two valid serialised outcomes
+  console.log('3c. Testing uncontrolled simultaneous support ticket race...');
+  const [r3cResolved, r3cPending] = await Promise.all([
+    runPsql(ticketTx(ticketC, 'resolved', 'high', 0)),
+    runPsql(ticketTx(ticketC, 'pending', 'normal', 0)),
+  ]);
+  const stateC = await runPsql(`SELECT status FROM public.support_tickets WHERE id = '${ticketC}';`);
+  assert.equal(stateC.stdout, 'resolved');
+  const auditC = await runPsql(`
+    SELECT string_agg(action, ',' ORDER BY created_at ASC, id ASC)
+    FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id = '${ticketC}';
+  `);
+  if (r3cPending.code !== 0) {
+    assert.equal(r3cResolved.code, 0, '3c resolved must succeed when pending is rejected');
+    assert.match(r3cPending.stderr, /Cannot move ticket from resolved to pending/);
+    assert.equal(auditC.stdout, 'support_ticket_resolved');
+  } else {
+    assert.equal(r3cResolved.code, 0, '3c resolved must succeed after pending');
+    assert.equal(auditC.stdout, 'support_ticket_pending,support_ticket_resolved');
+  }
+  console.log(`   PASS: 3c valid serialised outcome (${auditC.stdout}).`);
 }
 
 main().catch((err) => {

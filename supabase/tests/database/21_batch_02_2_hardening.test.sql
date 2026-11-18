@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(29);
+select plan(38);
 
 -- ------------------------------------------------------------------------------------------------
 -- Seed test identities & permissions
@@ -316,7 +316,7 @@ select throws_ok(
 );
 
 -- ------------------------------------------------------------------------------------------------
--- E. Storage verification-documents Bucket & Policies
+-- E. Storage verification-documents Bucket & Actual RLS Policy Enforcement
 -- ------------------------------------------------------------------------------------------------
 select is(
   (select public from storage.buckets where id = 'verification-documents'),
@@ -329,6 +329,76 @@ select is(
   1::bigint,
   'E2: verification-documents owner delete policy exists for orphan cleanup'
 );
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+
+select lives_ok(
+  $$insert into storage.objects (bucket_id, name, owner)
+    values ('verification-documents', 'd7000000-0000-0000-0000-000000000001/id-card.pdf', 'd7000000-0000-0000-0000-000000000001')$$,
+  'E3: Authenticated owner can upload verification document to own folder'
+);
+
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name, owner)
+    values ('verification-documents', 'd7000000-0000-0000-0000-000000000006/evil.pdf', 'd7000000-0000-0000-0000-000000000001')$$,
+  '42501', null,
+  'E4: Authenticated user cannot upload verification document into another user folder'
+);
+
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  1::bigint,
+  'E5: Document owner can read own verification document object'
+);
+
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  0::bigint,
+  'E6: Unrelated authenticated user cannot read another user verification document'
+);
+
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000005","role":"authenticated"}', true);
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  0::bigint,
+  'E7: Staff without verification.review permission cannot read user verification document'
+);
+
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  1::bigint,
+  'E8: Staff with verification.review permission can read user verification document'
+);
+
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
+delete from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
+update storage.objects set name = 'd7000000-0000-0000-0000-000000000006/hijack.pdf'
+ where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
+
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  1::bigint,
+  'E9: Cross-user DELETE and UPDATE cannot remove or rename owner verification document'
+);
+
+delete from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
+select is(
+  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
+  0::bigint,
+  'E10: Document owner can delete own verification document object'
+);
+
+select is(
+  (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and bucket_id is null and cmd = 'UPDATE' and policyname like 'verification documents%'),
+  0::bigint,
+  'E11: No permissive UPDATE policy exists on verification-documents objects'
+);
+
+reset role;
 
 -- ------------------------------------------------------------------------------------------------
 -- F. Role Request Lifecycle
