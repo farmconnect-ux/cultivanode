@@ -150,7 +150,7 @@ begin
          lga = null,
          deleted_at = clock_timestamp(),
          suspended_at = coalesce(suspended_at, clock_timestamp()),
-         suspension_reason = coalesce(suspension_reason, 'Account deleted by user')
+         suspended_reason = coalesce(suspended_reason, 'Account deleted by user')
    where id = p_user_id;
 
   update public.marketplace_orders
