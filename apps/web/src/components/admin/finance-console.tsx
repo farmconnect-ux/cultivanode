@@ -154,7 +154,7 @@ export function FinanceConsole({
                     <td className="px-3 py-2.5 capitalize">{p.provider.replace("_", " ")}</td>
                     <td className="px-3 py-2.5 text-right font-medium tabular-nums">{formatNaira(p.amount_kobo)}</td>
                     <td className="px-3 py-2.5">
-                      <Badge tone={p.status === "successful" ? "leaf" : p.status === "failed" ? "danger" : "warning"}>
+                      <Badge tone={p.status === "successful" ? "positive" : p.status === "failed" ? "critical" : "caution"}>
                         {p.status}
                       </Badge>
                     </td>
@@ -193,7 +193,7 @@ export function FinanceConsole({
                     <td className="px-3 py-2.5 text-right tabular-nums text-on-surface-variant">{formatNaira(s.commission_kobo)}</td>
                     <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatNaira(s.net_payout_kobo)}</td>
                     <td className="px-3 py-2.5">
-                      <Badge tone={s.status === "completed" ? "leaf" : s.status === "failed" ? "danger" : "warning"}>
+                      <Badge tone={s.status === "completed" ? "positive" : s.status === "failed" ? "critical" : "caution"}>
                         {s.status}
                       </Badge>
                     </td>
@@ -237,7 +237,7 @@ export function FinanceConsole({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <Badge tone="default">{je.reference_type}</Badge>
+                        <Badge tone="neutral">{je.reference_type}</Badge>
                         <span className="font-mono text-xs text-on-surface-variant">{je.reference_id}</span>
                       </div>
                       <p className="mt-1 font-medium text-on-surface">{je.description}</p>

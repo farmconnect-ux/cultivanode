@@ -79,10 +79,10 @@ export function SupportConsole({
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-xs font-semibold text-primary">{t.ticket_number}</span>
                 <div className="flex items-center gap-1.5">
-                  <Badge tone={t.priority === "urgent" || t.priority === "high" ? "danger" : "default"}>
+                  <Badge tone={t.priority === "urgent" || t.priority === "high" ? "critical" : "neutral"}>
                     {t.priority}
                   </Badge>
-                  <Badge tone={t.status === "resolved" || t.status === "closed" ? "leaf" : "warning"}>
+                  <Badge tone={t.status === "resolved" || t.status === "closed" ? "positive" : "caution"}>
                     {t.status.replace("_", " ")}
                   </Badge>
                 </div>
