@@ -32,8 +32,8 @@ Audit every web API route (`apps/web/src/app/api/**/route.ts`) and server action
 | `/api/maps/config` | DB/Config-backed | `getPublicGoogleMapsConfig()` | Public map config only (no secret keys) | Preserved |
 | `/api/scouting/analyse` | DB/Storage/AI | `analyseObservation` on `crop_observations` & `scouting-photos` | Bearer JWT (`401`) + UUID (`400`) + RLS | Preserved |
 | `/api/weather` | External + DB cache | `getLivePilotWeather()` (NiMet / Open-Meteo) | Public cached (`revalidate = 900`) | Preserved |
-| `/api/webhooks/flutterwave` | DB-backed webhook | `process_payment_webhook` RPC | `verif-hash` `timingSafeEqual`; **returned `200` on `rpcErr`** | **Added `400` malformed JSON & `422`/`500` on `rpcErr`** |
-| `/api/webhooks/paystack` | DB-backed webhook | `process_payment_webhook` RPC | `x-paystack-signature` HMAC-SHA512; **returned `200` on `rpcErr`** | **Added `400` malformed JSON & `422`/`500` on `rpcErr`** |
+| `/api/webhooks/flutterwave` | DB-backed webhook | `process_payment_webhook` RPC | `verif-hash` `timingSafeEqual` + strict payload/ref/amount/UUID order validation | **Hardened validation, order lookup error handling (`500`/`422`), and `rpcErr` (`422`/`500`)** |
+| `/api/webhooks/paystack` | DB-backed webhook | `process_payment_webhook` RPC | `x-paystack-signature` HMAC-SHA512 + strict payload/ref/amount/UUID order validation | **Hardened validation, order lookup error handling (`500`/`422`), and `rpcErr` (`422`/`500`)** |
 
 ---
 
@@ -43,18 +43,26 @@ Audit every web API route (`apps/web/src/app/api/**/route.ts`) and server action
 
 ---
 
-## 4. Verification & Limitations
-- **GitHub Actions CI Run [44260888916](https://github.com/farmconnect-ux/cultivanode/actions/runs/44260888916) (on code commit `0e03ea3`):**
-  - **Database migrations and RLS tests** (Job `134653676469`): **PASS** (2m2s)
+## 4. Payment Webhook Failure-Handling Hardening (PR #9 Final Correction)
+- Both `apps/web/src/app/api/webhooks/paystack/route.ts` and `apps/web/src/app/api/webhooks/flutterwave/route.ts` were hardened so authenticated payment success events (`charge.success` / `charge.completed` with `status === "successful"`) never return `200` unless `process_payment_webhook` succeeds or the event is explicitly non-actionable (`200 { status: "ignored", event }`).
+- Added validation for missing/malformed `data`, missing/empty transaction references (`400`), zero/negative/non-finite/invalid amounts (`400`), `marketplace_payments` lookup database failures (`500`), unresolvable or non-UUID `order_id` (`422`), and `process_payment_webhook` RPC failures (`422` for `22023`/`P0002`/`23503`/`23505`, `500` for unexpected database errors), while preserving HMAC/secret signature verification and `already_processed` idempotency.
+- **Mocked route unit tests (`apps/web/src/__tests__/batch-02-3.test.ts`):** Added 10 webhook test cases covering Paystack and Flutterwave (invalid signature `401`, unrelated event `200 ignored`, missing reference `400`, zero/negative/non-finite amount `400`, missing/unresolvable order ID `422`, payment lookup failure `500`, unexpected RPC failure `500`, domain RPC failure `422`, valid settlement `200`, and idempotent duplicate replay `200 already_processed: true`).
+- **Live local Postgres RPC integration (`supabase/tests/api-db-integration-check.mjs` Section 5):** Verified `process_payment_webhook` against seeded `marketplace_orders` / `marketplace_inventory_lots` / `marketplace_fulfilments` in local Supabase (rejects unknown order, rejects mismatched amount, settles valid payment, returns `already_processed: true` on duplicate replay, and creates exactly one `order_payment` `marketplace_journal_entries` row).
+
+---
+
+## 5. Verification & Limitations
+- **GitHub Actions CI Run [44265598290](https://github.com/farmconnect-ux/cultivanode/actions/runs/44265598290) (on code commit `ada7621`):**
+  - **Database migrations and RLS tests** (Job `134669207002`): **PASS** (1m32s)
     - pgTAP (`supabase test db`): `Files=21, Tests=750, Result: PASS`.
     - Live Postgres Concurrency (`supabase/tests/concurrency-check.mjs`): **PASS** (ledger hash chain, settlement race, deterministic `pg_locks` support concurrency `3a`, `3b`, `3c`).
     - Live Storage API (`supabase/tests/storage-api-check.mjs`): **PASS**.
-    - Live API/DB Integration (`supabase/tests/api-db-integration-check.mjs`): **PASS** (`record_marketplace_journal_entry` unbalanced rejection & valid persistence, Admin Finance RPCs, Support RPCs + internal-note RLS isolation over PostgREST HTTP, and `export_my_data`).
-  - **Typecheck, lint and unit tests** (Job `134653676767`): **PASS** (3m58s)
+    - Live API/DB Integration (`supabase/tests/api-db-integration-check.mjs`): **PASS** (`record_marketplace_journal_entry` unbalanced rejection & valid persistence, Admin Finance RPCs, Support RPCs + internal-note RLS isolation over PostgREST HTTP, `export_my_data`, and live `process_payment_webhook` RPC settlement/idempotency).
+  - **Typecheck, lint and unit tests** (Job `134669207375`): **PASS** (3m38s)
     - `npm run typecheck`: `4 successful, 4 total`.
     - `npm run lint`: `1 successful, 1 total`.
-    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed; `@cultivanode/web` `batch-02-3.test.ts` 4/4 & `batch-02-2.test.ts` 8/8 passed; `@cultivanode/mobile` 6 files passed; `@cultivanode/shared` 32 files passed).
+    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 tests; `@cultivanode/web` 2 files / 12 tests; `@cultivanode/mobile` 6 files / 65 tests; `@cultivanode/shared` 32 files / 352 tests).
     - `npm run build`: **PASS**.
-  - **Vercel Preview:** **PASS** (`Deployment has completed`).
+  - **Vercel Preview:** **SUCCESS**.
 - **External Services & Physical Devices:** Live Paystack/Flutterwave gateway callbacks and physical mobile device QA are external-environment activities not executed in local CI.
 - **Hosted Safety:** Production Supabase (`vqbtnftnxyfaembwgfrk`), Staging Supabase (`xdbqndgwisshhjjqksbe`), and Production Vercel were not modified.
