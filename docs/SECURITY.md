@@ -65,7 +65,7 @@ on the server. Mobile crash reports (Sentry) are off without a DSN and scrub pho
 tokens and emails before sending.
 
 ## Payments (Goods Marketplace Implemented; Live Activation Gated)
-See [PAYMENTS.md](PAYMENTS.md) and [RELEASE_LEDGER.md](RELEASE_LEDGER.md). `PAYMENT_MODE` defaults to `test`; `live` is refused outside an approved production  Goods-marketplace webhooks, single-settlement enforcement (`20261117080000`), and hash-chained ledger/settlement RPCs (`20261118010000`) are implemented in `main` and verified in local CI; live gateway activation remains gated.
+See [PAYMENTS.md](PAYMENTS.md) and [RELEASE_LEDGER.md](RELEASE_LEDGER.md). `PAYMENT_MODE` defaults to `test`, and `live` mode is refused unless the deployment is an approved production environment with `LIVE_PAYMENTS_APPROVED=yes` (`resolvePaymentMode` in `packages/shared/src/config.ts`). Goods-marketplace webhooks (`paystack` and `flutterwave`), single-settlement enforcement (`20261117080000`), and hash-chained ledger/settlement RPCs (`20261118010000`) are implemented in repository code and verified in isolated local Supabase CI. Live gateway callbacks, hosted migration confirmation, and legal approval remain outstanding.
 
 
 ## Known warnings
