@@ -9,9 +9,9 @@ alter table public.profiles
   drop constraint if exists profiles_id_fkey;
 
 -- Ensure IoT user references do not block auth.users deletion.
-alter table public.devices
-  drop constraint if exists devices_installed_by_fkey,
-  add constraint devices_installed_by_fkey
+alter table public.device_installations
+  drop constraint if exists device_installations_installed_by_fkey,
+  add constraint device_installations_installed_by_fkey
     foreign key (installed_by) references auth.users (id) on delete set null;
 
 alter table public.device_alerts
@@ -19,10 +19,10 @@ alter table public.device_alerts
   add constraint device_alerts_acknowledged_by_fkey
     foreign key (acknowledged_by) references auth.users (id) on delete set null;
 
-alter table public.device_automations
+alter table public.device_commands
   alter column created_by drop not null,
-  drop constraint if exists device_automations_created_by_fkey,
-  add constraint device_automations_created_by_fkey
+  drop constraint if exists device_commands_created_by_fkey,
+  add constraint device_commands_created_by_fkey
     foreign key (created_by) references auth.users (id) on delete set null;
 
 create or replace function public.execute_account_deletion(
