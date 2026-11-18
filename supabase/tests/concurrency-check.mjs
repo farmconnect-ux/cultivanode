@@ -475,10 +475,13 @@ async function main() {
   assert.deepEqual(claimCounts, [0, 1], `Expected exactly 1 worker to claim lease, got ${claimCounts}`);
 
   // Expire the lease and verify stale claim recovery
-  const expireRes = await runPsql(`
+  const expireUpdate = await runPsql(`
     UPDATE public.account_deletion_storage_cleanup
        SET lease_expires_at = clock_timestamp() - interval '1 second'
      WHERE profile_id = '${u4e}';
+  `);
+  assert.equal(expireUpdate.code, 0, `4e expire update failed: ${expireUpdate.stderr}`);
+  const expireRes = await runPsql(`
     SELECT attempts::text FROM public.claim_account_deletion_storage_cleanup('${u4e}', 300);
   `);
   assert.equal(expireRes.code, 0, `4e stale reclaim failed: ${expireRes.stderr}`);
