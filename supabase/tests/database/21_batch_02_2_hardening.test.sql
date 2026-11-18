@@ -334,47 +334,47 @@ select is(
 -- F. Role Request Lifecycle
 -- ------------------------------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000001"}', true);
-insert into public.role_requests (role, details) values ('input_supplier', '{"shop":"Ibadan Agro"}'::jsonb);
+insert into public.role_requests (role, details) values ('machinery_owner', '{"tractors":2}'::jsonb);
 
 select is(
-  (public.cancel_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'input_supplier' and status = 'pending'))).status::text,
+  (public.cancel_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'))).status::text,
   'cancelled',
   'F1: User can cancel their own pending role request'
 );
 
-insert into public.role_requests (role, details) values ('buyer_offtaker', '{"company":"Oyo Grain"}'::jsonb);
+insert into public.role_requests (role, details) values ('machinery_owner', '{"tractors":3}'::jsonb);
 
 select throws_ok(
-  $$select public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'buyer_offtaker' and status = 'pending'), 'Self')$$,
+  $$select public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'), 'Self')$$,
   '42501', null,
   'F2: Ordinary user cannot approve a role request'
 );
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003"}', true);
 select is(
-  (public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'buyer_offtaker' and status = 'pending'), 'Verified') ).status::text,
+  (public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'), 'Verified') ).status::text,
   'approved',
   'F3: Authorised staff can approve role request'
 );
 
 select is(
-  (select count(*) from public.user_roles where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'buyer_offtaker'),
+  (select count(*) from public.user_roles where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner'),
   1::bigint,
   'F4: Approved role request grants user_roles row'
 );
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000001"}', true);
-insert into public.role_requests (role, details) values ('logistics_provider', '{"truck":"1"}'::jsonb);
+insert into public.role_requests (role, provider_type, details) values ('service_provider', 'agronomist', '{"exp":"5y"}'::jsonb);
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003"}', true);
 select is(
-  (public.reject_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'logistics_provider' and status = 'pending'), 'Missing vehicle papers') ).status::text,
+  (public.reject_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'service_provider' and status = 'pending'), 'Missing licence document') ).status::text,
   'rejected',
   'F5: Authorised staff can reject role request with reason'
 );
 
 select is(
-  (select count(*) from public.user_roles where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'logistics_provider'),
+  (select count(*) from public.user_roles where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'service_provider'),
   0::bigint,
   'F6: Rejected role request does not grant user_roles row'
 );

@@ -21,14 +21,17 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: mockGetUser },
     rpc: mockRpc,
   }),
+}));
+
+vi.mock('@/lib/supabase/admin', () => ({
   createServiceClient: () => mockCreateServiceClient(),
 }));
 
-function signEngineJwt(secret: string, sub = 'user-1') {
+function signEngineJwt(secret: string, permissions: string[] = []) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(
-    JSON.stringify({ sub, iat: now, exp: now + 300, roles: ['crop_farmer'] }),
+    JSON.stringify({ sub: 'user-1', iat: now, exp: now + 300, roles: ['crop_farmer'], permissions }),
   ).toString('base64url');
   const sig = createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
   return `${header}.${payload}.${sig}`;
@@ -94,26 +97,38 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     expect(badJson.status).toBe(400);
   });
 
-  it('/api/engines/ledger/transact fails closed (503) without service client and persists via RPC when configured', async () => {
+  it('/api/engines/ledger/transact fails closed (503) without service client, enforces ledger.write, and persists via RPC', async () => {
     const secret = 'test-engine-secret-key';
     process.env.ENGINE_JWT_SECRET = secret;
-    const token = signEngineJwt(secret);
+    const noPermToken = signEngineJwt(secret, []);
+    const token = signEngineJwt(secret, ['ledger.write']);
     const { POST } = await import('@/app/api/engines/ledger/transact/route');
+
+    const body = JSON.stringify({
+      referenceId: 'ORD-1',
+      referenceType: 'adjustment',
+      description: 'Test adjustment',
+      postings: [
+        { account_id: 'ASSET_PAYMENT_CLEARING', direction: 'DEBIT', amount_kobo: 1000 },
+        { account_id: 'LIABILITY_SELLER_PAYABLE', direction: 'CREDIT', amount_kobo: 1000 },
+      ],
+    });
+
+    const forbidden = await POST(
+      new Request('http://localhost/api/engines/ledger/transact', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${noPermToken}` },
+        body,
+      }),
+    );
+    expect(forbidden.status).toBe(403);
 
     mockCreateServiceClient.mockReturnValueOnce(null);
     const unconfigured = await POST(
       new Request('http://localhost/api/engines/ledger/transact', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          referenceId: 'ORD-1',
-          referenceType: 'adjustment',
-          description: 'Test adjustment',
-          postings: [
-            { accountId: 'ASSET_PAYMENT_CLEARING', direction: 'DEBIT', amountKobo: 1000 },
-            { accountId: 'LIABILITY_SELLER_PAYABLE', direction: 'CREDIT', amountKobo: 1000 },
-          ],
-        }),
+        body,
       }),
     );
     expect(unconfigured.status).toBe(503);
@@ -123,15 +138,7 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
       new Request('http://localhost/api/engines/ledger/transact', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          referenceId: 'ORD-1',
-          referenceType: 'adjustment',
-          description: 'Test adjustment',
-          postings: [
-            { accountId: 'ASSET_PAYMENT_CLEARING', direction: 'DEBIT', amountKobo: 1000 },
-            { accountId: 'LIABILITY_SELLER_PAYABLE', direction: 'CREDIT', amountKobo: 1000 },
-          ],
-        }),
+        body,
       }),
     );
     expect(ok.status).toBe(200);
