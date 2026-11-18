@@ -52,11 +52,12 @@
   2. Checks session recency (`isRecentSignIn(last_sign_in_at)` within 15 minutes); if stale, runs inline SMS/Email OTP re-verification and refreshes the session token via `getFreshAccessToken()`.
   3. Requires typing `DELETE` and confirming a native `Alert`, guarded by `deletingRef` against repeated taps.
   4. On `200`, clears `cache_account_${userId}`, `cn.activeFarm`, and `cn.outbox`, calls `signOut('local')`, and invokes `onDeleted()` **exactly once**.
-- **Server API (`apps/web/src/app/api/account/delete/route.ts` + `apps/web/src/lib/account-deletion.ts`):**
+- **Server API (`apps/web/src/app/api/account/delete/route.ts`, `apps/web/src/lib/account-deletion.ts`, `apps/web/src/app/api/cron/account-deletions/route.ts`):**
   - Fails closed (`503`) without service-role key; verifies Bearer JWT or cookie session (`401`); validates `{ confirmation: "DELETE", reason? }` (`400`); enforces 15-minute `last_sign_in_at` recency (`403 reauth_required`).
   - **Phase 1:** Calls `execute_account_deletion(user.id, reason)` (`409` on blockers, `500` on unexpected DB errors).
-  - **Phase 2:** Runs `processPendingStorageCleanup(supabaseAdmin, user.id)` (`claim_account_deletion_storage_cleanup` + `storage.remove` + `record_account_deletion_storage_result`). If any item fails, records `'failed'` and calls `finalize_account_deletion(user.id, false, ...)` returning `500 storage_cleanup_incomplete` **without** deleting the Auth identity.
-  - **Phase 3:** Only after zero pending/failed Storage items remain, calls `supabaseAdmin.auth.admin.deleteUser(user.id)` and `finalize_account_deletion(user.id, true)`. If Auth deletion fails, keeps `deletion_status = 'auth_pending'` and returns `500 auth_deletion_incomplete` for idempotent retry.
+  - **Phase 2:** Runs `processPendingStorageCleanup(supabaseAdmin, user.id)` (`claim_account_deletion_storage_cleanup` with `lease_expires_at` + `storage.remove` + `record_account_deletion_storage_result`). Every `record_account_deletion_storage_result` response is checked explicitly; unrecorded removals are never counted as completed. If any item fails, remains unrecorded, or is held by an active concurrent lease, returns `500 storage_cleanup_incomplete` **without** deleting the Auth identity.
+  - **Phase 3:** Only after zero pending/failed/processing Storage items remain, calls `supabaseAdmin.auth.admin.deleteUser(user.id)` and `finalize_account_deletion(user.id, true)`. Inspects `finalize_account_deletion` errors and never defaults `deletion_status` to `'completed'`; failures return `500 finalization_incomplete`.
+  - **Service-Side Recovery (`/api/cron/account-deletions`, scheduled via `apps/web/vercel.json`):** Protected by `CRON_SECRET` (`timingSafeEqual`), runs `reconcileIncompleteAccountDeletions()` to reclaim stale `'processing'` Storage leases, remove remaining Storage objects, reconcile Auth identity state (`getUserById` / `deleteUser`), and finalize orphaned `auth_pending` deletions.
 
 ---
 
@@ -73,7 +74,8 @@
 ## 6. Security, Concurrency & Database Migrations
 - **Migrations:**
   - `supabase/migrations/20261118020000_account_deletion_workflow.sql`: Adds `profiles.deleted_at`, drops `profiles_id_fkey` so `auth.admin.deleteUser()` does not cascade into financial/order tables, and sets `ON DELETE SET NULL` on `device_installations.installed_by`, `device_alerts.acknowledged_by`, and `device_commands.created_by`.
-  - `supabase/migrations/20261118030000_account_deletion_hardening.sql`: Adds `profiles.deletion_status`, `organizations.archived_at`, `public.account_deletion_storage_cleanup` (RLS-enabled, revoked from `public`/`anon`/`authenticated`), `guard_not_deleting_booking()`, `guard_not_deleting_order()`, `guard_not_deleting_fulfilment()` triggers, serialised `pg_advisory_xact_lock` in `execute_account_deletion`, and `service_role`-only `claim_account_deletion_storage_cleanup`, `record_account_deletion_storage_result`, and `finalize_account_deletion`.
+  - `supabase/migrations/20261118030000_account_deletion_hardening.sql`: Adds `profiles.deletion_status`, `organizations.archived_at`, `public.account_deletion_storage_cleanup` (RLS-enabled, revoked from `public`/`anon`/`authenticated`), serialised `pg_advisory_xact_lock` in `execute_account_deletion`, and `service_role`-only cleanup/finalisation RPCs.
+  - `supabase/migrations/20261118040000_account_deletion_reliability.sql`: Adds `lease_expires_at` stale-claim recovery to `claim_account_deletion_storage_cleanup(uuid, integer)`, clears `lease_expires_at` in `record_account_deletion_storage_result`, adds `service_role`-only `list_incomplete_account_deletions(integer)`, and upgrades `guard_not_deleting_booking()`, `guard_not_deleting_order()`, and `guard_not_deleting_fulfilment()` to `BEFORE INSERT OR UPDATE OF <party_fk>` using deadlock-safe `FOR KEY SHARE` locking on `public.profiles`.
 
 ---
 
@@ -82,17 +84,17 @@
   - `apps/mobile/src/lib/__tests__/account-roles-docs.test.ts`: Multi-role labels, provider permissions, specialty filtering, Tier 1+ gates.
   - `apps/mobile/src/lib/__tests__/account-deletion.test.ts`: Session recency, confirmation/token validation, `403 reauth_required`, `409 deletion_blocked`, network failure, cache cleanup, and `getFreshAccessToken()`.
 - **Web API tests (`apps/web/src/__tests__/batch-02-5.test.ts`):**
-  - Covers `503` fail-closed, `401`/`400`/`403`/`409`, partial Storage failure + retry recovery, Auth deletion failure + idempotent retry.
+  - Covers `503` fail-closed, `401`/`400`/`403`/`409`, partial Storage failure + retry recovery, `record_account_deletion_storage_result` RPC failure, active-lease skip blocking Auth deletion, Auth deletion failure + idempotent retry, `finalize_account_deletion` error/invalid payload returning `500`, and `/api/cron/account-deletions` post-Auth reconciliation.
 - **Database pgTAP (`supabase/tests/database/22_batch_02_5_account_deletion.test.sql`):**
-  - 23 assertions covering `service_role`-only RPC/table grants, `42501` role-escalation protection, active booking / active seller fulfilment (multi-seller order) / held escrow / processing settlement blockers, solo org archival, durable Storage queue capture, order-insert guard trigger, `data_requests` gating, and `finalize_account_deletion`.
-- **Database concurrency (`supabase/tests/concurrency-check.mjs` Sections 4a–4b):**
-  - Deterministic concurrent `super_admin` deletion test (1 succeeds, 1 rejected, 1 `super_admin` preserved) and concurrent deletion + `bookings` insert race test.
+  - 30 assertions covering `service_role`-only RPC/table grants, `42501` role-escalation protection, active booking / active seller fulfilment (multi-seller order) / held escrow / processing settlement blockers, solo org archival, durable Storage queue capture, lease-based stale claim recovery, INSERT + party-reassignment UPDATE guards (without blocking lifecycle updates), `data_requests` gating, and `finalize_account_deletion`.
+- **Database concurrency (`supabase/tests/concurrency-check.mjs` Sections 4a–4e):**
+  - Deterministic concurrent `super_admin` deletion test (4a), concurrent deletion + `bookings` race (4b), controlled `pg_locks` booking-first -> deletion-blocked (4c), deletion-first -> booking-rejected (4d), and concurrent Storage cleanup lease isolation + expired lease recovery (4e).
 - **Live local Supabase integration (`supabase/tests/api-db-integration-check.mjs` Section 6):**
-  - Live Auth, Storage API, PostgREST, and Postgres test simulating Storage failure, retrying `claim_account_deletion_storage_cleanup`, deleting the actual Storage object, deleting the Auth user via GoTrue Admin API, finalizing, and verifying order preservation + PII redaction.
+  - Live Auth, Storage API, PostgREST, and Postgres test simulating Storage failure, active-lease isolation, stale `'processing'` lease expiry & reclaim, deleting the actual Storage object, deleting the Auth user via GoTrue Admin API, verifying `list_incomplete_account_deletions` + Auth `404` reconciliation, finalizing, and verifying order preservation + PII redaction.
 - **CI Workflow & Build Results:**
-  - Verified on [PR #11](https://github.com/farmconnect-ux/cultivanode/pull/11) via GitHub Actions Run [`44313487340`](https://github.com/farmconnect-ux/cultivanode/actions/runs/44313487340) (commit `48c36ecc083f932c63860121080326ece4853105`):
-    - `Database migrations and RLS tests` (`1m8s`, `SUCCESS`): `pgTAP` (`Files=22, Tests=773, Result: PASS`), `concurrency-check.mjs` (Sections 1, 2, 3a–3c, 4a–4b `PASS`), `storage-api-check.mjs` (`PASS`), `api-db-integration-check.mjs` (Sections 1–6 `PASS`).
-    - `Typecheck, lint and unit tests` (`4m11s`, `SUCCESS`): `typecheck` (`4/4` tasks), `lint` (`1/1` task), `test` (`20` node tests + `71`, `17`, `358` vitest tests across `4/4` tasks), and Next.js `build`.
+  - Verified on [PR #11](https://github.com/farmconnect-ux/cultivanode/pull/11) via GitHub Actions Run [`44322513288`](https://github.com/farmconnect-ux/cultivanode/actions/runs/44322513288) (commit `af0618bd5dcb92a6c5b26ff62ecfc7b5ec03d9db`):
+    - `Database migrations and RLS tests` (`1m7s`, `SUCCESS`): `pgTAP` (`Files=22, Tests=780, Result: PASS`), `concurrency-check.mjs` (Sections 1, 2, 3a–3c, 4a–4e `PASS`), `storage-api-check.mjs` (`PASS`), `api-db-integration-check.mjs` (Sections 1–6 `PASS`).
+    - `Typecheck, lint and unit tests` (`3m7s`, `SUCCESS`): `typecheck` (`4/4` tasks), `lint` (`1/1` task), `test` (`20` node tests + `71`, `21`, `358` vitest tests across `4/4` tasks), and Next.js `build`.
     - Vercel Preview deployment: `SUCCESS`.
 
 ---
@@ -109,9 +111,12 @@
 - **Files changed:**
   - `supabase/migrations/20261118020000_account_deletion_workflow.sql`
   - `supabase/migrations/20261118030000_account_deletion_hardening.sql`
+  - `supabase/migrations/20261118040000_account_deletion_reliability.sql`
   - `packages/shared/src/database.types.ts`
   - `apps/web/src/lib/account-deletion.ts`
   - `apps/web/src/app/api/account/delete/route.ts`
+  - `apps/web/src/app/api/cron/account-deletions/route.ts`
+  - `apps/web/vercel.json`
   - `apps/web/src/__tests__/batch-02-5.test.ts`
   - `apps/mobile/src/lib/account.ts`
   - `apps/mobile/src/app/(provider)/_layout.tsx`
