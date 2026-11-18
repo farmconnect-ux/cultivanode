@@ -233,7 +233,8 @@ async function main() {
       ('${sa1}', '2348099900001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
       ('${sa2}', '2348099900002', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
     INSERT INTO public.profiles (id, phone, full_name)
-    VALUES ('${sa1}', '2348099900001', 'Super One'), ('${sa2}', '2348099900002', 'Super Two');
+    VALUES ('${sa1}', '2348099900001', 'Super One'), ('${sa2}', '2348099900002', 'Super Two')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
     DELETE FROM public.admin_roles WHERE admin_role = 'super_admin' AND profile_id NOT IN ('${sa1}', '${sa2}');
     INSERT INTO public.admin_roles (profile_id, admin_role)
     VALUES ('${sa1}', 'super_admin'), ('${sa2}', 'super_admin')
@@ -266,7 +267,8 @@ async function main() {
       ('${dupUser}', '2348099900003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
       ('${farmerUser}', '2348099900004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
     INSERT INTO public.profiles (id, phone, full_name)
-    VALUES ('${dupUser}', '2348099900003', 'Dup Target'), ('${farmerUser}', '2348099900004', 'Concurrent Farmer');
+    VALUES ('${dupUser}', '2348099900003', 'Dup Target'), ('${farmerUser}', '2348099900004', 'Concurrent Farmer')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
     INSERT INTO public.farms (id, owner_id, name, state, location)
     VALUES ('${farmId}', '${farmerUser}', 'Conc Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
     INSERT INTO public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
