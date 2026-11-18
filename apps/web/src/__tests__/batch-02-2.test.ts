@@ -10,6 +10,7 @@ const mockSupportUpdate = vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })
 const mockSupportMsgInsert = vi.fn(async () => ({ error: null }));
 const mockAdminActionsInsert = vi.fn(async () => ({ error: null }));
 
+vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@/lib/admin/staff', () => ({
