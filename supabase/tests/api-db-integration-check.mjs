@@ -193,6 +193,7 @@ async function main() {
     assert.ok(!unknownOrderRes.ok, `Expected unknown order to fail, got ${unknownOrderRes.status}`);
 
     const whSellerId = randomUUID();
+    const whCatId = randomUUID();
     const whListingId = randomUUID();
     const whOrderId = randomUUID();
     const whFulfilId = randomUUID();
@@ -201,14 +202,30 @@ async function main() {
     runPsql(`
       INSERT INTO public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
       VALUES ('${whSellerId}', '${staff.id}', 'WH Agro ${suffix}', 'agro_dealer', 'verified');
-      INSERT INTO public.marketplace_listings (id, seller_id, category, title, unit, price_kobo, quantity_available, quantity_reserved, status)
-      VALUES ('${whListingId}', '${whSellerId}', 'seeds', 'Maize Seed ${suffix}', 'kg', 50000, 10, 1, 'active');
-      INSERT INTO public.marketplace_orders (id, order_number, buyer_id, items_subtotal_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address)
-      VALUES ('${whOrderId}', 'ORD-WH-${suffix}', '${user.id}', 50000, 50000, 'pending_payment', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb);
-      INSERT INTO public.marketplace_fulfilments (id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_method)
-      VALUES ('${whFulfilId}', '${whOrderId}', '${whSellerId}', 'FUL-WH-${suffix}', 'pending', 50000, 'seller_delivery');
-      INSERT INTO public.marketplace_order_items (order_id, listing_id, seller_id, title_snapshot, unit_snapshot, quantity, unit_price_kobo, line_total_kobo, commission_kobo)
-      VALUES ('${whOrderId}', '${whListingId}', '${whSellerId}', 'Maize Seed', 'kg', 1, 50000, 50000, 2500);
+      INSERT INTO public.marketplace_categories (id, slug, name)
+      VALUES ('${whCatId}', 'wh-cat-${suffix}', 'WH Category ${suffix}');
+      INSERT INTO public.marketplace_listings (
+        id, seller_id, category_id, listing_type, title, unit, price_model,
+        base_price_kobo, min_order_quantity, available_quantity, location, location_state, status
+      ) VALUES (
+        '${whListingId}', '${whSellerId}', '${whCatId}', 'input', 'Maize Seed ${suffix}', 'bag', 'fixed',
+        50000, 1, 10, extensions.st_geogfromtext('SRID=4326;POINT(3.9470 7.3775)'), 'Oyo', 'active'
+      );
+      INSERT INTO public.marketplace_inventory_lots (listing_id, lot_number, physical_quantity, reserved_quantity, allocated_quantity)
+      VALUES ('${whListingId}', 'LOT-WH-${suffix}', 10, 1, 0);
+      INSERT INTO public.marketplace_orders (
+        id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+        platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+      ) VALUES (
+        '${whOrderId}', 'ORD-WH-${suffix}', '${user.id}', 'retail', 50000, 0, 0, 50000, 'pending_payment', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb
+      );
+      INSERT INTO public.marketplace_order_items (
+        order_id, listing_id, seller_id, title, unit, quantity, unit_price_kobo, subtotal_kobo, commission_bps, commission_kobo, seller_earnings_kobo
+      ) VALUES (
+        '${whOrderId}', '${whListingId}', '${whSellerId}', 'Maize Seed', 'bag', 1, 50000, 50000, 500, 2500, 47500
+      );
+      INSERT INTO public.marketplace_fulfilments (id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method)
+      VALUES ('${whFulfilId}', '${whOrderId}', '${whSellerId}', 'FUL-WH-${suffix}', 'placed', 50000, 0, 'seller_delivery');
     `);
 
     const badAmtRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
