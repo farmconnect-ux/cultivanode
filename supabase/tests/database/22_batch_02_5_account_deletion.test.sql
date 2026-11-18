@@ -132,7 +132,7 @@ values
   ('e5000000-0000-0000-0000-000000000e06', 'e5000000-0000-0000-0000-0000000000d1', 'e5000000-0000-0000-0000-000000000f06', 'e5000000-0000-0000-0000-000000000001', 'e5000000-0000-0000-0000-000000000026', 10000, 500, 9500, 'released');
 
 insert into public.marketplace_settlements (id, escrow_id, seller_id, gross_amount_kobo, commission_kobo, net_payout_kobo, payout_reference, status)
-values ('e5000000-0000-0000-0000-000000000s06', 'e5000000-0000-0000-0000-000000000e06', 'e5000000-0000-0000-0000-000000000026', 10000, 500, 9500, 'PAYOUT-DEL-6', 'processing');
+values ('e5000000-0000-0000-0000-000000000a06', 'e5000000-0000-0000-0000-000000000e06', 'e5000000-0000-0000-0000-000000000026', 10000, 500, 9500, 'PAYOUT-DEL-6', 'processing');
 
 -- Active booking blocker on u3
 insert into public.farms (id, owner_id, name, state, location)
