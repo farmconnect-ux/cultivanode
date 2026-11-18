@@ -1,5 +1,5 @@
 begin;
-select plan(29);
+select plan(30);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -243,7 +243,7 @@ select throws_ok(
     );
   $$,
   'P0001',
-  'Cannot place order for a deleted or deleting account.',
+  'Cannot place or reassign order for a deleted or deleting account.',
   'Test 17: Cannot place new order for deleted/deleting account'
 );
 
@@ -331,8 +331,8 @@ insert into public.bookings (
   'e5000000-0000-0000-0000-000000000401',
   'e5000000-0000-0000-0000-000000000002',
   'e5000000-0000-0000-0000-000000000003',
-  'e5000000-0000-0000-0000-000000000020',
-  'e5000000-0000-0000-0000-000000000010',
+  null,
+  null,
   'Harvester', 'equipment', 'Green Acre', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
   current_date + 2, 'hectare', 1, 15000, 15000, 'requested', now() + interval '1 day'
 );
@@ -350,28 +350,14 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$update public.marketplace_orders set buyer_id = 'e5000000-0000-0000-0000-000000000001' where id = 'e5000000-0000-0000-0000-000000000201'$$,
+  $$update public.marketplace_orders set buyer_id = 'e5000000-0000-0000-0000-000000000001' where id = 'e5000000-0000-0000-0000-0000000000d2'$$,
   'P0001',
   'Cannot place or reassign order for a deleted or deleting account.',
   'Test 27: reassigning marketplace_order buyer_id to deleted account is rejected'
 );
 
-insert into public.marketplace_orders (
-  id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
-  platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
-) values (
-  'e5000000-0000-0000-0000-000000000402', 'ORD-UPD-1', 'e5000000-0000-0000-0000-000000000002', 'retail',
-  10000, 0, 0, 10000, 'paid', 'paid', 'escrow', '{"line":"12 Farm Rd","state":"Oyo"}'::jsonb
-);
-insert into public.marketplace_fulfilments (
-  id, order_id, seller_id, fulfilment_mode, subtotal_kobo, delivery_fee_kobo, status
-) values (
-  'e5000000-0000-0000-0000-000000000403', 'e5000000-0000-0000-0000-000000000402',
-  'e5000000-0000-0000-0000-000000000041', 'seller_delivery', 10000, 0, 'placed'
-);
-
 select throws_ok(
-  $$update public.marketplace_fulfilments set seller_id = 'e5000000-0000-0000-0000-000000000040' where id = 'e5000000-0000-0000-0000-000000000403'$$,
+  $$update public.marketplace_fulfilments set seller_id = 'e5000000-0000-0000-0000-000000000024' where id = 'e5000000-0000-0000-0000-000000000f02'$$,
   'P0001',
   'Cannot create or reassign fulfilment for a deleted or deleting seller account.',
   'Test 28: reassigning marketplace_fulfilment seller_id to deleted seller is rejected'
