@@ -158,6 +158,12 @@ describe('Batch 02.3 API hardening: cancellation, disputes & payment webhooks', 
     // 2. Malformed JSON
     expect((await postSigned('{broken')).status).toBe(400);
 
+    // 2b. Non-actionable event
+    const ignored = await postSigned(JSON.stringify({ event: 'transfer.success', data: { reference: 'TRF_1' } }));
+    expect(ignored.status).toBe(200);
+    expect(await ignored.json()).toEqual({ status: 'ignored', event: 'transfer.success' });
+    expect(mockServiceRpc).not.toHaveBeenCalled();
+
     // 3. Missing transaction reference
     expect(
       (await postSigned(JSON.stringify({ event: 'charge.success', data: { amount: 50_000, metadata: { orderId: ORDER_ID } } }))).status,
@@ -167,6 +173,13 @@ describe('Batch 02.3 API hardening: cancellation, disputes & payment webhooks', 
     expect(
       (await postSigned(JSON.stringify({ event: 'charge.success', data: { reference: 'UNMAPPED_REF', amount: 50_000 } }))).status,
     ).toBe(422);
+
+    // 4b. marketplace_payments lookup database error
+    mockLookupMaybeSingle.mockResolvedValueOnce({ data: null, error: { code: '08006', message: 'Lookup failed' } });
+    expect(
+      (await postSigned(JSON.stringify({ event: 'charge.success', data: { reference: 'UNMAPPED_REF', amount: 50_000 } }))).status,
+    ).toBe(500);
+    expect(mockServiceRpc).not.toHaveBeenCalled();
 
     // 5. Unknown / non-UUID order reference
     expect(
@@ -231,6 +244,17 @@ describe('Batch 02.3 API hardening: cancellation, disputes & payment webhooks', 
     // 2. Malformed JSON
     expect((await postSigned('{broken')).status).toBe(400);
 
+    // 2b. Non-actionable events
+    const ignoredEvent = await postSigned(JSON.stringify({ event: 'transfer.completed', data: { id: 998 } }));
+    expect(ignoredEvent.status).toBe(200);
+    expect(await ignoredEvent.json()).toEqual({ status: 'ignored', event: 'transfer.completed' });
+    const ignoredStatus = await postSigned(
+      JSON.stringify({ event: 'charge.completed', data: { id: 998, tx_ref: `FLW_${ORDER_ID}_1`, status: 'failed', amount: 500 } }),
+    );
+    expect(ignoredStatus.status).toBe(200);
+    expect(await ignoredStatus.json()).toEqual({ status: 'ignored', payment_status: 'failed' });
+    expect(mockServiceRpc).not.toHaveBeenCalled();
+
     // 3. Missing transaction reference
     expect(
       (await postSigned(JSON.stringify({ event: 'charge.completed', data: { status: 'successful', amount: 500 } }))).status,
@@ -240,6 +264,13 @@ describe('Batch 02.3 API hardening: cancellation, disputes & payment webhooks', 
     expect(
       (await postSigned(JSON.stringify({ event: 'charge.completed', data: { id: 999, tx_ref: 'UNMAPPED', status: 'successful', amount: 500 } }))).status,
     ).toBe(422);
+
+    // 4b. marketplace_payments lookup database error
+    mockLookupMaybeSingle.mockResolvedValueOnce({ data: null, error: { code: '08006', message: 'Lookup failed' } });
+    expect(
+      (await postSigned(JSON.stringify({ event: 'charge.completed', data: { id: 999, tx_ref: 'UNMAPPED', status: 'successful', amount: 500 } }))).status,
+    ).toBe(500);
+    expect(mockServiceRpc).not.toHaveBeenCalled();
 
     // 5. Unknown / non-UUID order reference
     expect(
@@ -253,6 +284,9 @@ describe('Batch 02.3 API hardening: cancellation, disputes & payment webhooks', 
     ).toBe(400);
     expect(
       (await postSigned(JSON.stringify({ event: 'charge.completed', data: { id: 999, tx_ref: `FLW_${ORDER_ID}_1`, status: 'successful', amount: -50 } }))).status,
+    ).toBe(400);
+    expect(
+      (await postSigned(JSON.stringify({ event: 'charge.completed', data: { id: 999, tx_ref: `FLW_${ORDER_ID}_1`, status: 'successful', amount: 'NaN' } }))).status,
     ).toBe(400);
     expect(mockServiceRpc).not.toHaveBeenCalled();
 
