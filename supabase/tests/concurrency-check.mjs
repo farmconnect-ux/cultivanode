@@ -206,16 +206,19 @@ async function main() {
   const stateC = await runPsql(`SELECT status FROM public.support_tickets WHERE id = '${ticketC}';`);
   assert.equal(stateC.stdout, 'resolved');
   const auditC = await runPsql(`
-    SELECT string_agg(action, ',' ORDER BY created_at ASC, id ASC)
+    SELECT string_agg(action || ':' || reason, '|' ORDER BY (reason LIKE 'from=open%') DESC, created_at ASC, id ASC)
     FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id = '${ticketC}';
   `);
   if (r3cPending.code !== 0) {
     assert.equal(r3cResolved.code, 0, '3c resolved must succeed when pending is rejected');
     assert.match(r3cPending.stderr, /Cannot move ticket from resolved to pending/);
-    assert.equal(auditC.stdout, 'support_ticket_resolved');
+    assert.equal(auditC.stdout, 'support_ticket_resolved:from=open, status=resolved, priority=high');
   } else {
     assert.equal(r3cResolved.code, 0, '3c resolved must succeed after pending');
-    assert.equal(auditC.stdout, 'support_ticket_pending,support_ticket_resolved');
+    assert.equal(
+      auditC.stdout,
+      'support_ticket_pending:from=open, status=pending, priority=normal|support_ticket_resolved:from=pending, status=resolved, priority=high',
+    );
   }
   console.log(`   PASS: 3c valid serialised outcome (${auditC.stdout}).`);
 }
