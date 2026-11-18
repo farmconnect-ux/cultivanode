@@ -77,14 +77,22 @@
 
 ## 5. Verification Evidence & Limitations
 
-- **GitHub Actions CI Run `44246211388` (on code commit `cc41f28`):**
-  - **Database migrations and RLS tests** (Job `134605680748`, `supabase test db` + `node supabase/tests/concurrency-check.mjs`): **PASS**
-    - pgTAP: `Files=21, Tests=738, Result: PASS` (includes `20_batch_02_2_security.test.sql` and `21_batch_02_2_hardening.test.sql` covering >500 postings, >100 journal entries, >150 payments/settlements, >100 support tickets, storage policies, and role request lifecycle).
-    - Live Postgres concurrency (`supabase/tests/concurrency-check.mjs`):
-      - Concurrent journal writes serialised with sequential hash chain (`PASS`).
-      - Concurrent settlement completion race produced 1 completion, 1 rejection, and 1 payout entry (`PASS`).
-      - Concurrent support ticket transitions completed safely (`PASS`).
-  - **Typecheck, lint and unit tests** (Job `134605680298`): **PASS**
+- **Storage Security (`verification-documents` bucket & `storage.objects` RLS):**
+  - Inspected policies: `"verification documents: owner uploads to own folder"` (`INSERT`), `"verification documents: owner or reviewer reads"` (`SELECT` for owner or `public.has_permission('verification.review')`), `"verification documents: owner deletes own"` (`DELETE`, added in `20261118010000_batch_02_2_financial_and_support_hardening.sql`), and verified absence of any `UPDATE` policy.
+  - Behavioural tests executed under `SET LOCAL ROLE authenticated` in `21_batch_02_2_hardening.test.sql` (`E1`–`E11`):
+    - Owner upload to own `${uid}/...` folder succeeds (`E3`); cross-user upload to another user's folder rejected with `42501` (`E4`).
+    - Owner read succeeds (`E5`); unrelated user read returns 0 rows (`E6`); support staff without `verification.review` returns 0 rows (`E7`); staff with `verification.review` reads object (`E8`).
+    - Cross-user `UPDATE` cannot rename/overwrite owner object (`E9`); `DELETE` policy predicate restricts deletion to owner folder via `auth.uid()` (`E10`); no permissive `UPDATE` policy exists (`E11`).
+  - **Storage Limitation:** `supabase db start` in CI starts the Postgres container without the `storage-api` HTTP container, and `storage.protect_delete()` blocks direct SQL `DELETE` on `storage.objects`. Therefore, HTTP `storage-api` signed-URL minting/fetching and `storage-api`-mediated `remove()` are covered by mocked client unit tests (`account-roles-docs.test.ts`, 600s signed URL & cleanup on DB failure) while full-stack HTTP Storage execution remains an environment-level check. Note also that an already-issued signed URL is a time-limited (600s) bearer credential.
+- **Support Concurrency & Audit Verification (`supabase/tests/concurrency-check.mjs`):**
+  - **Scenario 3a (`resolved` holds `FOR UPDATE` lock first):** Competing `pending` update blocked until `resolved` committed, was rejected (`Cannot move ticket from resolved to pending`), left final status `'resolved'`, and recorded exactly 1 audit row (`support_ticket_resolved`) with 0 orphan audit rows.
+  - **Scenario 3b (`pending` holds `FOR UPDATE` lock first):** Competing `resolved` update blocked and then legitimately succeeded (`pending -> resolved`), leaving final status `'resolved'` and 2 sequential audit rows (`support_ticket_pending`, then `support_ticket_resolved`).
+  - **Scenario 3c (uncontrolled simultaneous race):** Verified final status `'resolved'` and strictly valid serialised audit trail (`support_ticket_resolved`).
+- **GitHub Actions CI Run `44248911344` (on code commit `7c7663e`):**
+  - **Database migrations and RLS tests** (Job `134614500754`, `supabase test db` + `node supabase/tests/concurrency-check.mjs`): **PASS** (1m2s)
+    - pgTAP: `Files=21, Tests=747, Result: PASS` (includes `20_batch_02_2_security.test.sql` and `21_batch_02_2_hardening.test.sql`).
+    - Live Postgres concurrency (`supabase/tests/concurrency-check.mjs`): **PASS** (ledger hash chain, settlement race, and support concurrency scenarios `3a`, `3b`, `3c`).
+  - **Typecheck, lint and unit tests** (Job `134614500454`): **PASS** (3m8s)
     - `npm run typecheck`: `4 successful, 4 total`
     - `npm run lint`: `1 successful, 1 total`
     - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed; `@cultivanode/web` `batch-02-2.test.ts` 8/8 passed; `@cultivanode/mobile` 6 files / 65 tests passed including `account-roles-docs.test.ts` 6/6; `@cultivanode/shared` 32 files passed)
