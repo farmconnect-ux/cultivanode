@@ -179,7 +179,7 @@ begin
     returning id into v_req_id;
   end if;
 
-  insert into public.audit_log (actor_id, action, entity_type, entity_id, new_values)
+  insert into public.audit_log (actor_id, action, entity, entity_id, new_values)
   values (
     p_user_id,
     'account_deleted',
