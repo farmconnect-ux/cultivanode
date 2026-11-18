@@ -311,7 +311,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
             ) : null}
             {chosenOption && !tierMet ? (
               <Notice tone="warning">
-                Requires Verification Tier {chosenOption.min_verification_tier}+ (your current tier is {currentTier}). Complete NIN verification before this role can be approved.
+                {`Requires Verification Tier ${chosenOption.min_verification_tier}+ (your current tier is ${currentTier}). Complete NIN verification before this role can be approved.`}
               </Notice>
             ) : null}
             <TextField
