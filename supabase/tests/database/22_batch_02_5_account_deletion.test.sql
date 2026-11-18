@@ -46,8 +46,8 @@ insert into public.organizations (id, name, owner_id)
 values ('e5000000-0000-0000-0000-0000000000a1', 'Shared Co-op', 'e5000000-0000-0000-0000-000000000001');
 insert into public.org_members (organization_id, profile_id, member_role)
 values
-  ('e5000000-0000-0000-0000-0000000000a1', 'e5000000-0000-0000-0000-000000000001', 'owner'),
-  ('e5000000-0000-0000-0000-0000000000a1', 'e5000000-0000-0000-0000-000000000002', 'farm_manager');
+  ('e5000000-0000-0000-0000-0000000000a1', 'e5000000-0000-0000-0000-000000000002', 'farm_manager')
+on conflict do nothing;
 
 -- Personal data for user 1
 insert into public.user_roles (profile_id, role) values ('e5000000-0000-0000-0000-000000000001', 'crop_farmer');
