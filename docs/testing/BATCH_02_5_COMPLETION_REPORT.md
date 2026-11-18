@@ -84,12 +84,16 @@
 - **Web API tests (`apps/web/src/__tests__/batch-02-5.test.ts`):**
   - Covers `503` fail-closed, `401`/`400`/`403`/`409`, partial Storage failure + retry recovery, Auth deletion failure + idempotent retry.
 - **Database pgTAP (`supabase/tests/database/22_batch_02_5_account_deletion.test.sql`):**
-  - 22 assertions covering `service_role`-only RPC/table grants, `42501` role-escalation protection, active booking / active seller fulfilment (multi-seller order) / held escrow / processing settlement blockers, solo org archival, durable Storage queue capture, order-insert guard trigger, `data_requests` gating, and `finalize_account_deletion`.
+  - 23 assertions covering `service_role`-only RPC/table grants, `42501` role-escalation protection, active booking / active seller fulfilment (multi-seller order) / held escrow / processing settlement blockers, solo org archival, durable Storage queue capture, order-insert guard trigger, `data_requests` gating, and `finalize_account_deletion`.
 - **Database concurrency (`supabase/tests/concurrency-check.mjs` Sections 4a–4b):**
   - Deterministic concurrent `super_admin` deletion test (1 succeeds, 1 rejected, 1 `super_admin` preserved) and concurrent deletion + `bookings` insert race test.
 - **Live local Supabase integration (`supabase/tests/api-db-integration-check.mjs` Section 6):**
   - Live Auth, Storage API, PostgREST, and Postgres test simulating Storage failure, retrying `claim_account_deletion_storage_cleanup`, deleting the actual Storage object, deleting the Auth user via GoTrue Admin API, finalizing, and verifying order preservation + PII redaction.
-- **CI Workflow & Build Results:** Verified via GitHub Actions on [PR #11](https://github.com/farmconnect-ux/cultivanode/pull/11) (latest code/test CI run recorded after final push).
+- **CI Workflow & Build Results:**
+  - Verified on [PR #11](https://github.com/farmconnect-ux/cultivanode/pull/11) via GitHub Actions Run [`44313487340`](https://github.com/farmconnect-ux/cultivanode/actions/runs/44313487340) (commit `48c36ecc083f932c63860121080326ece4853105`):
+    - `Database migrations and RLS tests` (`1m8s`, `SUCCESS`): `pgTAP` (`Files=22, Tests=773, Result: PASS`), `concurrency-check.mjs` (Sections 1, 2, 3a–3c, 4a–4b `PASS`), `storage-api-check.mjs` (`PASS`), `api-db-integration-check.mjs` (Sections 1–6 `PASS`).
+    - `Typecheck, lint and unit tests` (`4m11s`, `SUCCESS`): `typecheck` (`4/4` tasks), `lint` (`1/1` task), `test` (`20` node tests + `71`, `17`, `358` vitest tests across `4/4` tasks), and Next.js `build`.
+    - Vercel Preview deployment: `SUCCESS`.
 
 ---
 
