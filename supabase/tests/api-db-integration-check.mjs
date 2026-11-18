@@ -372,8 +372,8 @@ async function main() {
       p_auth_deleted: true,
     });
     assert.equal(finRes.status, 200);
-    const finJson = await finRes.json();
-    assert.equal(finJson.deletion_status, 'completed');
+    const finalizeJson = await finRes.json();
+    assert.equal(finalizeJson.deletion_status, 'completed');
 
     const profileCheck = runPsql(`
       SELECT full_name || '|' || deletion_status || '|' || (deleted_at IS NOT NULL)::text
