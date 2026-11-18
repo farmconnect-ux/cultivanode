@@ -4,16 +4,17 @@ import { useEffect, useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { fill, useI18n } from '../i18n';
 import { signOut } from '../lib/auth';
+import { formatRoleLabel, isProviderRole } from '../lib/account';
 import { myTier } from '../lib/hire';
 import { useSession } from '../lib/session';
 import { siteLink } from '../lib/site';
 import { color as c, space } from '../theme';
 import { Button, Card, Icon, Notice, Pill, Row, Screen, Text } from '../ui';
 
-type Props = { onVerify: () => void; onRoles: () => void; onOrders: () => void; onShop: () => void; onProvider: () => void };
+type Props = { onVerify: () => void; onRoles: () => void; onOrders: () => void; onShop: () => void; onProvider: () => void; onDeleteAccount: () => void };
 
 /** Me: who you are, NIN status, your shop and orders, language, help and signing out. */
-export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider }: Props) {
+export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider, onDeleteAccount }: Props) {
   const { t, lang, setLang } = useI18n();
   const me = t.me;
   const a = t.account;
@@ -35,7 +36,7 @@ export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider }: Pr
   }
 
   const p = account?.profile;
-  const provider = Boolean(account?.roles.some((r) => r.role === 'machinery_owner' || r.role === 'service_provider'));
+  const provider = isProviderRole(account);
   const phone = p?.phone && /^234[0-9]{10}$/.test(p.phone.replace(/\D/g, '')) ? formatNgPhone(p.phone.replace(/\D/g, '')) : p?.phone;
 
   return (
@@ -69,10 +70,10 @@ export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider }: Pr
         <Text variant="small" muted>{me.roles}</Text>
         <View style={styles.pills}>
           {(account?.roles ?? []).map((r) => (
-            <Pill key={r.role} tone="green">{t.roleSimple[r.role] ?? t.roleNames[r.role]}</Pill>
+            <Pill key={`${r.role}-${r.provider_type ?? 'none'}`} tone="green">{formatRoleLabel(r.role, r.provider_type, { ...t.roleNames, ...t.roleSimple }, t.providerTypes)}</Pill>
           ))}
           {(account?.pending ?? []).map((r) => (
-            <Pill key={`p-${r.role}`} tone="grey">{`${t.roleSimple[r.role] ?? t.roleNames[r.role]} · ${me.pending}`}</Pill>
+            <Pill key={`p-${r.role}-${r.provider_type ?? 'none'}`} tone="grey">{`${formatRoleLabel(r.role, r.provider_type, { ...t.roleNames, ...t.roleSimple }, t.providerTypes)} · ${me.pending}`}</Pill>
           ))}
         </View>
       </Card>
@@ -96,6 +97,7 @@ export function MeScreen({ onVerify, onRoles, onOrders, onShop, onProvider }: Pr
         <Row icon="external-link" title={me.website} onPress={() => Linking.openURL(siteLink(lang, 'account'))} />
         <Row icon="file-text" title={me.terms} onPress={() => Linking.openURL(siteLink(lang, 'terms'))} />
         <Row icon="lock" title={me.privacy} onPress={() => Linking.openURL(siteLink(lang, 'privacy'))} />
+        <Row icon="trash-2" title="Delete account" onPress={onDeleteAccount} />
       </Card>
 
       {offline ? <Notice>{t.common.offline}</Notice> : null}

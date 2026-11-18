@@ -9227,6 +9227,10 @@ export type Database = {
         Returns: Json
       }
       release_order_inventory: { Args: { p_order_id: string }; Returns: Json }
+      execute_account_deletion: {
+        Args: { p_reason?: string; p_user_id: string }
+        Returns: Json
+      }
       request_account_deletion: {
         Args: { p_reason?: string }
         Returns: {

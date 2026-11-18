@@ -267,6 +267,90 @@ async function main() {
     `);
     assert.equal(ledgerCount, '1', `Expected exactly 1 order_payment ledger entry, got ${ledgerCount}`);
     console.log('   PASS: process_payment_webhook rejected unknown/mismatched, cleared valid, and handled duplicate idempotently.');
+
+    console.log('6. Testing execute_account_deletion + Storage cleanup + Auth deletion against live local Supabase...');
+    const delUser = await createAndSignInUser(`del-${suffix}@example.com`, 'Pass1234!');
+    createdUsers.push(delUser.id);
+    const delDocPath = `${delUser.id}/${randomUUID()}.pdf`;
+
+    const uploadRes = await fetch(`${API_URL}/storage/v1/object/verification-documents/${delDocPath}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${delUser.token}`,
+        apikey: ANON_KEY,
+        'Content-Type': 'application/pdf',
+      },
+      body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+    });
+    assert.ok(uploadRes.ok, `Expected PDF upload to verification-documents to succeed, got ${uploadRes.status}`);
+
+    const delOrderId = randomUUID();
+    runPsql(`
+      INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+      VALUES ('${delUser.id}', 'national_id', '${delDocPath}', 'application/pdf', 4);
+      INSERT INTO public.marketplace_orders (
+        id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+        platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+      ) VALUES (
+        '${delOrderId}', 'ORD-DEL-${suffix}', '${delUser.id}', 'retail', 10000, 0, 0, 10000,
+        'completed', 'released', 'escrow', '{"line":"12 Farm Ave","state":"Oyo"}'::jsonb
+      );
+    `);
+
+    // Unauthorised authenticated user cannot call execute_account_deletion directly
+    const unauthDel = await rpcCall(delUser.token, 'execute_account_deletion', {
+      p_user_id: delUser.id,
+      p_reason: 'Direct RPC test',
+    });
+    assert.equal(unauthDel.status, 403, `Expected 403 for authenticated calling execute_account_deletion, got ${unauthDel.status}`);
+
+    // Service-role executes account deletion atomically
+    const svcDelRes = await rpcCall(SERVICE_ROLE_KEY, 'execute_account_deletion', {
+      p_user_id: delUser.id,
+      p_reason: 'Live integration deletion',
+    });
+    const svcDelText = await svcDelRes.text();
+    assert.equal(svcDelRes.status, 200, `Expected 200 from execute_account_deletion, got ${svcDelText}`);
+    const svcDelJson = JSON.parse(svcDelText);
+    assert.equal(svcDelJson.status, 'deleted');
+    assert.deepEqual(svcDelJson.storage_paths, [delDocPath]);
+
+    // Clean up returned storage path using service role
+    const rmRes = await fetch(`${API_URL}/storage/v1/object/verification-documents`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: svcDelJson.storage_paths }),
+    });
+    assert.ok(rmRes.ok, `Expected Storage cleanup to succeed, got ${rmRes.status}`);
+
+    // Verify Storage object is absent
+    const fetchDeletedDoc = await fetch(`${API_URL}/storage/v1/object/authenticated/verification-documents/${delDocPath}`, {
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.ok(!fetchDeletedDoc.ok, 'Expected deleted verification document to be absent from Storage');
+
+    // Delete Auth user via GoTrue Admin API (must succeed without cascading into profiles/orders!)
+    const authDelRes = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.ok(authDelRes.ok, `Expected Auth deleteUser to succeed, got ${authDelRes.status}`);
+
+    const profileCheck = runPsql(`
+      SELECT full_name || '|' || (deleted_at IS NOT NULL)::text
+      FROM public.profiles WHERE id = '${delUser.id}';
+    `);
+    assert.equal(profileCheck, 'Deleted user|true');
+
+    const orderRedacted = runPsql(`
+      SELECT delivery_address->>'redacted' FROM public.marketplace_orders WHERE id = '${delOrderId}';
+    `);
+    assert.equal(orderRedacted, 'true');
+    console.log('   PASS: execute_account_deletion anonymized PII, cleaned Storage, deleted Auth user, and preserved orders.');
   } finally {
     runPsql(`
       DELETE FROM public.marketplace_journal_entries WHERE reference_id = '${ledgerRef}';

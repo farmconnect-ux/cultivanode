@@ -1,6 +1,7 @@
 import { VERIFICATION_UPLOAD_LIMITS, type AppRole, type ProviderType } from '@cultivanode/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { SITE_URL } from './site';
 import { supabase } from './supabase';
 
 export type Profile = {
@@ -251,4 +252,141 @@ export async function getVerificationDocumentSignedUrl(
     return { ok: false, error: error?.message || 'Could not generate secure document link.' };
   }
   return { ok: true, url: data.signedUrl };
+}
+
+export function isProviderRole(account: Account | null | undefined): boolean {
+  return Boolean(account?.roles.some((r) => r.role === 'machinery_owner' || r.role === 'service_provider'));
+}
+
+export function formatRoleLabel(
+  role: AppRole,
+  providerType: ProviderType | null | undefined,
+  roleLabels: Partial<Record<AppRole, string>>,
+  providerTypeLabels: Partial<Record<ProviderType, string>>,
+): string {
+  const base = roleLabels[role] ?? role;
+  if (role === 'service_provider' && providerType) {
+    const sub = providerTypeLabels[providerType] ?? providerType;
+    return `${base} · ${sub}`;
+  }
+  return base;
+}
+
+export function availableProviderTypesForRequest(
+  roles: { role: AppRole; provider_type: ProviderType | null }[],
+  requests: Pick<RoleRequestRecord, 'role' | 'provider_type' | 'status'>[],
+  allProviderTypes: readonly ProviderType[],
+): ProviderType[] {
+  const blocked = new Set<ProviderType>();
+  for (const r of roles) {
+    if (r.role === 'service_provider' && r.provider_type) blocked.add(r.provider_type);
+  }
+  for (const req of requests) {
+    if (req.role === 'service_provider' && req.status === 'pending' && req.provider_type) {
+      blocked.add(req.provider_type);
+    }
+  }
+  return allProviderTypes.filter((pt) => !blocked.has(pt));
+}
+
+export function getRequestableRoles(
+  options: RoleOption[],
+  roles: { role: AppRole; provider_type: ProviderType | null }[],
+  requests: Pick<RoleRequestRecord, 'role' | 'provider_type' | 'status'>[],
+  allProviderTypes: readonly ProviderType[],
+): RoleOption[] {
+  const held = new Set(roles.map((r) => r.role));
+  const pending = new Set(requests.filter((r) => r.status === 'pending').map((r) => r.role));
+  const availableServiceTypes = availableProviderTypesForRequest(roles, requests, allProviderTypes);
+  return options.filter((o) => {
+    if (o.role === 'service_provider') return availableServiceTypes.length > 0;
+    return !held.has(o.role) && !pending.has(o.role);
+  });
+}
+
+export function canRequestRoleWithTier(option: RoleOption | undefined, verificationTier: number): boolean {
+  if (!option) return false;
+  return verificationTier >= option.min_verification_tier;
+}
+
+export const RECENT_AUTH_WINDOW_MS = 15 * 60 * 1000;
+
+export function isRecentSignIn(
+  lastSignInAt: string | null | undefined,
+  nowMs = Date.now(),
+  windowMs = RECENT_AUTH_WINDOW_MS,
+): boolean {
+  if (!lastSignInAt) return false;
+  const parsed = Date.parse(lastSignInAt);
+  if (!Number.isFinite(parsed)) return false;
+  return nowMs - parsed <= windowMs;
+}
+
+export type DeleteAccountOutcome =
+  | { ok: true; status: 'deleted' | 'already_deleted'; storageRemovedCount: number }
+  | { ok: false; code: 'reauth_required' | 'deletion_blocked' | 'unauthenticated' | 'invalid_confirmation' | 'network' | 'failed'; error: string };
+
+export async function deleteMyAccount(input: {
+  userId: string;
+  confirmation: string;
+  reason?: string;
+  accessToken: string;
+}): Promise<DeleteAccountOutcome> {
+  if (input.confirmation.trim() !== 'DELETE') {
+    return { ok: false, code: 'invalid_confirmation', error: 'Type DELETE to confirm permanent account deletion.' };
+  }
+  if (!input.accessToken) {
+    return { ok: false, code: 'unauthenticated', error: 'Please sign in again.' };
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${SITE_URL}/api/account/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+      body: JSON.stringify({
+        confirmation: 'DELETE',
+        reason: input.reason?.trim() ? input.reason.trim().slice(0, 1000) : undefined,
+      }),
+    });
+  } catch {
+    return { ok: false, code: 'network', error: 'No internet connection. Check your signal and try again.' };
+  }
+
+  const body = (await res.json().catch(() => ({}))) as {
+    status?: string;
+    error?: string;
+    message?: string;
+    storage_removed_count?: number;
+  };
+
+  if (res.ok) {
+    await Promise.all([
+      AsyncStorage.removeItem(`cache_account_${input.userId}`).catch(() => undefined),
+      AsyncStorage.removeItem('cn.activeFarm').catch(() => undefined),
+      AsyncStorage.removeItem('cn.outbox').catch(() => undefined),
+    ]);
+    return {
+      ok: true,
+      status: body.status === 'already_deleted' ? 'already_deleted' : 'deleted',
+      storageRemovedCount: body.storage_removed_count ?? 0,
+    };
+  }
+
+  if (res.status === 401) {
+    return { ok: false, code: 'unauthenticated', error: body.message || 'Please sign in again.' };
+  }
+  if (res.status === 403 && body.error === 'reauth_required') {
+    return { ok: false, code: 'reauth_required', error: body.message || 'Please verify your identity with a fresh sign-in code first.' };
+  }
+  if (res.status === 409) {
+    return { ok: false, code: 'deletion_blocked', error: body.message || 'Complete active bookings or orders before deleting your account.' };
+  }
+  if (res.status === 400) {
+    return { ok: false, code: 'invalid_confirmation', error: body.message || 'Type DELETE to confirm permanent account deletion.' };
+  }
+  return { ok: false, code: 'failed', error: body.message || 'Could not delete your account. Please try again.' };
 }

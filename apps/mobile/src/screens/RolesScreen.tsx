@@ -5,7 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { useI18n } from '../i18n';
 import {
+  availableProviderTypesForRequest,
   cancelRoleRequest,
+  canRequestRoleWithTier,
+  formatRoleLabel,
+  getRequestableRoles,
   getVerificationDocumentSignedUrl,
   loadRoleOptions,
   loadRoleRequests,
@@ -80,20 +84,39 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
     loadAll();
   }, [loadAll]);
 
-  const requestable = useMemo(() => {
-    const held = new Set((account?.roles ?? []).map((r) => r.role));
-    const pending = new Set(requests.filter((r) => r.status === 'pending').map((r) => r.role));
-    return options.filter((o) => {
-      if (o.role === 'service_provider') return true;
-      return !held.has(o.role) && !pending.has(o.role);
-    });
-  }, [options, account?.roles, requests]);
+  const availableServiceTypes = useMemo(() => {
+    const allowed = new Set(
+      availableProviderTypesForRequest(
+        account?.roles ?? [],
+        requests,
+        PROVIDER_TYPES.map((p) => p.value),
+      ),
+    );
+    return PROVIDER_TYPES.filter((p) => allowed.has(p.value));
+  }, [account?.roles, requests]);
+
+  const requestable = useMemo(
+    () =>
+      getRequestableRoles(
+        options,
+        account?.roles ?? [],
+        requests,
+        PROVIDER_TYPES.map((p) => p.value),
+      ),
+    [options, account?.roles, requests],
+  );
 
   useEffect(() => {
-    if (!selectedRole && requestable.length > 0) {
+    if ((!selectedRole || !requestable.some((r) => r.role === selectedRole)) && requestable.length > 0) {
       setSelectedRole(requestable[0].role);
     }
   }, [requestable, selectedRole]);
+
+  useEffect(() => {
+    if (availableServiceTypes.length > 0 && !availableServiceTypes.some((p) => p.value === providerType)) {
+      setProviderType(availableServiceTypes[0].value);
+    }
+  }, [availableServiceTypes, providerType]);
 
   async function handleSubmitRole() {
     if (!selectedRole || submittingRole) return;
@@ -226,6 +249,8 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
   }
 
   const chosenOption = options.find((o) => o.role === selectedRole);
+  const currentTier = account?.profile.verification_tier ?? 0;
+  const tierMet = canRequestRoleWithTier(chosenOption, currentTier);
 
   return (
     <Screen>
@@ -244,7 +269,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
         <View style={styles.pills}>
           {(account?.roles ?? []).map((r) => (
             <Pill key={`${r.role}-${r.provider_type ?? ''}`} tone="green">
-              {t.roleSimple[r.role] ?? t.roleNames[r.role] ?? r.role}
+              {formatRoleLabel(r.role, r.provider_type, { ...t.roleNames, ...t.roleSimple }, t.providerTypes)}
             </Pill>
           ))}
         </View>
@@ -271,7 +296,7 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
                 placeholder="Select speciality"
                 closeLabel="Close"
                 value={providerType}
-                options={PROVIDER_TYPES}
+                options={availableServiceTypes}
                 onChange={(v) => setProviderType(v as ProviderType)}
               />
             ) : null}
@@ -283,6 +308,11 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
                     ? `Requires staff review and supporting documents (Tier ${chosenOption.min_verification_tier}+).`
                     : `Requires staff review (Tier ${chosenOption.min_verification_tier}+).`}
               </Text>
+            ) : null}
+            {chosenOption && !tierMet ? (
+              <Notice tone="warning">
+                Requires Verification Tier {chosenOption.min_verification_tier}+ (your current tier is {currentTier}). Complete NIN verification before this role can be approved.
+              </Notice>
             ) : null}
             <TextField
               label="Notes (optional)"
