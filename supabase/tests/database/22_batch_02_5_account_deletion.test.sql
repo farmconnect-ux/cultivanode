@@ -82,8 +82,16 @@ insert into public.farms (id, owner_id, name, state, location)
 values ('e5000000-0000-0000-0000-0000000000f1', 'e5000000-0000-0000-0000-000000000003', 'Blocker Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
 insert into public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
 values ('e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-000000000002', 'equipment', 'tractor', 'Test Tractor', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
-insert into public.bookings (id, farmer_id, provider_id, listing_id, farm_id, job_date, unit, quantity, agreed_price_kobo, status)
-values ('e5000000-0000-0000-0000-0000000000f3', 'e5000000-0000-0000-0000-000000000003', 'e5000000-0000-0000-0000-000000000002', 'e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-0000000000f1', current_date + 1, 'hectare', 1, 20000, 'accepted');
+insert into public.bookings (
+  id, farmer_id, provider_id, listing_id, farm_id,
+  listing_title, listing_kind, farm_name, job_location, distance_km,
+  job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+) values (
+  'e5000000-0000-0000-0000-0000000000f3', 'e5000000-0000-0000-0000-000000000003', 'e5000000-0000-0000-0000-000000000002',
+  'e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-0000000000f1',
+  'Test Tractor', 'equipment', 'Blocker Farm', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+  current_date + 1, 'hectare', 1, 20000, 20000, 'accepted', now() + interval '1 day'
+);
 
 -- 4: User 3 with active booking is blocked
 select throws_ok(
