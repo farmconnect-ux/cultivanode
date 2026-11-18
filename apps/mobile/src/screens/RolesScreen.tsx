@@ -1,4 +1,5 @@
 import { PROVIDER_TYPE_LABELS, type AppRole, type ProviderType } from '@cultivanode/shared';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
@@ -155,6 +156,42 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
         uri: asset.uri,
         mimeType: mime,
         sizeBytes: asset.fileSize,
+      });
+      setUploadingForReqId(null);
+
+      if (!uploaded.ok) {
+        setFeedback({ tone: 'error', text: uploaded.error });
+        return;
+      }
+      setFeedback({ tone: 'success', text: 'Document uploaded and queued for review.' });
+      await loadAll();
+    } catch {
+      setUploadingForReqId(null);
+      setFeedback({ tone: 'error', text: 'Could not upload document. Please try again.' });
+    }
+  }
+
+  async function handlePickDocumentAndUpload(roleRequestId: string | null) {
+    if (!userId || uploadingForReqId) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const asset = result.assets[0];
+      const mime = asset.mimeType || 'application/pdf';
+
+      setUploadingForReqId(roleRequestId ?? 'general');
+      setFeedback(null);
+      const uploaded = await uploadVerificationDocument({
+        userId,
+        roleRequestId,
+        documentType: docType,
+        uri: asset.uri,
+        mimeType: mime,
+        sizeBytes: asset.size,
       });
       setUploadingForReqId(null);
 
@@ -327,6 +364,13 @@ export function RolesScreen({ onBack }: { onBack: () => void }) {
                       />
                     </View>
                   </View>
+                  <Button
+                    title="Choose PDF / file"
+                    variant="secondary"
+                    onPress={() => handlePickDocumentAndUpload(req.id)}
+                    loading={uploadingForReqId === req.id}
+                    disabled={Boolean(uploadingForReqId)}
+                  />
                 </View>
               ) : null}
 

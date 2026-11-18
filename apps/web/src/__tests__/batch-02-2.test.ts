@@ -3,12 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockGetUser = vi.fn();
 const mockRpc = vi.fn();
 const mockRequireStaff = vi.fn();
-const mockAdminRpc = vi.fn();
-const mockSupportEq = vi.fn();
-const mockSupportSelect = vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: mockSupportEq })) }));
-const mockSupportUpdate = vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) }));
-const mockSupportMsgInsert = vi.fn(async () => ({ error: null }));
-const mockAdminActionsInsert = vi.fn(async () => ({ error: null }));
+const mockServiceRpc = vi.fn();
+const mockCreateServiceClient = vi.fn<() => unknown>(() => ({ rpc: mockServiceRpc }));
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -23,37 +19,35 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: mockGetUser },
     rpc: mockRpc,
-    from: (table: string) => {
-      if (table === 'support_tickets') {
-        return { select: mockSupportSelect, update: mockSupportUpdate };
-      }
-      if (table === 'support_ticket_messages') {
-        return { insert: mockSupportMsgInsert };
-      }
-      if (table === 'admin_actions') {
-        return { insert: mockAdminActionsInsert };
-      }
-      return {};
-    },
   }),
-}));
-
-vi.mock('@/lib/supabase/admin', () => ({
-  createServiceClient: () => ({ rpc: mockAdminRpc }),
+  createServiceClient: () => mockCreateServiceClient(),
 }));
 
 describe('Batch 02.2 API, Finance & Support integrity', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.ENGINE_JWT_SECRET;
+    mockCreateServiceClient.mockImplementation(() => ({ rpc: mockServiceRpc }));
   });
 
-  it('engines-api-helper fails closed when ENGINE_JWT_SECRET is unset', async () => {
-    const { authorizeRequest, getEngineSecret } = await import('@/lib/engines-api-helper');
-    expect(getEngineSecret()).toBeNull();
-    const res = await authorizeRequest(new Request('http://localhost/api/engines/ledger/transact'));
+  it('engines-api-helper fails closed when ENGINE_JWT_SECRET is unset and handles malformed JSON', async () => {
+    const { authorizeRequest, parseJsonBody } = await import('@/lib/engines-api-helper');
+    const { z } = await import('zod');
+
+    const res = await authorizeRequest(new Request('http://localhost/api/engines/test'));
     expect(res.authorized).toBe(false);
-    if (!res.authorized) expect(res.response.status).toBe(503);
+    if (!res.authorized) {
+      expect(res.response.status).toBe(503);
+    }
+
+    const badJson = await parseJsonBody(
+      new Request('http://localhost/api/engines/test', { method: 'POST', body: '{bad-json' }),
+      z.object({ a: z.string() }),
+    );
+    expect(badJson.ok).toBe(false);
+    if (!badJson.ok) {
+      expect(badJson.response.status).toBe(400);
+    }
   });
 
   it('/api/ai/health returns 401 when unauthenticated and 403 when non-staff', async () => {
@@ -63,7 +57,7 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     expect(unauth.status).toBe(401);
 
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } });
-    mockRpc.mockResolvedValueOnce({ data: [] });
+    mockRequireStaff.mockResolvedValueOnce(null);
     const nonStaff = await GET();
     expect(nonStaff.status).toBe(403);
   });
@@ -71,23 +65,89 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
   it('/api/ai/assistant returns 400 on malformed JSON and 401 when unauthenticated', async () => {
     const { POST } = await import('@/app/api/ai/assistant/route');
     mockGetUser.mockResolvedValueOnce({ data: { user: null } });
-    const unauth = await POST(new Request('http://localhost/api/ai/assistant', { method: 'POST', body: '{}' }));
+    const unauth = await POST(
+      new Request('http://localhost/api/ai/assistant', {
+        method: 'POST',
+        body: JSON.stringify({ query: 'Hello' }),
+      }),
+    );
     expect(unauth.status).toBe(401);
 
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } });
     const badJson = await POST(
-      new Request('http://localhost/api/ai/assistant', { method: 'POST', body: '{bad-json' }),
+      new Request('http://localhost/api/ai/assistant', {
+        method: 'POST',
+        body: '{invalid-json',
+      }),
     );
     expect(badJson.status).toBe(400);
   });
 
-  it('/api/engines/agronomy/schedule GET serves dynamic CROP_CATALOGUE CSV', async () => {
-    const { GET } = await import('@/app/api/engines/agronomy/schedule/route');
-    const res = await GET();
-    expect(res.status).toBe(200);
-    const csv = await res.text();
+  it('/api/engines/ledger/transact fails closed (503) without service client and persists via RPC when configured', async () => {
+    process.env.ENGINE_JWT_SECRET = 'test-engine-secret-key';
+    const { POST } = await import('@/app/api/engines/ledger/transact/route');
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+
+    mockCreateServiceClient.mockReturnValueOnce(null);
+    const unconfigured = await POST(
+      new Request('http://localhost/api/engines/ledger/transact', {
+        method: 'POST',
+        body: JSON.stringify({
+          referenceId: 'ORD-1',
+          referenceType: 'adjustment',
+          description: 'Test adjustment',
+          postings: [
+            { accountId: 'ASSET_PAYMENT_CLEARING', direction: 'DEBIT', amountKobo: 1000 },
+            { accountId: 'LIABILITY_SELLER_PAYABLE', direction: 'CREDIT', amountKobo: 1000 },
+          ],
+        }),
+      }),
+    );
+    expect(unconfigured.status).toBe(503);
+
+    mockServiceRpc.mockResolvedValueOnce({ data: 'entry-uuid-1', error: null });
+    const ok = await POST(
+      new Request('http://localhost/api/engines/ledger/transact', {
+        method: 'POST',
+        body: JSON.stringify({
+          referenceId: 'ORD-1',
+          referenceType: 'adjustment',
+          description: 'Test adjustment',
+          postings: [
+            { accountId: 'ASSET_PAYMENT_CLEARING', direction: 'DEBIT', amountKobo: 1000 },
+            { accountId: 'LIABILITY_SELLER_PAYABLE', direction: 'CREDIT', amountKobo: 1000 },
+          ],
+        }),
+      }),
+    );
+    expect(ok.status).toBe(200);
+    expect(mockServiceRpc).toHaveBeenCalledWith('record_marketplace_journal_entry', expect.any(Object));
+  });
+
+  it('/api/engines/agronomy/* and /api/engines/ai/* enforce auth and Zod validation', async () => {
+    process.env.ENGINE_JWT_SECRET = 'test-engine-secret-key';
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+
+    const { POST: schedPost, GET: schedGet } = await import('@/app/api/engines/agronomy/schedule/route');
+    const { POST: weatherPost } = await import('@/app/api/engines/agronomy/weather-alerts/route');
+    const { POST: fertPost } = await import('@/app/api/engines/agronomy/fertiliser/route');
+    const { POST: sprayPost } = await import('@/app/api/engines/agronomy/spray/route');
+    const { POST: groundPost } = await import('@/app/api/engines/ai/ground/route');
+    const { POST: guardPost } = await import('@/app/api/engines/ai/guardrail/route');
+
+    const csvRes = await schedGet();
+    expect(csvRes.status).toBe(200);
+    const csv = await csvRes.text();
     expect(csv).toContain('Crop_ID,Crop_Name');
     expect(csv).toContain('maize');
+
+    const badReq = () => new Request('http://localhost/api/engines/test', { method: 'POST', body: JSON.stringify({}) });
+    expect((await schedPost(badReq())).status).toBe(400);
+    expect((await weatherPost(badReq())).status).toBe(400);
+    expect((await fertPost(badReq())).status).toBe(400);
+    expect((await sprayPost(badReq())).status).toBe(400);
+    expect((await groundPost(badReq())).status).toBe(400);
+    expect((await guardPost(badReq())).status).toBe(400);
   });
 
   it('/api/documents/[type] returns 404 for unknown document type', async () => {
@@ -119,7 +179,7 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     });
   });
 
-  it('Admin Support actions enforce website_inbox.manage and valid transitions', async () => {
+  it('Admin Support actions call atomic DB RPCs and enforce website_inbox.manage', async () => {
     const { updateSupportTicketAction, postSupportMessageAction } = await import('@/actions/admin-support');
     mockRequireStaff.mockResolvedValueOnce({ userId: 'staff-2', permissions: [] });
     const fd = new FormData();
@@ -127,25 +187,26 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     fd.set('status', 'resolved');
     fd.set('priority', 'high');
     expect((await updateSupportTicketAction(null, fd)).ok).toBe(false);
+    expect(mockRpc).not.toHaveBeenCalled();
 
     mockRequireStaff.mockResolvedValueOnce({ userId: 'staff-2', permissions: ['website_inbox.manage'] });
-    mockSupportEq.mockResolvedValueOnce({ data: { id: '22222222-2222-4222-8222-222222222222', status: 'closed' }, error: null });
-    fd.set('status', 'pending'); // invalid transition from closed -> pending
+    mockRpc.mockResolvedValueOnce({ error: { message: 'Cannot move ticket from closed to pending.' } });
+    fd.set('status', 'pending');
     const badTransition = await updateSupportTicketAction(null, fd);
     expect(badTransition.ok).toBe(false);
 
     mockRequireStaff.mockResolvedValueOnce({ userId: 'staff-2', permissions: ['website_inbox.manage'] });
+    mockRpc.mockResolvedValueOnce({ error: null });
     const msgFd = new FormData();
     msgFd.set('ticket_id', '22222222-2222-4222-8222-222222222222');
     msgFd.set('body', 'Internal triage note');
     msgFd.set('is_internal', 'true');
     const msgRes = await postSupportMessageAction(null, msgFd);
     expect(msgRes.ok).toBe(true);
-    expect(mockSupportMsgInsert).toHaveBeenCalledWith({
-      ticket_id: '22222222-2222-4222-8222-222222222222',
-      author_id: 'staff-2',
-      body: 'Internal triage note',
-      is_internal: true,
+    expect(mockRpc).toHaveBeenLastCalledWith('admin_post_support_message', {
+      p_ticket_id: '22222222-2222-4222-8222-222222222222',
+      p_body: 'Internal triage note',
+      p_is_internal: true,
     });
   });
 });

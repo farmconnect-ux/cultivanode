@@ -41,3 +41,6 @@ jobs:
           exit 1
       - name: Run pgTAP tests
         run: supabase test db
+
+      - name: Run database concurrency tests
+        run: node supabase/tests/concurrency-check.mjs

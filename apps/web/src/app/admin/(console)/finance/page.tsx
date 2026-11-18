@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   FinanceConsole,
   type JournalEntryRow,
@@ -15,10 +16,54 @@ import { formatNaira } from "@cultivanode/shared";
 
 export const metadata: Metadata = { title: "Platform Finance & Ledger" };
 
+const PAGE_SIZE = 25;
+
+type FinanceSummaryRpc = {
+  can_read_ledger: boolean;
+  can_read_payments: boolean;
+  accounts: {
+    id: string;
+    name: string;
+    type: string;
+    debits_kobo: number;
+    credits_kobo: number;
+    balance_kobo: number;
+  }[];
+  commission_ledger_kobo: number;
+  payments: {
+    total_count?: number;
+    successful_kobo?: number;
+    pending_kobo?: number;
+    failed_kobo?: number;
+    refunded_kobo?: number;
+    by_provider?: Record<string, { count: number; successful_kobo: number }>;
+  };
+  escrows: {
+    held_kobo?: number;
+    released_kobo?: number;
+    refunded_kobo?: number;
+    disputed_kobo?: number;
+  };
+  settlements: {
+    pending_kobo?: number;
+    completed_kobo?: number;
+    failed_kobo?: number;
+    commission_kobo?: number;
+    total_count?: number;
+  };
+};
+
+type PagedResult<T> = {
+  total_count: number;
+  limit: number;
+  offset: number;
+  items: T[];
+};
+
 export default async function AdminFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; provider?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; provider?: string; from?: string; to?: string; tab?: string; page?: string }>;
 }) {
   const staff = await requireStaff();
   if (!staff) return null;
@@ -36,165 +81,116 @@ export default async function AdminFinancePage({
   }
 
   const sp = await searchParams;
-  const q = (sp.q ?? "").trim().toLowerCase();
+  const q = (sp.q ?? "").trim();
   const statusFilter = (sp.status ?? "").trim();
   const providerFilter = (sp.provider ?? "").trim();
   const fromDate = (sp.from ?? "").trim();
   const toDate = (sp.to ?? "").trim();
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const defaultTab = canReadPayments ? "payments" : "ledger";
+  const activeTab =
+    sp.tab && ((sp.tab === "payments" || sp.tab === "settlements") ? canReadPayments : canReadLedger)
+      ? sp.tab
+      : defaultTab;
+
+  const fromIso = fromDate ? `${fromDate}T00:00:00.000Z` : null;
+  const toIso = toDate ? `${toDate}T23:59:59.999Z` : null;
 
   const supabase = await createClient();
+  const rpc = supabase.rpc as unknown as <T>(
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{ data: T | null; error: { message: string } | null }>;
+
   const errors: string[] = [];
 
-  let accounts: LedgerAccountRow[] = [];
-  let journalEntries: JournalEntryRow[] = [];
-  let payments: PaymentRow[] = [];
-  let settlements: SettlementRow[] = [];
-  let heldEscrowKobo = 0;
-  let commissionKobo = 0;
+  const [summaryRes, jeRes, payRes, setRes] = await Promise.all([
+    rpc<FinanceSummaryRpc>("admin_finance_summary"),
+    canReadLedger
+      ? rpc<PagedResult<JournalEntryRow>>("admin_finance_journal_entries", {
+          p_q: q || null,
+          p_type: null,
+          p_from: fromIso,
+          p_to: toIso,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: null, error: null }),
+    canReadPayments
+      ? rpc<PagedResult<PaymentRow>>("admin_finance_payments", {
+          p_q: q || null,
+          p_status: statusFilter || null,
+          p_provider: providerFilter || null,
+          p_from: fromIso,
+          p_to: toIso,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: null, error: null }),
+    canReadPayments
+      ? rpc<PagedResult<SettlementRow>>("admin_finance_settlements", {
+          p_q: q || null,
+          p_status: statusFilter || null,
+          p_from: fromIso,
+          p_to: toIso,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
-  if (canReadLedger) {
-    const [acctRes, jeRes, postRes] = await Promise.all([
-      supabase.from("marketplace_ledger_accounts").select("id, name, type").order("id"),
-      supabase.from("marketplace_journal_entries").select("id, reference_id, reference_type, description, current_hash, created_at").order("created_at", { ascending: false }).limit(100),
-      supabase.from("marketplace_journal_postings").select("id, entry_id, account_id, direction, amount_kobo, memo").limit(500),
-    ]);
+  if (summaryRes.error) errors.push(`Summary: ${summaryRes.error.message}`);
+  if (jeRes.error) errors.push(`Journal entries: ${jeRes.error.message}`);
+  if (payRes.error) errors.push(`Payments: ${payRes.error.message}`);
+  if (setRes.error) errors.push(`Settlements: ${setRes.error.message}`);
 
-    if (acctRes.error) errors.push(`Ledger accounts: ${acctRes.error.message}`);
-    if (jeRes.error) errors.push(`Journal entries: ${jeRes.error.message}`);
-    if (postRes.error) errors.push(`Journal postings: ${postRes.error.message}`);
+  const summary = summaryRes.data;
+  const accounts: LedgerAccountRow[] = (summary?.accounts ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    debitsKobo: Number(a.debits_kobo ?? 0),
+    creditsKobo: Number(a.credits_kobo ?? 0),
+    balanceKobo: Number(a.balance_kobo ?? 0),
+  }));
 
-    const postingsByEntry = new Map<string, JournalEntryRow["postings"]>();
-    const totalsByAcct = new Map<string, { debits: number; credits: number }>();
+  const journalEntries = jeRes.data?.items ?? [];
+  const journalTotal = Number(jeRes.data?.total_count ?? 0);
+  const payments = payRes.data?.items ?? [];
+  const paymentsTotal = Number(payRes.data?.total_count ?? 0);
+  const settlements = setRes.data?.items ?? [];
+  const settlementsTotal = Number(setRes.data?.total_count ?? 0);
 
-    for (const pt of postRes.data ?? []) {
-      const list = postingsByEntry.get(pt.entry_id) ?? [];
-      list.push({
-        id: pt.id,
-        account_id: pt.account_id,
-        direction: pt.direction as "DEBIT" | "CREDIT",
-        amount_kobo: Number(pt.amount_kobo),
-        memo: pt.memo,
-      });
-      postingsByEntry.set(pt.entry_id, list);
+  const clearedKobo = Number(summary?.payments?.successful_kobo ?? 0);
+  const heldEscrowKobo = Number(summary?.escrows?.held_kobo ?? 0);
+  const pendingPayoutsKobo = Number(summary?.settlements?.pending_kobo ?? 0);
+  const commissionKobo = canReadLedger
+    ? Number(summary?.commission_ledger_kobo ?? 0)
+    : Number(summary?.settlements?.commission_kobo ?? 0);
 
-      const cur = totalsByAcct.get(pt.account_id) ?? { debits: 0, credits: 0 };
-      if (pt.direction === "DEBIT") cur.debits += Number(pt.amount_kobo);
-      else cur.credits += Number(pt.amount_kobo);
-      totalsByAcct.set(pt.account_id, cur);
-    }
+  const activeTotal =
+    activeTab === "payments" ? paymentsTotal : activeTab === "settlements" ? settlementsTotal : activeTab === "ledger" ? journalTotal : accounts.length;
+  const totalPages = activeTab === "accounts" ? 1 : Math.max(1, Math.ceil(activeTotal / PAGE_SIZE));
 
-    accounts = (acctRes.data ?? []).map((a) => {
-      const t = totalsByAcct.get(a.id) ?? { debits: 0, credits: 0 };
-      const normalDebit = a.type === "asset" || a.type === "expense";
-      return {
-        id: a.id,
-        name: a.name,
-        type: a.type,
-        debitsKobo: t.debits,
-        creditsKobo: t.credits,
-        balanceKobo: normalDebit ? t.debits - t.credits : t.credits - t.debits,
-      };
-    });
-
-    commissionKobo = accounts.find((a) => a.id === "REVENUE_MARKETPLACE_COMMISSION")?.balanceKobo ?? 0;
-
-    journalEntries = (jeRes.data ?? [])
-      .filter((je) => {
-        if (fromDate && je.created_at.slice(0, 10) < fromDate) return false;
-        if (toDate && je.created_at.slice(0, 10) > toDate) return false;
-        if (q && !`${je.reference_id} ${je.reference_type} ${je.description}`.toLowerCase().includes(q)) return false;
-        return true;
-      })
-      .map((je) => ({
-        id: je.id,
-        reference_id: je.reference_id,
-        reference_type: je.reference_type,
-        description: je.description,
-        current_hash: je.current_hash,
-        created_at: je.created_at,
-        postings: postingsByEntry.get(je.id) ?? [],
-      }));
-  }
-
-  if (canReadPayments) {
-    const [payRes, escRes, setRes] = await Promise.all([
-      supabase
-        .from("marketplace_payments")
-        .select("id, order_id, payment_reference, provider, amount_kobo, status, verified_at, created_at, marketplace_orders(order_number)")
-        .order("created_at", { ascending: false })
-        .limit(150),
-      supabase.from("marketplace_escrows").select("amount_kobo, commission_kobo, status"),
-      supabase
-        .from("marketplace_settlements")
-        .select("id, escrow_id, gross_amount_kobo, commission_kobo, net_payout_kobo, payout_reference, status, processed_at, created_at, marketplace_sellers(business_name)")
-        .order("created_at", { ascending: false })
-        .limit(150),
-    ]);
-
-    if (payRes.error) errors.push(`Payments: ${payRes.error.message}`);
-    if (escRes.error) errors.push(`Escrows: ${escRes.error.message}`);
-    if (setRes.error) errors.push(`Settlements: ${setRes.error.message}`);
-
-    heldEscrowKobo = (escRes.data ?? [])
-      .filter((e) => e.status === "held" || e.status === "awaiting_confirmation" || e.status === "disputed")
-      .reduce((s, e) => s + Number(e.amount_kobo), 0);
-
-    if (!canReadLedger) {
-      commissionKobo = (escRes.data ?? [])
-        .filter((e) => e.status === "released")
-        .reduce((s, e) => s + Number(e.commission_kobo), 0);
-    }
-
-    payments = (payRes.data ?? [])
-      .map((p) => ({
-        id: p.id,
-        order_id: p.order_id,
-        order_number: (p.marketplace_orders as { order_number?: string } | null)?.order_number ?? null,
-        payment_reference: p.payment_reference,
-        provider: p.provider,
-        amount_kobo: Number(p.amount_kobo),
-        status: p.status,
-        verified_at: p.verified_at,
-        created_at: p.created_at,
-      }))
-      .filter((p) => {
-        if (statusFilter && p.status !== statusFilter) return false;
-        if (providerFilter && p.provider !== providerFilter) return false;
-        if (fromDate && p.created_at.slice(0, 10) < fromDate) return false;
-        if (toDate && p.created_at.slice(0, 10) > toDate) return false;
-        if (q && !`${p.payment_reference} ${p.order_number ?? ""}`.toLowerCase().includes(q)) return false;
-        return true;
-      });
-
-    settlements = (setRes.data ?? [])
-      .map((s) => ({
-        id: s.id,
-        escrow_id: s.escrow_id,
-        seller_name: (s.marketplace_sellers as { business_name?: string } | null)?.business_name ?? null,
-        gross_amount_kobo: Number(s.gross_amount_kobo),
-        commission_kobo: Number(s.commission_kobo),
-        net_payout_kobo: Number(s.net_payout_kobo),
-        payout_reference: s.payout_reference,
-        status: s.status,
-        processed_at: s.processed_at,
-        created_at: s.created_at,
-      }))
-      .filter((s) => {
-        if (fromDate && s.created_at.slice(0, 10) < fromDate) return false;
-        if (toDate && s.created_at.slice(0, 10) > toDate) return false;
-        if (q && !`${s.payout_reference ?? ""} ${s.seller_name ?? ""}`.toLowerCase().includes(q)) return false;
-        return true;
-      });
-  }
-
-  const clearedKobo = payments.filter((p) => p.status === "successful").reduce((s, p) => s + p.amount_kobo, 0);
-  const pendingPayoutsKobo = settlements.filter((s) => s.status === "pending" || s.status === "processing").reduce((s, x) => s + x.net_payout_kobo, 0);
+  const buildPageHref = (nextPage: number, nextTab = activeTab) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (statusFilter) params.set("status", statusFilter);
+    if (providerFilter) params.set("provider", providerFilter);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
+    params.set("tab", nextTab);
+    params.set("page", String(nextPage));
+    return `/admin/finance?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Platform Finance & Double-Entry Ledger"
-        description="Authoritative marketplace payments, escrow custody, seller settlements, and cryptographic journal entries."
+        description="Authoritative database-aggregated marketplace payments, escrow custody, seller settlements, and cryptographic journal entries."
       />
 
       {errors.length > 0 && (
@@ -204,23 +200,37 @@ export default async function AdminFinancePage({
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard icon="payments" label="Cleared Payments (Filtered)" value={formatNaira(clearedKobo)} />
+        <MetricCard icon="payments" label="Total Cleared Payments" value={formatNaira(clearedKobo)} />
         <MetricCard icon="lock" label="Held in Escrow" value={formatNaira(heldEscrowKobo)} />
         <MetricCard icon="account_balance" label="Pending Seller Payouts" value={formatNaira(pendingPayoutsKobo)} />
         <MetricCard icon="receipt_long" label="Commission Revenue" value={formatNaira(commissionKobo)} />
       </div>
 
+      {canReadPayments && summary?.payments?.by_provider && Object.keys(summary.payments.by_provider).length > 0 && (
+        <div className="flex flex-wrap gap-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-body-sm">
+          <span className="font-semibold text-on-surface">Cleared by provider:</span>
+          {Object.entries(summary.payments.by_provider).map(([prov, stats]) => (
+            <span key={prov} className="text-on-surface-variant">
+              <span className="capitalize font-medium text-on-surface">{prov.replace("_", " ")}</span>: {formatNaira(Number(stats.successful_kobo ?? 0))} ({stats.count})
+            </span>
+          ))}
+        </div>
+      )}
+
       <form method="get" className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3 sm:grid-cols-6">
+        <input type="hidden" name="tab" value={activeTab} />
         <input
           name="q"
-          defaultValue={sp.q ?? ""}
-          placeholder="Search ref, order, seller…"
+          defaultValue={q}
+          placeholder="Search ref, order #, seller…"
           className="rounded-lg border border-outline-variant/50 px-3 py-1.5 text-body-sm sm:col-span-2"
         />
         <select name="status" defaultValue={statusFilter} className="rounded-lg border border-outline-variant/50 px-2 py-1.5 text-body-sm">
           <option value="">All statuses</option>
-          <option value="successful">Successful</option>
           <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="successful">Successful</option>
+          <option value="completed">Completed</option>
           <option value="failed">Failed</option>
           <option value="refunded">Refunded</option>
         </select>
@@ -229,10 +239,11 @@ export default async function AdminFinancePage({
           <option value="paystack">Paystack</option>
           <option value="flutterwave">Flutterwave</option>
           <option value="direct_transfer">Direct transfer</option>
+          <option value="test_adapter">Test adapter</option>
         </select>
-        <input type="date" name="from" defaultValue={fromDate} aria-label="From date" className="rounded-lg border border-outline-variant/50 px-2 py-1.5 text-body-sm" />
+        <input type="date" name="from" defaultValue={fromDate} className="rounded-lg border border-outline-variant/50 px-2 py-1.5 text-body-sm" />
         <div className="flex gap-2">
-          <input type="date" name="to" defaultValue={toDate} aria-label="To date" className="w-full rounded-lg border border-outline-variant/50 px-2 py-1.5 text-body-sm" />
+          <input type="date" name="to" defaultValue={toDate} className="w-full rounded-lg border border-outline-variant/50 px-2 py-1.5 text-body-sm" />
           <button type="submit" className="rounded-lg bg-primary px-3 py-1.5 text-label-md font-medium text-on-primary">
             Filter
           </button>
@@ -240,14 +251,38 @@ export default async function AdminFinancePage({
       </form>
 
       <FinanceConsole
-        canApprovePayouts={canApprovePayouts}
-        canReadLedger={canReadLedger}
-        canReadPayments={canReadPayments}
         accounts={accounts}
         journalEntries={journalEntries}
         payments={payments}
         settlements={settlements}
+        canReadLedger={canReadLedger}
+        canReadPayments={canReadPayments}
+        canApprovePayouts={canApprovePayouts}
+        initialTab={activeTab}
+        paymentsTotalCount={paymentsTotal}
+        settlementsTotalCount={settlementsTotal}
+        journalTotalCount={journalTotal}
       />
+
+      {activeTab !== "accounts" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-body-sm">
+          <span className="text-on-surface-variant">
+            Page {page} of {totalPages} ({activeTotal} matching records)
+          </span>
+          <div className="flex gap-2">
+            {page > 1 ? (
+              <Link href={buildPageHref(page - 1)} className="rounded-lg border border-outline-variant/50 px-3 py-1 text-label-sm font-medium">
+                Previous
+              </Link>
+            ) : null}
+            {page < totalPages ? (
+              <Link href={buildPageHref(page + 1)} className="rounded-lg border border-outline-variant/50 px-3 py-1 text-label-sm font-medium">
+                Next
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

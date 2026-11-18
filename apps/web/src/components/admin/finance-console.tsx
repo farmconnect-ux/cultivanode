@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { processSettlementAction } from "@/actions/admin-finance";
 import { AdminForm } from "@/components/admin/admin-form";
 import { EmptyState } from "@/components/ds/empty-state";
@@ -67,6 +68,10 @@ export function FinanceConsole({
   journalEntries,
   payments,
   settlements,
+  initialTab,
+  paymentsTotalCount,
+  settlementsTotalCount,
+  journalTotalCount,
 }: {
   canApprovePayouts: boolean;
   canReadLedger: boolean;
@@ -75,11 +80,24 @@ export function FinanceConsole({
   journalEntries: JournalEntryRow[];
   payments: PaymentRow[];
   settlements: SettlementRow[];
+  initialTab?: string;
+  paymentsTotalCount?: number;
+  settlementsTotalCount?: number;
+  journalTotalCount?: number;
 }) {
-  const [tab, setTab] = useState<"payments" | "settlements" | "ledger" | "accounts">(
-    canReadPayments ? "payments" : "ledger",
-  );
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const resolvedDefault = (initialTab as "payments" | "settlements" | "ledger" | "accounts" | undefined) ?? (canReadPayments ? "payments" : "ledger");
+  const [tab, setTab] = useState<"payments" | "settlements" | "ledger" | "accounts">(resolvedDefault);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+
+  const switchTab = (next: "payments" | "settlements" | "ledger" | "accounts") => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    params.set("page", "1");
+    router.replace(`/admin/finance?${params.toString()}`);
+  };
 
   return (
     <div className="space-y-4">
@@ -88,21 +106,21 @@ export function FinanceConsole({
           <>
             <button
               type="button"
-              onClick={() => setTab("payments")}
+              onClick={() => switchTab("payments")}
               className={`rounded-lg px-3 py-1.5 text-label-md font-medium ${
                 tab === "payments" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"
               }`}
             >
-              Payments ({payments.length})
+              Payments ({paymentsTotalCount ?? payments.length})
             </button>
             <button
               type="button"
-              onClick={() => setTab("settlements")}
+              onClick={() => switchTab("settlements")}
               className={`rounded-lg px-3 py-1.5 text-label-md font-medium ${
                 tab === "settlements" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"
               }`}
             >
-              Seller Settlements ({settlements.length})
+              Seller Settlements ({settlementsTotalCount ?? settlements.length})
             </button>
           </>
         )}
@@ -110,16 +128,16 @@ export function FinanceConsole({
           <>
             <button
               type="button"
-              onClick={() => setTab("ledger")}
+              onClick={() => switchTab("ledger")}
               className={`rounded-lg px-3 py-1.5 text-label-md font-medium ${
                 tab === "ledger" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"
               }`}
             >
-              Journal Entries ({journalEntries.length})
+              Journal Entries ({journalTotalCount ?? journalEntries.length})
             </button>
             <button
               type="button"
-              onClick={() => setTab("accounts")}
+              onClick={() => switchTab("accounts")}
               className={`rounded-lg px-3 py-1.5 text-label-md font-medium ${
                 tab === "accounts" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"
               }`}

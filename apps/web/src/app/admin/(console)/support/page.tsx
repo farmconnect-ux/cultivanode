@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   SupportConsole,
   type StaffOption,
-  type SupportMessageItem,
   type SupportTicketItem,
 } from "@/components/admin/support-console";
 import { PageHeader } from "@/components/ds/page-header";
@@ -13,10 +13,27 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Support & SLA Desk" };
 
+const PAGE_SIZE = 25;
+
+type SupportSummaryRpc = {
+  total_count: number;
+  active_count: number;
+  urgent_open_count: number;
+  resolved_count: number;
+  sla_overdue_count: number;
+};
+
+type SupportPageRpc = {
+  total_count: number;
+  limit: number;
+  offset: number;
+  items: SupportTicketItem[];
+};
+
 export default async function AdminSupportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; priority?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; page?: string }>;
 }) {
   const staff = await requireStaff();
   if (!staff) return null;
@@ -29,107 +46,66 @@ export default async function AdminSupportPage({
   }
 
   const sp = await searchParams;
-  const q = (sp.q ?? "").trim().toLowerCase();
+  const q = (sp.q ?? "").trim();
   const statusFilter = (sp.status ?? "").trim();
   const priorityFilter = (sp.priority ?? "").trim();
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
 
   const supabase = await createClient();
-  const [ticketsRes, staffRolesRes] = await Promise.all([
-    supabase
-      .from("support_tickets")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100),
+  const rpc = supabase.rpc as unknown as <T>(
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{ data: T | null; error: { message: string } | null }>;
+
+  const [summaryRes, pageRes, staffRolesRes] = await Promise.all([
+    rpc<SupportSummaryRpc>("admin_support_summary"),
+    rpc<SupportPageRpc>("admin_support_tickets_page", {
+      p_q: q || null,
+      p_status: statusFilter || null,
+      p_priority: priorityFilter || null,
+      p_limit: PAGE_SIZE,
+      p_offset: offset,
+    }),
     supabase.from("admin_roles").select("profile_id"),
   ]);
 
-  if (ticketsRes.error) {
-    return <Alert tone="danger">Could not load support tickets: {ticketsRes.error.message}</Alert>;
+  if (summaryRes.error) {
+    return <Alert tone="danger">Could not load support summary: {summaryRes.error.message}</Alert>;
+  }
+  if (pageRes.error) {
+    return <Alert tone="danger">Could not load support tickets: {pageRes.error.message}</Alert>;
   }
 
-  const rawTickets = ticketsRes.data ?? [];
-  const ticketIds = rawTickets.map((t) => t.id);
+  const summary = summaryRes.data ?? {
+    total_count: 0,
+    active_count: 0,
+    urgent_open_count: 0,
+    resolved_count: 0,
+    sla_overdue_count: 0,
+  };
+  const tickets = pageRes.data?.items ?? [];
+  const filteredTotal = Number(pageRes.data?.total_count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
-  const messagesRes = ticketIds.length
-    ? await supabase
-        .from("support_ticket_messages")
-        .select("*")
-        .in("ticket_id", ticketIds)
-        .order("created_at", { ascending: true })
-    : { data: [], error: null };
-
-  if (messagesRes.error) {
-    return <Alert tone="danger">Could not load ticket messages: {messagesRes.error.message}</Alert>;
-  }
-
-  const profileIds = new Set<string>();
-  for (const t of rawTickets) {
-    profileIds.add(t.requester_id);
-    if (t.assigned_to) profileIds.add(t.assigned_to);
-  }
-  for (const m of messagesRes.data ?? []) profileIds.add(m.author_id);
-  for (const r of staffRolesRes.data ?? []) profileIds.add(r.profile_id);
-
-  const profilesRes = profileIds.size
-    ? await supabase.from("profiles").select("id, full_name, phone").in("id", [...profileIds])
+  const staffIds = [...new Set((staffRolesRes.data ?? []).map((r) => r.profile_id))];
+  const staffProfilesRes = staffIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", staffIds)
     : { data: [] };
-
-  const profileMap = new Map(
-    (profilesRes.data ?? []).map((p) => [p.id, { name: p.full_name || "CultivaNode User", phone: p.phone }]),
-  );
-
-  const staffOptions: StaffOption[] = [...new Set((staffRolesRes.data ?? []).map((r) => r.profile_id))].map((id) => ({
+  const staffNameMap = new Map((staffProfilesRes.data ?? []).map((p) => [p.id, p.full_name || p.id.slice(0, 8)]));
+  const staffOptions: StaffOption[] = staffIds.map((id) => ({
     id,
-    name: profileMap.get(id)?.name ?? id.slice(0, 8),
+    name: staffNameMap.get(id) ?? id.slice(0, 8),
   }));
 
-  const messagesByTicket = new Map<string, SupportMessageItem[]>();
-  for (const m of messagesRes.data ?? []) {
-    const list = messagesByTicket.get(m.ticket_id) ?? [];
-    list.push({
-      id: m.id,
-      ticket_id: m.ticket_id,
-      author_id: m.author_id,
-      author_name: profileMap.get(m.author_id)?.name ?? "User",
-      body: m.body,
-      is_internal: m.is_internal,
-      created_at: m.created_at,
-    });
-    messagesByTicket.set(m.ticket_id, list);
-  }
-
-  const tickets: SupportTicketItem[] = rawTickets
-    .map((t) => {
-      const req = profileMap.get(t.requester_id);
-      return {
-        id: t.id,
-        ticket_number: t.ticket_number,
-        requester_id: t.requester_id,
-        requester_name: req?.name ?? "User",
-        requester_phone: req?.phone ?? null,
-        subject: t.subject,
-        category: t.category,
-        priority: t.priority,
-        status: t.status,
-        channel: t.channel,
-        assigned_to: t.assigned_to,
-        sla_due_at: t.sla_due_at,
-        resolved_at: t.resolved_at,
-        created_at: t.created_at,
-        updated_at: t.updated_at,
-        messages: messagesByTicket.get(t.id) ?? [],
-      };
-    })
-    .filter((t) => {
-      if (statusFilter && t.status !== statusFilter) return false;
-      if (priorityFilter && t.priority !== priorityFilter) return false;
-      if (q && !`${t.ticket_number} ${t.subject} ${t.requester_name}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-
-  const openCount = rawTickets.filter((t) => t.status === "open" || t.status === "pending" || t.status === "in_progress").length;
-  const urgentCount = rawTickets.filter((t) => (t.priority === "urgent" || t.priority === "high") && t.status !== "resolved" && t.status !== "closed").length;
-  const resolvedCount = rawTickets.filter((t) => t.status === "resolved" || t.status === "closed").length;
+  const buildPageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    params.set("page", String(nextPage));
+    return `/admin/support?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -138,16 +114,17 @@ export default async function AdminSupportPage({
         description="Triage user support tickets, assign staff, post public replies, and record internal notes."
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricCard icon="support_agent" label="Active Cases" value={String(openCount)} />
-        <MetricCard icon="warning" label="High / Urgent Open" value={String(urgentCount)} />
-        <MetricCard icon="verified" label="Resolved / Closed" value={String(resolvedCount)} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard icon="support_agent" label="Active Cases" value={String(summary.active_count)} />
+        <MetricCard icon="warning" label="High / Urgent Open" value={String(summary.urgent_open_count)} />
+        <MetricCard icon="schedule" label="SLA Overdue" value={String(summary.sla_overdue_count)} />
+        <MetricCard icon="verified" label="Resolved / Closed" value={String(summary.resolved_count)} />
       </div>
 
       <form method="get" className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3 sm:grid-cols-4">
         <input
           name="q"
-          defaultValue={sp.q ?? ""}
+          defaultValue={q}
           placeholder="Search ticket #, subject, user…"
           className="rounded-lg border border-outline-variant/50 px-3 py-1.5 text-body-sm sm:col-span-2"
         />
@@ -174,6 +151,24 @@ export default async function AdminSupportPage({
       </form>
 
       <SupportConsole tickets={tickets} staffOptions={staffOptions} />
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2.5 text-body-sm">
+        <span className="text-on-surface-variant">
+          Showing {tickets.length} of {filteredTotal} matching tickets (Page {page} of {totalPages})
+        </span>
+        <div className="flex gap-2">
+          {page > 1 ? (
+            <Link href={buildPageHref(page - 1)} className="rounded-lg border border-outline-variant/50 px-3 py-1 text-label-sm font-medium">
+              Previous
+            </Link>
+          ) : null}
+          {page < totalPages ? (
+            <Link href={buildPageHref(page + 1)} className="rounded-lg border border-outline-variant/50 px-3 py-1 text-label-sm font-medium">
+              Next
+            </Link>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

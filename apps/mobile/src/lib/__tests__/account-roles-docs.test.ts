@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cancelRoleRequest,
   getVerificationDocumentSignedUrl,
+  loadRoleRequests,
   requestRole,
   uploadVerificationDocument,
   validateVerificationFile,
 } from '../account';
 import { supabase } from '../supabase';
 
+const mockGetUser = vi.fn();
 const mockRoleInsert = vi.fn();
+const mockRoleOrder = vi.fn();
+const mockRoleSelect = vi.fn(() => ({ order: mockRoleOrder }));
 const mockDocSingle = vi.fn();
 const mockDocSelect = vi.fn(() => ({ single: mockDocSingle }));
 const mockDocInsert = vi.fn(() => ({ select: mockDocSelect }));
@@ -26,9 +30,12 @@ vi.mock('expo-crypto', () => ({
 
 vi.mock('../supabase', () => ({
   supabase: {
+    auth: {
+      getUser: () => mockGetUser(),
+    },
     rpc: vi.fn(),
     from: vi.fn((table: string) => {
-      if (table === 'role_requests') return { insert: mockRoleInsert };
+      if (table === 'role_requests') return { insert: mockRoleInsert, select: mockRoleSelect };
       if (table === 'verification_documents') return { insert: mockDocInsert };
       return {};
     }),
@@ -43,11 +50,13 @@ vi.mock('../supabase', () => ({
 }));
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const OTHER_USER_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const REQ_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 describe('mobile role requests and verification document uploads', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } });
   });
 
   it('requires providerType for service_provider and maps duplicate/held errors', async () => {
@@ -76,7 +85,20 @@ describe('mobile role requests and verification document uploads', () => {
     });
   });
 
-  it('calls cancel_role_request RPC', async () => {
+  it('loads role requests with pending/approved/rejected statuses and calls cancel_role_request RPC', async () => {
+    mockRoleOrder.mockResolvedValueOnce({
+      data: [
+        { id: REQ_ID, role: 'machinery_owner', provider_type: null, status: 'approved', review_note: 'Verified', created_at: '2026-11-18T00:00:00Z', reviewed_at: '2026-11-18T01:00:00Z' },
+        { id: 'req-2', role: 'logistics_provider', provider_type: null, status: 'rejected', review_note: 'Blurry ID', created_at: '2026-11-18T00:00:00Z', reviewed_at: '2026-11-18T01:00:00Z' },
+      ],
+      error: null,
+    });
+    const listRes = await loadRoleRequests();
+    expect(listRes.ok).toBe(true);
+    if (listRes.ok) {
+      expect(listRes.requests.map((r) => r.status)).toEqual(['approved', 'rejected']);
+    }
+
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ error: null } as never);
     expect(await cancelRoleRequest(REQ_ID)).toEqual({ ok: true });
     expect(supabase.rpc).toHaveBeenCalledWith('cancel_role_request', { p_request_id: REQ_ID });
@@ -84,13 +106,51 @@ describe('mobile role requests and verification document uploads', () => {
 
   it('validates allowed MIME types and 5 MB size limit', () => {
     expect(validateVerificationFile({ mimeType: 'image/jpeg', sizeBytes: 1024 })).toEqual({ valid: true, ext: 'jpg' });
+    expect(validateVerificationFile({ mimeType: 'image/webp', sizeBytes: 1024 })).toEqual({ valid: true, ext: 'webp' });
     expect(validateVerificationFile({ mimeType: 'application/pdf', sizeBytes: 5_242_880 })).toEqual({ valid: true, ext: 'pdf' });
     expect(validateVerificationFile({ mimeType: 'text/plain', sizeBytes: 100 }).valid).toBe(false);
     expect(validateVerificationFile({ mimeType: 'image/png', sizeBytes: 0 }).valid).toBe(false);
     expect(validateVerificationFile({ mimeType: 'image/png', sizeBytes: 5_242_881 }).valid).toBe(false);
   });
 
-  it('uploads valid document to private bucket and cleans up storage if DB insert fails', async () => {
+  it('rejects unauthenticated, mismatched-owner, and empty-byte uploads before touching storage', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
+    const unauth = await uploadVerificationDocument({
+      userId: USER_ID,
+      roleRequestId: REQ_ID,
+      documentType: 'national_id',
+      uri: 'file://id.pdf',
+      mimeType: 'application/pdf',
+    });
+    expect(unauth).toEqual({ ok: false, error: 'Authenticated session does not match document owner.' });
+    expect(mockUpload).not.toHaveBeenCalled();
+
+    const wrongOwner = await uploadVerificationDocument({
+      userId: OTHER_USER_ID,
+      roleRequestId: REQ_ID,
+      documentType: 'national_id',
+      uri: 'file://id.pdf',
+      mimeType: 'application/pdf',
+    });
+    expect(wrongOwner).toEqual({ ok: false, error: 'Authenticated session does not match document owner.' });
+    expect(mockUpload).not.toHaveBeenCalled();
+
+    // Even if client-supplied sizeBytes is spoofed as 1024, actual 0-byte payload must be rejected
+    vi.stubGlobal('fetch', vi.fn(async () => ({ arrayBuffer: async () => new Uint8Array(0).buffer })));
+    const emptyRes = await uploadVerificationDocument({
+      userId: USER_ID,
+      roleRequestId: REQ_ID,
+      documentType: 'national_id',
+      uri: 'file://empty.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 1024,
+    });
+    expect(emptyRes).toEqual({ ok: false, error: 'Selected file is empty.' });
+    expect(mockUpload).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('uploads PDF and image documents to private bucket and cleans up storage if DB insert fails', async () => {
     const fakeBytes = new Uint8Array([1, 2, 3, 4]).buffer;
     vi.stubGlobal('fetch', vi.fn(async () => ({ arrayBuffer: async () => fakeBytes })));
 
@@ -110,11 +170,11 @@ describe('mobile role requests and verification document uploads', () => {
     mockUpload.mockResolvedValueOnce({ error: null });
     mockDocSingle.mockResolvedValueOnce({
       data: {
-        id: 'doc-1',
+        id: 'doc-pdf-1',
         role_request_id: REQ_ID,
-        document_type: 'national_id',
-        storage_path: `${USER_ID}/00000000-0000-4000-8000-000000000099.jpg`,
-        mime_type: 'image/jpeg',
+        document_type: 'cac_certificate',
+        storage_path: `${USER_ID}/00000000-0000-4000-8000-000000000099.pdf`,
+        mime_type: 'application/pdf',
         size_bytes: 4,
         status: 'pending',
         review_note: null,
@@ -123,21 +183,30 @@ describe('mobile role requests and verification document uploads', () => {
       error: null,
     });
 
-    const okRes = await uploadVerificationDocument({
+    const pdfOk = await uploadVerificationDocument({
       userId: USER_ID,
       roleRequestId: REQ_ID,
-      documentType: 'national_id',
-      uri: 'file://id.jpg',
-      mimeType: 'image/jpeg',
+      documentType: 'cac_certificate',
+      uri: 'file://cac.pdf',
+      mimeType: 'application/pdf',
     });
-    expect(okRes.ok).toBe(true);
+    expect(pdfOk.ok).toBe(true);
+    expect(mockUpload).toHaveBeenLastCalledWith(
+      `${USER_ID}/00000000-0000-4000-8000-000000000099.pdf`,
+      fakeBytes,
+      { contentType: 'application/pdf', upsert: false },
+    );
     vi.unstubAllGlobals();
   });
 
-  it('generates short-lived signed URLs for private documents', async () => {
+  it('generates short-lived signed URLs for private documents and handles unauthorized failure', async () => {
     mockCreateSignedUrl.mockResolvedValueOnce({ data: { signedUrl: 'https://signed.example/doc' }, error: null });
-    const res = await getVerificationDocumentSignedUrl(`${USER_ID}/doc.jpg`);
+    const res = await getVerificationDocumentSignedUrl(`${USER_ID}/doc.pdf`);
     expect(res).toEqual({ ok: true, url: 'https://signed.example/doc' });
-    expect(mockCreateSignedUrl).toHaveBeenCalledWith(`${USER_ID}/doc.jpg`, 600);
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith(`${USER_ID}/doc.pdf`, 600);
+
+    mockCreateSignedUrl.mockResolvedValueOnce({ data: null, error: { message: 'Object not found or unauthorized' } });
+    const denied = await getVerificationDocumentSignedUrl(`${OTHER_USER_ID}/secret.pdf`);
+    expect(denied).toEqual({ ok: false, error: 'Object not found or unauthorized' });
   });
 });

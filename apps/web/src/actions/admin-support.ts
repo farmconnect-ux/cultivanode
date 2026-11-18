@@ -17,6 +17,11 @@ export const ALLOWED_TICKET_TRANSITIONS: Record<string, readonly string[]> = {
   closed: ["open", "in_progress", "closed"],
 };
 
+type RpcFn = (
+  fn: string,
+  args: Record<string, unknown>,
+) => Promise<{ error: { message?: string } | null }>;
+
 export async function updateSupportTicketAction(
   _: AdminResult | null,
   form: FormData,
@@ -44,44 +49,16 @@ export async function updateSupportTicketAction(
   }
 
   const supabase = await createClient();
-  const { data: existing, error: fetchErr } = await supabase
-    .from("support_tickets")
-    .select("id, status")
-    .eq("id", ticketId)
-    .maybeSingle();
-
-  if (fetchErr || !existing) {
-    return { ok: false, message: fetchErr?.message || "Ticket not found.", at: Date.now() };
-  }
-
-  const allowed = ALLOWED_TICKET_TRANSITIONS[existing.status] ?? VALID_STATUSES;
-  if (!allowed.includes(status)) {
-    return { ok: false, message: `Cannot move ticket from ${existing.status} to ${status}.`, at: Date.now() };
-  }
-
-  const resolvedAt = status === "resolved" || status === "closed" ? new Date().toISOString() : null;
-  const { error: updErr } = await supabase
-    .from("support_tickets")
-    .update({
-      status,
-      priority,
-      assigned_to: assignedTo,
-      resolved_at: resolvedAt,
-    })
-    .eq("id", ticketId);
-
-  if (updErr) {
-    return { ok: false, message: updErr.message || "Could not update ticket.", at: Date.now() };
-  }
-
-  await supabase.from("admin_actions").insert({
-    actor_id: staff.userId,
-    permission: "website_inbox.manage",
-    action: `support_ticket_${status}`,
-    entity: "support_tickets",
-    entity_id: ticketId,
-    reason: `status=${status}, priority=${priority}`,
+  const { error } = await (supabase.rpc as unknown as RpcFn)("admin_update_support_ticket", {
+    p_ticket_id: ticketId,
+    p_status: status,
+    p_priority: priority,
+    p_assigned_to: assignedTo,
   });
+
+  if (error) {
+    return { ok: false, message: error.message || "Could not update ticket.", at: Date.now() };
+  }
 
   revalidatePath("/admin/support");
   return { ok: true, message: "Ticket updated.", at: Date.now() };
@@ -104,11 +81,10 @@ export async function postSupportMessageAction(
   if (!body) return { ok: false, message: "Enter a message before sending.", at: Date.now() };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("support_ticket_messages").insert({
-    ticket_id: ticketId,
-    author_id: staff.userId,
-    body,
-    is_internal: isInternal,
+  const { error } = await (supabase.rpc as unknown as RpcFn)("admin_post_support_message", {
+    p_ticket_id: ticketId,
+    p_body: body,
+    p_is_internal: isInternal,
   });
 
   if (error) {

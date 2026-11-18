@@ -190,6 +190,12 @@ export async function uploadVerificationDocument(input: {
     return { ok: false, error: 'Please sign in before uploading a document.' };
   }
 
+  const { data: authData } = await supabase.auth.getUser();
+  const verifiedUserId = authData?.user?.id;
+  if (!verifiedUserId || verifiedUserId !== input.userId) {
+    return { ok: false, error: 'Authenticated session does not match document owner.' };
+  }
+
   let bytes: ArrayBuffer;
   try {
     const res = await fetch(input.uri);
@@ -198,13 +204,13 @@ export async function uploadVerificationDocument(input: {
     return { ok: false, error: 'Could not read the selected file from this device.' };
   }
 
-  const actualSize = bytes.byteLength || input.sizeBytes || 0;
+  const actualSize = bytes.byteLength;
   const check = validateVerificationFile({ mimeType: input.mimeType, sizeBytes: actualSize });
   if (!check.valid) {
     return { ok: false, error: check.error };
   }
 
-  const storagePath = `${input.userId}/${Crypto.randomUUID()}.${check.ext}`;
+  const storagePath = `${verifiedUserId}/${Crypto.randomUUID()}.${check.ext}`;
   const bucket = supabase.storage.from('verification-documents');
 
   const { error: uploadErr } = await bucket.upload(storagePath, bytes, {
