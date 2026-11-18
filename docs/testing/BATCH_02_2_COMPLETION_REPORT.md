@@ -1,59 +1,95 @@
-# Batch 02.2 Completion Report — Complete, Integrate and Verify Existing Platform Functionality
+# Batch 02.2 Completion Report — Complete, Integrate, Verify & Independent Review Corrections
 
 **Branch:** `stabilization/batch-02-2-complete-integrations`  
-**Base Commit (`main`):** `529773d` (*Batch 02.1: Stabilise mobile provider dispatch workflows*)  
+**Base Commit (`main`):** `529773da0acc6b8c30a869bc96f2961aff1fa3d9`  
+**Pull Request:** [PR #8](https://github.com/farmconnect-ux/cultivanode/pull/8) (*Batch 02.2: Complete Admin, API and Mobile Platform Integrations*)  
 **Date:** 2026-11-18
 
 ---
 
-## 1. Workstream Summaries
+## 1. Original Batch 02.2 Requirements & Classification Summary
 
-### Workstream A — Admin Finance Dashboard
-- **Original Issue:** `apps/web/src/app/admin/(console)/finance/page.tsx` rendered static sample `PlatformFinance` (`INITIAL_LEDGER`) with no `requireStaff()`, no permission checks, and no DB queries. No settlement approval RPC existed.
-- **Changes Made:**
-  - Added `public.admin_process_marketplace_settlement(uuid, text, text)` in [20261118000000_admin_settlement_rpc.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118000000_admin_settlement_rpc.sql) (`SECURITY DEFINER SET search_path = ''`, gated by `payouts.approve`, validates transitions, posts balanced `'payout'` double-entry ledger entries, writes `admin_actions`).
-  - Added `processSettlementAction` in [admin-finance.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/actions/admin-finance.ts), live [FinanceConsole](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/components/admin/finance-console.tsx), and live [admin/(console)/finance/page.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/admin/(console)/finance/page.tsx) querying `marketplace_ledger_accounts`, `marketplace_journal_entries`, `marketplace_journal_postings`, `marketplace_payments`, `marketplace_escrows`, and `marketplace_settlements` with search/status/provider/date filters.
-  - Added `perm: ["ledger.read", "payments.read", "payouts.approve"]` in [nav-config.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/components/ds/nav-config.ts).
-
-### Workstream B — Admin Support Dashboard & User Ticket Thread
-- **Original Issue:** `apps/web/src/app/admin/(console)/support/page.tsx` rendered static `SupportDesk` (`TICKETS` array) with no DB integration; users had no reply/thread UI on `/account/settings` and `createSupportTicket` revalidated `/settings` instead of `/${lang}/account/settings`.
-- **Changes Made:**
-  - Added [admin-support.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/actions/admin-support.ts) (`updateSupportTicketAction` with `ALLOWED_TICKET_TRANSITIONS`, `postSupportMessageAction` for public replies and `is_internal = true` staff notes), gated by `website_inbox.manage`.
-  - Replaced `SupportDesk` on [admin/(console)/support/page.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/admin/(console)/support/page.tsx) with live [SupportConsole](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/components/admin/support-console.tsx).
-  - Added `replyToSupportTicket` in [ecosystem.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/actions/ecosystem.ts) and thread/reply UI in [account/settings/page.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/[lang]/account/settings/page.tsx) (RLS hides `is_internal = true` notes from requesters).
-  - Added `perm: ["website_inbox.manage"]` in [nav-config.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/components/ds/nav-config.ts).
-
-### Workstream C — API Routes & Security Defects
-- **[engines-api-helper.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/lib/engines-api-helper.ts):** Removed critical fallback to `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and hardcoded `'cultivanode-stateless-engine-secret-key-2026'`; fails closed (`503`) when `ENGINE_JWT_SECRET` is unset. Added `parseJsonBody()` Zod helper.
-- **[/api/ai/health](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/api/ai/health/route.ts):** Returns `401` JSON when unauthenticated and `403` JSON when non-staff (instead of `307` redirect).
-- **[/api/ai/assistant](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/api/ai/assistant/route.ts) & [ai-assistant.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/actions/ai-assistant.ts):** Bound `farmerId` to the authenticated user, added Zod validation, and returned `400` on malformed JSON.
-- **[/api/engines/ledger/transact](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/api/engines/ledger/transact/route.ts):** Replaced ephemeral in-memory `new CryptographicLedger()` with `record_marketplace_journal_entry` RPC persistence (via `createServiceClient()`, `503` if unconfigured).
-- **[/api/engines/agronomy/* & /api/engines/ai/*](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/api/engines/agronomy/schedule/route.ts):** Added Zod validation on all `POST` endpoints; replaced hardcoded 5-row CSV in `GET /api/engines/agronomy/schedule` with dynamic CSV from `CROP_CATALOGUE`.
-- **[/api/documents/[type]](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/api/documents/[type]/route.ts):** Unknown `type` returns `404` instead of falling back to `whitepaper`.
-
-### Workstream D & E — Mobile Role Requests & Document Uploads
-- **[apps/mobile/src/lib/account.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/lib/account.ts):** Added `loadRoleRequests()`, `loadVerificationDocuments()`, `requestRole()` (`23505`/`P0001` error mapping), `cancelRoleRequest()`, `validateVerificationFile()`, `uploadVerificationDocument()` (private `verification-documents` bucket `${userId}/${uuid}.${ext}` + orphan cleanup on DB failure), and `getVerificationDocumentSignedUrl()` (600s signed URLs).
-- **[RolesScreen.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/screens/RolesScreen.tsx), [me/roles.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/app/me/roles.tsx), [MeScreen.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/screens/MeScreen.tsx), [(tabs)/me.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/app/(tabs)/me.tsx):** Added native Roles & Documents screen supporting role requests, request history/review notes, cancel pending, and camera/gallery verification document upload + signed URL viewing.
-
-### Workstream F — Branch Reconciliation
-- Inspected `origin/fix/farmer-live-records` (`4dd26ac`, superseded Oct 9 `farmer-community` refactor), `origin/vercel/install-vercel-web-analytics-bhrs3k` (`b01aebe`, unrelated feature), and `origin/security/batch-02-payment-reliability` (`f982c1a`, withdrawn scope). None merged into Batch 02.2.
+| Workstream | Requirement | Classification | Notes |
+| --- | --- | --- | --- |
+| **A. Admin Finance** | Live DB-backed `/admin/finance`, settlement approval RPC, authoritative totals & pagination | **Complete** | Verified by pgTAP (`20`, `21`), live concurrency tests, Vitest, and Next.js build |
+| **B. Admin Support** | Live DB-backed `/admin/support`, atomic ticket updates/audit, pagination, user reply thread | **Complete** | Verified by pgTAP (`20`, `21`), live concurrency tests, Vitest, and Next.js build |
+| **C. Web API & Actions** | Fail-closed `ENGINE_JWT_SECRET`, JSON `401`/`403`, `farmerId` binding, Zod validation, persistent ledger | **Complete** | Verified by `apps/web/src/__tests__/batch-02-2.test.ts` (8/8 tests) |
+| **D. Mobile Role Requests** | Native role request form, history, cancel pending, staff approve/reject lifecycle | **Complete (logic/DB); Partially complete (device QA)** | Verified by DB pgTAP & mobile Vitest; physical device QA pending |
+| **E. Mobile Verification Docs** | Native image + PDF upload, 5 MB/MIME validation, private Storage bucket, orphan cleanup, signed URLs | **Complete (logic/DB); Partially complete (device QA)** | `expo-document-picker` (`~57.0.3`) + `expo-image-picker` integrated; physical iOS/Android device QA pending |
+| **F. Branch Reconciliation** | Inspect `4dd26ac`, `b01aebe`, `f982c1a` without auto-merging | **Complete** | Documented below; none merged |
 
 ---
 
-## 2. Automated Tests Added
-- **pgTAP ([20_batch_02_2_security.test.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/tests/database/20_batch_02_2_security.test.sql), `plan(12)`):** Settlement permission/transition/ledger posting (`1`–`4`), support internal-note isolation (`5`–`7`), duplicate role request / non-self-approval / document path & size checks (`8`–`12`).
-- **Web Vitest ([batch-02-2.test.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/__tests__/batch-02-2.test.ts), `apps/web/vitest.config.mts`):** API auth fail-closed, `/api/ai/health` `401`/`403`, `/api/ai/assistant` `400`/`401`, `/api/engines/agronomy/schedule` CSV, `/api/documents/[type]` `404`, `processSettlementAction`, and `updateSupportTicketAction`/`postSupportMessageAction`.
-- **Mobile Vitest ([account-roles-docs.test.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/lib/__tests__/account-roles-docs.test.ts)):** Role request validation/errors, `cancel_role_request`, 5 MB / MIME validation, storage cleanup on DB failure, and 600s signed URLs.
+## 2. Independent Review Corrections Implemented
+
+### Correction A — Financial Ledger Integrity & Concurrency Protection
+- **Migration:** [20261118010000_batch_02_2_financial_and_support_hardening.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118010000_batch_02_2_financial_and_support_hardening.sql)
+- `public.record_marketplace_journal_entry` acquires `pg_advisory_xact_lock(hashtext('marketplace_journal_chain'))` before reading the latest `current_hash` and `created_at`.
+- Uses strictly monotonic `clock_timestamp()` (bumping by `1 microsecond` if `clock_timestamp() <= v_last_created_at`) so `created_at` matches lock/commit order even when concurrent transactions start at different `now()` timestamps.
+- Validates non-empty `p_reference_id`, `p_reference_type`, `p_description`, JSON array `p_postings` (`>= 2` lines), active `marketplace_ledger_accounts` existence, `DEBIT`/`CREDIT` direction, integer positive `amount_kobo`, and `SUM(DEBIT) = SUM(CREDIT) > 0`.
+- Added partial unique index `mkt_journal_one_payout_idx` on `public.marketplace_journal_entries (reference_id) where (reference_type = 'payout')`.
+
+### Correction B — Settlement Processing & Financial Controls
+- `public.admin_process_marketplace_settlement(uuid, text, text)` (`SECURITY DEFINER SET search_path = ''`, `payouts.approve` gated at DB boundary):
+  - Locks `marketplace_settlements` (`FOR UPDATE`), enforces valid transitions (`pending -> processing|completed|failed`, `processing -> completed|failed`), and blocks re-processing `'completed'`/`'failed'` rows.
+  - Verifies `gross_amount_kobo = commission_kobo + net_payout_kobo`.
+  - Locks linked `marketplace_escrows` row (`FOR UPDATE`) and verifies `seller_id`, `status = 'released'`, `amount_kobo`, `commission_kobo`, and `seller_net_kobo` reconciliation before updating or posting `'payout'` ledger entries.
+  - Inserts `admin_actions` audit record in the same transaction.
+
+### Correction C — Complete & Accurate Finance Dashboard
+- Added authoritative DB-side RPCs in [20261118010000_batch_02_2_financial_and_support_hardening.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118010000_batch_02_2_financial_and_support_hardening.sql):
+  - `admin_finance_summary()` (computes full ledger account debits/credits/balances, commission, payment totals by status & provider, escrow totals, and settlement totals in integer kobo; withholds ledger accounts when caller lacks `ledger.read`).
+  - `admin_finance_journal_entries()`, `admin_finance_payments()`, and `admin_finance_settlements()` (server-side search, status/provider/date filtering BEFORE `LIMIT`/`OFFSET`, `pageSize = 25`).
+- Updated [admin/(console)/finance/page.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/admin/(console)/finance/page.tsx) and [finance-console.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/components/admin/finance-console.tsx).
+
+### Correction D — Support Ticket Atomicity, Auditing & Pagination
+- Added atomic RPCs `admin_update_support_ticket(uuid, text, text, uuid)`, `admin_post_support_message(uuid, text, boolean)`, `admin_support_summary()`, and `admin_support_tickets_page(text, text, text, int, int)`.
+- Ticket updates and message posts insert into `admin_actions` inside the same DB transaction (`FOR UPDATE` row lock + transition check).
+- Updated [admin-support.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/actions/admin-support.ts) and [admin/(console)/support/page.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/app/admin/(console)/support/page.tsx) (`pageSize = 25`, SLA overdue metric).
+
+### Correction E — Mobile Verification Document Uploads & Storage Policy
+- Added `expo-document-picker` (`~57.0.3`) to [apps/mobile/package.json](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/package.json) and wired `"Choose PDF / file"` alongside camera & gallery in [RolesScreen.tsx](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/screens/RolesScreen.tsx).
+- Hardened `uploadVerificationDocument()` in [apps/mobile/src/lib/account.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/mobile/src/lib/account.ts) to verify `supabase.auth.getUser()` ownership and validate actual `bytes.byteLength` (rejecting spoofed empty files).
+- Added Storage `DELETE` policy `"verification documents: owner deletes own"` on `storage.objects` in [20261118010000_batch_02_2_financial_and_support_hardening.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118010000_batch_02_2_financial_and_support_hardening.sql) so orphan cleanup succeeds for the owner without allowing cross-user deletion.
+
+### Correction F & G — Role Request Lifecycle & API Route Hardening
+- Verified full role request lifecycle in DB pgTAP (`cancel_role_request`, `review_verification_document`, `approve_role_request` -> `user_roles`, `reject_role_request` with reason, unauthorized `42501` checks) and mobile Vitest.
+- Verified all 11 API routes/actions in [batch-02-2.test.ts](file:///d:/New%20BAckup/Cultivanode/cultivanode/apps/web/src/__tests__/batch-02-2.test.ts).
 
 ---
 
-## 3. Verification & Limitations
-- **CI Execution (PR [#8](https://github.com/farmconnect-ux/cultivanode/pull/8), GitHub Actions Run `44205478491` on commit `e2d488a`):**
-  - **Database migrations and RLS tests** (Job `134470178866`): **PASS** (`Files=20, Tests=709`, `Result: PASS`, including all 12 assertions in `20_batch_02_2_security.test.sql`).
-  - **Typecheck, lint and unit tests** (Job `134470179278`): **PASS**:
-    - `npm run typecheck`: `4 successful, 4 total` (`@cultivanode/iot-module`, `@cultivanode/shared`, `@cultivanode/mobile`, `@cultivanode/web`).
-    - `npm run lint`: `1 successful, 1 total`.
-    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed, `@cultivanode/web` 1 file / 7 tests passed, `@cultivanode/mobile` 6 files passed including `account-roles-docs.test.ts` 5 tests, `@cultivanode/shared` 32 files passed).
-    - `npm run build`: **PASS**.
-- **Physical Device / PDF Picker Limitation:** Mobile document upload uses `expo-image-picker` (camera/gallery JPEG/PNG/WebP); `expo-document-picker` for native PDF selection was not added to avoid native binary/Expo prebuild changes in this batch. Physical Android/iOS device QA remains pending.
-- **Production Safety:** Production Supabase (`vqbtnftnxyfaembwgfrk`) and Production Vercel remain untouched.
+## 3. Database Migrations & Security/Storage Changes
+
+- [supabase/migrations/20261118000000_admin_settlement_rpc.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118000000_admin_settlement_rpc.sql): Initial `admin_process_marketplace_settlement` RPC.
+- [supabase/migrations/20261118010000_batch_02_2_financial_and_support_hardening.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/migrations/20261118010000_batch_02_2_financial_and_support_hardening.sql): Ledger advisory lock & validation, `mkt_journal_one_payout_idx`, reconciled settlement RPC, Finance & Support aggregation/pagination RPCs, atomic Support audit RPCs, and `verification-documents` owner `DELETE` Storage policy.
+
+---
+
+## 4. Branch Reconciliation Findings
+
+| Remote Branch | Head SHA | Summary | Decision |
+| --- | --- | --- | --- |
+| `origin/fix/farmer-live-records` | `4dd26ac` | Oct 9 partial farmer-community dashboard live-records fix; superseded by Oct 9–10 `farmer-community` refactor in `main` | **Do not merge** (superseded) |
+| `origin/vercel/install-vercel-web-analytics-bhrs3k` | `b01aebe` | Sep 28 `@vercel/analytics` + CSP setup | **Do not merge** (unrelated analytics feature; keep if desired in a separate PR) |
+| `origin/security/batch-02-payment-reliability` | `f982c1a` | Nov 17 `docs/security/BATCH_02_PAYMENT_RELIABILITY.md` added and immediately withdrawn | **Do not merge** (withdrawn; zero unique code/security logic) |
+
+---
+
+## 5. Verification Evidence & Limitations
+
+- **GitHub Actions CI Run `44246211388` (on code commit `cc41f28`):**
+  - **Database migrations and RLS tests** (Job `134605680748`, `supabase test db` + `node supabase/tests/concurrency-check.mjs`): **PASS**
+    - pgTAP: `Files=21, Tests=738, Result: PASS` (includes `20_batch_02_2_security.test.sql` and `21_batch_02_2_hardening.test.sql` covering >500 postings, >100 journal entries, >150 payments/settlements, >100 support tickets, storage policies, and role request lifecycle).
+    - Live Postgres concurrency (`supabase/tests/concurrency-check.mjs`):
+      - Concurrent journal writes serialised with sequential hash chain (`PASS`).
+      - Concurrent settlement completion race produced 1 completion, 1 rejection, and 1 payout entry (`PASS`).
+      - Concurrent support ticket transitions completed safely (`PASS`).
+  - **Typecheck, lint and unit tests** (Job `134605680298`): **PASS**
+    - `npm run typecheck`: `4 successful, 4 total`
+    - `npm run lint`: `1 successful, 1 total`
+    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed; `@cultivanode/web` `batch-02-2.test.ts` 8/8 passed; `@cultivanode/mobile` 6 files / 65 tests passed including `account-roles-docs.test.ts` 6/6; `@cultivanode/shared` 32 files passed)
+    - `npm run build`: **PASS**
+  - **Vercel Preview:** **PASS** (`Deployment has completed`).
+- **Outstanding Physical-Device & External-Service Limitations:**
+  - No physical iOS or Android device was connected; `expo-document-picker` and `expo-image-picker` native file pickers require physical-device / Expo dev-client QA before mobile store release.
+  - Production Supabase (`vqbtnftnxyfaembwgfrk`), Staging Supabase (`xdbqndgwisshhjjqksbe`), and Production Vercel were not modified.
