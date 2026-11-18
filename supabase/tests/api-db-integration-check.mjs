@@ -217,7 +217,7 @@ async function main() {
         id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
         platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
       ) VALUES (
-        '${whOrderId}', 'ORD-WH-${suffix}', '${user.id}', 'retail', 50000, 0, 0, 50000, 'pending_payment', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb
+        '${whOrderId}', 'ORD-WH-${suffix}', '${user.id}', 'retail', 50000, 0, 0, 50000, 'payment_pending', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb
       );
       INSERT INTO public.marketplace_order_items (
         order_id, listing_id, seller_id, title, unit, quantity, unit_price_kobo, subtotal_kobo, commission_bps, commission_kobo, seller_earnings_kobo
