@@ -331,28 +331,45 @@ async function main() {
     const reqStatusMid = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
     assert.equal(reqStatusMid, 'open', 'Expected data_request to stay open while Storage cleanup is failed');
 
-    // Phase 2b: Retry claim & delete real object via Storage API
-    const claim2Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id });
+    // Phase 2b: Simulate worker crash leaving 'processing' lease, verify active lease blocks concurrent claim, then expire & reclaim
+    const claim2Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
     assert.equal(claim2Res.status, 200);
     const claimed2 = await claim2Res.json();
     assert.equal(claimed2.length, 1);
     assert.equal(claimed2[0].attempts, 2);
 
-    const rmRes = await fetch(`${API_URL}/storage/v1/object/${claimed2[0].bucket_id}`, {
+    const claimWhileActiveRes = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
+    assert.equal(claimWhileActiveRes.status, 200);
+    assert.deepEqual(await claimWhileActiveRes.json(), []);
+
+    runPsql(`
+      UPDATE public.account_deletion_storage_cleanup
+         SET lease_expires_at = clock_timestamp() - interval '1 second'
+       WHERE id = '${claimed2[0].id}';
+    `);
+
+    const claim3Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
+    assert.equal(claim3Res.status, 200);
+    const claimed3 = await claim3Res.json();
+    assert.equal(claimed3.length, 1);
+    assert.equal(claimed3[0].attempts, 3);
+
+    const rmRes = await fetch(`${API_URL}/storage/v1/object/${claimed3[0].bucket_id}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
         apikey: SERVICE_ROLE_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prefixes: [claimed2[0].storage_path] }),
+      body: JSON.stringify({ prefixes: [claimed3[0].storage_path] }),
     });
     assert.ok(rmRes.ok, `Expected Storage cleanup to succeed, got ${rmRes.status}`);
 
-    await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
-      p_cleanup_id: claimed2[0].id,
+    const recOkRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed3[0].id,
       p_status: 'completed',
     });
+    assert.equal(recOkRes.status, 200);
 
     // Verify Storage object is absent
     const fetchDeletedDoc = await fetch(`${API_URL}/storage/v1/object/authenticated/verification-documents/${delDocPath}`, {
@@ -360,12 +377,25 @@ async function main() {
     });
     assert.ok(!fetchDeletedDoc.ok, 'Expected deleted verification document to be absent from Storage');
 
-    // Phase 3: Delete Auth user via GoTrue Admin API & finalize
+    // Phase 3: Delete Auth user via GoTrue Admin API, verify post-Auth incomplete listing, then finalize
     const authDelRes = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
     });
     assert.ok(authDelRes.ok, `Expected Auth deleteUser to succeed, got ${authDelRes.status}`);
+
+    const incompleteRes = await rpcCall(SERVICE_ROLE_KEY, 'list_incomplete_account_deletions', { p_limit: 50 });
+    assert.equal(incompleteRes.status, 200);
+    const incompleteRows = await incompleteRes.json();
+    assert.ok(
+      incompleteRows.some((r) => r.profile_id === delUser.id && r.deletion_status === 'auth_pending'),
+      'Expected post-Auth unfinalized user to appear in list_incomplete_account_deletions',
+    );
+
+    const authCheckAfterDel = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.equal(authCheckAfterDel.status, 404, 'Expected Auth user lookup to return 404 after Auth deletion');
 
     const finRes = await rpcCall(SERVICE_ROLE_KEY, 'finalize_account_deletion', {
       p_user_id: delUser.id,
@@ -374,6 +404,14 @@ async function main() {
     assert.equal(finRes.status, 200);
     const finalizeJson = await finRes.json();
     assert.equal(finalizeJson.deletion_status, 'completed');
+
+    const incompleteAfterRes = await rpcCall(SERVICE_ROLE_KEY, 'list_incomplete_account_deletions', { p_limit: 50 });
+    assert.equal(incompleteAfterRes.status, 200);
+    const incompleteAfterRows = await incompleteAfterRes.json();
+    assert.ok(
+      !incompleteAfterRows.some((r) => r.profile_id === delUser.id),
+      'Expected finalized user to be absent from list_incomplete_account_deletions',
+    );
 
     const profileCheck = runPsql(`
       SELECT full_name || '|' || deletion_status || '|' || (deleted_at IS NOT NULL)::text

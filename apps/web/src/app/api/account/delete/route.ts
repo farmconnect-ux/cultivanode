@@ -97,15 +97,18 @@ export async function POST(req: Request) {
   const result = (rpcData && typeof rpcData === "object" ? rpcData : {}) as ExecutionResult;
 
   // Phase 2: Durable, recoverable private Storage cleanup BEFORE deleting Auth identity.
-  let storageSummary = { attempted: 0, removed: 0, failed: 0 };
+  let storageSummary: Awaited<ReturnType<typeof processPendingStorageCleanup>>;
   try {
     storageSummary = await processPendingStorageCleanup(supabaseAdmin, user.id);
   } catch {
-    await supabaseAdmin.rpc("finalize_account_deletion", {
+    const { error: finErr } = await supabaseAdmin.rpc("finalize_account_deletion", {
       p_user_id: user.id,
       p_auth_deleted: false,
       p_auth_error: "Storage cleanup claim failed",
     });
+    if (finErr) {
+      logger.error("account_delete_finalize_on_claim_error_failed", { code: finErr.code ?? "unknown" });
+    }
     logger.error("account_delete_storage_claim_failed");
     return NextResponse.json(
       {
@@ -116,16 +119,29 @@ export async function POST(req: Request) {
     );
   }
 
-  if (storageSummary.failed > 0) {
-    await supabaseAdmin.rpc("finalize_account_deletion", {
+  const hasRemainingStorage =
+    storageSummary.failed > 0 ||
+    storageSummary.recordFailed > 0 ||
+    (storageSummary.lastRemainingCount !== null && storageSummary.lastRemainingCount > 0) ||
+    (storageSummary.attempted === 0 && (result.pending_storage_count ?? 0) > 0);
+
+  if (hasRemainingStorage) {
+    const { error: finErr } = await supabaseAdmin.rpc("finalize_account_deletion", {
       p_user_id: user.id,
       p_auth_deleted: false,
-      p_auth_error: `Storage cleanup failed for ${storageSummary.failed} item(s)`,
+      p_auth_error:
+        storageSummary.recordFailed > 0
+          ? `Storage cleanup result recording failed for ${storageSummary.recordFailed} item(s)`
+          : `Storage cleanup incomplete (${storageSummary.failed || storageSummary.lastRemainingCount || result.pending_storage_count || 1} item(s) remaining)`,
     });
+    if (finErr) {
+      logger.error("account_delete_finalize_on_storage_error_failed", { code: finErr.code ?? "unknown" });
+    }
     logger.warn("account_delete_storage_cleanup_incomplete", {
       attempted: storageSummary.attempted,
       removed: storageSummary.removed,
       failed: storageSummary.failed,
+      recordFailed: storageSummary.recordFailed,
     });
     return NextResponse.json(
       {
@@ -139,11 +155,14 @@ export async function POST(req: Request) {
   // Phase 3: Remove Supabase Auth identity only after private Storage cleanup succeeds.
   const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(user.id);
   if (authDeleteErr && authDeleteErr.status !== 404) {
-    await supabaseAdmin.rpc("finalize_account_deletion", {
+    const { error: finErr } = await supabaseAdmin.rpc("finalize_account_deletion", {
       p_user_id: user.id,
       p_auth_deleted: false,
       p_auth_error: authDeleteErr.message || "Auth deleteUser failed",
     });
+    if (finErr) {
+      logger.error("account_delete_finalize_on_auth_error_failed", { code: finErr.code ?? "unknown" });
+    }
     logger.error("account_delete_auth_failed", { status: authDeleteErr.status ?? 500 });
     return NextResponse.json(
       {
@@ -154,22 +173,44 @@ export async function POST(req: Request) {
     );
   }
 
-  const { data: finalized } = await supabaseAdmin.rpc("finalize_account_deletion", {
+  const { data: finalized, error: finalizeErr } = await supabaseAdmin.rpc("finalize_account_deletion", {
     p_user_id: user.id,
     p_auth_deleted: true,
   });
 
+  if (finalizeErr) {
+    logger.error("account_delete_finalize_failed", { code: finalizeErr.code ?? "unknown" });
+    return NextResponse.json(
+      {
+        error: "finalization_incomplete",
+        message: "Your profile and authentication were removed, but finalization did not complete. Background recovery will finish it.",
+      },
+      { status: 500 },
+    );
+  }
+
   const finalStatus =
     finalized && typeof finalized === "object" && "deletion_status" in finalized
       ? String((finalized as { deletion_status?: unknown }).deletion_status)
-      : "completed";
+      : null;
+
+  if (!finalStatus) {
+    logger.error("account_delete_finalize_invalid_response");
+    return NextResponse.json(
+      {
+        error: "finalization_incomplete",
+        message: "Account deletion finalization returned an invalid status.",
+      },
+      { status: 500 },
+    );
+  }
 
   if (finalStatus !== "completed") {
     logger.warn("account_delete_still_incomplete", { finalStatus });
     return NextResponse.json(
       {
-        error: "storage_cleanup_incomplete",
-        message: "Private document cleanup is still pending. Please retry.",
+        error: finalStatus === "storage_pending" ? "storage_cleanup_incomplete" : "finalization_incomplete",
+        message: "Private document cleanup or finalization is still pending.",
       },
       { status: 500 },
     );

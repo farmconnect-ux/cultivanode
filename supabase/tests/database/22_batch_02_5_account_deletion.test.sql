@@ -1,5 +1,5 @@
 begin;
-select plan(23);
+select plan(29);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -8,7 +8,7 @@ select is(
   'Test 1: authenticated cannot execute execute_account_deletion directly'
 );
 select is(
-  has_function_privilege('authenticated', 'public.claim_account_deletion_storage_cleanup(uuid)', 'execute'),
+  has_function_privilege('authenticated', 'public.claim_account_deletion_storage_cleanup(uuid, integer)', 'execute'),
   false,
   'Test 2: authenticated cannot execute claim_account_deletion_storage_cleanup'
 );
@@ -292,6 +292,89 @@ select is(
   (select status::text from public.data_requests where profile_id = 'e5000000-0000-0000-0000-000000000001' and kind = 'deletion'),
   'completed',
   'Test 22b: data_request is marked completed after finalize_account_deletion'
+);
+
+-- 23: list_incomplete_account_deletions privilege check
+select is(
+  has_function_privilege('authenticated', 'public.list_incomplete_account_deletions(integer)', 'execute'),
+  false,
+  'Test 23: authenticated cannot execute list_incomplete_account_deletions'
+);
+
+-- 24-25: Lease-based stale processing claim recovery
+insert into public.account_deletion_storage_cleanup (profile_id, bucket_id, storage_path, status, attempts, lease_expires_at)
+values ('e5000000-0000-0000-0000-000000000001', 'verification-documents', 'e5000000/stale.pdf', 'processing', 1, clock_timestamp() + interval '5 minutes');
+
+select is(
+  (select count(*)::int from public.claim_account_deletion_storage_cleanup('e5000000-0000-0000-0000-000000000001', 300)),
+  0,
+  'Test 24: active processing lease is not re-claimed'
+);
+
+update public.account_deletion_storage_cleanup
+   set lease_expires_at = clock_timestamp() - interval '1 second'
+ where profile_id = 'e5000000-0000-0000-0000-000000000001'
+   and storage_path = 'e5000000/stale.pdf';
+
+select is(
+  (select attempts from public.claim_account_deletion_storage_cleanup('e5000000-0000-0000-0000-000000000001', 300) limit 1),
+  2,
+  'Test 25: expired processing lease is reclaimed and increments attempts'
+);
+
+-- 26-28: Party-reassignment UPDATE guards on bookings, marketplace_orders, marketplace_fulfilments
+insert into public.bookings (
+  id, farmer_id, provider_id, listing_id, farm_id,
+  listing_title, listing_kind, farm_name, job_location, distance_km,
+  job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+) values (
+  'e5000000-0000-0000-0000-000000000401',
+  'e5000000-0000-0000-0000-000000000002',
+  'e5000000-0000-0000-0000-000000000003',
+  'e5000000-0000-0000-0000-000000000020',
+  'e5000000-0000-0000-0000-000000000010',
+  'Harvester', 'equipment', 'Green Acre', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+  current_date + 2, 'hectare', 1, 15000, 15000, 'requested', now() + interval '1 day'
+);
+
+select lives_ok(
+  $$update public.bookings set farmer_note = 'Updated note' where id = 'e5000000-0000-0000-0000-000000000401'$$,
+  'Test 26a: legitimate booking lifecycle update is not blocked'
+);
+
+select throws_ok(
+  $$update public.bookings set provider_id = 'e5000000-0000-0000-0000-000000000001' where id = 'e5000000-0000-0000-0000-000000000401'$$,
+  'P0001',
+  'Cannot create or update booking for a deleted or deleting account.',
+  'Test 26b: reassigning booking provider_id to deleted account is rejected'
+);
+
+select throws_ok(
+  $$update public.marketplace_orders set buyer_id = 'e5000000-0000-0000-0000-000000000001' where id = 'e5000000-0000-0000-0000-000000000201'$$,
+  'P0001',
+  'Cannot place or reassign order for a deleted or deleting account.',
+  'Test 27: reassigning marketplace_order buyer_id to deleted account is rejected'
+);
+
+insert into public.marketplace_orders (
+  id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+  platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+) values (
+  'e5000000-0000-0000-0000-000000000402', 'ORD-UPD-1', 'e5000000-0000-0000-0000-000000000002', 'retail',
+  10000, 0, 0, 10000, 'paid', 'paid', 'escrow', '{"line":"12 Farm Rd","state":"Oyo"}'::jsonb
+);
+insert into public.marketplace_fulfilments (
+  id, order_id, seller_id, fulfilment_mode, subtotal_kobo, delivery_fee_kobo, status
+) values (
+  'e5000000-0000-0000-0000-000000000403', 'e5000000-0000-0000-0000-000000000402',
+  'e5000000-0000-0000-0000-000000000041', 'seller_delivery', 10000, 0, 'placed'
+);
+
+select throws_ok(
+  $$update public.marketplace_fulfilments set seller_id = 'e5000000-0000-0000-0000-000000000040' where id = 'e5000000-0000-0000-0000-000000000403'$$,
+  'P0001',
+  'Cannot create or reassign fulfilment for a deleted or deleting seller account.',
+  'Test 28: reassigning marketplace_fulfilment seller_id to deleted seller is rejected'
 );
 
 select * from finish();
