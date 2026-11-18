@@ -134,11 +134,15 @@ async function main() {
 
     // 1. Bucket restrictions: reject disallowed MIME type and >5 MB file
     console.log('1. Testing bucket MIME type and 5 MB limit via Storage API...');
-    const badMimeRes = await storageUpload(owner.token, `${owner.id}/bad.txt`, Buffer.from('hello'), 'text/plain');
+    const badMimePath = `${owner.id}/bad-${randomUUID()}.txt`;
+    uploadedPaths.push(badMimePath);
+    const badMimeRes = await storageUpload(owner.token, badMimePath, Buffer.from('hello'), 'text/plain');
     assert.ok(!badMimeRes.ok, `Expected text/plain upload to fail, got ${badMimeRes.status}`);
 
     const oversizedBuf = Buffer.alloc(5 * 1024 * 1024 + 1024, 0x25);
-    const bigRes = await storageUpload(owner.token, `${owner.id}/huge.pdf`, oversizedBuf, 'application/pdf');
+    const oversizedPath = `${owner.id}/huge-${randomUUID()}.pdf`;
+    uploadedPaths.push(oversizedPath);
+    const bigRes = await storageUpload(owner.token, oversizedPath, oversizedBuf, 'application/pdf');
     assert.ok(!bigRes.ok, `Expected >5MB upload to fail, got ${bigRes.status}`);
     console.log(`   PASS: Storage API rejected disallowed MIME (${badMimeRes.status}) and >5MB (${bigRes.status}).`);
 
@@ -165,7 +169,10 @@ async function main() {
 
     // 3. Cross-user isolation
     console.log('3. Testing cross-user upload, download, sign, overwrite, and delete denials...');
-    const crossUp = await storageUpload(outsider.token, `${owner.id}/${randomUUID()}.pdf`, PDF_BYTES, 'application/pdf');
+    const crossUserUploadPath = `${owner.id}/cross-user-${randomUUID()}.pdf`;
+    // Track before the request so finally can remove it even if an RLS regression unexpectedly allows this upload.
+    uploadedPaths.push(crossUserUploadPath);
+    const crossUp = await storageUpload(outsider.token, crossUserUploadPath, PDF_BYTES, 'application/pdf');
     assert.ok(!crossUp.ok, `Cross-user upload should fail, got ${crossUp.status}`);
 
     const crossDl = await storageDownload(outsider.token, ownerPath);
