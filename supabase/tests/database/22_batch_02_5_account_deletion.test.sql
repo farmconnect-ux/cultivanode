@@ -32,17 +32,19 @@ values
   ('e5000000-0000-0000-0000-000000000003', '2348055550003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e5000000-0000-0000-0000-000000000004', '2348055550004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e5000000-0000-0000-0000-000000000005', '2348055550005', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
-  ('e5000000-0000-0000-0000-000000000006', '2348055550006', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
+  ('e5000000-0000-0000-0000-000000000006', '2348055550006', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e5000000-0000-0000-0000-000000000007', '2348055550007', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, phone, full_name, state, lga)
 values
   ('e5000000-0000-0000-0000-000000000001', '2348055550001', 'Deleting Farmer', 'Oyo', 'Ibadan'),
-  ('e5000000-0000-0000-0000-000000000002', '2348055550002', 'Active Seller B', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000002', '2348055550002', 'Remaining Member', 'Oyo', 'Ibadan'),
   ('e5000000-0000-0000-0000-000000000003', '2348055550003', 'Booking Blocker', 'Oyo', 'Ibadan'),
   ('e5000000-0000-0000-0000-000000000004', '2348055550004', 'Completed Seller A', 'Oyo', 'Ibadan'),
   ('e5000000-0000-0000-0000-000000000005', '2348055550005', 'Escrow Blocker', 'Oyo', 'Ibadan'),
-  ('e5000000-0000-0000-0000-000000000006', '2348055550006', 'Settlement Blocker', 'Oyo', 'Ibadan')
+  ('e5000000-0000-0000-0000-000000000006', '2348055550006', 'Settlement Blocker', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000007', '2348055550007', 'Active Seller B', 'Oyo', 'Ibadan')
 on conflict (id) do nothing;
 
 -- 4: Unauthorised client cannot grant themselves a privileged role in user_roles
@@ -99,7 +101,7 @@ select public.record_marketplace_journal_entry(
 -- Sellers & multi-seller order with multiple fulfilments
 insert into public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
 values
-  ('e5000000-0000-0000-0000-000000000022', 'e5000000-0000-0000-0000-000000000002', 'Seller B Agro', 'agro_dealer', 'verified'),
+  ('e5000000-0000-0000-0000-000000000022', 'e5000000-0000-0000-0000-000000000007', 'Seller B Agro', 'agro_dealer', 'verified'),
   ('e5000000-0000-0000-0000-000000000024', 'e5000000-0000-0000-0000-000000000004', 'Seller A Agro', 'agro_dealer', 'verified'),
   ('e5000000-0000-0000-0000-000000000025', 'e5000000-0000-0000-0000-000000000005', 'Seller E Agro', 'agro_dealer', 'verified'),
   ('e5000000-0000-0000-0000-000000000026', 'e5000000-0000-0000-0000-000000000006', 'Seller S Agro', 'agro_dealer', 'verified');
@@ -159,7 +161,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000002', 'Leaving')$$,
+  $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000007', 'Leaving')$$,
   'P0001',
   'Complete or resolve active seller fulfilments before deleting your account.',
   'Test 6: Active seller fulfilment (dispatched) blocks deletion in multi-seller order'

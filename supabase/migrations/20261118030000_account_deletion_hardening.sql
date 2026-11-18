@@ -289,7 +289,6 @@ begin
 
   update public.marketplace_sellers
      set business_name = 'Deleted seller',
-         verification_status = 'suspended',
          is_suspended = true,
          suspension_reason = 'Account deleted by user'
    where profile_id = p_user_id;

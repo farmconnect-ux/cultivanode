@@ -158,8 +158,7 @@ begin
    where buyer_id = p_user_id;
 
   update public.marketplace_sellers
-     set business_name = 'Deleted seller',
-         verification_status = 'suspended'
+     set business_name = 'Deleted seller'
    where profile_id = p_user_id;
 
   -- Close open deletion request or insert completed NDPA deletion record.
