@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockRemoveItem = vi.fn().mockResolvedValue(undefined);
+const mockGetSession = vi.fn();
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
@@ -16,7 +17,7 @@ vi.mock('expo-crypto', () => ({
 
 vi.mock('../supabase', () => ({
   supabase: {
-    auth: { getUser: vi.fn() },
+    auth: { getUser: vi.fn(), getSession: mockGetSession },
     from: vi.fn(),
     rpc: vi.fn(),
     storage: { from: vi.fn() },
@@ -110,5 +111,15 @@ describe('mobile account deletion workflow', () => {
     expect(mockRemoveItem).toHaveBeenCalledWith('cache_account_user-123');
     expect(mockRemoveItem).toHaveBeenCalledWith('cn.activeFarm');
     expect(mockRemoveItem).toHaveBeenCalledWith('cn.outbox');
+  });
+
+  it('retrieves the latest access token after OTP re-authentication and falls back safely on error', async () => {
+    const { getFreshAccessToken } = await import('../account');
+
+    mockGetSession.mockResolvedValueOnce({ data: { session: { access_token: 'fresh-post-otp-jwt' } } });
+    expect(await getFreshAccessToken('stale-jwt')).toBe('fresh-post-otp-jwt');
+
+    mockGetSession.mockRejectedValueOnce(new Error('Storage read failed'));
+    expect(await getFreshAccessToken('fallback-jwt')).toBe('fallback-jwt');
   });
 });

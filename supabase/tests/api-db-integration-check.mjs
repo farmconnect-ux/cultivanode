@@ -304,7 +304,7 @@ async function main() {
     });
     assert.equal(unauthDel.status, 403, `Expected 403 for authenticated calling execute_account_deletion, got ${unauthDel.status}`);
 
-    // Service-role executes account deletion atomically
+    // Service-role executes Phase 1 (DB anonymisation + durable Storage queue)
     const svcDelRes = await rpcCall(SERVICE_ROLE_KEY, 'execute_account_deletion', {
       p_user_id: delUser.id,
       p_reason: 'Live integration deletion',
@@ -312,20 +312,47 @@ async function main() {
     const svcDelText = await svcDelRes.text();
     assert.equal(svcDelRes.status, 200, `Expected 200 from execute_account_deletion, got ${svcDelText}`);
     const svcDelJson = JSON.parse(svcDelText);
-    assert.equal(svcDelJson.status, 'deleted');
-    assert.deepEqual(svcDelJson.storage_paths, [delDocPath]);
+    assert.equal(svcDelJson.status, 'anonymized');
+    assert.equal(svcDelJson.deletion_status, 'storage_pending');
+    assert.equal(svcDelJson.pending_storage_count, 1);
 
-    // Clean up returned storage path using service role
-    const rmRes = await fetch(`${API_URL}/storage/v1/object/verification-documents`, {
+    // Phase 2a: Claim Storage item, simulate a Storage failure, and verify data_request stays open
+    const claim1Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id });
+    assert.equal(claim1Res.status, 200);
+    const claimed1 = await claim1Res.json();
+    assert.equal(claimed1.length, 1);
+    assert.equal(claimed1[0].storage_path, delDocPath);
+
+    await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed1[0].id,
+      p_status: 'failed',
+      p_error: 'Simulated Storage 503',
+    });
+    const reqStatusMid = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
+    assert.equal(reqStatusMid, 'open', 'Expected data_request to stay open while Storage cleanup is failed');
+
+    // Phase 2b: Retry claim & delete real object via Storage API
+    const claim2Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id });
+    assert.equal(claim2Res.status, 200);
+    const claimed2 = await claim2Res.json();
+    assert.equal(claimed2.length, 1);
+    assert.equal(claimed2[0].attempts, 2);
+
+    const rmRes = await fetch(`${API_URL}/storage/v1/object/${claimed2[0].bucket_id}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
         apikey: SERVICE_ROLE_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prefixes: svcDelJson.storage_paths }),
+      body: JSON.stringify({ prefixes: [claimed2[0].storage_path] }),
     });
     assert.ok(rmRes.ok, `Expected Storage cleanup to succeed, got ${rmRes.status}`);
+
+    await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed2[0].id,
+      p_status: 'completed',
+    });
 
     // Verify Storage object is absent
     const fetchDeletedDoc = await fetch(`${API_URL}/storage/v1/object/authenticated/verification-documents/${delDocPath}`, {
@@ -333,24 +360,35 @@ async function main() {
     });
     assert.ok(!fetchDeletedDoc.ok, 'Expected deleted verification document to be absent from Storage');
 
-    // Delete Auth user via GoTrue Admin API (must succeed without cascading into profiles/orders!)
+    // Phase 3: Delete Auth user via GoTrue Admin API & finalize
     const authDelRes = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
     });
     assert.ok(authDelRes.ok, `Expected Auth deleteUser to succeed, got ${authDelRes.status}`);
 
+    const finRes = await rpcCall(SERVICE_ROLE_KEY, 'finalize_account_deletion', {
+      p_user_id: delUser.id,
+      p_auth_deleted: true,
+    });
+    assert.equal(finRes.status, 200);
+    const finJson = await finRes.json();
+    assert.equal(finJson.deletion_status, 'completed');
+
     const profileCheck = runPsql(`
-      SELECT full_name || '|' || (deleted_at IS NOT NULL)::text
+      SELECT full_name || '|' || deletion_status || '|' || (deleted_at IS NOT NULL)::text
       FROM public.profiles WHERE id = '${delUser.id}';
     `);
-    assert.equal(profileCheck, 'Deleted user|true');
+    assert.equal(profileCheck, 'Deleted user|completed|true');
+
+    const reqStatusFinal = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
+    assert.equal(reqStatusFinal, 'completed');
 
     const orderRedacted = runPsql(`
       SELECT delivery_address->>'redacted' FROM public.marketplace_orders WHERE id = '${delOrderId}';
     `);
     assert.equal(orderRedacted, 'true');
-    console.log('   PASS: execute_account_deletion anonymized PII, cleaned Storage, deleted Auth user, and preserved orders.');
+    console.log('   PASS: 3-phase execute_account_deletion recovered Storage failure, cleaned Storage, deleted Auth user, finalized, and preserved orders.');
   } finally {
     runPsql(`
       DELETE FROM public.marketplace_journal_entries WHERE reference_id = '${ledgerRef}';

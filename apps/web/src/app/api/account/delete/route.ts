@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { processPendingStorageCleanup } from "@/lib/account-deletion";
 import { logger } from "@/lib/logger";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -12,10 +13,11 @@ const DeleteAccountSchema = z.object({
 });
 
 type ExecutionResult = {
-  status?: "deleted" | "already_deleted";
+  status?: "anonymized" | "already_anonymized" | "already_deleted";
+  deletion_status?: string;
   user_id?: string;
   request_id?: string | null;
-  storage_paths?: unknown;
+  pending_storage_count?: number;
 };
 
 export async function POST(req: Request) {
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
     );
   }
 
+  // Phase 1: DB blocker check, durable Storage queue capture, and PII anonymisation.
   const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("execute_account_deletion", {
     p_user_id: user.id,
     p_reason: parsed.data.reason || undefined,
@@ -92,43 +95,96 @@ export async function POST(req: Request) {
   }
 
   const result = (rpcData && typeof rpcData === "object" ? rpcData : {}) as ExecutionResult;
-  const storagePaths = Array.isArray(result.storage_paths)
-    ? result.storage_paths.filter((p): p is string => typeof p === "string" && p.length > 0)
-    : [];
 
-  let storageCleanupPartial = false;
-  if (storagePaths.length > 0) {
-    const { error: storageErr } = await supabaseAdmin.storage.from("verification-documents").remove(storagePaths);
-    if (storageErr) {
-      storageCleanupPartial = true;
-      logger.warn("account_delete_storage_cleanup_partial", { count: storagePaths.length });
-    }
+  // Phase 2: Durable, recoverable private Storage cleanup BEFORE deleting Auth identity.
+  let storageSummary = { attempted: 0, removed: 0, failed: 0 };
+  try {
+    storageSummary = await processPendingStorageCleanup(supabaseAdmin, user.id);
+  } catch {
+    await supabaseAdmin.rpc("finalize_account_deletion", {
+      p_user_id: user.id,
+      p_auth_deleted: false,
+      p_auth_error: "Storage cleanup claim failed",
+    });
+    logger.error("account_delete_storage_claim_failed");
+    return NextResponse.json(
+      {
+        error: "storage_cleanup_incomplete",
+        message: "Your profile was anonymized, but private document cleanup did not finish. Please retry.",
+      },
+      { status: 500 },
+    );
   }
 
+  if (storageSummary.failed > 0) {
+    await supabaseAdmin.rpc("finalize_account_deletion", {
+      p_user_id: user.id,
+      p_auth_deleted: false,
+      p_auth_error: `Storage cleanup failed for ${storageSummary.failed} item(s)`,
+    });
+    logger.warn("account_delete_storage_cleanup_incomplete", {
+      attempted: storageSummary.attempted,
+      removed: storageSummary.removed,
+      failed: storageSummary.failed,
+    });
+    return NextResponse.json(
+      {
+        error: "storage_cleanup_incomplete",
+        message: "Some private verification documents could not be removed yet. Please retry to finish account deletion.",
+      },
+      { status: 500 },
+    );
+  }
+
+  // Phase 3: Remove Supabase Auth identity only after private Storage cleanup succeeds.
   const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(user.id);
   if (authDeleteErr && authDeleteErr.status !== 404) {
+    await supabaseAdmin.rpc("finalize_account_deletion", {
+      p_user_id: user.id,
+      p_auth_deleted: false,
+      p_auth_error: authDeleteErr.message || "Auth deleteUser failed",
+    });
     logger.error("account_delete_auth_failed", { status: authDeleteErr.status ?? 500 });
     return NextResponse.json(
       {
         error: "auth_deletion_incomplete",
-        message: "Your personal profile was anonymized, but authentication removal did not finish. Please retry or contact support.",
+        message: "Your personal profile and documents were removed, but authentication removal did not finish. Please retry.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const { data: finalized } = await supabaseAdmin.rpc("finalize_account_deletion", {
+    p_user_id: user.id,
+    p_auth_deleted: true,
+  });
+
+  const finalStatus =
+    finalized && typeof finalized === "object" && "deletion_status" in finalized
+      ? String((finalized as { deletion_status?: unknown }).deletion_status)
+      : "completed";
+
+  if (finalStatus !== "completed") {
+    logger.warn("account_delete_still_incomplete", { finalStatus });
+    return NextResponse.json(
+      {
+        error: "storage_cleanup_incomplete",
+        message: "Private document cleanup is still pending. Please retry.",
       },
       { status: 500 },
     );
   }
 
   logger.info("account_deleted", {
-    status: result.status ?? "deleted",
-    storageRemovedCount: storagePaths.length,
-    storageCleanupPartial,
+    priorStatus: result.status ?? "anonymized",
+    storageRemovedCount: storageSummary.removed,
   });
 
   return NextResponse.json(
     {
       status: result.status === "already_deleted" ? "already_deleted" : "deleted",
       request_id: result.request_id ?? null,
-      storage_removed_count: storagePaths.length,
-      ...(storageCleanupPartial ? { storage_cleanup_partial: true } : {}),
+      storage_removed_count: storageSummary.removed,
     },
     { status: 200, headers: { "Cache-Control": "no-store" } },
   );

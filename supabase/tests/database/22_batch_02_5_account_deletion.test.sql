@@ -1,34 +1,51 @@
 begin;
-select plan(12);
+select plan(22);
 
--- 1-2: execute_account_deletion is revoked from anon/authenticated and granted to service_role
+-- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
   has_function_privilege('authenticated', 'public.execute_account_deletion(uuid, text)', 'execute'),
   false,
   'Test 1: authenticated cannot execute execute_account_deletion directly'
 );
 select is(
-  has_function_privilege('service_role', 'public.execute_account_deletion(uuid, text)', 'execute'),
-  true,
-  'Test 2: service_role can execute execute_account_deletion'
+  has_function_privilege('authenticated', 'public.claim_account_deletion_storage_cleanup(uuid)', 'execute'),
+  false,
+  'Test 2: authenticated cannot execute claim_account_deletion_storage_cleanup'
+);
+select is(
+  has_table_privilege('authenticated', 'public.account_deletion_storage_cleanup', 'SELECT'),
+  false,
+  'Test 3: authenticated cannot read account_deletion_storage_cleanup'
 );
 
--- Seed users, shared org, completed order + ledger, active booking blocker
+-- Seed users:
+-- u1: eligible buyer/member with shared org + completed order + ledger + verification doc
+-- u2: remaining org member + active seller (dispatched fulfilment in multi-seller order)
+-- u3: active booking blocker
+-- u4: eligible seller with completed/accepted fulfilment in same multi-seller order + solo org
+-- u5: seller with held escrow
+-- u6: seller with processing settlement
 insert into auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
   ('e5000000-0000-0000-0000-000000000001', '2348055550001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e5000000-0000-0000-0000-000000000002', '2348055550002', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
-  ('e5000000-0000-0000-0000-000000000003', '2348055550003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
+  ('e5000000-0000-0000-0000-000000000003', '2348055550003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e5000000-0000-0000-0000-000000000004', '2348055550004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e5000000-0000-0000-0000-000000000005', '2348055550005', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e5000000-0000-0000-0000-000000000006', '2348055550006', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, phone, full_name, state, lga)
 values
   ('e5000000-0000-0000-0000-000000000001', '2348055550001', 'Deleting Farmer', 'Oyo', 'Ibadan'),
-  ('e5000000-0000-0000-0000-000000000002', '2348055550002', 'Remaining Member', 'Oyo', 'Ibadan'),
-  ('e5000000-0000-0000-0000-000000000003', '2348055550003', 'Active Blocker', 'Oyo', 'Ibadan')
+  ('e5000000-0000-0000-0000-000000000002', '2348055550002', 'Active Seller B', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000003', '2348055550003', 'Booking Blocker', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000004', '2348055550004', 'Completed Seller A', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000005', '2348055550005', 'Escrow Blocker', 'Oyo', 'Ibadan'),
+  ('e5000000-0000-0000-0000-000000000006', '2348055550006', 'Settlement Blocker', 'Oyo', 'Ibadan')
 on conflict (id) do nothing;
 
--- 3: Unauthorised client cannot grant themselves a privileged role in user_roles
+-- 4: Unauthorised client cannot grant themselves a privileged role in user_roles
 select throws_ok(
   $$
     set local role authenticated;
@@ -37,26 +54,28 @@ select throws_ok(
   $$,
   '42501',
   null,
-  'Test 3: authenticated client cannot self-grant user_roles'
+  'Test 4: authenticated client cannot self-grant user_roles'
 );
 reset role;
 
--- Shared org owned by user 1 with user 2 as member
-insert into public.organizations (id, name, owner_id)
-values ('e5000000-0000-0000-0000-0000000000a1', 'Shared Co-op', 'e5000000-0000-0000-0000-000000000001');
-insert into public.org_members (organization_id, profile_id, member_role)
+-- Shared org owned by u1 with u2 remaining; solo org owned by u4 with no remaining members
+insert into public.organizations (id, name, cac_number, owner_id)
 values
-  ('e5000000-0000-0000-0000-0000000000a1', 'e5000000-0000-0000-0000-000000000002', 'farm_manager')
+  ('e5000000-0000-0000-0000-0000000000a1', 'Shared Co-op', 'RC-111', 'e5000000-0000-0000-0000-000000000001'),
+  ('e5000000-0000-0000-0000-0000000000a2', 'Solo Seller Farm', 'RC-222', 'e5000000-0000-0000-0000-000000000004');
+
+insert into public.org_members (organization_id, profile_id, member_role)
+values ('e5000000-0000-0000-0000-0000000000a1', 'e5000000-0000-0000-0000-000000000002', 'farm_manager')
 on conflict do nothing;
 
--- Personal data for user 1
+-- Personal data for u1
 insert into public.user_roles (profile_id, role) values ('e5000000-0000-0000-0000-000000000001', 'crop_farmer');
 insert into public.role_requests (id, profile_id, role, status)
 values ('e5000000-0000-0000-0000-0000000000b1', 'e5000000-0000-0000-0000-000000000001', 'machinery_owner', 'pending');
 insert into public.verification_documents (id, profile_id, role_request_id, document_type, storage_path, mime_type, size_bytes)
 values ('e5000000-0000-0000-0000-0000000000c1', 'e5000000-0000-0000-0000-000000000001', 'e5000000-0000-0000-0000-0000000000b1', 'national_id', 'e5000000-0000-0000-0000-000000000001/nid.pdf', 'application/pdf', 1024);
 
--- Completed marketplace order + financial ledger entry for user 1
+-- Completed marketplace order + financial ledger entry for u1
 insert into public.marketplace_orders (
   id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
   platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
@@ -77,7 +96,45 @@ select public.record_marketplace_journal_entry(
   )
 );
 
--- Active booking blocker on user 3
+-- Sellers & multi-seller order with multiple fulfilments
+insert into public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
+values
+  ('e5000000-0000-0000-0000-000000000022', 'e5000000-0000-0000-0000-000000000002', 'Seller B Agro', 'agro_dealer', 'verified'),
+  ('e5000000-0000-0000-0000-000000000024', 'e5000000-0000-0000-0000-000000000004', 'Seller A Agro', 'agro_dealer', 'verified'),
+  ('e5000000-0000-0000-0000-000000000025', 'e5000000-0000-0000-0000-000000000005', 'Seller E Agro', 'agro_dealer', 'verified'),
+  ('e5000000-0000-0000-0000-000000000026', 'e5000000-0000-0000-0000-000000000006', 'Seller S Agro', 'agro_dealer', 'verified');
+
+insert into public.marketplace_orders (
+  id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+  platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+) values (
+  'e5000000-0000-0000-0000-0000000000d2', 'ORD-MULTI-002',
+  'e5000000-0000-0000-0000-000000000003', 'retail',
+  20000, 0, 0, 20000, 'completed', 'released', 'escrow',
+  '{"line":"9 Market Rd","state":"Oyo"}'::jsonb
+);
+
+-- Multi-seller fulfilments on ORD-MULTI-002: Seller A (accepted/terminal) vs Seller B (dispatched/active)
+insert into public.marketplace_fulfilments (id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method)
+values
+  ('e5000000-0000-0000-0000-000000000f01', 'e5000000-0000-0000-0000-0000000000d2', 'e5000000-0000-0000-0000-000000000024', 'FUL-MULTI-1', 'accepted', 10000, 0, 'seller_delivery'),
+  ('e5000000-0000-0000-0000-000000000f02', 'e5000000-0000-0000-0000-0000000000d2', 'e5000000-0000-0000-0000-000000000022', 'FUL-MULTI-2', 'dispatched', 10000, 0, 'seller_delivery');
+
+-- Held escrow for u5 (Seller E) & processing settlement for u6 (Seller S)
+insert into public.marketplace_fulfilments (id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method)
+values
+  ('e5000000-0000-0000-0000-000000000f05', 'e5000000-0000-0000-0000-0000000000d1', 'e5000000-0000-0000-0000-000000000025', 'FUL-ESC-5', 'accepted', 10000, 0, 'seller_delivery'),
+  ('e5000000-0000-0000-0000-000000000f06', 'e5000000-0000-0000-0000-0000000000d1', 'e5000000-0000-0000-0000-000000000026', 'FUL-SET-6', 'accepted', 10000, 0, 'seller_delivery');
+
+insert into public.marketplace_escrows (id, order_id, fulfilment_id, buyer_id, seller_id, amount_kobo, commission_kobo, seller_net_kobo, status)
+values
+  ('e5000000-0000-0000-0000-000000000e05', 'e5000000-0000-0000-0000-0000000000d1', 'e5000000-0000-0000-0000-000000000f05', 'e5000000-0000-0000-0000-000000000001', 'e5000000-0000-0000-0000-000000000025', 10000, 500, 9500, 'held'),
+  ('e5000000-0000-0000-0000-000000000e06', 'e5000000-0000-0000-0000-0000000000d1', 'e5000000-0000-0000-0000-000000000f06', 'e5000000-0000-0000-0000-000000000001', 'e5000000-0000-0000-0000-000000000026', 10000, 500, 9500, 'released');
+
+insert into public.marketplace_settlements (id, escrow_id, seller_id, gross_amount_kobo, commission_kobo, net_payout_kobo, payout_reference, status)
+values ('e5000000-0000-0000-0000-000000000s06', 'e5000000-0000-0000-0000-000000000e06', 'e5000000-0000-0000-0000-000000000026', 10000, 500, 9500, 'PAYOUT-DEL-6', 'processing');
+
+-- Active booking blocker on u3
 insert into public.farms (id, owner_id, name, state, location)
 values ('e5000000-0000-0000-0000-0000000000f1', 'e5000000-0000-0000-0000-000000000003', 'Blocker Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
 insert into public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
@@ -93,68 +150,142 @@ insert into public.bookings (
   current_date + 1, 'hectare', 1, 20000, 20000, 'accepted', now() + interval '1 day'
 );
 
--- 4: User 3 with active booking is blocked
+-- 5-8: Operational & financial blockers
 select throws_ok(
   $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000003', 'Leaving')$$,
   'P0001',
   'Complete or resolve active service bookings before deleting your account.',
-  'Test 4: Active booking blocks account deletion'
+  'Test 5: Active booking blocks account deletion'
 );
 
--- 5: Execute deletion for eligible user 1 and verify returned storage_paths
+select throws_ok(
+  $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000002', 'Leaving')$$,
+  'P0001',
+  'Complete or resolve active seller fulfilments before deleting your account.',
+  'Test 6: Active seller fulfilment (dispatched) blocks deletion in multi-seller order'
+);
+
+select throws_ok(
+  $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000005', 'Leaving')$$,
+  'P0001',
+  'Resolve held marketplace escrows before deleting your account.',
+  'Test 7: Held marketplace escrow blocks seller deletion'
+);
+
+select throws_ok(
+  $$select public.execute_account_deletion('e5000000-0000-0000-0000-000000000006', 'Leaving')$$,
+  'P0001',
+  'Wait for pending seller settlements to complete before deleting your account.',
+  'Test 8: Processing settlement blocks seller deletion'
+);
+
+-- 9: Seller A with only terminal (accepted) fulfilment succeeds & solo org is archived/anonymised
 select is(
-  (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'No longer needed'))->>'status'),
-  'deleted',
-  'Test 5: execute_account_deletion succeeds for eligible user'
+  (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000004', 'Done selling'))->>'status'),
+  'anonymized',
+  'Test 9: Seller with terminal (accepted) fulfilment can delete account'
 );
 
--- 6: Personal role_requests and verification_documents removed
 select is(
-  (select count(*)::int from public.verification_documents where profile_id = 'e5000000-0000-0000-0000-000000000001'),
-  0,
-  'Test 6: verification_documents deleted for user 1'
+  (select name || '|' || (archived_at is not null)::text from public.organizations where id = 'e5000000-0000-0000-0000-0000000000a2'),
+  'Deleted organization|true',
+  'Test 10: Organization with no remaining members is explicitly archived and anonymised'
 );
 
--- 7: Shared organization preserved and ownership transferred to user 2
+-- 11-18: Execute deletion for u1 -> durable Storage queue populated, data_requests stays open until finalized
+select is(
+  (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'No longer needed'))->>'deletion_status'),
+  'storage_pending',
+  'Test 11: u1 enters storage_pending when verification documents exist'
+);
+
+select is(
+  (select status || '|' || storage_path from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001'),
+  'pending|e5000000-0000-0000-0000-000000000001/nid.pdf',
+  'Test 12: Storage path preserved in durable queue before verification_documents metadata deletion'
+);
+
+select is(
+  (select status::text from public.data_requests where profile_id = 'e5000000-0000-0000-0000-000000000001' and kind = 'deletion'),
+  'open',
+  'Test 13: data_request remains open while Storage cleanup is pending'
+);
+
 select is(
   (select owner_id from public.organizations where id = 'e5000000-0000-0000-0000-0000000000a1'),
   'e5000000-0000-0000-0000-000000000002'::uuid,
-  'Test 7: shared organization preserved and ownership transferred to remaining member'
+  'Test 14: shared organization ownership transferred to remaining member'
 );
 
--- 8: Profile PII anonymized and deleted_at set
-select is(
-  (select full_name from public.profiles where id = 'e5000000-0000-0000-0000-000000000001'),
-  'Deleted user',
-  'Test 8: profile full_name anonymized'
-);
-
--- 9: Historical marketplace order preserved with delivery_address redacted
 select is(
   (select delivery_address->>'redacted' from public.marketplace_orders where id = 'e5000000-0000-0000-0000-0000000000d1'),
   'true',
-  'Test 9: historical order preserved and delivery_address redacted'
+  'Test 15: historical order preserved with delivery_address redacted'
 );
 
--- 10: Financial ledger entry preserved
 select is(
   (select count(*)::int from public.marketplace_journal_entries where reference_id = 'e5000000-0000-0000-0000-0000000000d1'),
   1,
-  'Test 10: financial ledger entry preserved'
+  'Test 16: financial ledger entry preserved'
 );
 
--- 11: NDPA completed data_requests row recorded
+-- 17: New orders/bookings against deleting/deleted u1 are blocked by trigger
+select throws_ok(
+  $$
+    insert into public.marketplace_orders (
+      order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+      platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+    ) values (
+      'ORD-BLK-999', 'e5000000-0000-0000-0000-000000000001', 'retail',
+      1000, 0, 0, 1000, 'placed', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb
+    );
+  $$,
+  'P0001',
+  'Cannot place order for a deleted or deleting account.',
+  'Test 17: Cannot place new order for deleted/deleting account'
+);
+
+-- 18-22: Claim, fail, retry, complete Storage cleanup, and finalize
 select is(
+  (select count(*)::int from public.claim_account_deletion_storage_cleanup('e5000000-0000-0000-0000-000000000001')),
+  1,
+  'Test 18: claim_account_deletion_storage_cleanup claims 1 pending item'
+);
+
+select is(
+  (select (public.record_account_deletion_storage_result(
+    (select id from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001'),
+    'failed',
+    'Simulated 503'
+  ))->>'remaining_count'),
+  '1',
+  'Test 19: failed Storage cleanup keeps remaining_count = 1'
+);
+
+select is(
+  (select (public.finalize_account_deletion('e5000000-0000-0000-0000-000000000001', true))->>'deletion_status'),
+  'storage_pending',
+  'Test 20: finalize_account_deletion refuses to mark completed while Storage cleanup is failed/pending'
+);
+
+-- Retry claim -> succeed -> finalize
+select is(
+  (select count(*)::int from public.claim_account_deletion_storage_cleanup('e5000000-0000-0000-0000-000000000001')),
+  1,
+  'Test 21: retry claims failed Storage cleanup item'
+);
+
+select public.record_account_deletion_storage_result(
+  (select id from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001'),
+  'completed'
+);
+
+select is(
+  (select (public.finalize_account_deletion('e5000000-0000-0000-0000-000000000001', true))->>'deletion_status')
+  || '|' ||
   (select status::text from public.data_requests where profile_id = 'e5000000-0000-0000-0000-000000000001' and kind = 'deletion'),
-  'completed',
-  'Test 11: completed NDPA deletion data_request recorded'
-);
-
--- 12: Idempotent second call returns already_deleted
-select is(
-  (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'Retry'))->>'status'),
-  'already_deleted',
-  'Test 12: second execute_account_deletion call is idempotent'
+  'completed|completed',
+  'Test 22: finalize_account_deletion marks profile and data_request completed once Storage and Auth succeed'
 );
 
 select * from finish();

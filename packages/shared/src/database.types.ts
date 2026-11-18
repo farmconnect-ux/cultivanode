@@ -9227,8 +9227,26 @@ export type Database = {
         Returns: Json
       }
       release_order_inventory: { Args: { p_order_id: string }; Returns: Json }
+      claim_account_deletion_storage_cleanup: {
+        Args: { p_user_id?: string }
+        Returns: {
+          attempts: number
+          bucket_id: string
+          id: string
+          profile_id: string
+          storage_path: string
+        }[]
+      }
       execute_account_deletion: {
         Args: { p_reason?: string; p_user_id: string }
+        Returns: Json
+      }
+      finalize_account_deletion: {
+        Args: { p_auth_deleted: boolean; p_auth_error?: string; p_user_id: string }
+        Returns: Json
+      }
+      record_account_deletion_storage_result: {
+        Args: { p_cleanup_id: string; p_error?: string; p_status: string }
         Returns: Json
       }
       request_account_deletion: {

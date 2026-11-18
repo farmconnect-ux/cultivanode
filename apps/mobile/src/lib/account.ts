@@ -390,3 +390,13 @@ export async function deleteMyAccount(input: {
   }
   return { ok: false, code: 'failed', error: body.message || 'Could not delete your account. Please try again.' };
 }
+
+export async function getFreshAccessToken(fallbackToken?: string | null): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) return data.session.access_token;
+  } catch {
+    // Fall back to existing session token if getSession fails.
+  }
+  return fallbackToken ?? null;
+}

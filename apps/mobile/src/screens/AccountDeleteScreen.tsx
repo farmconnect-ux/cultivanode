@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { deleteMyAccount, isRecentSignIn } from '../lib/account';
+import { deleteMyAccount, getFreshAccessToken, isRecentSignIn } from '../lib/account';
 import { sendCode, sendEmailCode, signOut, verifyCode, verifyEmailCode } from '../lib/auth';
 import { useSession } from '../lib/session';
+import { supabase } from '../lib/supabase';
 import { space } from '../theme';
 import { Button, Card, Header, Notice, Screen, SectionTitle, Text, TextField } from '../ui';
 
@@ -23,10 +24,12 @@ export function AccountDeleteScreen({ onBack, onDeleted }: Props) {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [reauthing, setReauthing] = useState(false);
+  const [reauthVerified, setReauthVerified] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
   const [feedback, setFeedback] = useState<{ tone: 'error' | 'warning' | 'success'; text: string } | null>(null);
 
-  const recentSession = isRecentSignIn(session?.user.last_sign_in_at);
+  const recentSession = reauthVerified || isRecentSignIn(session?.user.last_sign_in_at);
 
   async function handleSendReauthCode() {
     if (reauthing) return;
@@ -53,41 +56,60 @@ export function AccountDeleteScreen({ onBack, onDeleted }: Props) {
         : 'errorWrongCode';
     setReauthing(false);
     if (err) {
-      setFeedback({ tone: 'error', text: 'Invalid or expired verification code. Please try again.' });
+      setFeedback({
+        tone: 'error',
+        text: err === 'offline'
+          ? 'No internet connection. Check your signal and try again.'
+          : 'Invalid or expired verification code. Please try again.',
+      });
       return;
     }
+    await supabase.auth.getSession().catch(() => undefined);
+    setReauthVerified(true);
     setOtpSent(false);
     setOtpCode('');
     setFeedback({ tone: 'success', text: 'Identity verified. You can now confirm account deletion.' });
   }
 
   async function executeDeletion() {
-    if (!userId || !session?.access_token || deleting) return;
+    if (!userId || deletingRef.current) return;
+    deletingRef.current = true;
     setDeleting(true);
     setFeedback(null);
-    const outcome = await deleteMyAccount({
-      userId,
-      confirmation,
-      reason,
-      accessToken: session.access_token,
-    });
-    setDeleting(false);
-
-    if (!outcome.ok) {
-      setFeedback({
-        tone: outcome.code === 'deletion_blocked' || outcome.code === 'reauth_required' ? 'warning' : 'error',
-        text: outcome.error,
+    try {
+      const freshToken = await getFreshAccessToken(session?.access_token);
+      if (!freshToken) {
+        setFeedback({ tone: 'error', text: 'Please sign in again before deleting your account.' });
+        return;
+      }
+      const outcome = await deleteMyAccount({
+        userId,
+        confirmation,
+        reason,
+        accessToken: freshToken,
       });
-      return;
-    }
 
-    await signOut('local');
-    Alert.alert(
-      'Account deleted',
-      'Your CultivaNode login and personal profile have been permanently removed.',
-      [{ text: 'OK', onPress: onDeleted }],
-    );
-    onDeleted();
+      if (!outcome.ok) {
+        if (outcome.code === 'reauth_required') {
+          setReauthVerified(false);
+        }
+        setFeedback({
+          tone: outcome.code === 'deletion_blocked' || outcome.code === 'reauth_required' ? 'warning' : 'error',
+          text: outcome.error,
+        });
+        return;
+      }
+
+      await signOut('local');
+      onDeleted();
+      Alert.alert(
+        'Account deleted',
+        'Your CultivaNode login and personal profile have been permanently removed.',
+      );
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
+    }
   }
 
   function handleConfirmPress() {

@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
-describe('Batch 02.5 /api/account/delete route', () => {
+describe('Batch 02.5 /api/account/delete route (durable 3-phase flow)', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockCookieGetUser.mockResolvedValue({ data: { user: null }, error: null });
@@ -44,7 +44,7 @@ describe('Batch 02.5 /api/account/delete route', () => {
     expect(res.status).toBe(503);
   });
 
-  it('rejects unauthenticated requests with 401 and invalid confirmation with 400', async () => {
+  it('rejects unauthenticated requests (401), invalid confirmation (400), and stale sessions (403)', async () => {
     const { POST } = await import('@/app/api/account/delete/route');
 
     const noAuth = await POST(
@@ -67,30 +67,24 @@ describe('Batch 02.5 /api/account/delete route', () => {
       }),
     );
     expect(badConfirm.status).toBe(400);
-    expect(mockAdminRpc).not.toHaveBeenCalled();
-  });
 
-  it('requires recent sign-in (403 reauth_required) when session is stale', async () => {
-    const { POST } = await import('@/app/api/account/delete/route');
-    const staleIso = new Date(Date.now() - 20 * 60 * 1000).toISOString();
     mockAdminGetUser.mockResolvedValueOnce({
-      data: { user: { id: 'u1', last_sign_in_at: staleIso } },
+      data: { user: { id: 'u1', last_sign_in_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() } },
       error: null,
     });
-
-    const res = await POST(
+    const stale = await POST(
       new Request('http://localhost/api/account/delete', {
         method: 'POST',
         headers: { Authorization: 'Bearer tok-1' },
         body: JSON.stringify({ confirmation: 'DELETE' }),
       }),
     );
-    expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe('reauth_required');
+    expect(stale.status).toBe(403);
+    expect((await stale.json()).error).toBe('reauth_required');
     expect(mockAdminRpc).not.toHaveBeenCalled();
   });
 
-  it('returns 409 when active bookings/escrows/settlements block deletion without touching storage or auth', async () => {
+  it('returns 409 when active bookings/fulfilments/escrows/settlements block deletion', async () => {
     const { POST } = await import('@/app/api/account/delete/route');
     mockAdminGetUser.mockResolvedValueOnce({
       data: { user: { id: 'u1', last_sign_in_at: new Date().toISOString() } },
@@ -98,7 +92,7 @@ describe('Batch 02.5 /api/account/delete route', () => {
     });
     mockAdminRpc.mockResolvedValueOnce({
       data: null,
-      error: { code: 'P0001', message: 'Complete or resolve active service bookings before deleting your account.' },
+      error: { code: 'P0001', message: 'Complete or resolve active seller fulfilments before deleting your account.' },
     });
 
     const res = await POST(
@@ -113,67 +107,104 @@ describe('Batch 02.5 /api/account/delete route', () => {
     expect(mockAdminDeleteUser).not.toHaveBeenCalled();
   });
 
-  it('executes deletion, removes verification documents from storage, deletes Auth user, and handles partial failures', async () => {
+  it('handles partial Storage failure without deleting Auth, then recovers on retry', async () => {
     const { POST } = await import('@/app/api/account/delete/route');
     const freshUser = { id: 'u1', last_sign_in_at: new Date().toISOString() };
 
-    // 1. Full success
+    // Attempt 1: 2 files queued; 1st succeeds, 2nd fails -> Auth deleteUser must NOT run.
     mockAdminGetUser.mockResolvedValueOnce({ data: { user: freshUser }, error: null });
-    mockAdminRpc.mockResolvedValueOnce({
-      data: { status: 'deleted', request_id: 'req-1', storage_paths: ['u1/doc1.pdf', 'u1/doc2.jpg'] },
-      error: null,
-    });
+    mockAdminRpc
+      .mockResolvedValueOnce({ data: { status: 'anonymized', request_id: 'req-1', pending_storage_count: 2 }, error: null })
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'c1', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/a.pdf', attempts: 1 },
+          { id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 1 },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { status: 'completed', remaining_count: 1 }, error: null })
+      .mockResolvedValueOnce({ data: { status: 'failed', remaining_count: 1 }, error: null })
+      .mockResolvedValueOnce({ data: { deletion_status: 'storage_pending' }, error: null });
 
-    const ok = await POST(
+    mockStorageRemove
+      .mockResolvedValueOnce({ data: [{ name: 'u1/a.pdf' }], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'Storage 503' } });
+
+    const partialRes = await POST(
       new Request('http://localhost/api/account/delete', {
         method: 'POST',
         headers: { Authorization: 'Bearer tok-1' },
-        body: JSON.stringify({ confirmation: 'DELETE', reason: 'Closing farm account' }),
+        body: JSON.stringify({ confirmation: 'DELETE' }),
       }),
     );
-    expect(ok.status).toBe(200);
-    expect(await ok.json()).toEqual({ status: 'deleted', request_id: 'req-1', storage_removed_count: 2 });
-    expect(mockAdminRpc).toHaveBeenCalledWith('execute_account_deletion', {
-      p_user_id: 'u1',
-      p_reason: 'Closing farm account',
-    });
-    expect(mockStorageRemove).toHaveBeenCalledWith(['u1/doc1.pdf', 'u1/doc2.jpg']);
-    expect(mockAdminDeleteUser).toHaveBeenCalledWith('u1');
+    expect(partialRes.status).toBe(500);
+    expect((await partialRes.json()).error).toBe('storage_cleanup_incomplete');
+    expect(mockAdminDeleteUser).not.toHaveBeenCalled();
 
-    // 2. Auth deleteUser partial failure returns 500 auth_deletion_incomplete
+    // Attempt 2 (retry): claims only remaining failed item c2, removes it, deletes Auth, finalizes.
     mockAdminGetUser.mockResolvedValueOnce({ data: { user: freshUser }, error: null });
-    mockAdminRpc.mockResolvedValueOnce({
-      data: { status: 'deleted', request_id: 'req-1', storage_paths: [] },
-      error: null,
-    });
+    mockAdminRpc
+      .mockResolvedValueOnce({ data: { status: 'already_anonymized', request_id: 'req-1', pending_storage_count: 1 }, error: null })
+      .mockResolvedValueOnce({
+        data: [{ id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 2 }],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { status: 'completed', remaining_count: 0 }, error: null })
+      .mockResolvedValueOnce({ data: { deletion_status: 'completed', remaining_storage_count: 0 }, error: null });
+
+    mockStorageRemove.mockResolvedValueOnce({ data: [{ name: 'u1/b.jpg' }], error: null });
+    mockAdminDeleteUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+
+    const retryRes = await POST(
+      new Request('http://localhost/api/account/delete', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer tok-1' },
+        body: JSON.stringify({ confirmation: 'DELETE' }),
+      }),
+    );
+    expect(retryRes.status).toBe(200);
+    expect(await retryRes.json()).toEqual({ status: 'deleted', request_id: 'req-1', storage_removed_count: 1 });
+    expect(mockAdminDeleteUser).toHaveBeenCalledWith('u1');
+  });
+
+  it('handles Auth deletion failure and idempotent retry', async () => {
+    const { POST } = await import('@/app/api/account/delete/route');
+    const freshUser = { id: 'u1', last_sign_in_at: new Date().toISOString() };
+
+    // Auth deletion fails after Storage completes
+    mockAdminGetUser.mockResolvedValueOnce({ data: { user: freshUser }, error: null });
+    mockAdminRpc
+      .mockResolvedValueOnce({ data: { status: 'anonymized', request_id: 'req-2', pending_storage_count: 0 }, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: { deletion_status: 'auth_pending' }, error: null });
     mockAdminDeleteUser.mockResolvedValueOnce({ data: { user: null }, error: { status: 500, message: 'Auth down' } });
 
-    const partial = await POST(
+    const authFail = await POST(
       new Request('http://localhost/api/account/delete', {
         method: 'POST',
         headers: { Authorization: 'Bearer tok-1' },
         body: JSON.stringify({ confirmation: 'DELETE' }),
       }),
     );
-    expect(partial.status).toBe(500);
-    expect((await partial.json()).error).toBe('auth_deletion_incomplete');
+    expect(authFail.status).toBe(500);
+    expect((await authFail.json()).error).toBe('auth_deletion_incomplete');
 
-    // 3. Idempotent retry when already_deleted and Auth user already 404
+    // Retry succeeds even if Auth returns 404
     mockAdminGetUser.mockResolvedValueOnce({ data: { user: freshUser }, error: null });
-    mockAdminRpc.mockResolvedValueOnce({
-      data: { status: 'already_deleted', request_id: null, storage_paths: [] },
-      error: null,
-    });
-    mockAdminDeleteUser.mockResolvedValueOnce({ data: { user: null }, error: { status: 404, message: 'User not found' } });
+    mockAdminRpc
+      .mockResolvedValueOnce({ data: { status: 'already_deleted', request_id: 'req-2', pending_storage_count: 0 }, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: { deletion_status: 'completed' }, error: null });
+    mockAdminDeleteUser.mockResolvedValueOnce({ data: { user: null }, error: { status: 404, message: 'Not found' } });
 
-    const retry = await POST(
+    const retryOk = await POST(
       new Request('http://localhost/api/account/delete', {
         method: 'POST',
         headers: { Authorization: 'Bearer tok-1' },
         body: JSON.stringify({ confirmation: 'DELETE' }),
       }),
     );
-    expect(retry.status).toBe(200);
-    expect((await retry.json()).status).toBe('already_deleted');
+    expect(retryOk.status).toBe(200);
+    expect((await retryOk.json()).status).toBe('already_deleted');
   });
 });

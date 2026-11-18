@@ -221,6 +221,84 @@ async function main() {
     );
   }
   console.log(`   PASS: 3c valid serialised outcome (${auditC.stdout}).`);
+
+  // 4a: Concurrent last-super-admin deletion guard
+  console.log('4a. Testing concurrent super_admin deletion serialisation...');
+  const sa1 = randomUUID();
+  const sa2 = randomUUID();
+  const saSetup = runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${sa1}', '2348099900001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${sa2}', '2348099900002', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${sa1}', '2348099900001', 'Super One'), ('${sa2}', '2348099900002', 'Super Two');
+    DELETE FROM public.admin_roles WHERE admin_role = 'super_admin' AND profile_id NOT IN ('${sa1}', '${sa2}');
+    INSERT INTO public.admin_roles (profile_id, admin_role)
+    VALUES ('${sa1}', 'super_admin'), ('${sa2}', 'super_admin')
+    ON CONFLICT DO NOTHING;
+  `);
+  assert.equal(saSetup.code, 0, `4a setup failed: ${saSetup.stderr}`);
+
+  const [rSa1, rSa2] = await Promise.all([
+    runPsql(`SELECT public.execute_account_deletion('${sa1}', 'Concurrent SA1');`),
+    runPsql(`SELECT public.execute_account_deletion('${sa2}', 'Concurrent SA2');`),
+  ]);
+  const saSuccesses = [rSa1, rSa2].filter((r) => r.code === 0);
+  const saFailures = [rSa1, rSa2].filter((r) => r.code !== 0);
+  assert.equal(saSuccesses.length, 1, `Expected exactly 1 super_admin deletion to succeed, got ${saSuccesses.length}`);
+  assert.equal(saFailures.length, 1, `Expected exactly 1 super_admin deletion to be rejected, got ${saFailures.length}`);
+  assert.match(saFailures[0].stderr, /Cannot delete the last super admin account/);
+  const remainingSa = runPsql(`SELECT count(*) FROM public.admin_roles WHERE admin_role = 'super_admin';`);
+  assert.equal(remainingSa.stdout, '1', `Expected 1 remaining super_admin, got ${remainingSa.stdout}`);
+  console.log('   PASS: 4a serialised concurrent super_admin deletions; 1 succeeded, 1 rejected, 1 super_admin preserved.');
+
+  // 4b: Concurrent duplicate account deletion + booking insert guard
+  console.log('4b. Testing concurrent duplicate deletion and booking creation guard...');
+  const dupUser = randomUUID();
+  const farmerUser = randomUUID();
+  const farmId = randomUUID();
+  const listingId = randomUUID();
+  const b4Setup = runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${dupUser}', '2348099900003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${farmerUser}', '2348099900004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${dupUser}', '2348099900003', 'Dup Target'), ('${farmerUser}', '2348099900004', 'Concurrent Farmer');
+    INSERT INTO public.farms (id, owner_id, name, state, location)
+    VALUES ('${farmId}', '${farmerUser}', 'Conc Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+    INSERT INTO public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
+    VALUES ('${listingId}', '${dupUser}', 'equipment', 'tractor', 'Conc Tractor', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+  `);
+  assert.equal(b4Setup.code, 0, `4b setup failed: ${b4Setup.stderr}`);
+
+  const [rDup1, rDup2, rBook] = await Promise.all([
+    runPsql(`SELECT (public.execute_account_deletion('${dupUser}', 'Race 1'))->>'status';`),
+    runPsql(`SELECT (public.execute_account_deletion('${dupUser}', 'Race 2'))->>'status';`),
+    runPsql(`
+      INSERT INTO public.bookings (
+        farmer_id, provider_id, listing_id, farm_id,
+        listing_title, listing_kind, farm_name, job_location, distance_km,
+        job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+      ) VALUES (
+        '${farmerUser}', '${dupUser}', '${listingId}', '${farmId}',
+        'Conc Tractor', 'equipment', 'Conc Farm', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+        current_date + 1, 'hectare', 1, 20000, 20000, 'requested', now() + interval '1 day'
+      );
+    `),
+  ]);
+  // Either booking landed first (blocking both deletions) OR deletion landed first (blocking booking + making second deletion idempotent).
+  if (rBook.code === 0) {
+    assert.ok(rDup1.code !== 0 && rDup2.code !== 0, 'If booking succeeded first, both deletions must be blocked');
+  } else {
+    assert.match(rBook.stderr, /Cannot create or update booking for a deleted or deleting account/);
+    assert.equal(rDup1.code, 0);
+    assert.equal(rDup2.code, 0);
+    const statuses = [rDup1.stdout, rDup2.stdout].sort();
+    assert.deepEqual(statuses, ['already_anonymized', 'anonymized']);
+  }
+  console.log('   PASS: 4b concurrent deletion and booking race produced a valid serialised outcome.');
 }
 
 main().catch((err) => {
