@@ -180,6 +180,74 @@ async function main() {
     const exportJson = await exportRes.json();
     assert.ok(exportJson && typeof exportJson === 'object', 'Expected NDPA export JSON object');
     console.log('   PASS: export_my_data returned user data over PostgREST.');
+
+    // 5. Payment Webhook Settlement RPC (backing /api/webhooks/paystack & /api/webhooks/flutterwave)
+    console.log('5. Testing process_payment_webhook RPC against live Postgres...');
+    const unknownOrderRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
+      p_reference: `PSTK-MISSING-${suffix}`,
+      p_provider: 'paystack',
+      p_amount_kobo: 50000,
+      p_order_id: randomUUID(),
+      p_gateway_data: {},
+    });
+    assert.ok(!unknownOrderRes.ok, `Expected unknown order to fail, got ${unknownOrderRes.status}`);
+
+    const whSellerId = randomUUID();
+    const whListingId = randomUUID();
+    const whOrderId = randomUUID();
+    const whFulfilId = randomUUID();
+    const whPayRef = `PSTK_${whOrderId}_${suffix}`;
+
+    runPsql(`
+      INSERT INTO public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
+      VALUES ('${whSellerId}', '${staff.id}', 'WH Agro ${suffix}', 'agro_dealer', 'verified');
+      INSERT INTO public.marketplace_listings (id, seller_id, category, title, unit, price_kobo, quantity_available, quantity_reserved, status)
+      VALUES ('${whListingId}', '${whSellerId}', 'seeds', 'Maize Seed ${suffix}', 'kg', 50000, 10, 1, 'active');
+      INSERT INTO public.marketplace_orders (id, order_number, buyer_id, items_subtotal_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address)
+      VALUES ('${whOrderId}', 'ORD-WH-${suffix}', '${user.id}', 50000, 50000, 'pending_payment', 'pending', 'escrow', '{"state":"Oyo"}'::jsonb);
+      INSERT INTO public.marketplace_fulfilments (id, order_id, seller_id, fulfilment_number, status, subtotal_kobo, delivery_method)
+      VALUES ('${whFulfilId}', '${whOrderId}', '${whSellerId}', 'FUL-WH-${suffix}', 'pending', 50000, 'seller_delivery');
+      INSERT INTO public.marketplace_order_items (order_id, listing_id, seller_id, title_snapshot, unit_snapshot, quantity, unit_price_kobo, line_total_kobo, commission_kobo)
+      VALUES ('${whOrderId}', '${whListingId}', '${whSellerId}', 'Maize Seed', 'kg', 1, 50000, 50000, 2500);
+    `);
+
+    const badAmtRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
+      p_reference: whPayRef,
+      p_provider: 'paystack',
+      p_amount_kobo: 1000,
+      p_order_id: whOrderId,
+      p_gateway_data: {},
+    });
+    assert.ok(!badAmtRes.ok, `Expected mismatched webhook amount to fail, got ${badAmtRes.status}`);
+
+    const okWhRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
+      p_reference: whPayRef,
+      p_provider: 'paystack',
+      p_amount_kobo: 50000,
+      p_order_id: whOrderId,
+      p_gateway_data: { reference: whPayRef },
+    });
+    assert.equal(okWhRes.status, 200, `Expected 200 from process_payment_webhook, got ${await okWhRes.text()}`);
+    const okWhJson = await okWhRes.json();
+    assert.equal(okWhJson.success, true);
+
+    const dupWhRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
+      p_reference: whPayRef,
+      p_provider: 'paystack',
+      p_amount_kobo: 50000,
+      p_order_id: whOrderId,
+      p_gateway_data: { reference: whPayRef },
+    });
+    assert.equal(dupWhRes.status, 200);
+    const dupWhJson = await dupWhRes.json();
+    assert.equal(dupWhJson.already_processed, true);
+
+    const ledgerCount = runPsql(`
+      SELECT count(*) FROM public.marketplace_journal_entries
+      WHERE reference_id = '${whOrderId}' AND reference_type = 'order_payment';
+    `);
+    assert.equal(ledgerCount, '1', `Expected exactly 1 order_payment ledger entry, got ${ledgerCount}`);
+    console.log('   PASS: process_payment_webhook rejected unknown/mismatched, cleared valid, and handled duplicate idempotently.');
   } finally {
     runPsql(`
       DELETE FROM public.marketplace_journal_entries WHERE reference_id = '${ledgerRef}';

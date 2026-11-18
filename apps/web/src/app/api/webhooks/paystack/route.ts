@@ -4,6 +4,8 @@ import type { Json } from "@cultivanode/shared";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Paystack Webhook Ingestion Endpoint
  *
@@ -29,69 +31,106 @@ export async function POST(req: Request) {
 
     let payload: Record<string, unknown>;
     try {
-      payload = JSON.parse(rawBody);
+      const parsed = JSON.parse(rawBody);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+      }
+      payload = parsed as Record<string, unknown>;
     } catch {
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
     logger.info("paystack_webhook_received", { event: payload?.event });
 
-    if (payload?.event === "charge.success") {
-      const data = (payload.data ?? {}) as Record<string, unknown>;
-      const metadata = (data.metadata ?? {}) as Record<string, unknown>;
-      const reference: string = String(data.reference || "");
-      const amountKobo: number = Math.round(Number(data.amount || 0)); // Paystack amounts are already in kobo
+    if (payload.event !== "charge.success") {
+      return NextResponse.json({ status: "ignored", event: payload.event ?? null }, { status: 200 });
+    }
 
-      const supabase = createServiceClient();
-      if (!supabase) {
-        logger.error("paystack_webhook_no_service_key");
-        return NextResponse.json({ error: "Not configured" }, { status: 503 });
-      }
+    if (!payload.data || typeof payload.data !== "object" || Array.isArray(payload.data)) {
+      return NextResponse.json({ error: "Missing payment data" }, { status: 400 });
+    }
 
-      let orderId: string | null = null;
+    const data = payload.data as Record<string, unknown>;
+    const metadata = (data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
+      ? data.metadata
+      : {}) as Record<string, unknown>;
+    const reference = typeof data.reference === "string" ? data.reference.trim() : "";
+    if (!reference) {
+      return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
+    }
 
-      if (metadata.orderId || metadata.order_id) {
-        orderId = String(metadata.orderId || metadata.order_id);
-      } else if (reference.startsWith("PSTK_")) {
-        const parts = reference.split("_");
-        if (parts.length >= 2) {
-          orderId = parts[1];
-        }
-      }
+    const rawAmount = Number(data.amount);
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+    }
+    const amountKobo = Math.round(rawAmount); // Paystack amounts are already in kobo
+    if (amountKobo <= 0) {
+      return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+    }
 
-      if (!orderId && reference) {
-        const { data: pRec } = await supabase
-          .from("marketplace_payments")
-          .select("order_id")
-          .eq("payment_reference", reference)
-          .maybeSingle();
+    const supabase = createServiceClient();
+    if (!supabase) {
+      logger.error("paystack_webhook_no_service_key");
+      return NextResponse.json({ error: "Not configured" }, { status: 503 });
+    }
 
-        if (pRec?.order_id) {
-          orderId = pRec.order_id;
-        }
-      }
+    let orderId: string | null = null;
 
-      if (orderId && amountKobo > 0) {
-        const { error: rpcErr } = await supabase.rpc("process_payment_webhook", {
-          p_reference: reference,
-          p_provider: "paystack",
-          p_amount_kobo: amountKobo,
-          p_order_id: orderId,
-          p_gateway_data: data as Json,
-        });
-
-        if (rpcErr) {
-          logger.error("paystack_webhook_rpc_failed", { code: rpcErr.code });
-          const isDomainErr = rpcErr.code === "22023" || rpcErr.code === "P0002";
-          return NextResponse.json(
-            { error: "Payment processing failed" },
-            { status: isDomainErr ? 422 : 500 },
-          );
-        }
-        logger.info("paystack_payment_cleared", { orderId, amountKobo, reference });
+    if (typeof metadata.orderId === "string" && metadata.orderId.trim()) {
+      orderId = metadata.orderId.trim();
+    } else if (typeof metadata.order_id === "string" && metadata.order_id.trim()) {
+      orderId = metadata.order_id.trim();
+    } else if (reference.startsWith("PSTK_")) {
+      const parts = reference.split("_");
+      if (parts.length >= 2 && parts[1]) {
+        orderId = parts[1].trim();
       }
     }
 
-    return NextResponse.json({ status: "success" }, { status: 200 });
+    if (!orderId) {
+      const { data: pRec, error: lookupErr } = await supabase
+        .from("marketplace_payments")
+        .select("order_id")
+        .eq("payment_reference", reference)
+        .maybeSingle();
+
+      if (lookupErr) {
+        logger.error("paystack_webhook_lookup_failed", { code: lookupErr.code });
+        return NextResponse.json({ error: "Payment lookup failed" }, { status: 500 });
+      }
+      if (pRec?.order_id) {
+        orderId = pRec.order_id;
+      }
+    }
+
+    if (!orderId || !UUID_RE.test(orderId)) {
+      logger.warn("paystack_webhook_unresolvable_order", { reference });
+      return NextResponse.json({ error: "Unresolvable order reference" }, { status: 422 });
+    }
+
+    const { data: rpcData, error: rpcErr } = await supabase.rpc("process_payment_webhook", {
+      p_reference: reference,
+      p_provider: "paystack",
+      p_amount_kobo: amountKobo,
+      p_order_id: orderId,
+      p_gateway_data: data as Json,
+    });
+
+    if (rpcErr) {
+      logger.error("paystack_webhook_rpc_failed", { code: rpcErr.code });
+      const isDomainErr =
+        rpcErr.code === "22023" ||
+        rpcErr.code === "P0002" ||
+        rpcErr.code === "23503" ||
+        rpcErr.code === "23505";
+      return NextResponse.json(
+        { error: "Payment processing failed" },
+        { status: isDomainErr ? 422 : 500 },
+      );
+    }
+
+    const alreadyProcessed = Boolean((rpcData as Record<string, unknown> | null)?.already_processed);
+    logger.info("paystack_payment_cleared", { orderId, amountKobo, reference, alreadyProcessed });
+    return NextResponse.json({ status: "success", already_processed: alreadyProcessed }, { status: 200 });
   } catch (error) {
     logger.error("paystack_webhook_error", { error: String(error) });
     return NextResponse.json({ error: "Internal processing error" }, { status: 500 });
