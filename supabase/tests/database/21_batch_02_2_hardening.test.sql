@@ -34,18 +34,21 @@ values
   ('d7000000-0000-0000-0000-000000000006', 'Hardening Outsider', '+2348099000006')
 on conflict (id) do nothing;
 
-insert into public.admin_roles (profile_id, role)
+insert into public.admin_roles (profile_id, admin_role)
 values
   ('d7000000-0000-0000-0000-000000000003', 'super_admin'),
-  ('d7000000-0000-0000-0000-000000000004', 'finance_admin'),
-  ('d7000000-0000-0000-0000-000000000005', 'support_agent')
-on conflict (profile_id) do nothing;
+  ('d7000000-0000-0000-0000-000000000004', 'finance_officer'),
+  ('d7000000-0000-0000-0000-000000000005', 'support_disputes')
+on conflict do nothing;
 
--- Grant finance_admin payments.read only (test restricted ledger isolation) vs super_admin
-delete from public.admin_role_permissions where role = 'finance_admin' and permission = 'ledger.read';
+-- Ensure finance_officer has payments.read without ledger.read inside this rolled-back test tx
+insert into public.admin_role_permissions (admin_role, permission)
+values ('finance_officer', 'payments.read')
+on conflict do nothing;
+delete from public.admin_role_permissions where admin_role = 'finance_officer' and permission = 'ledger.read';
 
-insert into public.marketplace_sellers (id, owner_id, business_name, seller_type, status)
-values ('d7000000-0000-0000-0000-0000000000a1', 'd7000000-0000-0000-0000-000000000002', 'Hardening Agro Ltd', 'farmer', 'active')
+insert into public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status)
+values ('d7000000-0000-0000-0000-0000000000a1', 'd7000000-0000-0000-0000-000000000002', 'Hardening Agro Ltd', 'agro_dealer', 'verified')
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------------------------------------------
@@ -87,9 +90,12 @@ select is(
 -- ------------------------------------------------------------------------------------------------
 -- B. Settlement Reconciliation & Security
 -- ------------------------------------------------------------------------------------------------
-insert into public.marketplace_orders (id, order_number, buyer_id, total_kobo, status)
-values ('d7000000-0000-0000-0000-0000000000b1', 'ORD-B22H-001', 'd7000000-0000-0000-0000-000000000001', 100000, 'completed')
-on conflict (id) do nothing;
+insert into public.marketplace_orders (
+  id, order_number, buyer_id, items_subtotal_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+) values (
+  'd7000000-0000-0000-0000-0000000000b1', 'ORD-B22H-001', 'd7000000-0000-0000-0000-000000000001',
+  100000, 100000, 'completed', 'released', 'escrow', '{"state":"Oyo"}'::jsonb
+) on conflict (id) do nothing;
 
 insert into public.marketplace_escrows (id, order_id, buyer_id, seller_id, amount_kobo, commission_kobo, seller_net_kobo, status)
 values ('d7000000-0000-0000-0000-0000000000c1', 'd7000000-0000-0000-0000-0000000000b1', 'd7000000-0000-0000-0000-000000000001', 'd7000000-0000-0000-0000-0000000000a1', 100000, 5000, 95000, 'released');

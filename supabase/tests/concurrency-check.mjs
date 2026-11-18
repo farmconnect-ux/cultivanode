@@ -68,14 +68,14 @@ async function main() {
       ('e8000000-0000-0000-0000-000000000002', 'Conc Seller'),
       ('e8000000-0000-0000-0000-000000000003', 'Conc Admin')
     ON CONFLICT (id) DO NOTHING;
-    INSERT INTO public.admin_roles (profile_id, role) VALUES
+    INSERT INTO public.admin_roles (profile_id, admin_role) VALUES
       ('e8000000-0000-0000-0000-000000000003', 'super_admin')
-    ON CONFLICT (profile_id) DO NOTHING;
-    INSERT INTO public.marketplace_sellers (id, owner_id, business_name, seller_type, status) VALUES
-      ('e8000000-0000-0000-0000-0000000000a1', 'e8000000-0000-0000-0000-000000000002', 'Conc Agro', 'farmer', 'active')
+    ON CONFLICT DO NOTHING;
+    INSERT INTO public.marketplace_sellers (id, profile_id, business_name, seller_type, verification_status) VALUES
+      ('e8000000-0000-0000-0000-0000000000a1', 'e8000000-0000-0000-0000-000000000002', 'Conc Agro', 'agro_dealer', 'verified')
     ON CONFLICT (id) DO NOTHING;
-    INSERT INTO public.marketplace_orders (id, order_number, buyer_id, total_kobo, status) VALUES
-      ('e8000000-0000-0000-0000-0000000000b1', 'ORD-CONC-1', 'e8000000-0000-0000-0000-000000000001', 50000, 'completed')
+    INSERT INTO public.marketplace_orders (id, order_number, buyer_id, items_subtotal_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address) VALUES
+      ('e8000000-0000-0000-0000-0000000000b1', 'ORD-CONC-1', 'e8000000-0000-0000-0000-000000000001', 50000, 50000, 'completed', 'released', 'escrow', '{"state":"Oyo"}'::jsonb)
     ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.marketplace_escrows (id, order_id, buyer_id, seller_id, amount_kobo, commission_kobo, seller_net_kobo, status) VALUES
       ('e8000000-0000-0000-0000-0000000000c1', 'e8000000-0000-0000-0000-0000000000b1', 'e8000000-0000-0000-0000-000000000001', 'e8000000-0000-0000-0000-0000000000a1', 50000, 2500, 47500, 'released')

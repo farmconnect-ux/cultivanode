@@ -12,7 +12,8 @@ import { supabase } from '../supabase';
 const mockGetUser = vi.fn();
 const mockRoleInsert = vi.fn();
 const mockRoleOrder = vi.fn();
-const mockRoleSelect = vi.fn(() => ({ order: mockRoleOrder }));
+const mockRoleEq = vi.fn(() => ({ order: mockRoleOrder }));
+const mockRoleSelect = vi.fn(() => ({ eq: mockRoleEq }));
 const mockDocSingle = vi.fn();
 const mockDocSelect = vi.fn(() => ({ single: mockDocSingle }));
 const mockDocInsert = vi.fn(() => ({ select: mockDocSelect }));
@@ -93,11 +94,8 @@ describe('mobile role requests and verification document uploads', () => {
       ],
       error: null,
     });
-    const listRes = await loadRoleRequests();
-    expect(listRes.ok).toBe(true);
-    if (listRes.ok) {
-      expect(listRes.requests.map((r) => r.status)).toEqual(['approved', 'rejected']);
-    }
+    const requests = await loadRoleRequests(USER_ID);
+    expect(requests.map((r) => r.status)).toEqual(['approved', 'rejected']);
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ error: null } as never);
     expect(await cancelRoleRequest(REQ_ID)).toEqual({ ok: true });
