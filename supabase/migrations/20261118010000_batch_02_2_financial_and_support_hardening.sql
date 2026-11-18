@@ -26,6 +26,8 @@ set search_path = ''
 as $$
 declare
   v_last_hash text;
+  v_last_created_at timestamptz;
+  v_entry_created_at timestamptz;
   v_entry_id uuid;
   v_postings_digest text := '';
   v_current_hash text;
@@ -115,7 +117,7 @@ begin
   -- Global transaction-scoped advisory lock serialises hash-chain reads & writes
   perform pg_advisory_xact_lock(hashtext('marketplace_journal_chain'));
 
-  select current_hash into v_last_hash
+  select current_hash, created_at into v_last_hash, v_last_created_at
     from public.marketplace_journal_entries
    order by created_at desc, id desc
    limit 1;
@@ -124,17 +126,22 @@ begin
     v_last_hash := repeat('0', 64);
   end if;
 
+  v_entry_created_at := clock_timestamp();
+  if v_last_created_at is not null and v_entry_created_at <= v_last_created_at then
+    v_entry_created_at := v_last_created_at + interval '1 microsecond';
+  end if;
+
   v_entry_id := gen_random_uuid();
   v_current_hash := encode(
     extensions.digest(
-      v_last_hash || ':' || v_entry_id::text || ':' || p_reference_id || ':' || v_postings_digest || ':' || clock_timestamp()::text,
+      v_last_hash || ':' || v_entry_id::text || ':' || p_reference_id || ':' || v_postings_digest || ':' || v_entry_created_at::text,
       'sha256'
     ),
     'hex'
   );
 
-  insert into public.marketplace_journal_entries (id, reference_id, reference_type, description, previous_hash, current_hash)
-  values (v_entry_id, trim(p_reference_id), p_reference_type, trim(p_description), v_last_hash, v_current_hash);
+  insert into public.marketplace_journal_entries (id, reference_id, reference_type, description, previous_hash, current_hash, created_at)
+  values (v_entry_id, trim(p_reference_id), p_reference_type, trim(p_description), v_last_hash, v_current_hash, v_entry_created_at);
 
   for v_elem in select value from jsonb_array_elements(p_postings)
   loop
