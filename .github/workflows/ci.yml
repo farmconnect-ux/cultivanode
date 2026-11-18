@@ -51,3 +51,10 @@ jobs:
           eval "$(supabase status -o env)"
           set +a
           node supabase/tests/storage-api-check.mjs
+
+      - name: Run live API/DB integration tests
+        run: |
+          set -a
+          eval "$(supabase status -o env)"
+          set +a
+          node supabase/tests/api-db-integration-check.mjs

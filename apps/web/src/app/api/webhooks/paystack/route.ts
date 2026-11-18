@@ -26,12 +26,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const payload = JSON.parse(rawBody);
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
     logger.info("paystack_webhook_received", { event: payload?.event });
 
     if (payload?.event === "charge.success") {
-      const { data } = payload;
-      const reference: string = data.reference || "";
+      const data = (payload.data ?? {}) as Record<string, unknown>;
+      const metadata = (data.metadata ?? {}) as Record<string, unknown>;
+      const reference: string = String(data.reference || "");
       const amountKobo: number = Math.round(Number(data.amount || 0)); // Paystack amounts are already in kobo
 
       const supabase = createServiceClient();
@@ -42,8 +48,8 @@ export async function POST(req: Request) {
 
       let orderId: string | null = null;
 
-      if (data.metadata?.orderId || data.metadata?.order_id) {
-        orderId = data.metadata.orderId || data.metadata.order_id;
+      if (metadata.orderId || metadata.order_id) {
+        orderId = String(metadata.orderId || metadata.order_id);
       } else if (reference.startsWith("PSTK_")) {
         const parts = reference.split("_");
         if (parts.length >= 2) {
@@ -74,9 +80,13 @@ export async function POST(req: Request) {
 
         if (rpcErr) {
           logger.error("paystack_webhook_rpc_failed", { code: rpcErr.code });
-        } else {
-          logger.info("paystack_payment_cleared", { orderId, amountKobo, reference });
+          const isDomainErr = rpcErr.code === "22023" || rpcErr.code === "P0002";
+          return NextResponse.json(
+            { error: "Payment processing failed" },
+            { status: isDomainErr ? 422 : 500 },
+          );
         }
+        logger.info("paystack_payment_cleared", { orderId, amountKobo, reference });
       }
     }
 

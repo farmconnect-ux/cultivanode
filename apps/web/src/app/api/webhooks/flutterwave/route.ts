@@ -22,13 +22,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const payload = await req.json();
+    let payload: Record<string, unknown>;
+    try {
+      payload = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
     logger.info("flutterwave_webhook_received", { event: payload?.event });
 
     // Handle charge.completed
-    if (payload?.event === "charge.completed" && payload?.data?.status === "successful") {
-      const { data } = payload;
-      const txRef: string = data.tx_ref || "";
+    if (payload?.event === "charge.completed" && (payload?.data as Record<string, unknown> | undefined)?.status === "successful") {
+      const data = payload.data as Record<string, unknown>;
+      const txRef: string = String(data.tx_ref || "");
       const flwRef: string = String(data.id || data.flw_ref || txRef);
       const amountKobo: number = Math.round(Number(data.amount || data.charged_amount || 0) * 100);
 
@@ -72,9 +77,13 @@ export async function POST(req: Request) {
 
         if (rpcErr) {
           logger.error("flutterwave_webhook_rpc_failed", { code: rpcErr.code });
-        } else {
-          logger.info("flutterwave_payment_cleared", { orderId, amountKobo, flwRef });
+          const isDomainErr = rpcErr.code === "22023" || rpcErr.code === "P0002";
+          return NextResponse.json(
+            { error: "Payment processing failed" },
+            { status: isDomainErr ? 422 : 500 },
+          );
         }
+        logger.info("flutterwave_payment_cleared", { orderId, amountKobo, flwRef });
       }
     }
 
