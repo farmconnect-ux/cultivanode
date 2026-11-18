@@ -1,5 +1,5 @@
 begin;
-select plan(30);
+select plan(32);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -258,7 +258,8 @@ select is(
   (select (public.record_account_deletion_storage_result(
     (select id from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001'),
     'failed',
-    'Simulated 503'
+    'Simulated 503',
+    (select lease_token from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001')
   ))->>'remaining_count'),
   '1',
   'Test 19: failed Storage cleanup keeps remaining_count = 1'
@@ -279,7 +280,9 @@ select is(
 
 select public.record_account_deletion_storage_result(
   (select id from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001'),
-  'completed'
+  'completed',
+  null,
+  (select lease_token from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001')
 );
 
 select is(
@@ -361,6 +364,27 @@ select throws_ok(
   'P0001',
   'Cannot create or reassign fulfilment for a deleted or deleting seller account.',
   'Test 28: reassigning marketplace_fulfilment seller_id to deleted seller is rejected'
+);
+
+-- 29-30: Lease token fencing & terminal 'completed' state protection
+select throws_ok(
+  $$
+    select public.record_account_deletion_storage_result(
+      (select id from public.account_deletion_storage_cleanup where profile_id = 'e5000000-0000-0000-0000-000000000001' and storage_path = 'e5000000/stale.pdf'),
+      'failed',
+      'Stale worker error',
+      '00000000-0000-0000-0000-000000000000'::uuid
+    );
+  $$,
+  'P0001',
+  'Storage cleanup lease token mismatch or superseded by another worker.',
+  'Test 29: mismatched lease_token is rejected by record_account_deletion_storage_result'
+);
+
+select is(
+  (select (public.finalize_account_deletion('e5000000-0000-0000-0000-000000000001', false, 'Stale retry'))->>'deletion_status'),
+  'completed',
+  'Test 30: finalize_account_deletion never regresses a terminal completed profile'
 );
 
 select * from finish();

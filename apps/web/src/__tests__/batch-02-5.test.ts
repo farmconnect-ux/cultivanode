@@ -119,8 +119,8 @@ describe('Batch 02.5 /api/account/delete route (durable 3-phase flow)', () => {
       .mockResolvedValueOnce({ data: { status: 'anonymized', request_id: 'req-1', pending_storage_count: 2 }, error: null })
       .mockResolvedValueOnce({
         data: [
-          { id: 'c1', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/a.pdf', attempts: 1 },
-          { id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 1 },
+          { id: 'c1', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/a.pdf', attempts: 1, lease_token: 'lt-1' },
+          { id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 1, lease_token: 'lt-2' },
         ],
         error: null,
       })
@@ -148,7 +148,7 @@ describe('Batch 02.5 /api/account/delete route (durable 3-phase flow)', () => {
     mockAdminRpc
       .mockResolvedValueOnce({ data: { status: 'already_anonymized', request_id: 'req-1', pending_storage_count: 1 }, error: null })
       .mockResolvedValueOnce({
-        data: [{ id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 2 }],
+        data: [{ id: 'c2', profile_id: 'u1', bucket_id: 'verification-documents', storage_path: 'u1/b.jpg', attempts: 2, lease_token: 'lt-3' }],
         error: null,
       })
       .mockResolvedValueOnce({ data: { status: 'completed', remaining_count: 0 }, error: null })
@@ -166,6 +166,11 @@ describe('Batch 02.5 /api/account/delete route (durable 3-phase flow)', () => {
     );
     expect(retryRes.status).toBe(200);
     expect(await retryRes.json()).toEqual({ status: 'deleted', request_id: 'req-1', storage_removed_count: 1 });
+    expect(mockAdminRpc).toHaveBeenCalledWith('record_account_deletion_storage_result', {
+      p_cleanup_id: 'c2',
+      p_status: 'completed',
+      p_lease_token: 'lt-3',
+    });
     expect(mockAdminDeleteUser).toHaveBeenCalledWith('u1');
   });
 

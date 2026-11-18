@@ -9234,6 +9234,7 @@ export type Database = {
           bucket_id: string
           id: string
           lease_expires_at: string
+          lease_token: string
           profile_id: string
           storage_path: string
         }[]
@@ -9256,7 +9257,7 @@ export type Database = {
         }[]
       }
       record_account_deletion_storage_result: {
-        Args: { p_cleanup_id: string; p_error?: string; p_status: string }
+        Args: { p_cleanup_id: string; p_error?: string; p_lease_token?: string; p_status: string }
         Returns: Json
       }
       request_account_deletion: {

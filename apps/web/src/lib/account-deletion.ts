@@ -73,6 +73,7 @@ export async function processPendingStorageCleanup(
           p_cleanup_id: row.id,
           p_status: "failed",
           p_error: rmErr.message || "Storage removal failed",
+          p_lease_token: row.lease_token,
         },
       );
       if (recErr) {
@@ -92,6 +93,7 @@ export async function processPendingStorageCleanup(
       {
         p_cleanup_id: row.id,
         p_status: "completed",
+        p_lease_token: row.lease_token,
       },
     );
 

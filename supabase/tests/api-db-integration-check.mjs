@@ -323,11 +323,13 @@ async function main() {
     assert.equal(claimed1.length, 1);
     assert.equal(claimed1[0].storage_path, delDocPath);
 
-    await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+    const recFailRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
       p_cleanup_id: claimed1[0].id,
       p_status: 'failed',
       p_error: 'Simulated Storage 503',
+      p_lease_token: claimed1[0].lease_token,
     });
+    assert.equal(recFailRes.status, 200);
     const reqStatusMid = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
     assert.equal(reqStatusMid, 'open', 'Expected data_request to stay open while Storage cleanup is failed');
 
@@ -337,6 +339,7 @@ async function main() {
     const claimed2 = await claim2Res.json();
     assert.equal(claimed2.length, 1);
     assert.equal(claimed2[0].attempts, 2);
+    assert.ok(claimed2[0].lease_token, 'Expected claim to return lease_token');
 
     const claimWhileActiveRes = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
     assert.equal(claimWhileActiveRes.status, 200);
@@ -353,6 +356,7 @@ async function main() {
     const claimed3 = await claim3Res.json();
     assert.equal(claimed3.length, 1);
     assert.equal(claimed3[0].attempts, 3);
+    assert.notEqual(claimed3[0].lease_token, claimed2[0].lease_token);
 
     const rmRes = await fetch(`${API_URL}/storage/v1/object/${claimed3[0].bucket_id}`, {
       method: 'DELETE',
@@ -368,8 +372,18 @@ async function main() {
     const recOkRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
       p_cleanup_id: claimed3[0].id,
       p_status: 'completed',
+      p_lease_token: claimed3[0].lease_token,
     });
     assert.equal(recOkRes.status, 200);
+
+    // Stale Worker 2 attempting to record 'failed' with expired lease_token must be rejected
+    const staleRecRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed2[0].id,
+      p_status: 'failed',
+      p_error: 'Stale worker failure',
+      p_lease_token: claimed2[0].lease_token,
+    });
+    assert.equal(staleRecRes.status, 400, `Expected 400 for stale lease_token, got ${staleRecRes.status}`);
 
     // Verify Storage object is absent
     const fetchDeletedDoc = await fetch(`${API_URL}/storage/v1/object/authenticated/verification-documents/${delDocPath}`, {

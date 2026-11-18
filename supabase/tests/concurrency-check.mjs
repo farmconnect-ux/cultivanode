@@ -487,6 +487,123 @@ async function main() {
   assert.equal(expireRes.code, 0, `4e stale reclaim failed: ${expireRes.stderr}`);
   assert.equal(expireRes.stdout, '2');
   console.log('   PASS: 4e concurrent workers respected active lease and reclaimed expired lease.');
+
+  // 4f: Lease fencing: Worker A claims -> expires -> Worker B reclaims, completes & finalizes -> stale Worker A fails cannot regress
+  console.log('4f. Testing Storage lease fencing (stale Worker A failure rejected after Worker B completion)...');
+  const u4f = randomUUID();
+  const setup4f = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${u4f}', '2348099900016', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4f}', '2348099900016', 'Fence User A')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+    VALUES ('${u4f}', 'national_id', '${u4f}/fence-a.pdf', 'application/pdf', 100);
+    SELECT public.execute_account_deletion('${u4f}', '4f fence test');
+  `);
+  assert.equal(setup4f.code, 0, `4f setup failed: ${setup4f.stderr}`);
+
+  const claimA4f = await runPsql(`
+    SELECT id::text || '|' || lease_token::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4f}', 300);
+  `);
+  assert.equal(claimA4f.code, 0);
+  const [cleanupId4f, tokenA4f] = claimA4f.stdout.split('|');
+  assert.ok(cleanupId4f && tokenA4f);
+
+  const expire4f = await runPsql(`
+    UPDATE public.account_deletion_storage_cleanup
+       SET lease_expires_at = clock_timestamp() - interval '1 second'
+     WHERE id = '${cleanupId4f}';
+  `);
+  assert.equal(expire4f.code, 0);
+
+  const claimB4f = await runPsql(`
+    SELECT lease_token::text || '|' || attempts::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4f}', 300);
+  `);
+  assert.equal(claimB4f.code, 0);
+  const [tokenB4f, attemptsB4f] = claimB4f.stdout.split('|');
+  assert.notEqual(tokenB4f, tokenA4f);
+  assert.equal(attemptsB4f, '2');
+
+  const completeB4f = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4f}', 'completed', null, '${tokenB4f}');
+    SELECT (public.finalize_account_deletion('${u4f}', true))->>'deletion_status';
+  `);
+  assert.equal(completeB4f.code, 0, `4f Worker B completion failed: ${completeB4f.stderr}`);
+
+  // Stale Worker A tries to record 'failed' with expired tokenA4f
+  const staleFail4f = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4f}', 'failed', 'Stale Worker A error', '${tokenA4f}');
+  `);
+  assert.notEqual(staleFail4f.code, 0, '4f stale Worker A result must be rejected');
+
+  // Repeated finalize_account_deletion with false must not regress completed profile or duplicate audit row
+  const repeatFin4f = await runPsql(`
+    SELECT (public.finalize_account_deletion('${u4f}', false, 'Late retry'))->>'deletion_status';
+  `);
+  assert.equal(repeatFin4f.code, 0);
+  assert.equal(repeatFin4f.stdout, 'completed');
+
+  const verify4f = await runPsql(`
+    SELECT (SELECT status FROM public.account_deletion_storage_cleanup WHERE id = '${cleanupId4f}')
+        || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4f}')
+        || '|' || (SELECT status::text FROM public.data_requests WHERE profile_id = '${u4f}' AND kind = 'deletion' LIMIT 1)
+        || '|' || (SELECT count(*)::text FROM public.audit_log WHERE entity_id = '${u4f}' AND action = 'account_deleted');
+  `);
+  assert.equal(verify4f.stdout, 'completed|completed|completed|1');
+  console.log('   PASS: 4f stale Worker A failure rejected; cleanup, profile, data_request, and audit log stayed terminal completed.');
+
+  // 4g: Reverse lease fencing: Worker A claims -> expires -> Worker B reclaims & fails -> stale Worker A success rejected
+  console.log('4g. Testing reverse Storage lease fencing (stale Worker A success rejected after Worker B failure)...');
+  const u4g = randomUUID();
+  const setup4g = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${u4g}', '2348099900017', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4g}', '2348099900017', 'Fence User B')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+    VALUES ('${u4g}', 'national_id', '${u4g}/fence-b.pdf', 'application/pdf', 100);
+    SELECT public.execute_account_deletion('${u4g}', '4g reverse fence test');
+  `);
+  assert.equal(setup4g.code, 0, `4g setup failed: ${setup4g.stderr}`);
+
+  const claimA4g = await runPsql(`
+    SELECT id::text || '|' || lease_token::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4g}', 300);
+  `);
+  const [cleanupId4g, tokenA4g] = claimA4g.stdout.split('|');
+
+  await runPsql(`
+    UPDATE public.account_deletion_storage_cleanup
+       SET lease_expires_at = clock_timestamp() - interval '1 second'
+     WHERE id = '${cleanupId4g}';
+  `);
+
+  const claimB4g = await runPsql(`
+    SELECT lease_token::text FROM public.claim_account_deletion_storage_cleanup('${u4g}', 300);
+  `);
+  const tokenB4g = claimB4g.stdout;
+
+  const failB4g = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4g}', 'failed', 'Worker B Storage 503', '${tokenB4g}');
+  `);
+  assert.equal(failB4g.code, 0);
+
+  // Stale Worker A tries to record 'completed' with expired tokenA4g
+  const staleComplete4g = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4g}', 'completed', null, '${tokenA4g}');
+  `);
+  assert.notEqual(staleComplete4g.code, 0, '4g stale Worker A completion must be rejected');
+
+  const verify4g = await runPsql(`
+    SELECT (SELECT status || ':' || coalesce(last_error, '') FROM public.account_deletion_storage_cleanup WHERE id = '${cleanupId4g}')
+        || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4g}');
+  `);
+  assert.equal(verify4g.stdout, 'failed:Worker B Storage 503|storage_pending');
+  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');
 }
 
 main().catch((err) => {
