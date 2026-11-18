@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import type { Json } from "@cultivanode/shared";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
           p_provider: "paystack",
           p_amount_kobo: amountKobo,
           p_order_id: orderId,
-          p_gateway_data: data,
+          p_gateway_data: data as Json,
         });
 
         if (rpcErr) {
