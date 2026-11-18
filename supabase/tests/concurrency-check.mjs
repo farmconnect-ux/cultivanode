@@ -227,7 +227,7 @@ async function main() {
   console.log('4a. Testing concurrent super_admin deletion serialisation...');
   const sa1 = randomUUID();
   const sa2 = randomUUID();
-  const saSetup = runPsql(`
+  const saSetup = await runPsql(`
     INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
     VALUES
       ('${sa1}', '2348099900001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
@@ -250,7 +250,7 @@ async function main() {
   assert.equal(saSuccesses.length, 1, `Expected exactly 1 super_admin deletion to succeed, got ${saSuccesses.length}`);
   assert.equal(saFailures.length, 1, `Expected exactly 1 super_admin deletion to be rejected, got ${saFailures.length}`);
   assert.match(saFailures[0].stderr, /Cannot delete the last super admin account/);
-  const remainingSa = runPsql(`SELECT count(*) FROM public.admin_roles WHERE admin_role = 'super_admin';`);
+  const remainingSa = await runPsql(`SELECT count(*) FROM public.admin_roles WHERE admin_role = 'super_admin';`);
   assert.equal(remainingSa.stdout, '1', `Expected 1 remaining super_admin, got ${remainingSa.stdout}`);
   console.log('   PASS: 4a serialised concurrent super_admin deletions; 1 succeeded, 1 rejected, 1 super_admin preserved.');
 
@@ -260,7 +260,7 @@ async function main() {
   const farmerUser = randomUUID();
   const farmId = randomUUID();
   const listingId = randomUUID();
-  const b4Setup = runPsql(`
+  const b4Setup = await runPsql(`
     INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
     VALUES
       ('${dupUser}', '2348099900003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
