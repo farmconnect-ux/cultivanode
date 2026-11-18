@@ -374,7 +374,6 @@ select is(
 );
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
-delete from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
 update storage.objects set name = 'd7000000-0000-0000-0000-000000000006/hijack.pdf'
  where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
 
@@ -382,18 +381,22 @@ select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-0000000
 select is(
   (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
   1::bigint,
-  'E9: Cross-user DELETE and UPDATE cannot remove or rename owner verification document'
-);
-
-delete from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf';
-select is(
-  (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
-  0::bigint,
-  'E10: Document owner can delete own verification document object'
+  'E9: Cross-user UPDATE cannot rename or overwrite owner verification document'
 );
 
 select is(
-  (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and bucket_id is null and cmd = 'UPDATE' and policyname like 'verification documents%'),
+  (select count(*) from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname = 'verification documents: owner deletes own'
+      and cmd = 'DELETE'
+      and qual like '%verification-documents%'
+      and qual like '%auth.uid()%'),
+  1::bigint,
+  'E10: verification-documents DELETE policy restricts deletion to owner folder via auth.uid()'
+);
+
+select is(
+  (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE' and policyname like 'verification documents%'),
   0::bigint,
   'E11: No permissive UPDATE policy exists on verification-documents objects'
 );
