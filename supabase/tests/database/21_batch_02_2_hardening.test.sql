@@ -146,12 +146,24 @@ select is(
 do $$
 declare
   i integer;
+  v_order_id uuid;
   v_escrow_id uuid;
 begin
   for i in 1..160 loop
+    v_order_id := gen_random_uuid();
+    insert into public.marketplace_orders (
+      id, order_number, buyer_id, items_subtotal_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address, created_at
+    ) values (
+      v_order_id,
+      'ORD-SCALE-' || lpad(i::text, 4, '0'),
+      'd7000000-0000-0000-0000-000000000001',
+      10000, 10000, 'completed', 'released', 'escrow', '{"state":"Oyo"}'::jsonb,
+      now() - (i || ' minutes')::interval
+    );
+
     insert into public.marketplace_payments (order_id, payment_reference, provider, amount_kobo, status, created_at)
     values (
-      'd7000000-0000-0000-0000-0000000000b1',
+      v_order_id,
       'PAY-SCALE-' || lpad(i::text, 4, '0'),
       case when i % 2 = 0 then 'paystack' else 'flutterwave' end,
       10000,
@@ -161,7 +173,7 @@ begin
 
     insert into public.marketplace_escrows (order_id, buyer_id, seller_id, amount_kobo, commission_kobo, seller_net_kobo, status, created_at)
     values (
-      'd7000000-0000-0000-0000-0000000000b1',
+      v_order_id,
       'd7000000-0000-0000-0000-000000000001',
       'd7000000-0000-0000-0000-0000000000a1',
       10000, 500, 9500, 'released',

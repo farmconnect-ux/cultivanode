@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetUser = vi.fn();
@@ -23,9 +24,19 @@ vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: () => mockCreateServiceClient(),
 }));
 
+function signEngineJwt(secret: string, sub = 'user-1') {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const now = Math.floor(Date.now() / 1000);
+  const payload = Buffer.from(
+    JSON.stringify({ sub, iat: now, exp: now + 300, roles: ['crop_farmer'] }),
+  ).toString('base64url');
+  const sig = createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
+  return `${header}.${payload}.${sig}`;
+}
+
 describe('Batch 02.2 API, Finance & Support integrity', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     delete process.env.ENGINE_JWT_SECRET;
     mockCreateServiceClient.mockImplementation(() => ({ rpc: mockServiceRpc }));
   });
@@ -57,7 +68,7 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     expect(unauth.status).toBe(401);
 
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } });
-    mockRequireStaff.mockResolvedValueOnce(null);
+    mockRpc.mockResolvedValueOnce({ data: [] });
     const nonStaff = await GET();
     expect(nonStaff.status).toBe(403);
   });
@@ -84,14 +95,16 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
   });
 
   it('/api/engines/ledger/transact fails closed (503) without service client and persists via RPC when configured', async () => {
-    process.env.ENGINE_JWT_SECRET = 'test-engine-secret-key';
+    const secret = 'test-engine-secret-key';
+    process.env.ENGINE_JWT_SECRET = secret;
+    const token = signEngineJwt(secret);
     const { POST } = await import('@/app/api/engines/ledger/transact/route');
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
 
     mockCreateServiceClient.mockReturnValueOnce(null);
     const unconfigured = await POST(
       new Request('http://localhost/api/engines/ledger/transact', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           referenceId: 'ORD-1',
           referenceType: 'adjustment',
@@ -109,6 +122,7 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     const ok = await POST(
       new Request('http://localhost/api/engines/ledger/transact', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           referenceId: 'ORD-1',
           referenceType: 'adjustment',
@@ -125,8 +139,9 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
   });
 
   it('/api/engines/agronomy/* and /api/engines/ai/* enforce auth and Zod validation', async () => {
-    process.env.ENGINE_JWT_SECRET = 'test-engine-secret-key';
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const secret = 'test-engine-secret-key';
+    process.env.ENGINE_JWT_SECRET = secret;
+    const token = signEngineJwt(secret);
 
     const { POST: schedPost, GET: schedGet } = await import('@/app/api/engines/agronomy/schedule/route');
     const { POST: weatherPost } = await import('@/app/api/engines/agronomy/weather-alerts/route');
@@ -141,7 +156,15 @@ describe('Batch 02.2 API, Finance & Support integrity', () => {
     expect(csv).toContain('Crop_ID,Crop_Name');
     expect(csv).toContain('maize');
 
-    const badReq = () => new Request('http://localhost/api/engines/test', { method: 'POST', body: JSON.stringify({}) });
+    const unauthReq = () => new Request('http://localhost/api/engines/test', { method: 'POST', body: JSON.stringify({}) });
+    expect((await schedPost(unauthReq())).status).toBe(401);
+
+    const badReq = () =>
+      new Request('http://localhost/api/engines/test', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
     expect((await schedPost(badReq())).status).toBe(400);
     expect((await weatherPost(badReq())).status).toBe(400);
     expect((await fertPost(badReq())).status).toBe(400);
