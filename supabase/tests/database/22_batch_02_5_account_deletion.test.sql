@@ -73,7 +73,7 @@ select public.record_marketplace_journal_entry(
   'Historical order payment',
   jsonb_build_array(
     jsonb_build_object('account_id', 'ASSET_PAYMENT_CLEARING', 'direction', 'DEBIT', 'amount_kobo', 10000),
-    jsonb_build_object('account_id', 'LIABILITY_ESCROW_HELD', 'direction', 'CREDIT', 'amount_kobo', 10000)
+    jsonb_build_object('account_id', 'LIABILITY_ESCROW_DEPOSIT', 'direction', 'CREDIT', 'amount_kobo', 10000)
   )
 );
 
