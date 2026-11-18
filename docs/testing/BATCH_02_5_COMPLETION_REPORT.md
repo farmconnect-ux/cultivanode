@@ -79,6 +79,10 @@
   - 12 assertions verifying `service_role`-only execution, `42501` role-escalation protection, active booking blocker, `verification_documents` removal, shared `organizations` ownership transfer, `profiles` & `delivery_address` anonymization, `marketplace_journal_entries` preservation, NDPA `data_requests` completion, and idempotency.
 - **Live local Supabase integration (`supabase/tests/api-db-integration-check.mjs` Section 6):**
   - End-to-end test against local Auth, Storage API, PostgREST, and Postgres: `403` for authenticated direct RPC call, `200` `execute_account_deletion`, Storage object deletion & absence check, GoTrue `DELETE /auth/v1/admin/users/:id`, and verified anonymized profile + redacted preserved order.
+- **CI Workflow & Build Results (Run [`44287634478`](https://github.com/farmconnect-ux/cultivanode/actions/runs/44287634478) on code/test commit `eb7e4ed4f55ef5c7ae6399cfa46be2098811e649`):**
+  - `Database migrations and RLS tests` (Job `134744297339`, 1m13s): **SUCCESS** — pgTAP `Files=22, Tests=762, Result: PASS`, `concurrency-check.mjs` PASS, `storage-api-check.mjs` PASS, `api-db-integration-check.mjs` (Sections 1–6) PASS.
+  - `Typecheck, lint and unit tests` (Job `134744296784`, 3m11s): **SUCCESS** — `npm run typecheck` (`4/4`), `npm run lint` (`1/1`), `npm run test` (`4/4`: `@cultivanode/iot-module` 20 tests, `@cultivanode/web` 3 files / 17 tests, `@cultivanode/mobile` 7 files / 70 tests, `@cultivanode/shared` 33 files / 357 tests), `npm run build` PASS.
+  - `Vercel` Preview: **SUCCESS**.
 
 ---
 
@@ -90,7 +94,7 @@
 
 ## 9. Files Changed & Branch / PR Metadata
 - **Branch:** `stabilization/batch-02-5-mobile-roles-account-deletion`
-- **Pull Request:** Pending creation against `main` (do not merge)
+- **Pull Request:** [PR #11](https://github.com/farmconnect-ux/cultivanode/pull/11) (`OPEN`, targeting `main`, not merged)
 - **Files changed:**
   - `supabase/migrations/20261118020000_account_deletion_workflow.sql`
   - `packages/shared/src/database.types.ts`
