@@ -344,6 +344,15 @@ select is(
 
 insert into public.role_requests (role, details) values ('machinery_owner', '{"tractors":3}'::jsonb);
 
+insert into public.verification_documents (role_request_id, document_type, storage_path, mime_type, size_bytes)
+values (
+  (select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'),
+  'equipment_ownership',
+  'd7000000-0000-0000-0000-000000000001/tractor-title.pdf',
+  'application/pdf',
+  204800
+);
+
 select throws_ok(
   $$select public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'), 'Self')$$,
   '42501', null,
@@ -351,6 +360,11 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003"}', true);
+select public.review_verification_document(
+  (select id from public.verification_documents where role_request_id = (select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending') limit 1),
+  'accepted',
+  'Tractor ownership verified'
+);
 select is(
   (public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'), 'Verified') ).status::text,
   'approved',
