@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createSupportTicket } from "@/actions/ecosystem";
+import { createSupportTicket, replyToSupportTicket } from "@/actions/ecosystem";
 import { Icon, type IconName } from "@/components/ds/icon";
 import { PageHeader } from "@/components/ds/page-header";
 import { ActionDialog } from "@/components/live/action-form";
@@ -29,6 +29,16 @@ export default async function Page({ params }: PageProps<"/[lang]/account/settin
   const account = await requireAccount(lang, { customer: true });
   const supabase = await createClient();
   const { data: tickets } = await supabase.from("support_tickets").select("*").eq("requester_id", account.userId).order("created_at", { ascending: false });
+  const ticketIds = (tickets ?? []).map((t) => t.id);
+  const { data: ticketMessages } = ticketIds.length
+    ? await supabase.from("support_ticket_messages").select("id, ticket_id, author_id, body, created_at").in("ticket_id", ticketIds).order("created_at", { ascending: true })
+    : { data: [] as { id: string; ticket_id: string; author_id: string; body: string; created_at: string }[] };
+  const messagesByTicket = new Map<string, { id: string; author_id: string; body: string; created_at: string }[]>();
+  for (const m of ticketMessages ?? []) {
+    const list = messagesByTicket.get(m.ticket_id) ?? [];
+    list.push(m);
+    messagesByTicket.set(m.ticket_id, list);
+  }
   const p = account.profile;
 
   return (
@@ -88,6 +98,28 @@ export default async function Page({ params }: PageProps<"/[lang]/account/settin
                   { label: "Opened", cell: (t) => ago(t.created_at) },
                   { label: "Priority", cell: (t) => <Status value={t.priority} /> },
                   { label: "Status", cell: (t) => <Status value={t.status} /> },
+                  {
+                    label: "Thread",
+                    cell: (t) => {
+                      const msgs = messagesByTicket.get(t.id) ?? [];
+                      const latest = msgs[msgs.length - 1];
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="max-w-48 truncate text-caption text-on-surface-variant" title={latest?.body}>
+                            {msgs.length ? `${msgs.length} msg: ${latest.body}` : "No replies yet"}
+                          </span>
+                          <ActionDialog
+                            title={`Reply ? ${t.ticket_number}`}
+                            trigger="Reply"
+                            icon="replay"
+                            action={replyToSupportTicket}
+                            hidden={{ lang, ticket_id: t.id }}
+                            fields={[{ name: "body", label: "Message", type: "textarea", required: true, wide: true }]}
+                          />
+                        </div>
+                      );
+                    },
+                  },
                 ]}
               />
             </Section>

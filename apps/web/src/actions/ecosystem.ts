@@ -190,9 +190,28 @@ export async function createSupportTicket(_: FormResult, form: FormData): R {
     .select("id")
     .single();
   if (error || !ticket) return dbFail(error, "create_ticket");
-  await supabase.from("support_ticket_messages").insert({ ticket_id: ticket.id, author_id: uid, body });
-  refreshPages("/settings", "/messages");
+  const { error: msgErr } = await supabase.from("support_ticket_messages").insert({ ticket_id: ticket.id, author_id: uid, body, is_internal: false });
+  if (msgErr) return dbFail(msgErr, "create_ticket_message");
+  const lang = text(form, "lang", 8) || "en";
+  refreshPages(`/${lang}/account/settings`, "/settings");
   return ok("Ticket opened. Our support team will reply here.");
+}
+
+export async function replyToSupportTicket(_: FormResult, form: FormData): R {
+  const { supabase, uid } = await actor(form);
+  const ticketId = id(form, "ticket_id");
+  const body = text(form, "body", 4000);
+  if (!ticketId || !body) return fail("Enter a reply message.");
+  const { error } = await supabase.from("support_ticket_messages").insert({
+    ticket_id: ticketId,
+    author_id: uid,
+    body,
+    is_internal: false,
+  });
+  if (error) return dbFail(error, "reply_ticket");
+  const lang = text(form, "lang", 8) || "en";
+  refreshPages(`/${lang}/account/settings`, "/admin/support");
+  return ok("Reply sent.");
 }
 
 // ── Credit ──────────────────────────────────────────────────────────────────────────────────

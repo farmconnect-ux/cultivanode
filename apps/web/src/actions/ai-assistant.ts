@@ -1,60 +1,50 @@
 "use server";
 
-import {
-  askGroundedAiAssistant,
-  type FarmerContext,
-  type AppLanguage,
-  type GroundedKnowledgeSnippet,
-} from "@cultivanode/shared";
+import { askGroundedAiAssistant, type FarmerContext, type GroundedAiAssistantResponse } from "@cultivanode/shared";
 import { requireAccount } from "@/lib/account/session";
 import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
 
-export interface AskAssistantParams {
+export type AssistantResponse = GroundedAiAssistantResponse;
+
+export async function askFarmAssistantAction(params: {
   query: string;
-  context: FarmerContext;
-  language?: AppLanguage | "pcm";
+  context?: Omit<FarmerContext, "farmerId"> & { farmerId?: string };
+  language?: "en" | "yo" | "pcm";
   imageBase64?: string;
   imageMimeType?: string;
-}
+}) {
+  const account = await requireAccount(params.language === "yo" ? "yo" : "en");
+  const query = typeof params.query === "string" ? params.query.trim().slice(0, 4000) : "";
+  if (!query && !params.imageBase64) {
+    throw new Error("Please enter a question or attach a photo.");
+  }
 
-export interface AssistantResponse {
-  answer: string;
-  language: AppLanguage | "pcm";
-  providerUsed: "claude" | "gemini" | "openai" | "rule-engine";
-  passedSafetyGuardrail: boolean;
-  bannedChemicalsDetected: string[];
-  approvedChemicalsDetected: string[];
-  safetyAppendices: string[];
-  sources: GroundedKnowledgeSnippet[];
-}
-
-export async function askFarmAssistantAction(
-  params: AskAssistantParams
-): Promise<AssistantResponse> {
-  const lang = params.language ?? "en";
-  await requireAccount(lang === "yo" ? "yo" : "en");
-
+  const c = aiConfig();
   const result = await askGroundedAiAssistant({
-    query: params.query,
-    context: params.context,
-    language: lang,
+    query: query || "Please examine this crop photo and advise what to do.",
+    // Always bind farmerId to the signed-in account
+    context: {
+      ...(params.context ?? {}),
+      cropId: params.context?.cropId || "maize",
+      zone: params.context?.zone || "rainforest",
+      farmerId: account.userId,
+    },
+    language: params.language ?? "en",
     imageBase64: params.imageBase64,
     imageMimeType: params.imageMimeType,
-    ...aiConfig(),
+    anthropicApiKey: c.anthropicApiKey,
+    claudeModels: c.claudeModels,
+    geminiApiKey: c.geminiApiKey,
+    openaiApiKey: c.openaiApiKey,
+    primaryModel: c.primaryModel,
+    fallbackModel: c.fallbackModel,
+    timeoutMs: c.timeoutMs,
   });
-
-  if (result.providerUsed === "rule-engine") logger.warn("ai_assistant_fallback", { reasons: result.providerErrors.join("; ") });
-  else if (result.providerErrors.some((e) => !e.endsWith("no key"))) logger.info("ai_assistant_provider_skipped", { used: result.modelUsed, reasons: result.providerErrors.join("; ") });
-
-  return {
-    answer: result.answer,
-    language: result.language,
-    providerUsed: result.providerUsed,
-    passedSafetyGuardrail: result.passedSafetyGuardrail,
-    bannedChemicalsDetected: result.bannedChemicalsDetected,
-    approvedChemicalsDetected: result.approvedChemicalsDetected,
-    safetyAppendices: result.safetyAppendices,
-    sources: result.sources,
-  };
+  if (result.providerErrors.length > 0) {
+    logger.warn("ai_assistant_fallback", { provider: result.providerUsed, errors: result.providerErrors.length });
+  } else {
+    logger.info("ai_assistant_ok", { provider: result.providerUsed, model: result.modelUsed });
+  }
+  return result;
 }

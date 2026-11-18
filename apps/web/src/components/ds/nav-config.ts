@@ -197,7 +197,7 @@ export const adminNav: AdminNavGroup[] = [
       { href: "/admin/jobs", label: "Jobs Console", icon: "assignment" },
       { href: "/admin/disputes", label: "Dispute Resolution & PoW", icon: "gavel", perm: ["disputes.decide", "bookings.read"] },
       { href: "/admin/cancellations", label: "Cancellations", icon: "event_busy" },
-      { href: "/admin/support", label: "Support & SLA Desk", icon: "support_agent" },
+      { href: "/admin/support", label: "Support & SLA Desk", icon: "support_agent", perm: ["website_inbox.manage"] },
     ],
   },
   {
@@ -213,7 +213,7 @@ export const adminNav: AdminNavGroup[] = [
     id: "money",
     label: "Marketplace & finance",
     items: [
-      { href: "/admin/finance", label: "Platform Finance", icon: "account_balance_wallet" },
+      { href: "/admin/finance", label: "Platform Finance", icon: "account_balance_wallet", perm: ["ledger.read", "payments.read", "payouts.approve"] },
       { href: "/admin/marketplace", label: "Equipment & Listings", icon: "storefront", perm: ["listings.moderate", "settings.manage"] },
       { href: "/admin/analytics", label: "Operations Analytics", icon: "analytics" },
       { href: "/admin/geo", label: "Geographic Map", icon: "map" },
