@@ -44,6 +44,17 @@ Audit every web API route (`apps/web/src/app/api/**/route.ts`) and server action
 ---
 
 ## 4. Verification & Limitations
-- **CI Execution:** Pending push to `stabilization/batch-02-3-real-database-integrations` (will be recorded once GitHub Actions completes).
+- **GitHub Actions CI Run [44260888916](https://github.com/farmconnect-ux/cultivanode/actions/runs/44260888916) (on code commit `0e03ea3`):**
+  - **Database migrations and RLS tests** (Job `134653676469`): **PASS** (2m2s)
+    - pgTAP (`supabase test db`): `Files=21, Tests=750, Result: PASS`.
+    - Live Postgres Concurrency (`supabase/tests/concurrency-check.mjs`): **PASS** (ledger hash chain, settlement race, deterministic `pg_locks` support concurrency `3a`, `3b`, `3c`).
+    - Live Storage API (`supabase/tests/storage-api-check.mjs`): **PASS**.
+    - Live API/DB Integration (`supabase/tests/api-db-integration-check.mjs`): **PASS** (`record_marketplace_journal_entry` unbalanced rejection & valid persistence, Admin Finance RPCs, Support RPCs + internal-note RLS isolation over PostgREST HTTP, and `export_my_data`).
+  - **Typecheck, lint and unit tests** (Job `134653676767`): **PASS** (3m58s)
+    - `npm run typecheck`: `4 successful, 4 total`.
+    - `npm run lint`: `1 successful, 1 total`.
+    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed; `@cultivanode/web` `batch-02-3.test.ts` 4/4 & `batch-02-2.test.ts` 8/8 passed; `@cultivanode/mobile` 6 files passed; `@cultivanode/shared` 32 files passed).
+    - `npm run build`: **PASS**.
+  - **Vercel Preview:** **PASS** (`Deployment has completed`).
 - **External Services & Physical Devices:** Live Paystack/Flutterwave gateway callbacks and physical mobile device QA are external-environment activities not executed in local CI.
 - **Hosted Safety:** Production Supabase (`vqbtnftnxyfaembwgfrk`), Staging Supabase (`xdbqndgwisshhjjqksbe`), and Production Vercel were not modified.
