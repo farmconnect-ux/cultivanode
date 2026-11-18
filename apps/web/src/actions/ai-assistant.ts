@@ -1,9 +1,11 @@
 "use server";
 
-import { askGroundedAiAssistant, type FarmerContext } from "@cultivanode/shared";
+import { askGroundedAiAssistant, type FarmerContext, type GroundedAiAssistantResponse } from "@cultivanode/shared";
 import { requireAccount } from "@/lib/account/session";
 import { aiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
+
+export type AssistantResponse = GroundedAiAssistantResponse;
 
 export async function askFarmAssistantAction(params: {
   query: string;
@@ -22,7 +24,12 @@ export async function askFarmAssistantAction(params: {
   const result = await askGroundedAiAssistant({
     query: query || "Please examine this crop photo and advise what to do.",
     // Always bind farmerId to the signed-in account
-    context: { ...(params.context ?? {}), farmerId: account.userId },
+    context: {
+      ...(params.context ?? {}),
+      cropId: params.context?.cropId || "maize",
+      zone: params.context?.zone || "rainforest",
+      farmerId: account.userId,
+    },
     language: params.language ?? "en",
     imageBase64: params.imageBase64,
     imageMimeType: params.imageMimeType,
@@ -34,10 +41,10 @@ export async function askFarmAssistantAction(params: {
     fallbackModel: c.fallbackModel,
     timeoutMs: c.timeoutMs,
   });
-  if (result.meta?.fallbackUsed) {
-    logger.warn("ai_assistant_fallback", { provider: result.meta.provider, attempts: result.meta.attempts });
+  if (result.providerErrors.length > 0) {
+    logger.warn("ai_assistant_fallback", { provider: result.providerUsed, errors: result.providerErrors.length });
   } else {
-    logger.info("ai_assistant_ok", { provider: result.meta?.provider, model: result.meta?.model });
+    logger.info("ai_assistant_ok", { provider: result.providerUsed, model: result.modelUsed });
   }
   return result;
 }

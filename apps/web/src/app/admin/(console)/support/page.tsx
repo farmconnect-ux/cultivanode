@@ -139,9 +139,9 @@ export default async function AdminSupportPage({
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricCard label="Active Cases" value={String(openCount)} />
-        <MetricCard label="High / Urgent Open" value={String(urgentCount)} />
-        <MetricCard label="Resolved / Closed" value={String(resolvedCount)} />
+        <MetricCard icon="support_agent" label="Active Cases" value={String(openCount)} />
+        <MetricCard icon="warning" label="High / Urgent Open" value={String(urgentCount)} />
+        <MetricCard icon="verified" label="Resolved / Closed" value={String(resolvedCount)} />
       </div>
 
       <form method="get" className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3 sm:grid-cols-4">

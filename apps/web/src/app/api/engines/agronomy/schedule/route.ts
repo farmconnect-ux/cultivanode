@@ -8,7 +8,8 @@ const ScheduleSchema = z.object({
   varietyId: z.string().max(80).optional(),
   plantingDate: z.string().min(8).max(32),
   zone: z.enum(['rainforest', 'derived_savanna']),
-  areaHectares: z.number().positive().max(100_000),
+  farmAreaHectares: z.number().positive().max(100_000).optional(),
+  areaHectares: z.number().positive().max(100_000).optional(),
 });
 
 export async function POST(req: Request) {
@@ -18,8 +19,20 @@ export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, ScheduleSchema);
   if (!parsed.ok) return parsed.response;
 
+  const farmAreaHectares = parsed.data.farmAreaHectares ?? parsed.data.areaHectares;
+  if (!farmAreaHectares) {
+    return NextResponse.json({ error: 'farmAreaHectares is required' }, { status: 400 });
+  }
+
   try {
-    const schedule = generatePlantingSchedule(parsed.data as GenerateScheduleParams);
+    const params: GenerateScheduleParams = {
+      cropId: parsed.data.cropId,
+      varietyId: parsed.data.varietyId ?? '',
+      plantingDate: parsed.data.plantingDate,
+      zone: parsed.data.zone,
+      farmAreaHectares,
+    };
+    const schedule = generatePlantingSchedule(params);
     return NextResponse.json(schedule);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid request';
@@ -32,7 +45,7 @@ export async function GET() {
   const header = 'Crop_ID,Crop_Name,Scientific_Name,Category,Suitable_Zones,Duration_Days,Seed_Rate_Per_Ha';
   const rows = CROP_CATALOGUE.map((c) => {
     const zones = c.suitableZones.join('; ');
-    const seed = `${c.seedRate.amountPerHa} ${c.seedRate.unit}`;
+    const seed = c.seedRate ? `${c.seedRate.amountPerHa} ${c.seedRate.unit}` : '';
     return [c.id, c.commonName, c.scientificName, c.category, zones, c.typicalDurationDays, seed]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(',');

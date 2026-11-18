@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { AdminActionState } from "@/components/admin/admin-form";
+import type { AdminResult } from "@/actions/admin-console";
 import { can, requireStaff } from "@/lib/admin/staff";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,12 +18,12 @@ export const ALLOWED_TICKET_TRANSITIONS: Record<string, readonly string[]> = {
 };
 
 export async function updateSupportTicketAction(
-  _: AdminActionState,
+  _: AdminResult | null,
   form: FormData,
-): Promise<AdminActionState> {
+): Promise<AdminResult> {
   const staff = await requireStaff();
   if (!staff || !can(staff, "website_inbox.manage")) {
-    return { ok: false, error: "You need the website_inbox.manage permission." };
+    return { ok: false, message: "You need the website_inbox.manage permission.", at: Date.now() };
   }
 
   const ticketId = String(form.get("ticket_id") ?? "").trim();
@@ -32,15 +32,15 @@ export async function updateSupportTicketAction(
   const assignedRaw = String(form.get("assigned_to") ?? "").trim();
   const assignedTo = assignedRaw ? assignedRaw : null;
 
-  if (!UUID.test(ticketId)) return { ok: false, error: "Invalid ticket ID." };
+  if (!UUID.test(ticketId)) return { ok: false, message: "Invalid ticket ID.", at: Date.now() };
   if (!VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number])) {
-    return { ok: false, error: "Invalid status." };
+    return { ok: false, message: "Invalid status.", at: Date.now() };
   }
   if (!VALID_PRIORITIES.includes(priority as (typeof VALID_PRIORITIES)[number])) {
-    return { ok: false, error: "Invalid priority." };
+    return { ok: false, message: "Invalid priority.", at: Date.now() };
   }
   if (assignedTo && !UUID.test(assignedTo)) {
-    return { ok: false, error: "Invalid assignee ID." };
+    return { ok: false, message: "Invalid assignee ID.", at: Date.now() };
   }
 
   const supabase = await createClient();
@@ -51,12 +51,12 @@ export async function updateSupportTicketAction(
     .maybeSingle();
 
   if (fetchErr || !existing) {
-    return { ok: false, error: fetchErr?.message || "Ticket not found." };
+    return { ok: false, message: fetchErr?.message || "Ticket not found.", at: Date.now() };
   }
 
   const allowed = ALLOWED_TICKET_TRANSITIONS[existing.status] ?? VALID_STATUSES;
   if (!allowed.includes(status)) {
-    return { ok: false, error: `Cannot move ticket from ${existing.status} to ${status}.` };
+    return { ok: false, message: `Cannot move ticket from ${existing.status} to ${status}.`, at: Date.now() };
   }
 
   const resolvedAt = status === "resolved" || status === "closed" ? new Date().toISOString() : null;
@@ -71,7 +71,7 @@ export async function updateSupportTicketAction(
     .eq("id", ticketId);
 
   if (updErr) {
-    return { ok: false, error: updErr.message || "Could not update ticket." };
+    return { ok: false, message: updErr.message || "Could not update ticket.", at: Date.now() };
   }
 
   await supabase.from("admin_actions").insert({
@@ -84,24 +84,24 @@ export async function updateSupportTicketAction(
   });
 
   revalidatePath("/admin/support");
-  return { ok: true, message: "Ticket updated." };
+  return { ok: true, message: "Ticket updated.", at: Date.now() };
 }
 
 export async function postSupportMessageAction(
-  _: AdminActionState,
+  _: AdminResult | null,
   form: FormData,
-): Promise<AdminActionState> {
+): Promise<AdminResult> {
   const staff = await requireStaff();
   if (!staff || !can(staff, "website_inbox.manage")) {
-    return { ok: false, error: "You need the website_inbox.manage permission." };
+    return { ok: false, message: "You need the website_inbox.manage permission.", at: Date.now() };
   }
 
   const ticketId = String(form.get("ticket_id") ?? "").trim();
   const body = String(form.get("body") ?? "").trim().slice(0, 4000);
   const isInternal = String(form.get("is_internal") ?? "") === "true";
 
-  if (!UUID.test(ticketId)) return { ok: false, error: "Invalid ticket ID." };
-  if (!body) return { ok: false, error: "Enter a message before sending." };
+  if (!UUID.test(ticketId)) return { ok: false, message: "Invalid ticket ID.", at: Date.now() };
+  if (!body) return { ok: false, message: "Enter a message before sending.", at: Date.now() };
 
   const supabase = await createClient();
   const { error } = await supabase.from("support_ticket_messages").insert({
@@ -112,9 +112,9 @@ export async function postSupportMessageAction(
   });
 
   if (error) {
-    return { ok: false, error: error.message || "Could not post message." };
+    return { ok: false, message: error.message || "Could not post message.", at: Date.now() };
   }
 
   revalidatePath("/admin/support");
-  return { ok: true, message: isInternal ? "Internal note saved." : "Reply sent to requester." };
+  return { ok: true, message: isInternal ? "Internal note saved." : "Reply sent to requester.", at: Date.now() };
 }

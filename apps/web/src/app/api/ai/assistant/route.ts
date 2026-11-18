@@ -90,13 +90,13 @@ export async function POST(req: Request) {
       timeoutMs: c.timeoutMs,
     });
 
-    if (result.meta?.fallbackUsed) {
+    if (result.providerErrors.length > 0) {
       logger.warn("ai_assistant_fallback", {
-        provider: result.meta.provider,
-        attempts: result.meta.attempts,
+        provider: result.providerUsed,
+        errors: result.providerErrors.length,
       });
     } else {
-      logger.info("ai_assistant_ok", { provider: result.meta?.provider, model: result.meta?.model });
+      logger.info("ai_assistant_ok", { provider: result.providerUsed, model: result.modelUsed });
     }
 
     return NextResponse.json(result);

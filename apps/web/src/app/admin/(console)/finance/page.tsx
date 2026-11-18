@@ -204,10 +204,10 @@ export default async function AdminFinancePage({
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Cleared Payments (Filtered)" value={formatNaira(clearedKobo)} />
-        <MetricCard label="Held in Escrow" value={formatNaira(heldEscrowKobo)} />
-        <MetricCard label="Pending Seller Payouts" value={formatNaira(pendingPayoutsKobo)} />
-        <MetricCard label="Commission Revenue" value={formatNaira(commissionKobo)} />
+        <MetricCard icon="payments" label="Cleared Payments (Filtered)" value={formatNaira(clearedKobo)} />
+        <MetricCard icon="lock" label="Held in Escrow" value={formatNaira(heldEscrowKobo)} />
+        <MetricCard icon="account_balance" label="Pending Seller Payouts" value={formatNaira(pendingPayoutsKobo)} />
+        <MetricCard icon="receipt_long" label="Commission Revenue" value={formatNaira(commissionKobo)} />
       </div>
 
       <form method="get" className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3 sm:grid-cols-6">

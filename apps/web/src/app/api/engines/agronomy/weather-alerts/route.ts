@@ -13,7 +13,9 @@ const WeatherAlertsSchema = z.object({
         rainMm: z.number().min(0),
         tempMaxC: z.number(),
         tempMinC: z.number(),
-        windMaxKmh: z.number().min(0),
+        windSpeedKmh: z.number().min(0).optional(),
+        windMaxKmh: z.number().min(0).optional(),
+        humidityPercent: z.number().min(0).max(100).optional(),
       }),
     )
     .min(1)
@@ -28,10 +30,18 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.response;
 
   try {
+    const forecasts: WeatherDayForecast[] = parsed.data.forecasts.map((f) => ({
+      date: f.date,
+      rainMm: f.rainMm,
+      tempMaxC: f.tempMaxC,
+      tempMinC: f.tempMinC,
+      windSpeedKmh: f.windSpeedKmh ?? f.windMaxKmh ?? 0,
+      humidityPercent: f.humidityPercent ?? 70,
+    }));
     const alerts = evaluateCropWeatherHazards({
       cropId: parsed.data.cropId,
       stageName: parsed.data.stageName,
-      forecasts: parsed.data.forecasts as WeatherDayForecast[],
+      forecasts,
     });
     return NextResponse.json(alerts);
   } catch (err: unknown) {

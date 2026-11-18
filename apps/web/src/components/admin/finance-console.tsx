@@ -133,7 +133,7 @@ export function FinanceConsole({
       {tab === "payments" && canReadPayments && (
         <div className="overflow-x-auto rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
           {payments.length === 0 ? (
-            <EmptyState icon="payments" title="No payments match" body="Adjust your filters or date range to view marketplace payment records." />
+            <EmptyState icon="payments" title="No payments match" description="Adjust your filters or date range to view marketplace payment records." />
           ) : (
             <table className="w-full text-left text-body-sm">
               <thead className="border-b border-outline-variant/40 bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
@@ -154,7 +154,7 @@ export function FinanceConsole({
                     <td className="px-3 py-2.5 capitalize">{p.provider.replace("_", " ")}</td>
                     <td className="px-3 py-2.5 text-right font-medium tabular-nums">{formatNaira(p.amount_kobo)}</td>
                     <td className="px-3 py-2.5">
-                      <Badge variant={p.status === "successful" ? "success" : p.status === "failed" ? "danger" : "warning"}>
+                      <Badge tone={p.status === "successful" ? "leaf" : p.status === "failed" ? "danger" : "warning"}>
                         {p.status}
                       </Badge>
                     </td>
@@ -170,7 +170,7 @@ export function FinanceConsole({
       {tab === "settlements" && canReadPayments && (
         <div className="overflow-x-auto rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
           {settlements.length === 0 ? (
-            <EmptyState icon="account_balance" title="No seller settlements" body="Settlement rows are created when buyers confirm escrow delivery." />
+            <EmptyState icon="account_balance" title="No seller settlements" description="Settlement rows are created when buyers confirm escrow delivery." />
           ) : (
             <table className="w-full text-left text-body-sm">
               <thead className="border-b border-outline-variant/40 bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
@@ -193,7 +193,7 @@ export function FinanceConsole({
                     <td className="px-3 py-2.5 text-right tabular-nums text-on-surface-variant">{formatNaira(s.commission_kobo)}</td>
                     <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatNaira(s.net_payout_kobo)}</td>
                     <td className="px-3 py-2.5">
-                      <Badge variant={s.status === "completed" ? "success" : s.status === "failed" ? "danger" : "warning"}>
+                      <Badge tone={s.status === "completed" ? "leaf" : s.status === "failed" ? "danger" : "warning"}>
                         {s.status}
                       </Badge>
                     </td>
@@ -202,13 +202,12 @@ export function FinanceConsole({
                         <div className="flex flex-wrap gap-2">
                           <AdminForm
                             action={processSettlementAction}
-                            submitLabel="Mark completed"
+                            buttons={[{ label: "Mark completed", variant: "primary" }]}
                             hidden={{ settlement_id: s.id, status: "completed", note: "Approved via Finance Console" }}
                           />
                           <AdminForm
                             action={processSettlementAction}
-                            submitLabel="Mark failed"
-                            tone="danger"
+                            buttons={[{ label: "Mark failed", variant: "secondary" }]}
                             hidden={{ settlement_id: s.id, status: "failed", note: "Payout failed" }}
                           />
                         </div>
@@ -229,7 +228,7 @@ export function FinanceConsole({
       {tab === "ledger" && canReadLedger && (
         <div className="space-y-3">
           {journalEntries.length === 0 ? (
-            <EmptyState icon="receipt_long" title="No journal entries" body="Double-entry journal entries appear here when escrow payments, releases, or payouts occur." />
+            <EmptyState icon="receipt_long" title="No journal entries" description="Double-entry journal entries appear here when escrow payments, releases, or payouts occur." />
           ) : (
             journalEntries.map((je) => {
               const open = expandedEntryId === je.id;
@@ -238,7 +237,7 @@ export function FinanceConsole({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="neutral">{je.reference_type}</Badge>
+                        <Badge tone="default">{je.reference_type}</Badge>
                         <span className="font-mono text-xs text-on-surface-variant">{je.reference_id}</span>
                       </div>
                       <p className="mt-1 font-medium text-on-surface">{je.description}</p>

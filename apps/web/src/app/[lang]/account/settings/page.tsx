@@ -111,7 +111,7 @@ export default async function Page({ params }: PageProps<"/[lang]/account/settin
                           <ActionDialog
                             title={`Reply ? ${t.ticket_number}`}
                             trigger="Reply"
-                            icon="reply"
+                            icon="replay"
                             action={replyToSupportTicket}
                             hidden={{ lang, ticket_id: t.id }}
                             fields={[{ name: "body", label: "Message", type: "textarea", required: true, wide: true }]}

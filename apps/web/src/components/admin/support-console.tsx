@@ -55,7 +55,7 @@ export function SupportConsole({
       <EmptyState
         icon="support_agent"
         title="No support tickets found"
-        body="Submitted support requests from web and mobile users will appear here."
+        description="Submitted support requests from web and mobile users will appear here."
       />
     );
   }
@@ -79,10 +79,10 @@ export function SupportConsole({
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-xs font-semibold text-primary">{t.ticket_number}</span>
                 <div className="flex items-center gap-1.5">
-                  <Badge variant={t.priority === "urgent" || t.priority === "high" ? "danger" : "neutral"}>
+                  <Badge tone={t.priority === "urgent" || t.priority === "high" ? "danger" : "default"}>
                     {t.priority}
                   </Badge>
-                  <Badge variant={t.status === "resolved" || t.status === "closed" ? "success" : "warning"}>
+                  <Badge tone={t.status === "resolved" || t.status === "closed" ? "leaf" : "warning"}>
                     {t.status.replace("_", " ")}
                   </Badge>
                 </div>
@@ -116,7 +116,7 @@ export function SupportConsole({
           <AdminForm
             key={`upd-${selected.id}-${selected.status}-${selected.priority}-${selected.assigned_to ?? ""}`}
             action={updateSupportTicketAction}
-            submitLabel="Update ticket"
+            buttons={[{ label: "Update ticket", variant: "primary" }]}
             hidden={{ ticket_id: selected.id }}
           >
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -197,7 +197,7 @@ export function SupportConsole({
             <AdminForm
               key={`pub-${selected.id}-${selected.messages.length}`}
               action={postSupportMessageAction}
-              submitLabel="Send public reply"
+              buttons={[{ label: "Send public reply", variant: "primary" }]}
               hidden={{ ticket_id: selected.id, is_internal: "false" }}
             >
               <textarea
@@ -211,8 +211,7 @@ export function SupportConsole({
             <AdminForm
               key={`int-${selected.id}-${selected.messages.length}`}
               action={postSupportMessageAction}
-              submitLabel="Save internal note"
-              tone="danger"
+              buttons={[{ label: "Save internal note", variant: "secondary" }]}
               hidden={{ ticket_id: selected.id, is_internal: "true" }}
             >
               <textarea

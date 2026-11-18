@@ -135,8 +135,8 @@ select is(
 
 -- 3. Role Requests & Verification Documents Tests
 select set_config('request.jwt.claims', '{"sub":"c6000000-0000-0000-0000-000000000001"}', true);
-insert into public.role_requests (id, role, details)
-values ('c6000000-0000-0000-0000-0000000000c1', 'machinery_owner', '{"note":"2 tractors"}'::jsonb);
+insert into public.role_requests (role, details)
+values ('machinery_owner', '{"note":"2 tractors"}'::jsonb);
 
 select throws_ok(
   $$insert into public.role_requests (role) values ('machinery_owner')$$,
@@ -146,7 +146,10 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$select public.approve_role_request('c6000000-0000-0000-0000-0000000000c1', 'Self approve')$$,
+  $$select public.approve_role_request(
+      (select id from public.role_requests where profile_id = 'c6000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'),
+      'Self approve'
+    )$$,
   '42501',
   null,
   'Test 9: User cannot approve their own role request'
@@ -155,7 +158,7 @@ select throws_ok(
 -- Verification document: valid own-folder insert succeeds; wrong-owner path & >5MiB rejected
 insert into public.verification_documents (role_request_id, document_type, storage_path, mime_type, size_bytes)
 values (
-  'c6000000-0000-0000-0000-0000000000c1',
+  (select id from public.role_requests where profile_id = 'c6000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'),
   'national_id',
   'c6000000-0000-0000-0000-000000000001/doc-001.jpg',
   'image/jpeg',
@@ -163,14 +166,21 @@ values (
 );
 
 select is(
-  (select count(*) from public.verification_documents where role_request_id = 'c6000000-0000-0000-0000-0000000000c1'),
+  (select count(*) from public.verification_documents
+   where role_request_id = (select id from public.role_requests where profile_id = 'c6000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending')),
   1::bigint,
   'Test 10: User can attach valid verification document to own role request'
 );
 
 select throws_ok(
   $$insert into public.verification_documents (role_request_id, document_type, storage_path, mime_type, size_bytes)
-    values ('c6000000-0000-0000-0000-0000000000c1', 'national_id', 'c6000000-0000-0000-0000-000000000003/evil.jpg', 'image/jpeg', 1024)$$,
+    values (
+      (select id from public.role_requests where profile_id = 'c6000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'),
+      'national_id',
+      'c6000000-0000-0000-0000-000000000003/evil.jpg',
+      'image/jpeg',
+      1024
+    )$$,
   '23514',
   null,
   'Test 11: Storage path outside user folder is rejected by constraint'
@@ -178,7 +188,13 @@ select throws_ok(
 
 select throws_ok(
   $$insert into public.verification_documents (role_request_id, document_type, storage_path, mime_type, size_bytes)
-    values ('c6000000-0000-0000-0000-0000000000c1', 'national_id', 'c6000000-0000-0000-0000-000000000001/huge.pdf', 'application/pdf', 6000000)$$,
+    values (
+      (select id from public.role_requests where profile_id = 'c6000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'),
+      'national_id',
+      'c6000000-0000-0000-0000-000000000001/huge.pdf',
+      'application/pdf',
+      6000000
+    )$$,
   '23514',
   null,
   'Test 12: Oversized (>5 MiB) verification document is rejected'
