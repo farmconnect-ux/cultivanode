@@ -48,6 +48,12 @@
 ---
 
 ## 3. Verification & Limitations
-- **CI Execution:** Pending push to `stabilization/batch-02-2-complete-integrations` (will be recorded once GitHub Actions completes).
+- **CI Execution (PR [#8](https://github.com/farmconnect-ux/cultivanode/pull/8), GitHub Actions Run `44205478491` on commit `e2d488a`):**
+  - **Database migrations and RLS tests** (Job `134470178866`): **PASS** (`Files=20, Tests=709`, `Result: PASS`, including all 12 assertions in `20_batch_02_2_security.test.sql`).
+  - **Typecheck, lint and unit tests** (Job `134470179278`): **PASS**:
+    - `npm run typecheck`: `4 successful, 4 total` (`@cultivanode/iot-module`, `@cultivanode/shared`, `@cultivanode/mobile`, `@cultivanode/web`).
+    - `npm run lint`: `1 successful, 1 total`.
+    - `npm run test`: `4 successful, 4 total` (`@cultivanode/iot-module` 20 passed, `@cultivanode/web` 1 file / 7 tests passed, `@cultivanode/mobile` 6 files passed including `account-roles-docs.test.ts` 5 tests, `@cultivanode/shared` 32 files passed).
+    - `npm run build`: **PASS**.
 - **Physical Device / PDF Picker Limitation:** Mobile document upload uses `expo-image-picker` (camera/gallery JPEG/PNG/WebP); `expo-document-picker` for native PDF selection was not added to avoid native binary/Expo prebuild changes in this batch. Physical Android/iOS device QA remains pending.
 - **Production Safety:** Production Supabase (`vqbtnftnxyfaembwgfrk`) and Production Vercel remain untouched.
