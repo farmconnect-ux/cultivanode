@@ -35,7 +35,7 @@ This document describes controls that exist in the code today. Items marked **Pl
 - Verification documents go to the private `verification-documents` bucket, into the uploader's own
   folder; 5 MB limit; JPEG/PNG/WebP/PDF only (enforced by the bucket, a table constraint and the shared
   Zod schema). Only the owner and staff with `verification.review` can read them.
-  **Planned (M1):** signed, short-lived download URLs in the admin console.
+  Signed, short-lived download URLs and owner `DELETE` cleanup are implemented and verified against the Storage API in CI (`storage-api-check.mjs`).
 
 ## Web
 - Security headers (`apps/web/next.config.ts`): Content-Security-Policy (self, Supabase, Sentry only;
@@ -64,9 +64,9 @@ person out. Sign-out clears both parts even when offline; "sign out on all devic
 on the server. Mobile crash reports (Sentry) are off without a DSN and scrub phones, codes, ID numbers,
 tokens and emails before sending.
 
-## Payments (**Planned, M5**)
-See PAYMENTS.md. `PAYMENT_MODE` defaults to `test`; `live` is refused outside an approved production
-deployment (`resolvePaymentMode` in `packages/shared/src/config.ts`).
+## Payments (Goods Marketplace Implemented; Live Activation Gated)
+See [PAYMENTS.md](PAYMENTS.md) and [RELEASE_LEDGER.md](RELEASE_LEDGER.md). `PAYMENT_MODE` defaults to `test`, and `live` mode is refused unless the deployment is an approved production environment with `LIVE_PAYMENTS_APPROVED=yes` (`resolvePaymentMode` in `packages/shared/src/config.ts`). Goods-marketplace webhooks (`paystack` and `flutterwave`), single-settlement enforcement (`20261117080000`), and hash-chained ledger/settlement RPCs (`20261118010000`) are implemented in repository code and verified in isolated local Supabase CI. Live gateway callbacks, hosted migration confirmation, and legal approval remain outstanding.
+
 
 ## Known warnings
 Supabase's linter lists the public RPCs callable by signed-in or anonymous users. Each one is intentional

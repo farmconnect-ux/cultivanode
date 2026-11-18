@@ -60,8 +60,8 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
 - Store builds: EAS (`npx eas-cli build -p android --profile production`), which manages the upload key.
 
 ## CI (GitHub Actions)
-- `ci.yml`: typecheck (including the Edge Functions), lint, unit tests (shared package and Edge Functions);
-  database job starts local Supabase and runs pgTAP.
+- `ci.yml`: typecheck (including the Edge Functions), lint, unit tests across `iot-module`, `web`, `mobile`, and `shared`, plus Next.js build; database job starts local Supabase and runs pgTAP (`21` files, `750` assertions), `concurrency-check.mjs`, `storage-api-check.mjs`, and `api-db-integration-check.mjs`. Local CI does **not** apply migrations to hosted Production or Staging (see [RELEASE_LEDGER.md](RELEASE_LEDGER.md)).
+
 - `android.yml`: builds the test APK when mobile or shared code changes.
 
 ## Checklist before a release
