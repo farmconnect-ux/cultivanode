@@ -1,5 +1,5 @@
 begin;
-select plan(22);
+select plan(23);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -283,11 +283,15 @@ select public.record_account_deletion_storage_result(
 );
 
 select is(
-  (select (public.finalize_account_deletion('e5000000-0000-0000-0000-000000000001', true))->>'deletion_status')
-  || '|' ||
+  (select (public.finalize_account_deletion('e5000000-0000-0000-0000-000000000001', true))->>'deletion_status'),
+  'completed',
+  'Test 22a: finalize_account_deletion marks profile completed once Storage and Auth succeed'
+);
+
+select is(
   (select status::text from public.data_requests where profile_id = 'e5000000-0000-0000-0000-000000000001' and kind = 'deletion'),
-  'completed|completed',
-  'Test 22: finalize_account_deletion marks profile and data_request completed once Storage and Auth succeed'
+  'completed',
+  'Test 22b: data_request is marked completed after finalize_account_deletion'
 );
 
 select * from finish();
