@@ -81,7 +81,7 @@ select public.record_marketplace_journal_entry(
 insert into public.farms (id, owner_id, name, state, location)
 values ('e5000000-0000-0000-0000-0000000000f1', 'e5000000-0000-0000-0000-000000000003', 'Blocker Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
 insert into public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
-values ('e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-000000000002', 'machinery', 'tractor', 'Test Tractor', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+values ('e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-000000000002', 'equipment', 'tractor', 'Test Tractor', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
 insert into public.bookings (id, farmer_id, provider_id, listing_id, farm_id, job_date, unit, quantity, agreed_price_kobo, status)
 values ('e5000000-0000-0000-0000-0000000000f3', 'e5000000-0000-0000-0000-000000000003', 'e5000000-0000-0000-0000-000000000002', 'e5000000-0000-0000-0000-0000000000f2', 'e5000000-0000-0000-0000-0000000000f1', current_date + 1, 'hectare', 1, 20000, 'accepted');
 
