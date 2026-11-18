@@ -3,10 +3,16 @@ import assert from 'node:assert/strict';
 
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-function runPsql(sql) {
+function runPsql(sqlOrCommands, appName) {
+  const cmds = Array.isArray(sqlOrCommands) ? sqlOrCommands : [sqlOrCommands];
+  const args = [DB_URL, '-v', 'ON_ERROR_STOP=1', '-t', '-A'];
+  for (const c of cmds) {
+    args.push('-c', c);
+  }
   return new Promise((resolve, reject) => {
-    const child = spawn('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-t', '-A', '-c', sql], {
+    const child = spawn('psql', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: appName ? { ...process.env, PGAPPNAME: appName } : process.env,
     });
     let stdout = '';
     let stderr = '';
@@ -17,6 +23,27 @@ function runPsql(sql) {
     });
     child.on('error', reject);
   });
+}
+
+async function waitForTicketLock(appName, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await runPsql(`
+      SELECT count(*)
+      FROM pg_locks l
+      JOIN pg_stat_activity a ON a.pid = l.pid
+      WHERE a.application_name = '${appName}'
+        AND l.relation = 'public.support_tickets'::regclass
+        AND l.mode = 'RowExclusiveLock'
+        AND l.granted = true
+        AND a.query LIKE '%pg_sleep%';
+    `);
+    if (res.code === 0 && Number.parseInt(res.stdout, 10) >= 1) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 15));
+  }
+  throw new Error(`Timed out waiting for ${appName} to acquire support_tickets lock`);
 }
 
 async function main() {
@@ -120,19 +147,21 @@ async function main() {
   `);
   assert.equal(seedTickets.code, 0, seedTickets.stderr);
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const ticketTx = (ticketId, status, priority, sleepSec = 0) => `
-    BEGIN;
-    SELECT set_config('request.jwt.claims', '{"sub":"e8000000-0000-0000-0000-000000000003"}', true);
-    SELECT public.admin_update_support_ticket('${ticketId}', '${status}', '${priority}', 'e8000000-0000-0000-0000-000000000003');
-    ${sleepSec > 0 ? `SELECT pg_sleep(${sleepSec});` : ''}
-    COMMIT;
-  `;
+  const ticketTxCmds = (ticketId, status, priority, sleepSec = 0) => {
+    const cmds = [
+      'BEGIN;',
+      `SELECT set_config('request.jwt.claims', '{"sub":"e8000000-0000-0000-0000-000000000003"}', true);`,
+      `SELECT public.admin_update_support_ticket('${ticketId}', '${status}', '${priority}', 'e8000000-0000-0000-0000-000000000003');`,
+    ];
+    if (sleepSec > 0) cmds.push(`SELECT pg_sleep(${sleepSec});`);
+    cmds.push('COMMIT;');
+    return cmds;
+  };
 
-  // 3a: resolved acquires lock first and holds 0.3s; pending blocks and must fail resolved -> pending
-  const p3a1 = runPsql(ticketTx(ticketA, 'resolved', 'high', 0.3));
-  await sleep(75);
-  const p3a2 = runPsql(ticketTx(ticketA, 'pending', 'normal', 0));
+  // 3a: resolved acquires FOR UPDATE lock (observed via pg_locks + pg_stat_activity); pending blocks and must fail resolved -> pending
+  const p3a1 = runPsql(ticketTxCmds(ticketA, 'resolved', 'high', 0.45), 'conc_tx1_3a');
+  await waitForTicketLock('conc_tx1_3a');
+  const p3a2 = runPsql(ticketTxCmds(ticketA, 'pending', 'normal', 0), 'conc_tx2_3a');
   const [r3a1, r3a2] = await Promise.all([p3a1, p3a2]);
   assert.equal(r3a1.code, 0, `3a resolved tx failed: ${r3a1.stderr}`);
   assert.notEqual(r3a2.code, 0, '3a competing pending tx should have been rejected after resolved committed');
@@ -145,13 +174,13 @@ async function main() {
     FROM public.admin_actions WHERE entity = 'support_tickets' AND entity_id = '${ticketA}';
   `);
   assert.equal(auditA.stdout, 'support_ticket_resolved:from=open, status=resolved, priority=high');
-  console.log('   PASS: 3a locked resolved first, rejected competing pending, zero orphan audit rows.');
+  console.log('   PASS: 3a deterministically locked resolved first (pg_locks verified), rejected competing pending, zero orphan audit rows.');
 
-  // 3b: pending acquires lock first and holds 0.3s; resolved blocks and legitimately succeeds (pending -> resolved)
+  // 3b: pending acquires FOR UPDATE lock (observed via pg_locks + pg_stat_activity); resolved blocks and legitimately succeeds (pending -> resolved)
   console.log('3b. Testing support ticket concurrency: pending holds FOR UPDATE lock first -> resolved succeeds via pending->resolved...');
-  const p3b1 = runPsql(ticketTx(ticketB, 'pending', 'normal', 0.3));
-  await sleep(75);
-  const p3b2 = runPsql(ticketTx(ticketB, 'resolved', 'high', 0));
+  const p3b1 = runPsql(ticketTxCmds(ticketB, 'pending', 'normal', 0.45), 'conc_tx1_3b');
+  await waitForTicketLock('conc_tx1_3b');
+  const p3b2 = runPsql(ticketTxCmds(ticketB, 'resolved', 'high', 0), 'conc_tx2_3b');
   const [r3b1, r3b2] = await Promise.all([p3b1, p3b2]);
   assert.equal(r3b1.code, 0, `3b pending tx failed: ${r3b1.stderr}`);
   assert.equal(r3b2.code, 0, `3b resolved tx should succeed after pending: ${r3b2.stderr}`);
@@ -166,13 +195,13 @@ async function main() {
     auditB.stdout,
     'support_ticket_pending:from=open, status=pending, priority=normal|support_ticket_resolved:from=pending, status=resolved, priority=high',
   );
-  console.log('   PASS: 3b serialised pending -> resolved with exact 2-step audit trail.');
+  console.log('   PASS: 3b deterministically serialised pending -> resolved (pg_locks verified) with exact 2-step audit trail.');
 
   // 3c: uncontrolled simultaneous race — accept only the two valid serialised outcomes
   console.log('3c. Testing uncontrolled simultaneous support ticket race...');
   const [r3cResolved, r3cPending] = await Promise.all([
-    runPsql(ticketTx(ticketC, 'resolved', 'high', 0)),
-    runPsql(ticketTx(ticketC, 'pending', 'normal', 0)),
+    runPsql(ticketTxCmds(ticketC, 'resolved', 'high', 0)),
+    runPsql(ticketTxCmds(ticketC, 'pending', 'normal', 0)),
   ]);
   const stateC = await runPsql(`SELECT status FROM public.support_tickets WHERE id = '${ticketC}';`);
   assert.equal(stateC.stdout, 'resolved');

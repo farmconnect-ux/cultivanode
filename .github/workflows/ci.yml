@@ -33,8 +33,8 @@ jobs:
         # Pull from GitHub's registry first, then Docker Hub, retrying once each.
         run: |
           for registry in ghcr.io ghcr.io docker.io docker.io; do
-            if SUPABASE_INTERNAL_IMAGE_REGISTRY=$registry supabase db start; then exit 0; fi
-            echo "supabase db start failed with $registry, retrying"
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY=$registry supabase start -x studio,inbucket,logflare,vector,analytics,pgadmin,imgproxy,edge-runtime,realtime; then exit 0; fi
+            echo "supabase start failed with $registry, retrying"
             supabase stop --no-backup || true
             sleep 15
           done
@@ -44,3 +44,10 @@ jobs:
 
       - name: Run database concurrency tests
         run: node supabase/tests/concurrency-check.mjs
+
+      - name: Run Storage API integration tests
+        run: |
+          set -a
+          eval "$(supabase status -o env)"
+          set +a
+          node supabase/tests/storage-api-check.mjs

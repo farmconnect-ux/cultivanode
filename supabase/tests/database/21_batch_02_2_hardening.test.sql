@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(38);
+select plan(41);
 
 -- ------------------------------------------------------------------------------------------------
 -- Seed test identities & permissions
@@ -21,7 +21,8 @@ values
   ('d7000000-0000-0000-0000-000000000003', 'b22h-finance@example.com'),
   ('d7000000-0000-0000-0000-000000000004', 'b22h-payments-only@example.com'),
   ('d7000000-0000-0000-0000-000000000005', 'b22h-support@example.com'),
-  ('d7000000-0000-0000-0000-000000000006', 'b22h-outsider@example.com')
+  ('d7000000-0000-0000-0000-000000000006', 'b22h-outsider@example.com'),
+  ('d7000000-0000-0000-0000-000000000007', 'b22h-verifier@example.com')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, full_name, phone)
@@ -31,14 +32,16 @@ values
   ('d7000000-0000-0000-0000-000000000003', 'Hardening Finance', '+2348099000003'),
   ('d7000000-0000-0000-0000-000000000004', 'Hardening PaymentsOnly', '+2348099000004'),
   ('d7000000-0000-0000-0000-000000000005', 'Hardening Support', '+2348099000005'),
-  ('d7000000-0000-0000-0000-000000000006', 'Hardening Outsider', '+2348099000006')
+  ('d7000000-0000-0000-0000-000000000006', 'Hardening Outsider', '+2348099000006'),
+  ('d7000000-0000-0000-0000-000000000007', 'Hardening Verifier', '+2348099000007')
 on conflict (id) do nothing;
 
 insert into public.admin_roles (profile_id, admin_role)
 values
   ('d7000000-0000-0000-0000-000000000003', 'super_admin'),
   ('d7000000-0000-0000-0000-000000000004', 'finance_officer'),
-  ('d7000000-0000-0000-0000-000000000005', 'support_disputes')
+  ('d7000000-0000-0000-0000-000000000005', 'support_disputes'),
+  ('d7000000-0000-0000-0000-000000000007', 'verification_officer')
 on conflict do nothing;
 
 -- Ensure finance_officer has payments.read without ledger.read inside this rolled-back test tx
@@ -366,11 +369,11 @@ select is(
   'E7: Staff without verification.review permission cannot read user verification document'
 );
 
-select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000007","role":"authenticated"}', true);
 select is(
   (select count(*) from storage.objects where bucket_id = 'verification-documents' and name = 'd7000000-0000-0000-0000-000000000001/id-card.pdf'),
   1::bigint,
-  'E8: Staff with verification.review permission can read user verification document'
+  'E8: Narrowly permissioned verification_officer (verification.review) can read user verification document'
 );
 
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
@@ -432,7 +435,23 @@ select throws_ok(
   'F2: Ordinary user cannot approve a role request'
 );
 
-select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003"}', true);
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000007"}', true);
+select throws_ok(
+  $$select public.admin_finance_summary()$$,
+  '42501', null,
+  'F2b: verification_officer cannot access unrelated admin_finance_summary'
+);
+select throws_ok(
+  $$select public.admin_support_summary()$$,
+  '42501', null,
+  'F2c: verification_officer cannot access unrelated admin_support_summary'
+);
+select throws_ok(
+  $$select public.admin_process_marketplace_settlement('d7000000-0000-0000-0000-0000000000d1', 'completed', 'Unauthorised')$$,
+  '42501', null,
+  'F2d: verification_officer cannot process marketplace settlements'
+);
+
 select public.review_verification_document(
   (select id from public.verification_documents where role_request_id = (select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending') limit 1),
   'accepted',
@@ -441,7 +460,7 @@ select public.review_verification_document(
 select is(
   (public.approve_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'machinery_owner' and status = 'pending'), 'Verified') ).status::text,
   'approved',
-  'F3: Authorised staff can approve role request'
+  'F3: Narrowly permissioned verification_officer can approve role request'
 );
 
 select is(
@@ -453,11 +472,11 @@ select is(
 select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000001"}', true);
 insert into public.role_requests (role, provider_type, details) values ('service_provider', 'agronomist', '{"exp":"5y"}'::jsonb);
 
-select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000003"}', true);
+select set_config('request.jwt.claims', '{"sub":"d7000000-0000-0000-0000-000000000007"}', true);
 select is(
   (public.reject_role_request((select id from public.role_requests where profile_id = 'd7000000-0000-0000-0000-000000000001' and role = 'service_provider' and status = 'pending'), 'Missing licence document') ).status::text,
   'rejected',
-  'F5: Authorised staff can reject role request with reason'
+  'F5: Narrowly permissioned verification_officer can reject role request with reason'
 );
 
 select is(
