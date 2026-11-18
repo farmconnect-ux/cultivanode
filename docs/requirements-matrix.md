@@ -5,7 +5,7 @@ Status: ✅ done · 🟡 partly done · ⬜ not started. Update this file in the
 Build order: [`ROADMAP.md`](ROADMAP.md). After M1 comes the MVP track "first real jobs" (weeks W1–W4, section below);
 rows pulled into it from later milestones are marked **→ MVP Wn**.
 
-## Current release evidence — 3 November 2026
+## Current release evidence — 18 November 2026 (`main` `3323d6b`)
 
 The detailed snapshot is the [current release ledger](RELEASE_LEDGER.md). It is the source of truth for release readiness; the milestone rows below map requirements and code locations, and older checkmarks do not imply deployment or field validation.
 
@@ -14,11 +14,11 @@ The detailed snapshot is the [current release ledger](RELEASE_LEDGER.md). It is 
 | Identity and account | Web/native code exists; production Supabase currently selects test-only mock SMS and identity providers. |
 | Farm and crop operations | Real-data workflows exist; agronomy governance/catalogue migrations from 3 Nov are pending in Supabase. |
 | Service hiring | W1–W4 code exists; W4 migration is pending. Marketplace is enabled in six states; real-device and field-pilot proof is absent. |
-| Goods marketplace | Checkout/order code exists; escrow is off and order-dispute switch is absent/off; latest dispute migration is pending. |
+| Goods marketplace | Checkout/order/security-lockdown/settlement/webhook code & tests exist (PRs #6, #8, #9); escrow is off, dispute switch is absent/off, hosted migrations and live gateway callbacks are pending. |
 | Weather | Weather Edge Function is active; live provider selection is NiMet. |
 | AI assistant | Assistant/photo-analysis code exists; photo-diagnosis switch is ON, but agronomy review/evaluation and handset results are unverified. |
 | Native/offline | Native journeys and an outbox/cache exist; complete offline behavior and device validation are unproven. |
-| Admin dispute/agronomy | Latest UI and logic are in GitHub; four Nov 3 database changes are not yet deployed. |
+| Admin dispute/finance/support/agronomy | Live DB-backed Finance & Support, dispute workstation, and agronomy UI are in `main` (PR #8); eight post-25-Oct DB migrations are not confirmed deployed to hosted Supabase. |
 
 **Cross-cutting release gate:** the production marketplace switch is ON while SMS and identity select test-only mocks. Resolve this before onboarding real users. The ledger records the deployed migration head, current flags, Vercel evidence, device results, and pilot provenance separately.
 
@@ -107,8 +107,8 @@ The detailed snapshot is the [current release ledger](RELEASE_LEDGER.md). It is 
 | ID | Requirement | Status |
 |---|---|---|
 | REQ-PAY-001 | Payment provider adapters (Paystack, Flutterwave) for service-job escrow | 🟡 provider/checkout code exists for goods commerce; live service escrow remains OFF and legally gated |
-| REQ-PAY-002 | Verified, idempotent webhooks | ⬜ |
-| REQ-PAY-003 | Double-entry hash-chained ledger | ⬜ |
+| REQ-PAY-002 | Verified, idempotent webhooks | 🟡 Paystack/Flutterwave webhooks & `process_payment_webhook` hardened and verified in local CI (PR #9); live gateway callbacks pending |
+| REQ-PAY-003 | Double-entry hash-chained ledger | 🟡 `marketplace_ledger_accounts` & `marketplace_journal_entries` with advisory lock verified in local CI (PR #8); hosted migration & live use pending |
 | REQ-PAY-004 | Escrow, commission, payouts, 48-hour auto-release | 🟡 marketplace ledger/escrow code exists; escrow switch is OFF and no live end-to-end settlement is verified; service-job escrow remains gated |
 | REQ-PAY-005 | Configurable cancellation rules, refunds | ⬜ rules without money **→ MVP W4**; refunds after legal sign-off |
 | REQ-PAY-006 | Disputes with evidence and audited outcomes | 🟡 W4 booking and goods-dispute code is in main; November migrations pending, switches/device/staff pilot not verified |

@@ -1,6 +1,6 @@
 # Roadmap (Phase 1)
 
-Revised 2026-09-28 to take in the independent MVP audit ("CultivaNode — Independent MVP Audit and Roadmap"). Current release state was reconciled on 3 November 2026; see the [current release ledger](RELEASE_LEDGER.md), which is authoritative over historical status notes below.
+Revised 2026-09-28 to take in the independent MVP audit ("CultivaNode — Independent MVP Audit and Roadmap"). Current release state was reconciled on 18 November 2026 (`main` `3323d6b`, PRs #6–#9); see the [current release ledger](RELEASE_LEDGER.md), which is authoritative over historical status notes below.
 The master build plan's milestones M0–M7 and its 12 modules stay the Phase 1 scope. What changes is the order:
 after M1, a four-week **MVP track, "first real jobs"**, pulls the hiring flow and the admin controls it needs
 forward from M4, M5, M7 and module 12, and runs it without money. The rest of Phase 1 follows the MVP.
@@ -24,21 +24,21 @@ dispute resolution and user suspension are MVP items.
 **Mobile.** The job flow is built once, as responsive web for Android Chrome (camera and GPS through the
 browser). Native parity comes after the MVP, with offline sync (M7).
 
-## Current release sequence — 3 November 2026
+## Current release sequence — 18 November 2026 (authoritative detail in `RELEASE_LEDGER.md`)
 
 The phases below are ordered by release risk and dependencies, not by code volume. “In main” does not mean deployed or pilot-proven.
 
 | Order | Work | Evidence now | Next gate |
 |---|---|---|---|
 | 1 | Close production exposure gap | Supabase reports `marketplace_live` enabled in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos; active SMS and identity providers are test-only mocks. | Configure and verify live providers, or close the marketplace before real-user onboarding. |
-| 2 | Reconcile schema and release switches | Supabase migration head is 25 Oct. Four 3 Nov migrations in GitHub (W4 booking disputes, agronomy governance, draft crop standards, goods-market disputes) are not applied. `marketplace_disputes` is missing/off; `ai_photo_diagnosis` is on. | Review/apply migrations; reconcile switches and run advisors; verify version and flag state. |
+| 2 | Reconcile schema and release switches | Hosted snapshot ended at 25 Oct. Eight post-25-Oct migrations on `main` (`20261103000000`–`20261118010000`) pass in local CI but are not confirmed applied to hosted Staging/Production. `marketplace_disputes` is missing/off; `ai_photo_diagnosis` is on. | Review/apply migrations; reconcile switches and run advisors; verify version and flag state. |
 | 3 | Finish service-job release validation | W1–W4 service code exists; W1–W3 DB work is applied. W4 DB change is pending. Five booking rows exist, but records alone do not prove real jobs. | Apply W4, execute documented real-device journeys, and record provenance/results for real completed jobs. |
 | 4 | Complete goods-market release gate | Seller/catalogue/cart/checkout/order flows exist; escrow is off. Goods dispute migration is pending. Fifteen order rows exist, with no verified field-pilot attribution. | Confirm payment mode/credentials, apply dispute schema, test order/payment/fulfilment/dispute with real devices and users. |
 | 5 | Establish safe agronomy and assistant release | Crop operations, assistant and photo analysis code exist. Draft standards and governance changes are in main but not deployed; photo-diagnosis flag is on. | Apply governance, obtain agronomist review, reconcile the photo switch, and publish evaluation/device evidence. |
 | 6 | Validate field operations and mobile/offline behavior | Native farm/hire/market flows and offline cache/outbox code exist; full deterministic sync is not proven. | Test supported phones under weak/no signal, define conflict outcomes, finish Yorùbá review and agent/support runbook. |
 | 7 | Closed beta and scale decisions | No verified pilot report was found; database status counts are not a substitute for user evidence. | Start a bounded beta only after gates 1–6. Measure completion, dispute, repeat booking, support effort and retention before expanding scope. |
 
-**Current deployment evidence:** Supabase is ACTIVE_HEALTHY and its listed Edge Functions are ACTIVE. The application-code head (`21e595b`) has a Vercel `success` status check; the later docs-only `main` commit is `pending`. Direct Vercel deployment metadata was unavailable in this audit, so the production alias and environment settings remain to be confirmed.
+**Current deployment evidence:** In the 3 Nov snapshot, Supabase was ACTIVE_HEALTHY with 6 ACTIVE Edge Functions and migrations applied through 25 Oct (8 subsequent `main` migrations remain unconfirmed on hosted Staging/Production). Vercel Production deployment `7878765073` on `main` (`3323d6b`, PR #9) completed with `state: "success"` (`2026-11-18T09:03:35Z`). See [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
 
 ## Original four-week MVP acceptance plan (current status is in RELEASE_LEDGER.md)
 

@@ -1,6 +1,6 @@
 # Batch 02.1 Provider Dispatch Test and Evaluation Plan
 
-**Pull request:** #7  
+**Pull request:** [PR #7](https://github.com/farmconnect-ux/cultivanode/pull/7) (**Merged** into `main` at `529773da0acc6b8c30a869bc96f2961aff1fa3d9`; `main` CI Run [44155950274](https://github.com/farmconnect-ux/cultivanode/actions/runs/44155950274))  
 **Target branch:** `main`  
 **Scope:** Mobile provider inbox, provider access, evidence deep links, job decline, GPS check-in and work-proof upload.  
 **Environment:** Automated tests run in GitHub Actions against mocked mobile service boundaries and an isolated local Supabase database. No Production credentials or records are used.

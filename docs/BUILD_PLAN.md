@@ -1,6 +1,6 @@
 # CultivaNode — Integrated Build Plan
 
-**Release evidence baseline:** 3 November 2026 · **Status:** current build plan · **Scope:** safely release the implemented journeys, prove them with device and field evidence, then expand.
+**Release evidence baseline:** 18 November 2026 (`main` `3323d6b`, PRs #6–#9) · **Status:** current build plan · **Scope:** safely release the implemented journeys, prove them with device and field evidence, then expand.
 
 The canonical state is the [current release ledger](RELEASE_LEDGER.md), based on GitHub `main`, the connected Supabase project, and available Vercel status evidence. This plan preserves the M0–M7 objectives but updates the execution gates to the current deployed schema and feature switches. Code, migration, deployment, device test, and field pilot are tracked as separate states.
 
@@ -29,19 +29,19 @@ In the pilot, a farmer can find a verified provider, agree a service job, see ev
 | Work under real field conditions | Android-first responsive web, large touch targets, low-bandwidth behaviour, agents, English and Yorùbá | Task completion on low-end Android/3G; agent-assisted completion; language QA pass |
 | Protect people and the business | RLS, masked identity values, consent, auditability, direct-payment boundary, provider adapters | Security-test pass rate; PII exposure incidents = 0; reconciliation accuracy |
 
-## 2. Current release assessment — 3 November 2026
+## 2. Current release assessment — 18 November 2026 (see `RELEASE_LEDGER.md`)
 
 ### What is established in code
 
 - The monorepo, web/native apps, Supabase/PostGIS schema, shared TypeScript packages, CI, provider adapters, admin permissions and audit foundation remain in place.
 - Identity/account, farm operations, hiring, goods commerce, weather, AI-assistant, and admin workflows have advanced beyond the original M0/M1 snapshot. Current journey-by-journey evidence is in [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
-- The 3 November GitHub head includes service-job W4 dispute resolution, goods-market disputes, agronomy governance, and a regional draft-catalogue seed. Database tests and migration files for these changes exist in the repository.
-- Supabase reports ACTIVE_HEALTHY; migrations are applied through `20261025212753_fk_indexes_rls_initplan`. Six Edge Functions report ACTIVE. The application-code head (`21e595b`) has a Vercel success status; a newer documentation-only `main` commit is pending. Direct Vercel deployment metadata was not available, so production alias/configuration was not independently confirmed.
+- `main` (`3323d6b`) includes Batch 01 marketplace order security lockdown (PR #6), Batch 02.1 mobile provider dispatch (PR #7), Batch 02.2 Admin Finance/Support, API hardening & Storage RLS (PR #8), and Batch 02.3 real DB integration & payment webhook hardening (PR #9), plus W4 disputes and agronomy governance. Database tests (`21` pgTAP files, `750` assertions) and migration files (`61` total) pass against isolated local Supabase in CI.
+- In the 3 Nov snapshot, Supabase reported ACTIVE_HEALTHY with migrations applied through `20261025212753_fk_indexes_rls_initplan` and six ACTIVE Edge Functions. Vercel Production deployment `7878765073` for `main` (`3323d6b`) completed with `state: "success"` (`2026-11-18T09:03:35Z`). Hosted Staging/Production migration application for the 8 subsequent migrations remains unverified; see [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
 
 ### Live configuration and schema gaps
 
 - **Production provider mismatch:** live Supabase selects `mock_sms` and `mock_identity`, both marked test-only, while `marketplace_live` is enabled in Oyo, Ogun, Osun, Ondo, Ekiti and Lagos. This is a stop-ship condition for real-user onboarding until live providers are verified or the marketplace is closed.
-- **Pending migrations:** four migrations committed on 3 November are absent from the connected project: `20261103000000_mvp_week4_dispute_resolution`, `20261103120000_agronomy_standards_governance`, `20261103130000_seed_crop_catalogue_draft_standards`, and `20261103140000_marketplace_disputes_w4`. Do not treat the related W4/governance/order-dispute code as live backend functionality yet.
+- **Pending migrations:** eight migrations committed after 25 Oct (`20261103000000` through `20261118010000`) are verified in local Supabase CI but are **not confirmed applied** to hosted Staging or Production. Do not treat the related W4/governance/order-dispute/Batch 01–02.2 schema changes as live hosted backend functionality yet.
 - **Feature switches:** `escrow_payments` and `hiring_escrow` are OFF, matching the service-hiring direct-payment boundary. `marketplace_disputes` is absent and therefore OFF. `ai_photo_diagnosis` is ON even though the admin switch description says diagnosis should stay off until a real model has agronomist review; reconcile before relying on this gate. Farm map, fleet, harvest and livestock are ON; several advanced ecosystem modules are OFF.
 - **Pilot evidence:** Supabase contains five booking rows and fifteen order rows in mixed states. Their provenance is not classified as seeded/demo/test versus real activity. No verified real-device pass or field-pilot report was found in the connected evidence. Do not infer field success from row counts.
 - **Security triage:** Supabase advisors on 3 November report 10 RLS-enabled tables without policies, 13 SECURITY DEFINER RPCs callable by anon, 88 callable by authenticated, and a leaked-password-protection warning. Some callable functions may be intentional and perform their own checks; review each grant and authorization path, then document disposition and re-run advisors.

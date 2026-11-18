@@ -15,9 +15,9 @@ separately in `supabase/seed.sql` (local only).
 | Website | `waitlist_signups`, `contact_messages` | Written only through rate-limited functions. |
 | Integrations | `integration_providers`, `integration_settings`, `integration_configs`, `integration_secrets`, `integration_events` | Staff-chosen SMS and identity providers; keys in Supabase Vault. No app access. See INTEGRATIONS.md. |
 
-Spec tables not yet created (they arrive with their milestone): crop catalogue, standards, plantings,
-calendar and reminders (M2); weather, inventory, farm books (M3); bookings, proofs, ratings, disputes (M4);
-ledger, payments, escrow, payouts, refunds (M5); AI tables (M6); notifications, agent visits (M1/M7).
+Additional module tables (crop catalogue/standards/operations, weather cache, inventory, farm books, bookings/proofs/ratings/disputes, goods marketplace orders/payments/escrow/ledger/settlements, IoT telemetry, ecosystem modules, support tickets, and feature flags) have been added across `61` migrations in `supabase/migrations/`. Hosted application status for migrations after `20261025212753_fk_indexes_rls_initplan` is tracked in [RELEASE_LEDGER.md](RELEASE_LEDGER.md).
+
+
 
 ### Naming note: accounts
 The specification lists both `accounts` and `profiles`. Here one person has exactly one `profiles` row and
@@ -70,8 +70,8 @@ Tier 3 is kept only while tier 2 conditions hold. **Planned (M4):** the automati
 
 ## Tests
 
-`supabase/tests/database/*.test.sql` (pgTAP, 241 tests) cover RLS, grants, approvals, onboarding, business staff, privacy requests, field-agent codes, tiers, documents,
-consents, provenance, audit immutability and the nearby search. CI runs them on every push.
+`supabase/tests/database/*.test.sql` (pgTAP: `21` files, `750` assertions on `main`) plus `concurrency-check.mjs`, `storage-api-check.mjs`, and `api-db-integration-check.mjs` cover RLS, grants, approvals, onboarding, business staff, privacy requests, field-agent codes, tiers, documents, consents, provenance, audit immutability, nearby search, marketplace security, ledger hash-chain concurrency, and `process_payment_webhook`. CI runs them against local Supabase on every push.
+
 Regenerate TypeScript types after a schema change: `npm run db:types:remote`.
 
 ## M1 accounts (migration `20260926150328_m1_accounts`)

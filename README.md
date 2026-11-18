@@ -28,7 +28,7 @@ Status:
 - [x] Farms schema: farms with GPS pin and walked boundary (area calculated), plots, soil records
 - [x] `nearby_listings()` search, ported from the prototype with fixes and tests
 - [x] CI: typecheck, lint, unit tests, database tests
-- [x] Hosted Supabase project `cultivanode` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1); migrations applied through 25 Oct 2026. Four migrations committed 3 Nov remain unapplied; see the [release ledger](docs/RELEASE_LEDGER.md).
+- [x] Hosted Supabase project `cultivanode` (ref `vqbtnftnxyfaembwgfrk`, eu-west-1); migrations applied through 25 Oct 2026 in the 3 Nov snapshot. Eight subsequent migrations committed on `main` are verified in local CI and await hosted confirmation; see the [release ledger](docs/RELEASE_LEDGER.md).
 - [x] Design system: shared tokens (`packages/shared/src/design/tokens.ts`), web components (`apps/web/src/components/ui`), mobile components (`apps/mobile/src/ui`)
 - [x] Public website in English and Yorùbá: home, how it works, about, FAQ, contact form, Marketplace waitlist
 - [x] Generated database types (`packages/shared/src/database.types.ts`) used by both apps
@@ -38,7 +38,7 @@ Status:
 - [x] Edge Functions: Send SMS hook, NIN/BVN/bank account checks, provider test
 - [x] Admin console: staff phone sign-in, overview with analytics and pilot-state weather, approvals, users, inbox, privacy requests, audit, integrations, home-page pictures
 - [x] M1: public sign-up and onboarding (web and mobile), roles and documents, ID check screens, admin approval queue, business staff, field-agent onboarding, farms by pin (web)
-- [~] Service-job W1–W4 implementation is present in `main`; the W4 database migration is not yet applied, real-device checks are pending, and no field-pilot result is verified. See the [release ledger](docs/RELEASE_LEDGER.md) before treating this as released.
+- [~] Service-job W1–W4, goods marketplace, Admin Finance/Support, and payment webhook hardening are implemented in `main` (PRs #6–#9); hosted migration application, real-device checks, live payment gateway callbacks, and field-pilot proof remain pending. See the [release ledger](docs/RELEASE_LEDGER.md) before treating these as released.
 
 ## Prerequisites
 
@@ -127,7 +127,7 @@ npm run typecheck
 npm run lint
 
 npm run db:start      # starts local Supabase in Docker and applies migrations
-npm run db:test       # pgTAP database tests (current count depends on the checked-out revision)
+npm run db:test       # pgTAP database tests (21 files, 750 assertions on main; CI also runs concurrency, Storage API, and PostgREST integration checks)
 npm run db:stop
 ```
 
