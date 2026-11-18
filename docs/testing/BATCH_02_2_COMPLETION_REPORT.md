@@ -101,3 +101,27 @@
 - **Outstanding Physical-Device & External-Service Limitations:**
   - No physical iOS or Android device was connected; `expo-document-picker` and `expo-image-picker` native file pickers require physical-device / Expo dev-client QA before mobile store release.
   - Production Supabase (`vqbtnftnxyfaembwgfrk`), Staging Supabase (`xdbqndgwisshhjjqksbe`), and Production Vercel were not modified.
+
+---
+
+## 6. Final Independent Verification (Storage API, Least-Privilege Reviewer & Deterministic Concurrency)
+
+- **Code Verification CI Run:** [44251341664](https://github.com/farmconnect-ux/cultivanode/actions/runs/44251341664) on code commit `bab7916` (Jobs: `Database migrations and RLS tests` `134622507397` **PASS**, `Typecheck, lint and unit tests` `134622507041` **PASS**, `Vercel` **PASS**).
+- **1. Live Supabase Storage API Integration ([storage-api-check.mjs](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/tests/storage-api-check.mjs)):**
+  - **Environment:** Isolated local Supabase stack (`supabase start -x studio,inbucket,logflare,vector,analytics,pgadmin,imgproxy,edge-runtime,realtime`) exposing GoTrue Auth + PostgREST + Storage API (`127.0.0.1:54321`) and Postgres (`127.0.0.1:54322`).
+  - **Disposable Accounts:** `owner`, `outsider`, `reviewer` (`admin_role = 'verification_officer'`, possessing `verification.review`, `roles.review`, `users.read`, `farms.read` — no `super_admin` or finance/support permissions), and `supportStaff` (`admin_role = 'support_disputes'`, no `verification.review`), all deleted in `finally`.
+  - **Operations Exercised & Results:**
+    - Bucket restrictions: Rejected disallowed `text/plain` (`400`) and `>5 MB` (`400`) uploads — **PASS**.
+    - Owner access: Uploaded PDF to `${owner.id}/${uuid}.pdf` (`200`), downloaded exact bytes (`200`), created 600s signed URL (`200`), and fetched exact PDF bytes via HTTP signed URL (`200`) — **PASS**.
+    - Cross-user isolation: `outsider` upload to owner folder, download, `createSignedUrl`, `x-upsert: true` overwrite, and `DELETE` were all rejected; owner download confirmed object remained intact — **PASS**.
+    - Reviewer least-privilege access: `supportStaff` (without `verification.review`) denied download & `createSignedUrl`; `reviewer` (`verification_officer`) created 600s signed URL and fetched exact PDF bytes (`200`) — **PASS**.
+    - Owner deletion: `owner` deleted object via `DELETE /storage/v1/object/verification-documents` (`200`, 1 deleted object), and subsequent download and `createSignedUrl` failed — **PASS**.
+- **2. Narrowly Permissioned Reviewer Tests ([21_batch_02_2_hardening.test.sql](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/tests/database/21_batch_02_2_hardening.test.sql), `Files=21, Tests=750, Result: PASS`):**
+  - Replaced `super_admin` with `verification_officer` (`d7000000-...007`) for `E8` (`storage.objects` read), `review_verification_document`, `F3` (`approve_role_request`), and `F5` (`reject_role_request`).
+  - Verified `F2b`–`F2d`: `verification_officer` is rejected (`42501`) from `admin_finance_summary()`, `admin_support_summary()`, and `admin_process_marketplace_settlement()`.
+- **3. Deterministic Support Concurrency ([concurrency-check.mjs](file:///d:/New%20BAckup/Cultivanode/cultivanode/supabase/tests/concurrency-check.mjs)):**
+  - **Coordination Mechanism:** `waitForTicketLock(appName)` polls `pg_locks` (`RowExclusiveLock` on `public.support_tickets`, `granted = true`) joined with `pg_stat_activity` (`application_name` + `query LIKE '%pg_sleep%'`) before launching the competing transaction, guaranteeing `tx1` has executed `SELECT ... FOR UPDATE` and holds the uncommitted row lock.
+  - **Scenario 3a (`resolved` holds lock first):** Competing `pending` transition blocked and was rejected (`Cannot move ticket from resolved to pending`), final status `'resolved'`, 1 audit row (`support_ticket_resolved:from=open, status=resolved, priority=high`), 0 orphan audit rows — **PASS**.
+  - **Scenario 3b (`pending` holds lock first):** Competing `resolved` transition blocked and succeeded via `pending -> resolved`, final status `'resolved'`, 2 sequential audit rows (`support_ticket_pending` then `support_ticket_resolved`) — **PASS**.
+  - **Scenario 3c (uncontrolled simultaneous race):** Final status `'resolved'` with valid serialised audit trail — **PASS**.
+- **Physical-Device QA Distinction:** All automated backend, Storage API, web, and mobile unit checks are verified in CI; native `expo-document-picker` / `expo-image-picker` testing on physical Android and iOS devices remains a separate release-readiness activity.
