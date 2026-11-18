@@ -244,8 +244,9 @@ async function main() {
       p_order_id: whOrderId,
       p_gateway_data: { reference: whPayRef },
     });
-    assert.equal(okWhRes.status, 200, `Expected 200 from process_payment_webhook, got ${await okWhRes.text()}`);
-    const okWhJson = await okWhRes.json();
+    const okWhText = await okWhRes.text();
+    assert.equal(okWhRes.status, 200, `Expected 200 from process_payment_webhook, got ${okWhText}`);
+    const okWhJson = JSON.parse(okWhText);
     assert.equal(okWhJson.success, true);
 
     const dupWhRes = await rpcCall(SERVICE_ROLE_KEY, 'process_payment_webhook', {
@@ -255,8 +256,9 @@ async function main() {
       p_order_id: whOrderId,
       p_gateway_data: { reference: whPayRef },
     });
-    assert.equal(dupWhRes.status, 200);
-    const dupWhJson = await dupWhRes.json();
+    const dupWhText = await dupWhRes.text();
+    assert.equal(dupWhRes.status, 200, `Expected 200 from duplicate process_payment_webhook, got ${dupWhText}`);
+    const dupWhJson = JSON.parse(dupWhText);
     assert.equal(dupWhJson.already_processed, true);
 
     const ledgerCount = runPsql(`
