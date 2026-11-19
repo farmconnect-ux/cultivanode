@@ -96,6 +96,7 @@ let mockSessionValue: {
 let mockRouteParams: { jobId?: string } = { jobId: '11111111-1111-4111-8111-111111111111' };
 
 vi.mock('react-native', () => ({
+  ActivityIndicator: (props: Record<string, unknown>) => React.createElement('ActivityIndicator', props),
   Alert: { alert: (...args: unknown[]) => mockAlert(...args) },
   FlatList: ({ data }: { data: unknown[] }) => React.createElement('FlatList', { data }),
   Image: (props: Record<string, unknown>) => React.createElement('Image', props),
@@ -120,15 +121,10 @@ vi.mock('expo-router', () => ({
   }),
 }));
 
-vi.mock('@cultivanode/shared', () => ({
-  colors: {
-    leaf: { 50: '#f0fdf4', 200: '#bbf7d0', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d' },
-    soil: { 700: '#44403c', 900: '#1c1917' },
-  },
-  formatNaira: (n: number) => `₦${n}`,
-  radius: { sm: 4, md: 8, lg: 12, full: 999 },
-  space: [0, 4, 8, 12, 16, 20, 24],
-}));
+vi.mock('@cultivanode/shared', async () => {
+  const actual = await vi.importActual<typeof import('@cultivanode/shared')>('@cultivanode/shared');
+  return actual;
+});
 
 vi.mock('../../lib/gps-tracker', () => ({
   BoundaryTracker: class {
@@ -193,6 +189,7 @@ function findButtonByTitle(tree: unknown, titlePart: string) {
 
 const SAMPLE_JOB = {
   id: '11111111-1111-4111-8111-111111111111',
+  title: 'Tractor Ploughing',
   jobTitle: 'Tractor Ploughing',
   farmName: 'Ibadan North Farm',
   farmerName: 'Ade Farmer',
@@ -201,6 +198,7 @@ const SAMPLE_JOB = {
   status: 'in_progress',
   quantity: 4,
   unit: 'hectare',
+  totalKobo: 12000000,
   totalAmountNgn: 120000,
   checkedInAt: '2026-11-20T08:00:00Z',
   farmLat: 7.37,
