@@ -36,7 +36,7 @@ begin
      and coalesce(btrim(p_tracking), '') = '' and coalesce(btrim(f.tracking_number), '') = '' then
     raise exception 'Add a tracking number, vehicle registration or delivery contact before dispatch.' using errcode = '22023';
   end if;
-  if p_status in ('ready_for_pickup', 'dispatched') then
+  if p_status = 'ready_for_pickup' or (p_status = 'dispatched' and f.status <> 'ready_for_pickup') then
     perform private.settle_fulfilment_stock(f.order_id, f.seller_id, true);
   elsif p_status = 'rejected' then
     perform private.settle_fulfilment_stock(f.order_id, f.seller_id, false);
