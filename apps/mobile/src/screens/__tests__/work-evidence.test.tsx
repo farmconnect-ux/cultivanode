@@ -125,31 +125,8 @@ vi.mock('../../lib/gps-tracker', () => ({
   },
 }));
 
-vi.mock('../lib/gps-tracker', () => ({
-  BoundaryTracker: class {
-    constructor(cb: (r: { latitude: number; longitude: number; accuracy: number; timestamp: number }) => void) {
-      mockGpsCallback = cb;
-    }
-    start() {
-      return Promise.resolve(true);
-    }
-    stop() {}
-  },
-}));
-
 vi.mock('../../lib/provider-dispatch', async () => {
   const actual = await vi.importActual<typeof import('../../lib/provider-dispatch')>('../../lib/provider-dispatch');
-  return {
-    ...actual,
-    loadProviderJobById: (...args: unknown[]) => mockLoadProviderJobById(...args),
-    submitWorkProofPhoto: (...args: unknown[]) => mockSubmitWorkProofPhoto(...args),
-    finishJobWork: (...args: unknown[]) => mockFinishJobWork(...args),
-    checkInJob: (...args: unknown[]) => mockCheckInJob(...args),
-  };
-});
-
-vi.mock('../lib/provider-dispatch', async () => {
-  const actual = await vi.importActual<typeof import('../lib/provider-dispatch')>('../lib/provider-dispatch');
   return {
     ...actual,
     loadProviderJobById: (...args: unknown[]) => mockLoadProviderJobById(...args),
@@ -164,15 +141,6 @@ vi.mock('../../lib/session', () => ({
 }));
 
 vi.mock('../../ui', () => ({
-  Button: (props: Record<string, unknown>) => React.createElement('Button', props),
-  Card: (props: Record<string, unknown>) => React.createElement('Card', props),
-  Notice: (props: Record<string, unknown>) => React.createElement('Notice', props),
-  Screen: (props: Record<string, unknown>) => React.createElement('Screen', props),
-  Text: (props: Record<string, unknown>) => React.createElement('Text', props),
-  TextField: (props: Record<string, unknown>) => React.createElement('TextField', props),
-}));
-
-vi.mock('../ui', () => ({
   Button: (props: Record<string, unknown>) => React.createElement('Button', props),
   Card: (props: Record<string, unknown>) => React.createElement('Card', props),
   Notice: (props: Record<string, unknown>) => React.createElement('Notice', props),
