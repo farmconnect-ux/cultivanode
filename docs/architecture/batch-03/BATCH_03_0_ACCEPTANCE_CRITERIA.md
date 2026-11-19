@@ -1,56 +1,52 @@
 # Batch 03.0 — Acceptance Criteria
 
 **Date:** 2026-11-19  
-**Status:** Revised for Batch 03.0 Identity & Memory Controls
+**Status:** Revised for Final Batch 03.0 Security Review
 
 ---
 
-## 1. Batch 03.0 Architecture & Discovery Acceptance Checklist
+## 1. Batch 03.0 Documentation Validation *(Completed in Batch 03.0)*
 
 | Criterion | Status | Evidence Location |
 |---|---|---|
 | Existing AI implementation mapped accurately | **Met** | `BATCH_03_0_EXISTING_AI_CAPABILITIES.md` |
-| Existing 35-table farm database assessed | **Met** | `BATCH_03_0_FARM_DATA_INVENTORY.md` |
+| Existing 35+ table farm database assessed (incl. `machinery_telemetry`) | **Met** | `BATCH_03_0_FARM_DATA_INVENTORY.md` |
 | Existing functionality distinguished from proposed functionality | **Met** | `BATCH_03_0_BASELINE_DISCOVERY.md` vs `BATCH_03_0_TARGET_ARCHITECTURE.md` |
-| Farm context architecture has defined data contract & 8-domain conflict rules | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §2 & `ADR-001`, `ADR-007` |
-| Persistent memory has `NOT NULL memory_scope`, ownership/attribution separation & lifecycle | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §3 & `ADR-002` |
-| AI audit register has immutable event model + `private.ai_actor_directory` protection | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §4 & `ADR-005`, `ADR-009` |
-| Server-mediated memory writes & JWT-derived `SECURITY DEFINER` audit writer specified | **Met** | `BATCH_03_0_SECURITY_AND_GOVERNANCE.md` §1 & `ADR-004`, `ADR-005` |
-| `pgvector` cost, capacity & provisional p95 measurement gate specified | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §3 & `ADR-003` |
-| Security & governance risks (13 threats) assessed | **Met** | `BATCH_03_0_SECURITY_AND_GOVERNANCE.md` §2 |
-| Implementation dependencies & sequencing documented | **Met** | `BATCH_03_0_IMPLEMENTATION_ROADMAP.md` |
-| Measurable acceptance tests specified for Batch 03.1+ | **Met** | §2 below |
+| Farm context architecture defines 8-domain conflict rules, `soil_test_age_days`, and `machinery_telemetry` | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §2 & `ADR-001`, `ADR-007` |
+| Persistent memory defines `NOT NULL memory_scope`, ownership/attribution separation & lifecycle | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §3 & `ADR-002` |
+| Two-pathway AI audit trust boundary & `private.ai_actor_directory` 3-function interface defined | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §4, `SECURITY_AND_GOVERNANCE.md` §1, `ADR-005` |
+| Verifiable `pg_cron` non-HTTP system-job identity defined | **Met** | `BATCH_03_0_SECURITY_AND_GOVERNANCE.md` §1 & `ADR-005` |
+| Immutable prompt-version artefacts & controlled rollback defined | **Met** | `ADR-006` |
+| `pgvector` cost, capacity & provisional `< 50 ms` p95 measurement gate defined | **Met** | `BATCH_03_0_TARGET_ARCHITECTURE.md` §3 & `ADR-003` |
 
 ---
 
-## 2. Batch 03.1+ Implementation Acceptance Tests *(Future Implementation Gates — Not Yet Executed)*
+## 2. Batch 03.1+ Implementation Validation *(Future Gates — Not Yet Executed)*
 
 ### A. Memory Scope, Ownership, Attribution & Isolation (`[Batch 03.2]`)
 1. **Profile-scoped preference isolation:** `memory_scope = 'profile'` preferences (`farm_id IS NULL`) are retrieved by their owning `profile_id` across multiple farms without exposing one farm's private data to another farm or allowing other farm/org members to read them.
 2. **Farm-scoped memory isolation:** `memory_scope = 'farm'` memories cannot be retrieved by unauthorised users or removed org members (`can_view_farm(farm_id) = false`).
-3. **Non-null scope & invalid combination rejection:** Database `CHECK` and `NOT NULL` constraints reject:
-   - `NULL` `memory_scope`.
-   - `memory_scope = 'farm'` with `farm_id IS NULL` or non-null `profile_id`.
-   - `memory_scope = 'profile'` with non-null `farm_id`, `profile_id IS NULL`, or `category <> 'preference'`.
-   - Invalid farm/profile ownership combinations.
-4. **Ownership vs. attribution & farm knowledge continuity on deletion:** Deleting a creator/confirmer's account deletes/anonymises their `scope = 'profile'` preferences, sets `created_by`/`confirmed_by`/`updated_by` to `NULL` on surviving org `scope = 'farm'` memories, and **preserves** the farm-owned knowledge (`farm_id` intact).
-5. **AI memory remains proposed:** AI-inferred memories are inserted strictly with `source_kind = 'ai_inferred'` and `verification_status = 'proposed'`, and cannot self-promote to `'confirmed'` without an authorised human confirmation event (`can_edit_farm`).
-6. **No client bypass of Memory Write Service:** Direct PostgREST `INSERT`/`UPDATE` from `anon` or unauthorised `authenticated` clients against `farm_memory_items` is rejected by RLS/grants.
-7. **Consent enforcement:** Memory writes and proactive FIE processing fail closed when `'ai_intelligence'` consent in `public.consents` is absent or withdrawn.
+3. **Non-null scope & invalid combination rejection:** Database `NOT NULL` and `CHECK` constraints reject `NULL` `memory_scope`, `'farm'` with `farm_id IS NULL` or non-null `profile_id`, `'profile'` with non-null `farm_id`, `profile_id IS NULL`, or `category <> 'preference'`, and invalid ownership combinations.
+4. **Ownership vs. attribution & farm continuity on deletion:** Deleting a user's account deletes/anonymises `scope = 'profile'` preferences, sets `created_by`/`confirmed_by`/`updated_by` to `NULL` on surviving org `scope = 'farm'` memories, and preserves farm-owned knowledge (`farm_id` intact).
+5. **AI memory remains proposed & server-mediated:** AI-inferred memories stay `source_kind = 'ai_inferred'` / `verification_status = 'proposed'` until authorised human confirmation (`can_edit_farm`); direct client PostgREST writes fail; missing/withdrawn `'ai_intelligence'` consent fails closed.
 
-### B. `SECURITY DEFINER` Audit Writer & Immutability (`[Batch 03.1]`)
-8. **Unauthenticated & `PUBLIC`/`anon` rejection:** `PUBLIC` and `anon` have zero `EXECUTE` privileges on the audit writer, and calls without valid authenticated JWT claims (`auth.uid() IS NULL`) are rejected (`42501`).
-9. **Actor impersonation prevention:** An `authenticated` user cannot supply another user's `actor_id`/`profile_id` or claim `actor_kind = 'system'`.
-10. **Cross-farm & view-only rejection:** An `authenticated` user cannot insert an audit event for a `farm_id` they cannot access (`can_view_farm = false`), nor perform edit/confirmation traces with view-only access (`can_edit_farm = false`).
-11. **Service-role system pathway:** `actor_kind = 'system'` events succeed **only** via `service_role` / trusted internal pathway with allowlisted `system_job_name`.
-12. **No privileged data access & fail-loud errors:** The audit writer cannot be used to read or modify unrelated farm data, and security-critical audit write failures surface errors rather than being silently discarded.
-13. **Audit immutability:** pgTAP `throws_ok` confirms `UPDATE` and `DELETE` on `public.ai_audit_events` fail for `authenticated` and `service_role` via `private.forbid_change()`.
+### B. AI Audit-Writer Trust Boundary (`[Batch 03.1]`)
+6. **No AI execution fabrication:** An `authenticated` user cannot call the general audit writer via RPC to fabricate a successful AI model execution, provider, model ID, prompt version, or guardrail pass.
+7. **Actor & system-role impersonation blocked:** A user cannot submit another user's actor identity or create arbitrary system events.
+8. **Payload allowlist & fail-loud:** Invalid event payloads are rejected; failed audit writes do not silently produce an apparent successful outcome; event volume/types are rate- and allowlist-controlled.
+9. **Trusted server events & immutability:** Valid server-generated events preserve verified human actor identity (`actor_subject_id`), and `public.ai_audit_events` rejects `UPDATE`/`DELETE` via `private.forbid_change()`.
 
-### C. `private.ai_actor_directory` Protection & Deletion (`[Batch 03.1/03.2]`)
-14. **Directory enumeration & modification blocked:** Ordinary clients (`anon`, `authenticated`) cannot enumerate, read, or modify `private.ai_actor_directory` directly.
-15. **Trusted mapping creation/resolution & cross-tenant safety:** Only authorised trusted processes can create or resolve mappings, and identity resolution cannot expose another farm's or user's private information.
-16. **Idempotent anonymisation & non-reactivation:** Account deletion anonymises `private.ai_actor_directory` (`profile_id = NULL, deleted_at = now()`) without mutating `public.ai_audit_events`; repeated anonymisation is idempotent; a deleted mapping (`deleted_at IS NOT NULL`) cannot be silently reactivated.
+### C. `private.ai_actor_directory` Privilege Boundaries (`[Batch 03.1/03.2]`)
+10. **Client & general enumeration blocked:** `anon`, `authenticated`, and ordinary application operations cannot access or enumerate `private.ai_actor_directory`.
+11. **Single-purpose interface functions:** `private.resolve_or_create_ai_actor` performs only create/resolve; `private.anonymise_ai_actor` cannot create or reactivate identities; unauthorised execution is rejected.
+12. **Idempotent deletion & non-reactivation:** Account-deletion anonymisation is idempotent, deleted mappings (`deleted_at IS NOT NULL`) cannot be restored via ordinary operations, and directory operations never mutate `public.ai_audit_events`.
 
-### D. Context Provenance & `pgvector` Measurement Gate (`[Batch 03.1/03.2]`)
-17. **Domain-specific provenance & 7 context states:** `LiveFarmContextService` tests verify `verified_current`, `unverified_provisional`, `stale`, `missing`, `conflicting`, `awaiting_sync`, and `invalid_rejected` across all 8 domains, and missing measurements are never treated as `0`.
-18. **Provisional `pgvector` benchmark gate:** Before production-scale rollout, measure vector retrieval latency separately from embedding generation and LLM inference under representative Staging volumes, dimensions, HNSW config, RLS filtering, and concurrency, validating or revising the provisional `< 50 ms` p95 target.
+### D. Verifiable PostgreSQL Scheduled-Job Identity (`[Batch 03.3]`)
+13. **Job spoofing & unregistered jobs blocked:** Ordinary `authenticated` users cannot create system events; a client cannot impersonate a scheduled job by supplying `system_job_name`; unregistered jobs are rejected.
+14. **Trusted non-HTTP execution & idempotent retries:** Registered `pg_cron` jobs create only their `private.ai_scheduled_jobs`-allowlisted event categories, derive system identity from trusted non-HTTP context, handle retries idempotently without duplicate audit rows, cannot impersonate human actors, and gain no general access to `private.ai_actor_directory`.
+
+### E. Provenance, Soil Staleness, Machinery Telemetry, Prompt Rollback & `pgvector` (`[Batch 03.1/03.2/03.5]`)
+15. **Soil-test staleness (`[Batch 03.1]`):** `soil_test_age_days = current_date - tested_on > approved_validity_days` (`365` provisional, `[Requires Agronomy Validation]`) marks tests `stale`; `tested_on > current_date` is `invalid_rejected`; `tested_on IS NULL` is `missing` (never `0` or current).
+16. **Machinery telemetry provenance (`[Batch 03.1/03.3]`):** Uses verified `public.machinery_telemetry` (`machinery_id` linked to `farm_machinery_assets`, cross-farm telemetry blocked); invalid/non-monotonic sensor readings cannot silently override `farm_machinery_usage_logs`; conflicts are exposed as `conflicting`; historical readings remain traceable.
+17. **Prompt-version rollback (`[Batch 03.1]`):** Immutable prompt artefacts + controlled active-version pointer pass pre-activation validation, switch back to a previously approved version on rollback, and record activation/rollback in `admin_actions`/`audit_log`.
+18. **Provisional `pgvector` benchmark gate (`[Batch 03.1/03.2]`):** Measure retrieval latency separately from embedding generation and LLM inference under realistic Staging volumes, dimensions, HNSW config, RLS filtering, and concurrency to validate or revise the provisional `< 50 ms` p95 target.
