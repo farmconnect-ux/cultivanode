@@ -2085,7 +2085,7 @@ export type Database = {
           audit_note: string | null
           command_type: string
           created_at: string
-          created_by: string
+          created_by: string | null
           device_id: string
           executed_at: string | null
           failsafe_conditions: Json
@@ -2109,7 +2109,7 @@ export type Database = {
           audit_note?: string | null
           command_type?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           device_id?: string
           executed_at?: string | null
           failsafe_conditions?: Json
