@@ -1,7 +1,7 @@
 # Batch 03.0 — Target Architecture: Farm Intelligence Engine (FIE)
 
 **Date:** 2026-11-19  
-**Status:** Proposed Architecture — Final Security Boundary Clarifications Applied (Discovery & Design Only)
+**Status:** Proposed Architecture — PR #12 Independent Review Remediation Applied (Discovery & Design Only)
 
 ---
 
@@ -28,7 +28,7 @@ flowchart TB
   end
 
   subgraph Scheduler["PostgreSQL Internal Scheduler (pg_cron)"]
-    CronJob["Registered pg_cron Job -> private.* Wrapper (service_role REVOKED)"]
+    CronJob["Restricted Scheduler Boundary (service_role REVOKED)"]
   end
 
   subgraph Supabase["Supabase PostgreSQL 17 (+ pgvector)"]
@@ -36,9 +36,11 @@ flowchart TB
     MemDB["farm_memory_items + pgvector (NOT NULL memory_scope + RLS)"]
     AuditWriter["private.write_ai_audit_event (service_role)"]
     FeedbackRPC["public.record_ai_feedback (authenticated, outcome only)"]
-    ActorFns["3 Separated private.* Actor Functions (Table REVOKE ALL from service_role)"]
-    ActorDir["private.ai_actor_directory (owner: postgres)"]
+    CompRPC["public.compliance_lookup_ai_actor (audit.read, audited, rate-limited)"]
+    ActorFns["Internal private.* Actor Functions (service_role REVOKED)"]
+    ActorDir["private.ai_actor_directory (Table REVOKE ALL from service_role)"]
     AuditDB["public.ai_audit_events (Strictly Append-Only)"]
+    SysAudit["public.audit_log (Compliance Lookup & Deletion Audit)"]
   end
 
   UI -->|"Bearer JWT + farm_id"| AuthGate
@@ -55,12 +57,15 @@ flowchart TB
   SafetyChk -->|"AI proposal -> MemWrite"| MemWrite
   UI -->|"Explicit Confirm / Correct / Delete"| MemWrite
   UI -->|"Feedback (accepted/rejected/modified)"| FeedbackRPC
+  UI -->|"Staff Compliance (audit.read)"| CompRPC
   MemWrite -->|"Auth + Scope + Consent + can_edit_farm"| MemDB
   SafetyChk --> ServerAudit
   MemWrite --> ServerAudit
   ServerAudit --> AuditWriter
   AuditWriter -->|"Internal postgres call"| ActorFns
   ActorFns --> ActorDir
+  CompRPC -->|"Single-row lookup"| ActorDir
+  CompRPC -->|"Logs every attempt"| SysAudit
   AuditWriter -->|"Immutable INSERT"| AuditDB
   FeedbackRPC -->|"Append-only child row"| AuditDB
   CronJob -->|"Registered job + allowlist + idempotency"| AuditDB
@@ -107,7 +112,7 @@ Every retrieved fact in `LiveFarmContextSnapshot` is classified into one of **se
 
 | Domain | Precedence & Conflict Rules | Freshness / Quality / Validation |
 |---|---|---|
-| **1. Soil chemistry & nutrients** | `soil_records` (`agent_verified`/`platform_verified`) > `soil_records` (`self_reported`) > `plots.soil_*` > `farms.soil_information`. **IoT sensors never override verified lab NPK/pH.** | `soil_test_age_days = current_date - tested_on`. Stale when `soil_test_age_days > approved_validity_days` (`365` provisional, `[Requires Agronomy Validation]`, configurable per domain/crop). `tested_on > current_date` → `invalid_rejected`; `tested_on IS NULL` → `missing`. Stale tests remain historical only, never `verified_current`. |
+| **1. Soil chemistry & nutrients** | `soil_records` (`agent_verified`/`platform_verified`) > `soil_records` (`self_reported`) > `plots.soil_*` > `farms.soil_information`. **IoT sensors never override verified lab NPK/pH.** | Distinguish measurement date (`tested_on`) from staleness evaluation date (`current_date`): `soil_test_age_days = current_date - tested_on > approved_validity_days`. `365` is **provisional (`[Requires Agronomy Validation]`)**, pending qualified agronomist/soil-scientist approval accounting for soil type/texture, rainfall/irrigation, cropping intensity, fertiliser/amendment applications, sampling method, crop type/growth stage, and lab uncertainty. `tested_on > current_date` → `invalid_rejected`; `tested_on IS NULL` → `missing`. Stale tests remain historical only, never `verified_current`. |
 | **2. Soil moisture & irrigation** | `telemetry_rollups` (`quality_flag = 'valid'`, `< 6h`) > recent `irrigation_events` (`< 24h`) > manual `irrigation_zones.current_moisture_pct`. | Exclude `'faulty'`/`'quarantined'` readings; weight `'suspicious'` lower; stale if `> 12h`. |
 | **3. Crop identity, variety & stage** | Active `crop_cycles` (`status = 'active'`) > `plots.current_crop`. | Phenology updates from `crop_observations` remain `unverified_provisional` until confirmed. |
 | **4. Weather & environment** | On-farm calibrated weather sensor (`quality_flag = 'valid'`) > `weather_cache` (NiMet/Open-Meteo) > regional pilot capital fallback. | Stale if `> 3h` (current) or `> 12h` (forecast). |
@@ -157,22 +162,23 @@ PostgreSQL 17 + `pgvector` is selected because it is available in Supabase and e
 ## 4. AI Audit Register (`public.ai_audit_events` & `private.ai_actor_directory`)
 
 ### Protected Identity Directory & Immutable Audit Evidence
-1. **`private.ai_actor_directory` (`owner: postgres`, restricted `private` schema, RLS enabled, `REVOKE ALL ON TABLE ... FROM PUBLIC, anon, authenticated, service_role`):** Stores `actor_subject_id uuid PK`, `actor_kind` (`'human' | 'system'`), `profile_id uuid UNIQUE REFERENCES public.profiles(id) ON DELETE SET NULL`, `system_principal text UNIQUE`, `created_at`, `deleted_at`. Because `service_role` has `rolsuper = false` and is not the table owner, `service_role` cannot bypass table-level `REVOKE`. All access occurs via **3 separated `SECURITY DEFINER` (`OWNER TO postgres`, `SET search_path = ''`) functions**:
-   - `private.resolve_or_create_ai_actor(p_profile_id)` (`service_role` revoked — internal to audit writer)
-   - `private.anonymise_ai_actor(p_profile_id)` (`service_role` revoked — internal to `execute_account_deletion`)
-   - `private.lookup_ai_actor_subject(p_actor_subject_id)` (`GRANT EXECUTE TO service_role` / compliance RPC only)
+1. **`private.ai_actor_directory` (`owner: postgres`, restricted `private` schema, RLS enabled, `REVOKE ALL ON TABLE ... FROM PUBLIC, anon, authenticated, service_role`):** Stores `actor_subject_id uuid PK`, `actor_kind` (`'human' | 'system'`), `profile_id uuid UNIQUE REFERENCES public.profiles(id) ON DELETE SET NULL`, `system_principal text UNIQUE`, `created_at`, `deleted_at`. Direct table access is denied to `service_role` (which has `rolsuper = false`).
+   - `private.resolve_or_create_ai_actor(p_profile_id)`: `service_role` revoked — internal to `postgres`-owned audit writer.
+   - `private.anonymise_ai_actor(p_profile_id)`: `service_role` revoked — internal to `execute_account_deletion`.
+   - `private.lookup_ai_actor_subject(p_actor_subject_id)`: **revoked from `service_role`, `authenticated`, `anon`, `PUBLIC`** — replaced by `public.compliance_lookup_ai_actor(p_actor_subject_id, p_purpose)` (`authenticated` with `has_permission('audit.read')`, single-row return, mandatory `audit_log` entry, and rate limit).
 2. **`public.ai_audit_events` (Strictly Append-Only via `private.forbid_change()`):** Stores `actor_subject_id` (non-PII), `actor_kind`, `system_job_name`, `trace_id`, `parent_event_id`, `farm_id`, `provider`, `model_id`, `prompt_version`, `context_record_refs`, `memory_ids_used`, `guardrail_result`, `human_outcome`, `execution_status`, `error_code`, `created_at`.
 
-### Two-Pathway Audit Ingestion & Verifiable Scheduled-Job Identity
-- **Pathway A (Trusted Server AI Orchestration):** `private.write_ai_audit_event(...)` revokes `PUBLIC, anon, authenticated` and grants `EXECUTE` only to `service_role` (isolated in `apps/web/src/lib/ai-audit.ts`, validating user auth, `account_active`, `can_view_farm`/`can_edit_farm`, allowlisted event types, and immutable prompt/model metadata).
+### Two-Pathway Audit Ingestion & Scheduled-Job Identity
+- **Pathway A (Trusted Server AI Orchestration):** `private.write_ai_audit_event(...)` revokes `PUBLIC, anon, authenticated` and grants `EXECUTE` only to `service_role` (isolated in `apps/web/src/lib/ai-audit.ts` as an application-architecture boundary, honestly noting shared `service_role` key limits).
 - **Pathway B (Human Feedback):** `public.record_ai_feedback(p_trace_id, p_outcome, p_note)` grants `EXECUTE` to `authenticated` (`PUBLIC, anon` revoked), derives `auth.uid()`, checks `can_view_farm`, restricts `p_outcome IN ('accepted','rejected','modified')`, and cannot alter execution metadata.
-- **Scheduled Jobs (`actor_kind = 'system'`):** `pg_cron` jobs registered in `cron.job` + `private.ai_scheduled_jobs` invoke a non-API `private.*` wrapper with `REVOKE ALL FROM PUBLIC, anon, authenticated, service_role`, verifying non-HTTP execution (`session_user` / role not `anon`/`authenticated`/`authenticator`/`service_role`), validating against the allowlist, and enforcing `(job_name, run_window)` idempotency.
+- **Scheduled Jobs (`actor_kind = 'system'`):** *"Restricted privileged scheduler execution boundary, pending dedicated scheduler identity verification."* `pg_cron` jobs registered in `cron.job` + `private.ai_scheduled_jobs` invoke a non-API `private.*` wrapper with `REVOKE ALL FROM PUBLIC, anon, authenticated, service_role`, enforcing allowlist and `(job_name, run_window)` idempotency; Batch 03.3 will test dedicated `cultivanode_scheduler` role support via `cron.alter_job` on Staging.
 
 ```mermaid
 sequenceDiagram
   participant User as Authenticated Caller
   participant FIE as Trusted AI Server (ai-audit.ts)
-  participant Cron as pg_cron (postgres / scheduler)
+  participant Staff as Compliance Staff (audit.read)
+  participant Cron as pg_cron (Restricted Boundary)
   participant Writer as private.write_ai_audit_event
   participant Dir as private.ai_actor_directory
   participant Audit as public.ai_audit_events (Append-Only)
@@ -183,6 +189,7 @@ sequenceDiagram
   Writer->>Dir: Internal postgres call: resolve_or_create_ai_actor()
   Writer->>Audit: INSERT immutable event (actor_subject_id, trace_id)
   User->>Audit: Optional feedback via public.record_ai_feedback() (outcome only)
+  Staff->>Dir: public.compliance_lookup_ai_actor(subject_id, purpose) -> logged to audit_log
   Cron->>Audit: Registered private.* wrapper (service_role REVOKED, idempotent)
   Note over Dir,Audit: On Account Deletion: execute_account_deletion -> private.anonymise_ai_actor(); Audit stays 100% immutable
 ```
