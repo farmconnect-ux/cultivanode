@@ -226,6 +226,7 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
           style: 'default',
           onPress: async () => {
             if (finishingJob || finishingJobRef.current) return;
+            finishingJobRef.current = true;
             setFinishingJob(true);
             try {
               const res = await finishJobWork(job.id, ha);
