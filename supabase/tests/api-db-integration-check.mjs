@@ -285,6 +285,9 @@ async function main() {
     assert.ok(uploadRes.ok, `Expected PDF upload to verification-documents to succeed, got ${uploadRes.status}`);
 
     const delOrderId = randomUUID();
+    const delModelId = randomUUID();
+    const delDeviceId = randomUUID();
+    const delCmdId = randomUUID();
     runPsql(`
       INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
       VALUES ('${delUser.id}', 'national_id', '${delDocPath}', 'application/pdf', 4);
@@ -294,6 +297,18 @@ async function main() {
       ) VALUES (
         '${delOrderId}', 'ORD-DEL-${suffix}', '${delUser.id}', 'retail', 10000, 0, 0, 10000,
         'completed', 'released', 'escrow', '{"line":"12 Farm Ave","state":"Oyo"}'::jsonb
+      );
+      INSERT INTO public.device_models (id, model_code, name, manufacturer)
+      VALUES ('${delModelId}', 'MOD-DEL-${suffix}', 'Test Valve Node', 'CultivaNode');
+      INSERT INTO public.devices (id, serial_number, model_id, assigned_owner_id)
+      VALUES ('${delDeviceId}', 'SN-DEL-${suffix}', '${delModelId}', '${delUser.id}');
+      INSERT INTO public.device_commands (
+        id, device_id, command_type, parameters, status, failsafe_conditions,
+        created_by, executed_at, audit_note
+      ) VALUES (
+        '${delCmdId}', '${delDeviceId}', 'valve_open', '{"duration_sec":30}'::jsonb,
+        'acknowledged', '{"manual_override_required":true}'::jsonb,
+        '${delUser.id}', '2026-11-18T10:00:00Z'::timestamptz, 'Manual irrigation test'
       );
     `);
 
@@ -440,9 +455,46 @@ async function main() {
       SELECT delivery_address->>'redacted' FROM public.marketplace_orders WHERE id = '${delOrderId}';
     `);
     assert.equal(orderRedacted, 'true');
-    console.log('   PASS: 3-phase execute_account_deletion recovered Storage failure, cleaned Storage, deleted Auth user, finalized, and preserved orders.');
+
+    // Verify device_commands audit record survives Auth deletion with created_by = NULL and unchanged payload
+    const cmdRow = runPsql(`
+      SELECT (created_by IS NULL)::text
+          || '|' || command_type
+          || '|' || (parameters->>'duration_sec')
+          || '|' || status
+          || '|' || (failsafe_conditions->>'manual_override_required')
+          || '|' || (executed_at IS NOT NULL)::text
+          || '|' || coalesce(audit_note, '')
+      FROM public.device_commands
+      WHERE id = '${delCmdId}';
+    `);
+    assert.equal(cmdRow, 'true|valve_open|30|acknowledged|true|true|Manual irrigation test');
+
+    // Verify repeated finalisation remains terminal and idempotent
+    const repeatFinRes = await rpcCall(SERVICE_ROLE_KEY, 'finalize_account_deletion', {
+      p_user_id: delUser.id,
+      p_auth_deleted: false,
+      p_auth_error: 'Late duplicate call',
+    });
+    assert.equal(repeatFinRes.status, 200);
+    assert.equal((await repeatFinRes.json()).deletion_status, 'completed');
+    const delAuditCount = runPsql(`
+      SELECT count(*)::text FROM public.audit_log WHERE entity_id = '${delUser.id}' AND action = 'account_deleted';
+    `);
+    assert.equal(delAuditCount, '1');
+
+    // Verify service_role-only restriction on device_commands remains enforced
+    const anonCmdRes = await fetch(`${API_URL}/rest/v1/device_commands?id=eq.${delCmdId}`, {
+      headers: { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY },
+    });
+    assert.ok(anonCmdRes.status === 401 || anonCmdRes.status === 403, `Expected 401/403 for anon device_commands read, got ${anonCmdRes.status}`);
+
+    console.log('   PASS: 3-phase execute_account_deletion recovered Storage failure, cleaned Storage, deleted Auth user, finalized, and preserved orders & device_commands.');
   } finally {
     runPsql(`
+      DELETE FROM public.device_commands WHERE id = '${delCmdId}';
+      DELETE FROM public.devices WHERE id = '${delDeviceId}';
+      DELETE FROM public.device_models WHERE id = '${delModelId}';
       DELETE FROM public.marketplace_journal_entries WHERE reference_id = '${ledgerRef}';
       DELETE FROM public.support_tickets WHERE id = '${ticketId}';
     `);
