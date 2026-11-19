@@ -67,6 +67,9 @@ async function main() {
   const createdUsers = [];
   const ticketId = randomUUID();
   const ledgerRef = `B23-INT-${suffix}`;
+  const delModelId = randomUUID();
+  const delDeviceId = randomUUID();
+  const delCmdId = randomUUID();
 
   try {
     const user = await createAndSignInUser(`b23-user-${suffix}@example.com`, 'TestPass!123');
@@ -285,9 +288,6 @@ async function main() {
     assert.ok(uploadRes.ok, `Expected PDF upload to verification-documents to succeed, got ${uploadRes.status}`);
 
     const delOrderId = randomUUID();
-    const delModelId = randomUUID();
-    const delDeviceId = randomUUID();
-    const delCmdId = randomUUID();
     runPsql(`
       INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
       VALUES ('${delUser.id}', 'national_id', '${delDocPath}', 'application/pdf', 4);
