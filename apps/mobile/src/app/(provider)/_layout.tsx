@@ -1,7 +1,10 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import { colors } from '@cultivanode/shared';
 import { View, ActivityIndicator } from 'react-native';
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { isProviderRole } from '../../lib/account';
+import { useSession } from '../../lib/session';
+import { Button, Card, Header, Notice, Screen, Text } from '../../ui';
 import {
   loadProviderJobs,
   loadMachineryFleet,
@@ -36,6 +39,8 @@ export function useProvider() {
 }
 
 export default function ProviderTabsLayout() {
+  const router = useRouter();
+  const { session, account } = useSession();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<ProviderJob[]>([]);
   const [fleet, setFleet] = useState<MachineryItem[]>([]);
@@ -99,11 +104,31 @@ export default function ProviderTabsLayout() {
     loadData();
   }, [loadData]);
 
-  if (loading) {
-    return (
+  if (session === null) return <Redirect href="/(auth)/welcome" />;
+
+  if (session === undefined || account === undefined || loading) {
+  return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.cream }}>
         <ActivityIndicator size="large" color={colors.leaf[600]} />
       </View>
+    );
+  }
+
+  if (!isProviderRole(account)) {
+    return (
+      <Screen>
+        <Header title="Provider Workspace" onBack={() => router.replace('/(tabs)/home')} backLabel="Home" />
+        <Card>
+          <Notice tone="warning">
+            Provider tools are only available to approved machinery owners and service providers.
+          </Notice>
+          <Text muted>
+            Request a Machinery Owner or Service Provider role and upload any required verification documents to unlock this workspace.
+          </Text>
+          <Button title="Manage roles & documents" onPress={() => router.push('/me/roles')} />
+          <Button title="Back to Home" variant="secondary" onPress={() => router.replace('/(tabs)/home')} />
+        </Card>
+      </Screen>
     );
   }
 

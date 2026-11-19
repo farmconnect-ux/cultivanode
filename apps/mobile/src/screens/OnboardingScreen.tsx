@@ -26,6 +26,8 @@ const ROLE_ICONS: Partial<Record<AppRole, IconName>> = {
   buyer_offtaker: 'briefcase',
   logistics_provider: 'navigation',
   field_agent: 'users',
+  institutional_partner: 'award',
+  investor: 'trending-up',
 };
 
 /** "Tell us about you": name, what you do, where, and the agreement. One screen, then the farm. */
@@ -139,6 +141,12 @@ export function OnboardingScreen({ onDone, onSignedOut }: Props) {
               selected={form.roles.includes(r.role)}
               onPress={() => toggleRole(r.role)}
             />
+            {!r.auto_approve && form.roles.includes(r.role) ? (
+              <Text variant="caption" muted style={styles.indent}>
+                {r.requires_documents ? 'Requires staff review and verification documents after setup.' : 'Requires staff review after setup.'}
+                {r.min_verification_tier > 0 ? ` Minimum Tier ${r.min_verification_tier} (NIN) verification required.` : ''}
+              </Text>
+            ) : null}
             {r.role === 'service_provider' && form.roles.includes('service_provider') ? (
               <View style={styles.indent}>
                 <Text variant="label">{o.providerType}</Text>

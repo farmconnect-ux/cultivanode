@@ -28,7 +28,9 @@ describe('provider dispatch acceptance evaluations', () => {
     });
 
     it.each([
-      ['equipment provider', [{ role: 'equipment_provider' }], true],
+      ['machinery owner', [{ role: 'machinery_owner' }], true],
+  ['equipment provider legacy role rejected', [{ role: 'equipment_provider' }], false],
+  ['provider speciality is not an app role', [{ role: 'machine_operator' }], false],
       ['service provider', [{ role: 'service_provider' }], true],
       ['farmer only', [{ role: 'farmer' }], false],
       ['administrator only', [{ role: 'admin' }], false],

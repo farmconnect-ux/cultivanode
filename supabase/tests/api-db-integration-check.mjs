@@ -67,6 +67,9 @@ async function main() {
   const createdUsers = [];
   const ticketId = randomUUID();
   const ledgerRef = `B23-INT-${suffix}`;
+  const delModelId = randomUUID();
+  const delDeviceId = randomUUID();
+  const delCmdId = randomUUID();
 
   try {
     const user = await createAndSignInUser(`b23-user-${suffix}@example.com`, 'TestPass!123');
@@ -267,8 +270,231 @@ async function main() {
     `);
     assert.equal(ledgerCount, '1', `Expected exactly 1 order_payment ledger entry, got ${ledgerCount}`);
     console.log('   PASS: process_payment_webhook rejected unknown/mismatched, cleared valid, and handled duplicate idempotently.');
+
+    console.log('6. Testing execute_account_deletion + Storage cleanup + Auth deletion against live local Supabase...');
+    const delUser = await createAndSignInUser(`del-${suffix}@example.com`, 'Pass1234!');
+    createdUsers.push(delUser.id);
+    const delDocPath = `${delUser.id}/${randomUUID()}.pdf`;
+
+    const uploadRes = await fetch(`${API_URL}/storage/v1/object/verification-documents/${delDocPath}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${delUser.token}`,
+        apikey: ANON_KEY,
+        'Content-Type': 'application/pdf',
+      },
+      body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+    });
+    assert.ok(uploadRes.ok, `Expected PDF upload to verification-documents to succeed, got ${uploadRes.status}`);
+
+    const delOrderId = randomUUID();
+    runPsql(`
+      INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+      VALUES ('${delUser.id}', 'national_id', '${delDocPath}', 'application/pdf', 4);
+      INSERT INTO public.marketplace_orders (
+        id, order_number, buyer_id, order_type, items_subtotal_kobo, delivery_fee_kobo,
+        platform_fee_kobo, total_amount_kobo, status, payment_status, payment_mode, delivery_address
+      ) VALUES (
+        '${delOrderId}', 'ORD-DEL-${suffix}', '${delUser.id}', 'retail', 10000, 0, 0, 10000,
+        'completed', 'released', 'escrow', '{"line":"12 Farm Ave","state":"Oyo"}'::jsonb
+      );
+      INSERT INTO public.device_models (id, model_code, name, vendor, connectivity)
+      VALUES ('${delModelId}', 'MOD-DEL-${suffix}', 'Test Valve Node', 'CultivaNode', 'lorawan');
+      INSERT INTO public.devices (id, serial_number, model_id, assigned_owner_id)
+      VALUES ('${delDeviceId}', 'SN-DEL-${suffix}', '${delModelId}', '${delUser.id}');
+      INSERT INTO public.device_commands (
+        id, device_id, command_type, parameters, status, failsafe_conditions,
+        created_by, executed_at, audit_note
+      ) VALUES (
+        '${delCmdId}', '${delDeviceId}', 'valve_open', '{"duration_sec":30}'::jsonb,
+        'acknowledged', '{"manual_override_required":true}'::jsonb,
+        '${delUser.id}', '2026-11-18T10:00:00Z'::timestamptz, 'Manual irrigation test'
+      );
+    `);
+
+    // Unauthorised authenticated user cannot call execute_account_deletion directly
+    const unauthDel = await rpcCall(delUser.token, 'execute_account_deletion', {
+      p_user_id: delUser.id,
+      p_reason: 'Direct RPC test',
+    });
+    assert.equal(unauthDel.status, 403, `Expected 403 for authenticated calling execute_account_deletion, got ${unauthDel.status}`);
+
+    // Service-role executes Phase 1 (DB anonymisation + durable Storage queue)
+    const svcDelRes = await rpcCall(SERVICE_ROLE_KEY, 'execute_account_deletion', {
+      p_user_id: delUser.id,
+      p_reason: 'Live integration deletion',
+    });
+    const svcDelText = await svcDelRes.text();
+    assert.equal(svcDelRes.status, 200, `Expected 200 from execute_account_deletion, got ${svcDelText}`);
+    const svcDelJson = JSON.parse(svcDelText);
+    assert.equal(svcDelJson.status, 'anonymized');
+    assert.equal(svcDelJson.deletion_status, 'storage_pending');
+    assert.equal(svcDelJson.pending_storage_count, 1);
+
+    // Phase 2a: Claim Storage item, simulate a Storage failure, and verify data_request stays open
+    const claim1Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id });
+    assert.equal(claim1Res.status, 200);
+    const claimed1 = await claim1Res.json();
+    assert.equal(claimed1.length, 1);
+    assert.equal(claimed1[0].storage_path, delDocPath);
+
+    const recFailRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed1[0].id,
+      p_status: 'failed',
+      p_error: 'Simulated Storage 503',
+      p_lease_token: claimed1[0].lease_token,
+    });
+    assert.equal(recFailRes.status, 200);
+    const reqStatusMid = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
+    assert.equal(reqStatusMid, 'open', 'Expected data_request to stay open while Storage cleanup is failed');
+
+    // Phase 2b: Simulate worker crash leaving 'processing' lease, verify active lease blocks concurrent claim, then expire & reclaim
+    const claim2Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
+    assert.equal(claim2Res.status, 200);
+    const claimed2 = await claim2Res.json();
+    assert.equal(claimed2.length, 1);
+    assert.equal(claimed2[0].attempts, 2);
+    assert.ok(claimed2[0].lease_token, 'Expected claim to return lease_token');
+
+    const claimWhileActiveRes = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
+    assert.equal(claimWhileActiveRes.status, 200);
+    assert.deepEqual(await claimWhileActiveRes.json(), []);
+
+    runPsql(`
+      UPDATE public.account_deletion_storage_cleanup
+         SET lease_expires_at = clock_timestamp() - interval '1 second'
+       WHERE id = '${claimed2[0].id}';
+    `);
+
+    const claim3Res = await rpcCall(SERVICE_ROLE_KEY, 'claim_account_deletion_storage_cleanup', { p_user_id: delUser.id, p_lease_seconds: 300 });
+    assert.equal(claim3Res.status, 200);
+    const claimed3 = await claim3Res.json();
+    assert.equal(claimed3.length, 1);
+    assert.equal(claimed3[0].attempts, 3);
+    assert.notEqual(claimed3[0].lease_token, claimed2[0].lease_token);
+
+    const rmRes = await fetch(`${API_URL}/storage/v1/object/${claimed3[0].bucket_id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: [claimed3[0].storage_path] }),
+    });
+    assert.ok(rmRes.ok, `Expected Storage cleanup to succeed, got ${rmRes.status}`);
+
+    const recOkRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed3[0].id,
+      p_status: 'completed',
+      p_lease_token: claimed3[0].lease_token,
+    });
+    assert.equal(recOkRes.status, 200);
+
+    // Stale Worker 2 attempting to record 'failed' with expired lease_token must be rejected
+    const staleRecRes = await rpcCall(SERVICE_ROLE_KEY, 'record_account_deletion_storage_result', {
+      p_cleanup_id: claimed2[0].id,
+      p_status: 'failed',
+      p_error: 'Stale worker failure',
+      p_lease_token: claimed2[0].lease_token,
+    });
+    assert.equal(staleRecRes.status, 400, `Expected 400 for stale lease_token, got ${staleRecRes.status}`);
+
+    // Verify Storage object is absent
+    const fetchDeletedDoc = await fetch(`${API_URL}/storage/v1/object/authenticated/verification-documents/${delDocPath}`, {
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.ok(!fetchDeletedDoc.ok, 'Expected deleted verification document to be absent from Storage');
+
+    // Phase 3: Delete Auth user via GoTrue Admin API, verify post-Auth incomplete listing, then finalize
+    const authDelRes = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.ok(authDelRes.ok, `Expected Auth deleteUser to succeed, got ${authDelRes.status}`);
+
+    const incompleteRes = await rpcCall(SERVICE_ROLE_KEY, 'list_incomplete_account_deletions', { p_limit: 50 });
+    assert.equal(incompleteRes.status, 200);
+    const incompleteRows = await incompleteRes.json();
+    assert.ok(
+      incompleteRows.some((r) => r.profile_id === delUser.id && r.deletion_status === 'auth_pending'),
+      'Expected post-Auth unfinalized user to appear in list_incomplete_account_deletions',
+    );
+
+    const authCheckAfterDel = await fetch(`${API_URL}/auth/v1/admin/users/${delUser.id}`, {
+      headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY },
+    });
+    assert.equal(authCheckAfterDel.status, 404, 'Expected Auth user lookup to return 404 after Auth deletion');
+
+    const finRes = await rpcCall(SERVICE_ROLE_KEY, 'finalize_account_deletion', {
+      p_user_id: delUser.id,
+      p_auth_deleted: true,
+    });
+    assert.equal(finRes.status, 200);
+    const finalizeJson = await finRes.json();
+    assert.equal(finalizeJson.deletion_status, 'completed');
+
+    const incompleteAfterRes = await rpcCall(SERVICE_ROLE_KEY, 'list_incomplete_account_deletions', { p_limit: 50 });
+    assert.equal(incompleteAfterRes.status, 200);
+    const incompleteAfterRows = await incompleteAfterRes.json();
+    assert.ok(
+      !incompleteAfterRows.some((r) => r.profile_id === delUser.id),
+      'Expected finalized user to be absent from list_incomplete_account_deletions',
+    );
+
+    const profileCheck = runPsql(`
+      SELECT full_name || '|' || deletion_status || '|' || (deleted_at IS NOT NULL)::text
+      FROM public.profiles WHERE id = '${delUser.id}';
+    `);
+    assert.equal(profileCheck, 'Deleted user|completed|true');
+
+    const reqStatusFinal = runPsql(`SELECT status::text FROM public.data_requests WHERE profile_id = '${delUser.id}' AND kind = 'deletion';`);
+    assert.equal(reqStatusFinal, 'completed');
+
+    const orderRedacted = runPsql(`
+      SELECT delivery_address->>'redacted' FROM public.marketplace_orders WHERE id = '${delOrderId}';
+    `);
+    assert.equal(orderRedacted, 'true');
+
+    // Verify device_commands audit record survives Auth deletion with created_by = NULL and unchanged payload
+    const cmdRow = runPsql(`
+      SELECT (created_by IS NULL)::text
+          || '|' || command_type
+          || '|' || (parameters->>'duration_sec')
+          || '|' || status
+          || '|' || (failsafe_conditions->>'manual_override_required')
+          || '|' || (executed_at IS NOT NULL)::text
+          || '|' || coalesce(audit_note, '')
+      FROM public.device_commands
+      WHERE id = '${delCmdId}';
+    `);
+    assert.equal(cmdRow, 'true|valve_open|30|acknowledged|true|true|Manual irrigation test');
+
+    // Verify repeated finalisation remains terminal and idempotent
+    const repeatFinRes = await rpcCall(SERVICE_ROLE_KEY, 'finalize_account_deletion', {
+      p_user_id: delUser.id,
+      p_auth_deleted: false,
+      p_auth_error: 'Late duplicate call',
+    });
+    assert.equal(repeatFinRes.status, 200);
+    assert.equal((await repeatFinRes.json()).deletion_status, 'completed');
+    const delAuditCount = runPsql(`
+      SELECT count(*)::text FROM public.audit_log WHERE entity_id = '${delUser.id}' AND action = 'account_deleted';
+    `);
+    assert.equal(delAuditCount, '1');
+
+    // Verify service_role-only restriction on device_commands remains enforced
+    const anonCmdRes = await fetch(`${API_URL}/rest/v1/device_commands?id=eq.${delCmdId}`, {
+      headers: { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY },
+    });
+    assert.ok(anonCmdRes.status === 401 || anonCmdRes.status === 403, `Expected 401/403 for anon device_commands read, got ${anonCmdRes.status}`);
+
+    console.log('   PASS: 3-phase execute_account_deletion recovered Storage failure, cleaned Storage, deleted Auth user, finalized, and preserved orders & device_commands.');
   } finally {
     runPsql(`
+      DELETE FROM public.device_commands WHERE id = '${delCmdId}';
+      DELETE FROM public.devices WHERE id = '${delDeviceId}';
+      DELETE FROM public.device_models WHERE id = '${delModelId}';
       DELETE FROM public.marketplace_journal_entries WHERE reference_id = '${ledgerRef}';
       DELETE FROM public.support_tickets WHERE id = '${ticketId}';
     `);

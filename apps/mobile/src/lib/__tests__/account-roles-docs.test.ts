@@ -207,4 +207,88 @@ describe('mobile role requests and verification document uploads', () => {
     const denied = await getVerificationDocumentSignedUrl(`${OTHER_USER_ID}/secret.pdf`);
     expect(denied).toEqual({ ok: false, error: 'Object not found or unauthorized' });
   });
+
+  it('handles multi-role labels, provider permissions, specialty filtering, and tier gates', async () => {
+    const {
+      availableProviderTypesForRequest,
+      canRequestRoleWithTier,
+      formatRoleLabel,
+      getRequestableRoles,
+      isProviderRole,
+    } = await import('../account');
+
+    expect(
+      isProviderRole({
+        profile: {
+          id: USER_ID,
+          full_name: 'Amina',
+          phone: '2348011111111',
+          preferred_language: 'en',
+          verification_tier: 1,
+          account_type: 'individual',
+          onboarded_at: '2026-11-18T00:00:00Z',
+          state: 'Oyo',
+          lga: 'Ibadan',
+        },
+        roles: [
+          { role: 'crop_farmer', provider_type: null },
+          { role: 'service_provider', provider_type: 'agronomist' },
+        ],
+        pending: [],
+      }),
+    ).toBe(true);
+
+    expect(
+      isProviderRole({
+        profile: {
+          id: USER_ID,
+          full_name: 'Bola',
+          phone: '2348011111112',
+          preferred_language: 'en',
+          verification_tier: 0,
+          account_type: 'individual',
+          onboarded_at: '2026-11-18T00:00:00Z',
+          state: 'Oyo',
+          lga: 'Ibadan',
+        },
+        roles: [{ role: 'crop_farmer', provider_type: null }],
+        pending: [],
+      }),
+    ).toBe(false);
+
+    expect(
+      formatRoleLabel(
+        'service_provider',
+        'agronomist',
+        { service_provider: 'Service provider' },
+        { agronomist: 'Agronomist' },
+      ),
+    ).toBe('Service provider · Agronomist');
+
+    const availableTypes = availableProviderTypesForRequest(
+      [{ role: 'service_provider', provider_type: 'agronomist' }],
+      [{ role: 'service_provider', provider_type: 'mechanic', status: 'pending' }],
+      ['agronomist', 'mechanic', 'vet'],
+    );
+    expect(availableTypes).toEqual(['vet']);
+
+    const requestable = getRequestableRoles(
+      [
+        { role: 'crop_farmer', auto_approve: true, requires_documents: false, min_verification_tier: 0 },
+        { role: 'machinery_owner', auto_approve: false, requires_documents: true, min_verification_tier: 0 },
+        { role: 'service_provider', auto_approve: false, requires_documents: true, min_verification_tier: 0 },
+        { role: 'field_agent', auto_approve: false, requires_documents: true, min_verification_tier: 1 },
+      ],
+      [
+        { role: 'crop_farmer', provider_type: null },
+        { role: 'service_provider', provider_type: 'agronomist' },
+      ],
+      [{ role: 'machinery_owner', provider_type: null, status: 'pending' }],
+      ['agronomist', 'vet'],
+    );
+    expect(requestable.map((r) => r.role)).toEqual(['service_provider', 'field_agent']);
+
+    expect(canRequestRoleWithTier(requestable[1], 0)).toBe(false);
+    expect(canRequestRoleWithTier(requestable[1], 1)).toBe(true);
+  });
 });

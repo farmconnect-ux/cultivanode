@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
@@ -221,6 +222,388 @@ async function main() {
     );
   }
   console.log(`   PASS: 3c valid serialised outcome (${auditC.stdout}).`);
+
+  // 4a: Concurrent last-super-admin deletion guard
+  console.log('4a. Testing concurrent super_admin deletion serialisation...');
+  const sa1 = randomUUID();
+  const sa2 = randomUUID();
+  const saSetup = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${sa1}', '2348099900001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${sa2}', '2348099900002', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${sa1}', '2348099900001', 'Super One'), ('${sa2}', '2348099900002', 'Super Two')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    DELETE FROM public.admin_roles WHERE admin_role = 'super_admin' AND profile_id NOT IN ('${sa1}', '${sa2}');
+    INSERT INTO public.admin_roles (profile_id, admin_role)
+    VALUES ('${sa1}', 'super_admin'), ('${sa2}', 'super_admin')
+    ON CONFLICT DO NOTHING;
+  `);
+  assert.equal(saSetup.code, 0, `4a setup failed: ${saSetup.stderr}`);
+
+  const [rSa1, rSa2] = await Promise.all([
+    runPsql(`SELECT public.execute_account_deletion('${sa1}', 'Concurrent SA1');`),
+    runPsql(`SELECT public.execute_account_deletion('${sa2}', 'Concurrent SA2');`),
+  ]);
+  const saSuccesses = [rSa1, rSa2].filter((r) => r.code === 0);
+  const saFailures = [rSa1, rSa2].filter((r) => r.code !== 0);
+  assert.equal(saSuccesses.length, 1, `Expected exactly 1 super_admin deletion to succeed, got ${saSuccesses.length}`);
+  assert.equal(saFailures.length, 1, `Expected exactly 1 super_admin deletion to be rejected, got ${saFailures.length}`);
+  assert.match(saFailures[0].stderr, /Cannot delete the last super admin account/);
+  const remainingSa = await runPsql(`SELECT count(*) FROM public.admin_roles WHERE admin_role = 'super_admin';`);
+  assert.equal(remainingSa.stdout, '1', `Expected 1 remaining super_admin, got ${remainingSa.stdout}`);
+  console.log('   PASS: 4a serialised concurrent super_admin deletions; 1 succeeded, 1 rejected, 1 super_admin preserved.');
+
+  // 4b: Concurrent duplicate account deletion + booking insert guard
+  console.log('4b. Testing concurrent duplicate deletion and booking creation guard...');
+  const dupUser = randomUUID();
+  const farmerUser = randomUUID();
+  const farmId = randomUUID();
+  const listingId = randomUUID();
+  const b4Setup = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${dupUser}', '2348099900003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${farmerUser}', '2348099900004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${dupUser}', '2348099900003', 'Dup Target'), ('${farmerUser}', '2348099900004', 'Concurrent Farmer')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.farms (id, owner_id, name, state, location)
+    VALUES ('${farmId}', '${farmerUser}', 'Conc Farm', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+    INSERT INTO public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
+    VALUES ('${listingId}', '${dupUser}', 'equipment', 'tractor', 'Conc Tractor', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+  `);
+  assert.equal(b4Setup.code, 0, `4b setup failed: ${b4Setup.stderr}`);
+
+  const [rDup1, rDup2, rBook] = await Promise.all([
+    runPsql(`SELECT (public.execute_account_deletion('${dupUser}', 'Race 1'))->>'status';`),
+    runPsql(`SELECT (public.execute_account_deletion('${dupUser}', 'Race 2'))->>'status';`),
+    runPsql(`
+      INSERT INTO public.bookings (
+        farmer_id, provider_id, listing_id, farm_id,
+        listing_title, listing_kind, farm_name, job_location, distance_km,
+        job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+      ) VALUES (
+        '${farmerUser}', '${dupUser}', '${listingId}', '${farmId}',
+        'Conc Tractor', 'equipment', 'Conc Farm', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+        current_date + 1, 'hectare', 1, 20000, 20000, 'requested', now() + interval '1 day'
+      );
+    `),
+  ]);
+  // Either booking landed first (blocking both deletions) OR deletion landed first (blocking booking + making second deletion idempotent).
+  if (rBook.code === 0) {
+    assert.ok(rDup1.code !== 0 && rDup2.code !== 0, 'If booking succeeded first, both deletions must be blocked');
+  } else {
+    assert.match(rBook.stderr, /Cannot create or update booking for a deleted or deleting account/);
+    assert.equal(rDup1.code, 0);
+    assert.equal(rDup2.code, 0);
+    const statuses = [rDup1.stdout, rDup2.stdout].sort();
+    assert.deepEqual(statuses, ['already_anonymized', 'anonymized']);
+  }
+  console.log('   PASS: 4b concurrent deletion and booking race produced a valid serialised outcome.');
+
+  // 4c: Deterministic ordering: booking insert locks profile (FOR KEY SHARE) first -> deletion blocks and rejects
+  console.log('4c. Testing deterministic booking-first -> deletion-blocked...');
+  const u4c = randomUUID();
+  const f4c = randomUUID();
+  const farm4c = randomUUID();
+  const list4c = randomUUID();
+  const setup4c = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${u4c}', '2348099900011', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${f4c}', '2348099900012', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4c}', '2348099900011', 'Provider 4c'), ('${f4c}', '2348099900012', 'Farmer 4c')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.farms (id, owner_id, name, state, location)
+    VALUES ('${farm4c}', '${f4c}', 'Farm 4c', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+    INSERT INTO public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
+    VALUES ('${list4c}', '${u4c}', 'equipment', 'tractor', 'Tractor 4c', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+  `);
+  assert.equal(setup4c.code, 0, `4c setup failed: ${setup4c.stderr}`);
+
+  const bookFirstP = runPsql(
+    `
+      BEGIN;
+      INSERT INTO public.bookings (
+        farmer_id, provider_id, listing_id, farm_id,
+        listing_title, listing_kind, farm_name, job_location, distance_km,
+        job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+      ) VALUES (
+        '${f4c}', '${u4c}', '${list4c}', '${farm4c}',
+        'Tractor 4c', 'equipment', 'Farm 4c', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+        current_date + 1, 'hectare', 1, 20000, 20000, 'requested', now() + interval '1 day'
+      );
+      SELECT pg_sleep(0.45);
+      COMMIT;
+    `,
+    'conc_4c_book_first',
+  );
+  // Wait until conc_4c_book_first holds RowShareLock on public.profiles and is sleeping
+  {
+    const deadline = Date.now() + 5000;
+    let locked = false;
+    while (Date.now() < deadline) {
+      const check = await runPsql(`
+        SELECT count(*) FROM pg_locks l
+        JOIN pg_stat_activity a ON a.pid = l.pid
+        WHERE a.application_name = 'conc_4c_book_first'
+          AND l.relation = 'public.profiles'::regclass
+          AND l.granted = true
+          AND a.query LIKE '%pg_sleep%';
+      `);
+      if (check.code === 0 && Number.parseInt(check.stdout, 10) >= 1) {
+        locked = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 15));
+    }
+    assert.ok(locked, 'Expected conc_4c_book_first to hold profiles lock before launching deletion');
+  }
+
+  const delAfterBook = await runPsql(`SELECT public.execute_account_deletion('${u4c}', '4c race');`);
+  const bookFirstRes = await bookFirstP;
+  assert.equal(bookFirstRes.code, 0, `4c booking should commit: ${bookFirstRes.stderr}`);
+  assert.notEqual(delAfterBook.code, 0, '4c deletion must be rejected after committed booking');
+  assert.match(delAfterBook.stderr, /Complete or resolve active service bookings/);
+
+  const state4c = await runPsql(`
+    SELECT (SELECT count(*) FROM public.bookings WHERE provider_id = '${u4c}')::text
+        || '|' || coalesce((SELECT deletion_status FROM public.profiles WHERE id = '${u4c}'), 'null');
+  `);
+  assert.equal(state4c.stdout, '1|null');
+  console.log('   PASS: 4c booking-first committed and blocked concurrent deletion.');
+
+  // 4d: Deterministic ordering: deletion locks profile (FOR UPDATE) first -> booking insert blocks and rejects
+  console.log('4d. Testing deterministic deletion-first -> booking-rejected...');
+  const u4d = randomUUID();
+  const f4d = randomUUID();
+  const farm4d = randomUUID();
+  const list4d = randomUUID();
+  const setup4d = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES
+      ('${u4d}', '2348099900013', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+      ('${f4d}', '2348099900014', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4d}', '2348099900013', 'Provider 4d'), ('${f4d}', '2348099900014', 'Farmer 4d')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.farms (id, owner_id, name, state, location)
+    VALUES ('${farm4d}', '${f4d}', 'Farm 4d', 'Oyo', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+    INSERT INTO public.listings (id, owner_id, kind, equipment_type, title, service_radius_km, location)
+    VALUES ('${list4d}', '${u4d}', 'equipment', 'tractor', 'Tractor 4d', 50, extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'));
+  `);
+  assert.equal(setup4d.code, 0, `4d setup failed: ${setup4d.stderr}`);
+
+  const delFirstP = runPsql(
+    `
+      BEGIN;
+      SELECT public.execute_account_deletion('${u4d}', '4d race');
+      SELECT pg_sleep(0.45);
+      COMMIT;
+    `,
+    'conc_4d_del_first',
+  );
+  {
+    const deadline = Date.now() + 5000;
+    let locked = false;
+    while (Date.now() < deadline) {
+      const check = await runPsql(`
+        SELECT count(*) FROM pg_locks l
+        JOIN pg_stat_activity a ON a.pid = l.pid
+        WHERE a.application_name = 'conc_4d_del_first'
+          AND l.relation = 'public.profiles'::regclass
+          AND l.mode = 'RowExclusiveLock'
+          AND l.granted = true
+          AND a.query LIKE '%pg_sleep%';
+      `);
+      if (check.code === 0 && Number.parseInt(check.stdout, 10) >= 1) {
+        locked = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 15));
+    }
+    assert.ok(locked, 'Expected conc_4d_del_first to hold RowExclusiveLock on profiles');
+  }
+
+  const bookAfterDel = await runPsql(`
+    INSERT INTO public.bookings (
+      farmer_id, provider_id, listing_id, farm_id,
+      listing_title, listing_kind, farm_name, job_location, distance_km,
+      job_date, unit, quantity, rate_kobo, total_kobo, status, expires_at
+    ) VALUES (
+      '${f4d}', '${u4d}', '${list4d}', '${farm4d}',
+      'Tractor 4d', 'equipment', 'Farm 4d', extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'), 0,
+      current_date + 1, 'hectare', 1, 20000, 20000, 'requested', now() + interval '1 day'
+    );
+  `);
+  const delFirstRes = await delFirstP;
+  assert.equal(delFirstRes.code, 0, `4d deletion should commit: ${delFirstRes.stderr}`);
+  assert.notEqual(bookAfterDel.code, 0, '4d booking must be rejected after committed deletion');
+  assert.match(bookAfterDel.stderr, /Cannot create or update booking for a deleted or deleting account/);
+
+  const state4d = await runPsql(`
+    SELECT (SELECT count(*) FROM public.bookings WHERE provider_id = '${u4d}')::text
+        || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4d}');
+  `);
+  assert.equal(state4d.stdout, '0|auth_pending');
+  console.log('   PASS: 4d deletion-first committed and rejected concurrent booking.');
+
+  // 4e: Concurrent Storage cleanup lease isolation + stale lease recovery
+  console.log('4e. Testing concurrent Storage cleanup lease isolation and stale recovery...');
+  const u4e = randomUUID();
+  const setup4e = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${u4e}', '2348099900015', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name, deleted_at, deletion_status)
+    VALUES ('${u4e}', '2348099900015', 'Deleted user', now(), 'storage_pending')
+    ON CONFLICT (id) DO UPDATE SET deleted_at = now(), deletion_status = 'storage_pending';
+    INSERT INTO public.account_deletion_storage_cleanup (profile_id, bucket_id, storage_path, status)
+    VALUES ('${u4e}', 'verification-documents', '${u4e}/lease-test.pdf', 'pending');
+  `);
+  assert.equal(setup4e.code, 0, `4e setup failed: ${setup4e.stderr}`);
+
+  const [w1, w2] = await Promise.all([
+    runPsql(`SELECT count(*) FROM public.claim_account_deletion_storage_cleanup('${u4e}', 300);`),
+    runPsql(`SELECT count(*) FROM public.claim_account_deletion_storage_cleanup('${u4e}', 300);`),
+  ]);
+  assert.equal(w1.code, 0);
+  assert.equal(w2.code, 0);
+  const claimCounts = [Number.parseInt(w1.stdout, 10), Number.parseInt(w2.stdout, 10)].sort();
+  assert.deepEqual(claimCounts, [0, 1], `Expected exactly 1 worker to claim lease, got ${claimCounts}`);
+
+  // Expire the lease and verify stale claim recovery
+  const expireUpdate = await runPsql(`
+    UPDATE public.account_deletion_storage_cleanup
+       SET lease_expires_at = clock_timestamp() - interval '1 second'
+     WHERE profile_id = '${u4e}';
+  `);
+  assert.equal(expireUpdate.code, 0, `4e expire update failed: ${expireUpdate.stderr}`);
+  const expireRes = await runPsql(`
+    SELECT attempts::text FROM public.claim_account_deletion_storage_cleanup('${u4e}', 300);
+  `);
+  assert.equal(expireRes.code, 0, `4e stale reclaim failed: ${expireRes.stderr}`);
+  assert.equal(expireRes.stdout, '2');
+  console.log('   PASS: 4e concurrent workers respected active lease and reclaimed expired lease.');
+
+  // 4f: Lease fencing: Worker A claims -> expires -> Worker B reclaims, completes & finalizes -> stale Worker A fails cannot regress
+  console.log('4f. Testing Storage lease fencing (stale Worker A failure rejected after Worker B completion)...');
+  const u4f = randomUUID();
+  const setup4f = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${u4f}', '2348099900016', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4f}', '2348099900016', 'Fence User A')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+    VALUES ('${u4f}', 'national_id', '${u4f}/fence-a.pdf', 'application/pdf', 100);
+    SELECT public.execute_account_deletion('${u4f}', '4f fence test');
+  `);
+  assert.equal(setup4f.code, 0, `4f setup failed: ${setup4f.stderr}`);
+
+  const claimA4f = await runPsql(`
+    SELECT id::text || '|' || lease_token::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4f}', 300);
+  `);
+  assert.equal(claimA4f.code, 0);
+  const [cleanupId4f, tokenA4f] = claimA4f.stdout.split('|');
+  assert.ok(cleanupId4f && tokenA4f);
+
+  const expire4f = await runPsql(`
+    UPDATE public.account_deletion_storage_cleanup
+       SET lease_expires_at = clock_timestamp() - interval '1 second'
+     WHERE id = '${cleanupId4f}';
+  `);
+  assert.equal(expire4f.code, 0);
+
+  const claimB4f = await runPsql(`
+    SELECT lease_token::text || '|' || attempts::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4f}', 300);
+  `);
+  assert.equal(claimB4f.code, 0);
+  const [tokenB4f, attemptsB4f] = claimB4f.stdout.split('|');
+  assert.notEqual(tokenB4f, tokenA4f);
+  assert.equal(attemptsB4f, '2');
+
+  const completeB4f = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4f}', 'completed', null, '${tokenB4f}');
+    SELECT (public.finalize_account_deletion('${u4f}', true))->>'deletion_status';
+  `);
+  assert.equal(completeB4f.code, 0, `4f Worker B completion failed: ${completeB4f.stderr}`);
+
+  // Stale Worker A tries to record 'failed' with expired tokenA4f
+  const staleFail4f = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4f}', 'failed', 'Stale Worker A error', '${tokenA4f}');
+  `);
+  assert.notEqual(staleFail4f.code, 0, '4f stale Worker A result must be rejected');
+
+  // Repeated finalize_account_deletion with false must not regress completed profile or duplicate audit row
+  const repeatFin4f = await runPsql(`
+    SELECT (public.finalize_account_deletion('${u4f}', false, 'Late retry'))->>'deletion_status';
+  `);
+  assert.equal(repeatFin4f.code, 0);
+  assert.equal(repeatFin4f.stdout, 'completed');
+
+  const verify4f = await runPsql(`
+    SELECT (SELECT status FROM public.account_deletion_storage_cleanup WHERE id = '${cleanupId4f}')
+        || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4f}')
+        || '|' || (SELECT status::text FROM public.data_requests WHERE profile_id = '${u4f}' AND kind = 'deletion' LIMIT 1)
+        || '|' || (SELECT count(*)::text FROM public.audit_log WHERE entity_id = '${u4f}' AND action = 'account_deleted');
+  `);
+  assert.equal(verify4f.stdout, 'completed|completed|completed|1');
+  console.log('   PASS: 4f stale Worker A failure rejected; cleanup, profile, data_request, and audit log stayed terminal completed.');
+
+  // 4g: Reverse lease fencing: Worker A claims -> expires -> Worker B reclaims & fails -> stale Worker A success rejected
+  console.log('4g. Testing reverse Storage lease fencing (stale Worker A success rejected after Worker B failure)...');
+  const u4g = randomUUID();
+  const setup4g = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${u4g}', '2348099900017', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${u4g}', '2348099900017', 'Fence User B')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.verification_documents (profile_id, document_type, storage_path, mime_type, size_bytes)
+    VALUES ('${u4g}', 'national_id', '${u4g}/fence-b.pdf', 'application/pdf', 100);
+    SELECT public.execute_account_deletion('${u4g}', '4g reverse fence test');
+  `);
+  assert.equal(setup4g.code, 0, `4g setup failed: ${setup4g.stderr}`);
+
+  const claimA4g = await runPsql(`
+    SELECT id::text || '|' || lease_token::text
+    FROM public.claim_account_deletion_storage_cleanup('${u4g}', 300);
+  `);
+  const [cleanupId4g, tokenA4g] = claimA4g.stdout.split('|');
+
+  await runPsql(`
+    UPDATE public.account_deletion_storage_cleanup
+       SET lease_expires_at = clock_timestamp() - interval '1 second'
+     WHERE id = '${cleanupId4g}';
+  `);
+
+  const claimB4g = await runPsql(`
+    SELECT lease_token::text FROM public.claim_account_deletion_storage_cleanup('${u4g}', 300);
+  `);
+  const tokenB4g = claimB4g.stdout;
+
+  const failB4g = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4g}', 'failed', 'Worker B Storage 503', '${tokenB4g}');
+  `);
+  assert.equal(failB4g.code, 0);
+
+  // Stale Worker A tries to record 'completed' with expired tokenA4g
+  const staleComplete4g = await runPsql(`
+    SELECT public.record_account_deletion_storage_result('${cleanupId4g}', 'completed', null, '${tokenA4g}');
+  `);
+  assert.notEqual(staleComplete4g.code, 0, '4g stale Worker A completion must be rejected');
+
+  const verify4g = await runPsql(`
+    SELECT (SELECT status || ':' || coalesce(last_error, '') FROM public.account_deletion_storage_cleanup WHERE id = '${cleanupId4g}')
+        || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4g}');
+  `);
+  assert.equal(verify4g.stdout, 'failed:Worker B Storage 503|storage_pending');
+  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');
 }
 
 main().catch((err) => {

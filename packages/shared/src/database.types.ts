@@ -2085,7 +2085,7 @@ export type Database = {
           audit_note: string | null
           command_type: string
           created_at: string
-          created_by: string
+          created_by: string | null
           device_id: string
           executed_at: string | null
           failsafe_conditions: Json
@@ -2109,7 +2109,7 @@ export type Database = {
           audit_note?: string | null
           command_type?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           device_id?: string
           executed_at?: string | null
           failsafe_conditions?: Json
@@ -9227,6 +9227,39 @@ export type Database = {
         Returns: Json
       }
       release_order_inventory: { Args: { p_order_id: string }; Returns: Json }
+      claim_account_deletion_storage_cleanup: {
+        Args: { p_lease_seconds?: number; p_user_id?: string }
+        Returns: {
+          attempts: number
+          bucket_id: string
+          id: string
+          lease_expires_at: string
+          lease_token: string
+          profile_id: string
+          storage_path: string
+        }[]
+      }
+      execute_account_deletion: {
+        Args: { p_reason?: string; p_user_id: string }
+        Returns: Json
+      }
+      finalize_account_deletion: {
+        Args: { p_auth_deleted: boolean; p_auth_error?: string; p_user_id: string }
+        Returns: Json
+      }
+      list_incomplete_account_deletions: {
+        Args: { p_limit?: number }
+        Returns: {
+          deleted_at: string | null
+          deletion_status: string
+          pending_storage_count: number
+          profile_id: string
+        }[]
+      }
+      record_account_deletion_storage_result: {
+        Args: { p_cleanup_id: string; p_error?: string; p_lease_token?: string; p_status: string }
+        Returns: Json
+      }
       request_account_deletion: {
         Args: { p_reason?: string }
         Returns: {

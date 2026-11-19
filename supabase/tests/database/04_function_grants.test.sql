@@ -4,7 +4,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(30);
 
 select ok(not has_function_privilege('authenticated', 'public.write_audit(text, text, uuid, jsonb, jsonb, jsonb)', 'execute'),
   'signed-in users cannot write audit entries directly');
@@ -65,6 +65,100 @@ select ok(to_regprocedure('public.is_farmer_profile(uuid)') is null and to_regpr
 insert into auth.users (id, phone) values ('99999999-0000-0000-0000-000000000009', '2348000000999');
 select ok(exists (select 1 from public.profiles where id = '99999999-0000-0000-0000-000000000009'),
   'the sign-up trigger still creates a profile');
+
+-- Farm RLS helper wrappers must not be callable by PUBLIC or anon, while authenticated retains EXECUTE.
+select ok(
+  not has_function_privilege('anon', 'public.can_edit_farm(uuid)', 'execute')
+  and not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where n.nspname = 'public'
+      and p.proname = 'can_edit_farm'
+      and pg_get_function_identity_arguments(p.oid) = 'p_farm uuid'
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  )
+  and has_function_privilege('authenticated', 'public.can_edit_farm(uuid)', 'execute'),
+  'can_edit_farm() is restricted to authenticated callers');
+
+select ok(
+  not has_function_privilege('anon', 'public.can_view_farm(uuid)', 'execute')
+  and not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where n.nspname = 'public'
+      and p.proname = 'can_view_farm'
+      and pg_get_function_identity_arguments(p.oid) = 'p_farm uuid'
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  )
+  and has_function_privilege('authenticated', 'public.can_view_farm(uuid)', 'execute'),
+  'can_view_farm() is restricted to authenticated callers');
+
+select ok(
+  not has_function_privilege('anon', 'public.plot_farm_id(uuid)', 'execute')
+  and not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where n.nspname = 'public'
+      and p.proname = 'plot_farm_id'
+      and pg_get_function_identity_arguments(p.oid) = 'p_plot uuid'
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  )
+  and has_function_privilege('authenticated', 'public.plot_farm_id(uuid)', 'execute'),
+  'plot_farm_id() is restricted to authenticated callers');
+
+-- feature_on() is intentionally exposed to anon/authenticated, with PUBLIC revoked.
+select ok(
+  not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where n.nspname = 'public'
+      and p.proname = 'feature_on'
+      and pg_get_function_identity_arguments(p.oid) = 'p_key text'
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  )
+  and has_function_privilege('anon', 'public.feature_on(text)', 'execute')
+  and has_function_privilege('authenticated', 'public.feature_on(text)', 'execute'),
+  'feature_on() revokes PUBLIC while allowing anon and authenticated');
+
+-- Cross-tenant isolation: an unrelated authenticated user cannot resolve another farm''s ID via plot_farm_id(),
+-- while the farm owner and an authorised organisation member can.
+insert into auth.users (id, phone) values
+  ('99999999-0000-0000-0000-000000000010', '2348000000998'),
+  ('99999999-0000-0000-0000-000000000011', '2348000000997');
+insert into public.organizations (id, owner_id, name)
+  values ('99999999-0000-0000-0000-000000000301', '99999999-0000-0000-0000-000000000009', 'Grant Isolation Coop');
+insert into public.org_members (organization_id, profile_id, member_role)
+  values ('99999999-0000-0000-0000-000000000301', '99999999-0000-0000-0000-000000000011', 'worker');
+insert into public.farms (id, owner_id, organization_id, name, location)
+  values ('99999999-0000-0000-0000-000000000101', '99999999-0000-0000-0000-000000000009', '99999999-0000-0000-0000-000000000301', 'Grant Isolation Farm', 'SRID=4326;POINT(3.90 7.40)');
+insert into public.plots (id, farm_id, name)
+  values ('99999999-0000-0000-0000-000000000201', '99999999-0000-0000-0000-000000000101', 'Grant Isolation Plot');
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"99999999-0000-0000-0000-000000000010","role":"authenticated"}', true);
+select is(public.plot_farm_id('99999999-0000-0000-0000-000000000201'::uuid), null::uuid,
+  'unrelated authenticated users cannot resolve farm_id via plot_farm_id()');
+
+select set_config('request.jwt.claims', '{"sub":"99999999-0000-0000-0000-000000000009","role":"authenticated"}', true);
+select is(public.plot_farm_id('99999999-0000-0000-0000-000000000201'::uuid), '99999999-0000-0000-0000-000000000101'::uuid,
+  'farm owners can still resolve farm_id via plot_farm_id()');
+
+select set_config('request.jwt.claims', '{"sub":"99999999-0000-0000-0000-000000000011","role":"authenticated"}', true);
+select is(public.plot_farm_id('99999999-0000-0000-0000-000000000201'::uuid), '99999999-0000-0000-0000-000000000101'::uuid,
+  'authorised organisation members can still resolve farm_id via plot_farm_id()');
+reset role;
 
 select * from finish();
 rollback;

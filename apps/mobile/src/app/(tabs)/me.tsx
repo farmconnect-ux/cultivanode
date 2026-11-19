@@ -10,6 +10,7 @@ export default function MeRoute() {
       onOrders={() => router.push('/market/orders')}
       onShop={() => router.push('/market/shop')}
       onProvider={() => router.push('/(provider)/inbox')}
+      onDeleteAccount={() => router.push('/me/delete')}
     />
   );
 }
