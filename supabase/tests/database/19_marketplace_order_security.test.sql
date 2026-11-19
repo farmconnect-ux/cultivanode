@@ -290,6 +290,7 @@ select is(
 reset role;
 create temp table lifecycle_fulfilment as
   select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.placed_order) limit 1;
+grant select on pg_temp.lifecycle_fulfilment to authenticated;
 update public.marketplace_orders
    set payment_mode = 'direct', payment_status = 'paid', paid_at = now()
  where id = (select id from pg_temp.placed_order);
@@ -367,6 +368,7 @@ select is(
 reset role;
 create temp table second_fulfilment as
   select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.second_order) limit 1;
+grant select on pg_temp.second_fulfilment to authenticated;
 update public.marketplace_orders
    set payment_mode = 'direct', payment_status = 'paid', paid_at = now()
  where id = (select id from pg_temp.second_order);
