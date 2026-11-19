@@ -7,7 +7,7 @@
 --        single-settlement-per-order (rejects second distinct reference), DB-level unique
 --        escrow/ledger constraints, and legitimate retry after a failed payment.
 begin;
-select plan(39);
+select plan(44);
 
 -- 1. Seed users, seller, category, listing, and pre-existing orders (as postgres)
 insert into auth.users (id, phone) values
@@ -343,8 +343,15 @@ select is(
 
 -- 7j-7o: PR 0 reconciliation regression coverage:
 --   temp-table isolation across repeated checkouts, notification RLS boundary,
---   ready_for_pickup -> dispatched for seller-delivery (proves 20261117190000 ran after 20261117180000),
---   pre-handover buyer receipt guard, buyer/seller access boundaries, and terminal accepted-state protection.
+--   ready_for_pickup -> dispatched for seller-delivery (proves 20261117190000 ran after 20261117180000
+--   and does not double-settle inventory), pre-handover buyer receipt guard,
+--   buyer/seller access boundaries, and terminal accepted-state protection.
+reset role;
+create temp table inv_before_second_checkout as
+  select physical_quantity, reserved_quantity
+    from public.marketplace_inventory_lots
+   where id = 'b5000000-0000-0000-0000-000000000041';
+
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
 create table pg_temp.second_order (id uuid);
@@ -366,6 +373,12 @@ select is(
 );
 
 reset role;
+select ok(
+  (select l.physical_quantity = b.physical_quantity and l.reserved_quantity = b.reserved_quantity + 1
+     from public.marketplace_inventory_lots l, pg_temp.inv_before_second_checkout b
+    where l.id = 'b5000000-0000-0000-0000-000000000041'),
+  'Test 7j-inv: Second checkout reserves 1 unit on lot without deducting physical stock yet'
+);
 create temp table second_fulfilment as
   select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.second_order) limit 1;
 grant select on pg_temp.second_fulfilment to authenticated;
@@ -381,7 +394,20 @@ select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-0000000
 select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'confirmed');
 select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'ready_for_pickup');
 
+reset role;
+select ok(
+  (select l.physical_quantity = b.physical_quantity - 1 and l.reserved_quantity = b.reserved_quantity
+     from public.marketplace_inventory_lots l, pg_temp.inv_before_second_checkout b
+    where l.id = 'b5000000-0000-0000-0000-000000000041'),
+  'Test 7l-ready-inv: Entering ready_for_pickup settles 1 unit (physical -1, reserved -1)'
+);
+create temp table inv_after_ready as
+  select physical_quantity, reserved_quantity
+    from public.marketplace_inventory_lots
+   where id = 'b5000000-0000-0000-0000-000000000041';
+
 -- Pre-handover receipt guard while ready_for_pickup on seller-delivery order
+set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
 select throws_ok(
   $$select public.buyer_confirm_direct_delivery((select id from pg_temp.second_fulfilment))$$,
@@ -406,7 +432,24 @@ select is(
   'Test 7l: Seller-delivery order can transition from ready_for_pickup to dispatched'
 );
 
+reset role;
+select ok(
+  (select status = 'dispatched' and dispatched_at is not null from public.marketplace_fulfilments where id = (select id from pg_temp.second_fulfilment)),
+  'Test 7l-dispatch-ts: Transitioning ready_for_pickup -> dispatched sets status and dispatched_at'
+);
+select is(
+  (select physical_quantity from public.marketplace_inventory_lots where id = 'b5000000-0000-0000-0000-000000000041'),
+  (select physical_quantity from pg_temp.inv_after_ready),
+  'Test 7l-no-double-settle-phys: Transitioning ready_for_pickup -> dispatched does not deduct physical_quantity a second time'
+);
+select is(
+  (select reserved_quantity from public.marketplace_inventory_lots where id = 'b5000000-0000-0000-0000-000000000041'),
+  (select reserved_quantity from pg_temp.inv_after_ready),
+  'Test 7l-no-double-settle-res: Transitioning ready_for_pickup -> dispatched does not deduct reserved_quantity a second time'
+);
+
 -- Pre-handover receipt guard while dispatched (not yet delivered)
+set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
 select throws_ok(
   $$select public.buyer_confirm_direct_delivery((select id from pg_temp.second_fulfilment))$$,

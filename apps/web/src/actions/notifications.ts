@@ -1,10 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { defaultLocale, hasLocale, type Locale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 
 export async function openMarketplaceOrderNotification(formData: FormData): Promise<never> {
-  const lang = String(formData.get("lang") ?? "en").slice(0, 5);
+  const rawLang = String(formData.get("lang") ?? "").trim().toLowerCase();
+  const lang: Locale = hasLocale(rawLang) ? rawLang : defaultLocale;
   const notificationId = String(formData.get("notification_id") ?? "").trim();
   if (!/^[0-9a-f-]{36}$/i.test(notificationId)) redirect(`/${lang}/account/inbox`);
   const supabase = await createClient();
