@@ -1,19 +1,15 @@
 # ADR-009: Retention, Correction and Deletion
 
-**Status:** Proposed (Batch 03.0) | **Date:** 2026-11-19
+**Status:** Proposed — Revised (Batch 03.0) | **Date:** 2026-11-19
 
 ## Context
-Batch 02.5 established 3-phase account deletion (`execute_account_deletion` + `lease_token`-fenced Storage cleanup) that anonymises `profiles`, drops `profiles_id_fkey`, and nulls `device_commands.created_by` while preserving operational/financial audit trails.
+Batch 02.5 established 3-phase account deletion (`execute_account_deletion` + `lease_token`-fenced Storage cleanup) preserving financial/device audit trails. Earlier ADR-009 text proposed nulling `ai_audit_events.actor_id`, conflicting with append-only `forbid_change()`.
 
 ## Decision
-Align FIE memory and audit retention with Batch 02.5:
-1. Farmers with `can_edit_farm` can correct, dispute, or soft-delete `farm_memory_items` at any time.
-2. On account deletion, personal `preference` memories for the deleted user are deleted/anonymised, while shared farm memories (`farm_id` owned by surviving org) retain `farm_id` with `confirmed_by`/`profile_id` anonymised.
-3. `ai_audit_events` remains append-only with `actor_id` anonymised (`NULL`) upon user deletion, preserving safety/agronomic traceability without retaining PII.
-4. FIE memory/proactive monitoring requires explicit `'ai_intelligence'` consent in `public.consents`.
+1. **Correction & Deletion of Memory:** Authorised users edit/dispute/delete `scope = 'farm'` memory via the server Memory Write Service (`can_edit_farm`); users manage their own `scope = 'profile'` preferences (`profile_id = auth.uid()`).
+2. **Account Deletion & Memory:** `execute_account_deletion` hard-deletes/anonymises `scope = 'profile'` rows for the deleted user, and sets `created_by`/`confirmed_by = NULL` on surviving org `scope = 'farm'` rows.
+3. **Account Deletion & Immutable Audit:** `ai_audit_events` is **never updated or deleted**. Instead, `execute_account_deletion` sets `ai_actor_directory.profile_id = NULL, deleted_at = now()`, severing PII attribution while preserving immutable safety/agronomic audit evidence, and logs the deletion in `public.audit_log`.
+4. **Consent:** FIE memory/proactive monitoring requires `'ai_intelligence'` consent in `public.consents`.
 
 ## Alternatives & Trade-offs
-- **Hard-deleting all AI audit rows on user deletion:** Destroys NAFDAC safety and agronomic liability trails (rejected).
-
-## Security & Cost Implications
-- Complies with GDPR/NDPR data-minimisation and erasure rights while preserving non-repudiable safety logs.
+- **Mutating `ai_audit_events` directly:** Violates append-only audit integrity (rejected).
