@@ -1,11 +1,11 @@
 # Batch 03.0 — Target Architecture: Farm Intelligence Engine (FIE)
 
 **Date:** 2026-11-19  
-**Status:** Proposed Architecture — Final Batch 03.0 Review Corrections Applied (Discovery & Design Only)
+**Status:** Proposed Architecture — Final Security Boundary Clarifications Applied (Discovery & Design Only)
 
 ---
 
-## 1. Proposed FIE Architecture (Read vs. Write & Audit Boundaries)
+## 1. Proposed FIE Architecture (Read, Write, Audit & Scheduler Boundaries)
 
 All client interactions pass through authenticated server-side API routes or Server Actions. **Clients never write directly to `farm_memory_items`, `private.ai_actor_directory`, or `public.ai_audit_events`.**
 
@@ -24,18 +24,20 @@ flowchart TB
     PromptAsm["Immutable Versioned Prompt & Guardrail Wrapper"]
     LLMRouter["LLM Router (Claude -> Gemini -> OpenAI -> Rule Engine)"]
     SafetyChk["Post-Generation NAFDAC & Schema Guardrail"]
-    ServerAudit["Trusted Server Audit Client (No direct client RPC)"]
+    ServerAudit["Trusted AI Audit Client (apps/web/src/lib/ai-audit.ts)"]
   end
 
   subgraph Scheduler["PostgreSQL Internal Scheduler (pg_cron)"]
-    CronJob["Registered pg_cron Job -> private.* Wrapper (Non-HTTP)"]
+    CronJob["Registered pg_cron Job -> private.* Wrapper (service_role REVOKED)"]
   end
 
   subgraph Supabase["Supabase PostgreSQL 17 (+ pgvector)"]
     FarmDB["Canonical Farm Tables (RLS: can_view_farm)"]
     MemDB["farm_memory_items + pgvector (NOT NULL memory_scope + RLS)"]
-    ActorFns["3 Separated private.* Actor Functions (No direct table access)"]
-    ActorDir["private.ai_actor_directory (Restricted Schema)"]
+    AuditWriter["private.write_ai_audit_event (service_role)"]
+    FeedbackRPC["public.record_ai_feedback (authenticated, outcome only)"]
+    ActorFns["3 Separated private.* Actor Functions (Table REVOKE ALL from service_role)"]
+    ActorDir["private.ai_actor_directory (owner: postgres)"]
     AuditDB["public.ai_audit_events (Strictly Append-Only)"]
   end
 
@@ -51,14 +53,17 @@ flowchart TB
   PromptAsm --> LLMRouter
   LLMRouter --> SafetyChk
   SafetyChk -->|"AI proposal -> MemWrite"| MemWrite
-  UI -->|"Explicit Confirm / Correct / Delete / Feedback"| MemWrite
+  UI -->|"Explicit Confirm / Correct / Delete"| MemWrite
+  UI -->|"Feedback (accepted/rejected/modified)"| FeedbackRPC
   MemWrite -->|"Auth + Scope + Consent + can_edit_farm"| MemDB
   SafetyChk --> ServerAudit
   MemWrite --> ServerAudit
-  ServerAudit -->|"Resolve active actor"| ActorFns
+  ServerAudit --> AuditWriter
+  AuditWriter -->|"Internal postgres call"| ActorFns
   ActorFns --> ActorDir
-  ServerAudit -->|"Immutable INSERT (service_role only)"| AuditDB
-  CronJob -->|"Verified non-HTTP + allowlist"| AuditDB
+  AuditWriter -->|"Immutable INSERT"| AuditDB
+  FeedbackRPC -->|"Append-only child row"| AuditDB
+  CronJob -->|"Registered job + allowlist + idempotency"| AuditDB
 ```
 
 ---
@@ -152,30 +157,32 @@ PostgreSQL 17 + `pgvector` is selected because it is available in Supabase and e
 ## 4. AI Audit Register (`public.ai_audit_events` & `private.ai_actor_directory`)
 
 ### Protected Identity Directory & Immutable Audit Evidence
-1. **`private.ai_actor_directory` (`owner: postgres`, restricted `private` schema, RLS enabled, `REVOKE ALL FROM PUBLIC, anon, authenticated`):** Stores `actor_subject_id uuid PK`, `actor_kind` (`'human' | 'system'`), `profile_id uuid UNIQUE REFERENCES public.profiles(id) ON DELETE SET NULL`, `system_principal text UNIQUE`, `created_at`, `deleted_at`. Direct table queries from general application code are prohibited; access occurs only through **3 separated `SECURITY DEFINER` functions** (`SET search_path = ''`, `GRANT EXECUTE TO service_role` only): `private.resolve_or_create_ai_actor(p_profile_id)`, `private.anonymise_ai_actor(p_profile_id)` (account-deletion only; idempotent; cannot reactivate), and `private.lookup_ai_actor_subject(p_actor_subject_id)`.
+1. **`private.ai_actor_directory` (`owner: postgres`, restricted `private` schema, RLS enabled, `REVOKE ALL ON TABLE ... FROM PUBLIC, anon, authenticated, service_role`):** Stores `actor_subject_id uuid PK`, `actor_kind` (`'human' | 'system'`), `profile_id uuid UNIQUE REFERENCES public.profiles(id) ON DELETE SET NULL`, `system_principal text UNIQUE`, `created_at`, `deleted_at`. Because `service_role` has `rolsuper = false` and is not the table owner, `service_role` cannot bypass table-level `REVOKE`. All access occurs via **3 separated `SECURITY DEFINER` (`OWNER TO postgres`, `SET search_path = ''`) functions**:
+   - `private.resolve_or_create_ai_actor(p_profile_id)` (`service_role` revoked — internal to audit writer)
+   - `private.anonymise_ai_actor(p_profile_id)` (`service_role` revoked — internal to `execute_account_deletion`)
+   - `private.lookup_ai_actor_subject(p_actor_subject_id)` (`GRANT EXECUTE TO service_role` / compliance RPC only)
 2. **`public.ai_audit_events` (Strictly Append-Only via `private.forbid_change()`):** Stores `actor_subject_id` (non-PII), `actor_kind`, `system_job_name`, `trace_id`, `parent_event_id`, `farm_id`, `provider`, `model_id`, `prompt_version`, `context_record_refs`, `memory_ids_used`, `guardrail_result`, `human_outcome`, `execution_status`, `error_code`, `created_at`.
 
 ### Two-Pathway Audit Ingestion & Verifiable Scheduled-Job Identity
-- **No general `authenticated` RPC:** `REVOKE ALL FROM PUBLIC, anon, authenticated` on the general AI audit writer so clients cannot fabricate AI executions, models, or guardrail results.
-- **Pathway A (Trusted Server AI Orchestration):** Server validates user via `auth.getUser()`, checks `account_active` and `can_view_farm`/`can_edit_farm`, validates payload schema, resolves `actor_subject_id`, and inserts the verified trace (`service_role`).
-- **Pathway B (Human Feedback):** Routed through the trusted server API (or a separate feedback-only RPC restricted to `human_outcome in ('accepted','rejected','modified')` on an existing `trace_id` under `can_view_farm`, never setting model/guardrail/system fields).
-- **Scheduled Jobs (`actor_kind = 'system'`):** `pg_cron` jobs registered in `cron.job` + `private.ai_scheduled_jobs` invoke a non-API `private.*` wrapper that verifies `current_setting('request.jwt.claim.role', true)` is NULL/empty (not HTTP), validates against the allowlist, enforces `(job_name, run_window)` idempotency, and never trusts `current_user` or client-supplied `system_job_name`.
+- **Pathway A (Trusted Server AI Orchestration):** `private.write_ai_audit_event(...)` revokes `PUBLIC, anon, authenticated` and grants `EXECUTE` only to `service_role` (isolated in `apps/web/src/lib/ai-audit.ts`, validating user auth, `account_active`, `can_view_farm`/`can_edit_farm`, allowlisted event types, and immutable prompt/model metadata).
+- **Pathway B (Human Feedback):** `public.record_ai_feedback(p_trace_id, p_outcome, p_note)` grants `EXECUTE` to `authenticated` (`PUBLIC, anon` revoked), derives `auth.uid()`, checks `can_view_farm`, restricts `p_outcome IN ('accepted','rejected','modified')`, and cannot alter execution metadata.
+- **Scheduled Jobs (`actor_kind = 'system'`):** `pg_cron` jobs registered in `cron.job` + `private.ai_scheduled_jobs` invoke a non-API `private.*` wrapper with `REVOKE ALL FROM PUBLIC, anon, authenticated, service_role`, verifying non-HTTP execution (`session_user` / role not `anon`/`authenticated`/`authenticator`/`service_role`), validating against the allowlist, and enforcing `(job_name, run_window)` idempotency.
 
 ```mermaid
 sequenceDiagram
   participant User as Authenticated Caller
-  participant FIE as Trusted FIE Server Layer
-  participant Cron as pg_cron (Non-HTTP)
-  participant Writer as Audit Writer (service_role / private)
+  participant FIE as Trusted AI Server (ai-audit.ts)
+  participant Cron as pg_cron (postgres / scheduler)
+  participant Writer as private.write_ai_audit_event
   participant Dir as private.ai_actor_directory
   participant Audit as public.ai_audit_events (Append-Only)
 
   User->>FIE: Authenticated Request (JWT)
   FIE->>FIE: Verify auth.getUser(), account_active, can_view_farm
-  FIE->>Writer: Insert verified AI trace (actual model, prompt_ver, guardrail)
-  Writer->>Dir: private.resolve_or_create_ai_actor(user_id)
+  FIE->>Writer: Insert verified AI trace (service_role)
+  Writer->>Dir: Internal postgres call: resolve_or_create_ai_actor()
   Writer->>Audit: INSERT immutable event (actor_subject_id, trace_id)
-  Cron->>Writer: Invoke registered private.* wrapper (no HTTP JWT)
-  Writer->>Audit: INSERT idempotent system event (allowlisted system_principal)
-  Note over Dir,Audit: On Account Deletion: private.anonymise_ai_actor() sets profile_id=NULL; Audit stays 100% immutable
+  User->>Audit: Optional feedback via public.record_ai_feedback() (outcome only)
+  Cron->>Audit: Registered private.* wrapper (service_role REVOKED, idempotent)
+  Note over Dir,Audit: On Account Deletion: execute_account_deletion -> private.anonymise_ai_actor(); Audit stays 100% immutable
 ```
