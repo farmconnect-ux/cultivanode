@@ -80,7 +80,7 @@ export function hasProviderAccess(
   roles: ReadonlyArray<{ role: string }> | null | undefined
 ): boolean {
   if (!Array.isArray(roles)) return false;
-  return roles.some((r) => r.role === 'equipment_provider' || r.role === 'service_provider');
+  return roles.some((r) => r.role === 'machinery_owner' || r.role === 'service_provider');
 }
 
 export function validateDeclineReason(reason: string): { valid: true; trimmed: string } | { valid: false; error: string } {

@@ -42,6 +42,8 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const trackerRef = useRef<BoundaryTracker | null>(null);
+  const submittingProofRef = useRef(false);
+  const finishingJobRef = useRef(false);
 
   const handleNewReading = useCallback((reading: GpsAccuracyReading) => {
     setCurrentReading(reading);
@@ -134,6 +136,7 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
 
   // Upload proof photo
   async function handleUploadProof() {
+    if (submittingProof || submittingProofRef.current) return;
     if (!capturedPhoto) {
       Alert.alert('Photo Needed', 'Please capture or select a photo first.');
       return;
@@ -145,42 +148,57 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
     }
 
     const ha = parseFloat(hectaresInput.replace(',', '.'));
+    submittingProofRef.current = true;
     setSubmittingProof(true);
 
-    const res = await submitWorkProofPhoto(
-      job.id,
-      capturedPhoto,
-      selectedKind,
-      currentReading,
-      Number.isFinite(ha) ? ha : undefined
-    );
+    try {
+      const res = await submitWorkProofPhoto(
+        job.id,
+        capturedPhoto,
+        selectedKind,
+        currentReading,
+        Number.isFinite(ha) ? ha : undefined
+      );
 
-    setSubmittingProof(false);
+      if (!res?.success) {
+        Alert.alert(
+          'Upload Failed',
+          res?.error || 'Could not upload work proof photo. Please try again.'
+        );
+        return;
+      }
 
-    // Save proof to local list
-    const newProof: ProofItem = {
-      id: `${Date.now()}-${selectedKind}`,
-      kind: selectedKind,
-      uri: capturedPhoto,
-      timestamp: currentReading.timestamp,
-      accuracy: currentReading.accuracy,
-      hectares: Number.isFinite(ha) ? ha : undefined,
-    };
+      // Save proof to local list only after confirmed backend persistence
+      const newProof: ProofItem = {
+        id: `${Date.now()}-${selectedKind}`,
+        kind: selectedKind,
+        uri: capturedPhoto,
+        timestamp: currentReading.timestamp,
+        accuracy: currentReading.accuracy,
+        hectares: Number.isFinite(ha) ? ha : undefined,
+      };
 
-    setProofs((prev) => [...prev, newProof]);
-    setCapturedPhoto(null);
+      setProofs((prev) => [...prev, newProof]);
+      setCapturedPhoto(null);
 
-    // Auto-advance kind if before was taken
-    if (selectedKind === 'before') {
-      setSelectedKind('after');
+      // Auto-advance kind if before was taken
+      if (selectedKind === 'before') {
+        setSelectedKind('after');
+      }
+
+      Alert.alert('Evidence Uploaded', `${selectedKind.toUpperCase()} photo verified with GPS.`);
+      onJobUpdated();
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload work proof photo. Please try again.');
+    } finally {
+      submittingProofRef.current = false;
+      setSubmittingProof(false);
     }
-
-    Alert.alert('Evidence Uploaded', `${selectedKind.toUpperCase()} photo verified with GPS.`);
-    onJobUpdated();
   }
 
   // Finish work & Handover to farmer
   async function handleFinishWork() {
+    if (finishingJob || finishingJobRef.current) return;
     const hasBefore = proofs.some((p) => p.kind === 'before');
     const hasAfter = proofs.some((p) => p.kind === 'after');
 
@@ -207,17 +225,26 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
           text: 'Confirm & Handover',
           style: 'default',
           onPress: async () => {
+            if (finishingJob || finishingJobRef.current) return;
             setFinishingJob(true);
-            const res = await finishJobWork(job.id, ha);
-            setFinishingJob(false);
-
-            if (res.success) {
-              Alert.alert('Work Handed Over!', 'Job transitioned to Awaiting Confirmation.');
-            } else {
-              Alert.alert('Work Submitted', 'Handover record updated for farmer confirmation.');
+            try {
+              const res = await finishJobWork(job.id, ha);
+              if (res?.success) {
+                Alert.alert('Work Handed Over!', 'Job transitioned to Awaiting Confirmation.');
+                onJobUpdated();
+                onBack();
+              } else {
+                Alert.alert(
+                  'Handover Failed',
+                  res?.error || 'Could not submit work handover. Please try again.'
+                );
+              }
+            } catch {
+              Alert.alert('Handover Failed', 'Could not submit work handover. Please try again.');
+            } finally {
+              finishingJobRef.current = false;
+              setFinishingJob(false);
             }
-            onJobUpdated();
-            onBack();
           },
         },
       ]
@@ -378,6 +405,7 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
               variant="primary"
               onPress={handleUploadProof}
               loading={submittingProof}
+              disabled={submittingProof}
             />
           </View>
         )}
@@ -425,7 +453,7 @@ export function WorkEvidenceScreen({ job, onBack, onJobUpdated }: Props) {
           variant="primary"
           onPress={handleFinishWork}
           loading={finishingJob}
-          disabled={!hasBefore || !hasAfter}
+          disabled={!hasBefore || !hasAfter || finishingJob}
         />
         <Text variant="caption" muted style={styles.center}>
           Requires at least 1 Before photo and 1 After photo.

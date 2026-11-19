@@ -216,7 +216,7 @@ describe('provider dispatch (no demo fallbacks)', () => {
   it('checks provider role permissions and job UUID format', () => {
     expect(hasProviderAccess(null)).toBe(false);
     expect(hasProviderAccess([{ role: 'crop_farmer' }])).toBe(false);
-    expect(hasProviderAccess([{ role: 'equipment_provider' }])).toBe(true);
+    expect(hasProviderAccess([{ role: 'machinery_owner' }])).toBe(true);
     expect(hasProviderAccess([{ role: 'service_provider' }])).toBe(true);
     expect(isValidJobId(VALID_JOB_ID)).toBe(true);
     expect(isValidJobId('job-req-001')).toBe(false);
