@@ -1,6 +1,23 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.hoisted(() => {
+  (globalThis as Record<string, unknown>).__DEV__ = false;
+});
+
+vi.mock('expo-crypto', () => ({
+  randomUUID: () => '00000000-0000-4000-8000-000000000099',
+}));
+
+vi.mock('../../lib/supabase', () => ({
+  supabase: {
+    auth: { getUser: vi.fn() },
+    from: vi.fn(),
+    rpc: vi.fn(),
+    storage: { from: vi.fn() },
+  },
+}));
+
 // Lightweight React hook harness for testing React Native components in Node Vitest
 const hookState: {
   states: unknown[];
