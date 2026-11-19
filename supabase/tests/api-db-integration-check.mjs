@@ -298,8 +298,8 @@ async function main() {
         '${delOrderId}', 'ORD-DEL-${suffix}', '${delUser.id}', 'retail', 10000, 0, 0, 10000,
         'completed', 'released', 'escrow', '{"line":"12 Farm Ave","state":"Oyo"}'::jsonb
       );
-      INSERT INTO public.device_models (id, model_code, name, manufacturer)
-      VALUES ('${delModelId}', 'MOD-DEL-${suffix}', 'Test Valve Node', 'CultivaNode');
+      INSERT INTO public.device_models (id, model_code, name, vendor, connectivity)
+      VALUES ('${delModelId}', 'MOD-DEL-${suffix}', 'Test Valve Node', 'CultivaNode', 'lorawan');
       INSERT INTO public.devices (id, serial_number, model_id, assigned_owner_id)
       VALUES ('${delDeviceId}', 'SN-DEL-${suffix}', '${delModelId}', '${delUser.id}');
       INSERT INTO public.device_commands (
