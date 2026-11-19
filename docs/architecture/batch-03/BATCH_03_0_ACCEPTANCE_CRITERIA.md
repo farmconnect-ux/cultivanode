@@ -39,7 +39,12 @@
 
 ### C. `private.ai_actor_directory` Privilege Enforcement & Compliance Lookup (`[Batch 03.1/03.2]`)
 9. **Direct table & internal function access revoked:** `PUBLIC`, `anon`, `authenticated`, and `service_role` have zero direct table privileges (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) on `private.ai_actor_directory`, and zero `EXECUTE` on `private.resolve_or_create_ai_actor`, `private.anonymise_ai_actor`, and `private.lookup_ai_actor_subject` (preventing `service_role` bulk enumeration).
-10. **Narrowly scoped, audited, rate-limited compliance lookup:** `public.compliance_lookup_ai_actor` requires `public.has_permission('audit.read')`, `account_active`, and non-empty `p_purpose`; returns only the single requested subject; logs every lookup (permitted, denied, throttled) to `public.audit_log`; and enforces a per-actor query-volume threshold.
+10. **Narrowly scoped, concurrency-safe, audited compliance lookup (`[Batch 03.1/03.2]` — planned, not yet executed):**
+    - `public.compliance_lookup_ai_actor` requires `public.has_permission('audit.read')`, `account_active`, and validated non-empty `p_purpose`, and returns only the minimum authorised compliance fields (`actor_subject_id`, `actor_kind`, `profile_id`, `deleted_at`).
+    - Rate limiting is keyed to the **requesting compliance principal (`auth.uid()`)** so rotating `p_actor_subject_id` across calls cannot bypass the principal's limit, paired with a secondary **system-wide compliance ceiling** across principals.
+    - Concurrent requests are serialised atomically inside PostgreSQL (`private.ai_compliance_lookup_limits` with `FOR UPDATE` / `pg_advisory_xact_lock`) and cannot exceed configured thresholds through race conditions (verified via concurrency test).
+    - Every attempt (`permitted`, `denied`, `throttled`, `failed`) is recorded in `public.audit_log` without rollback loss on denied/throttled outcomes, and any audit-insert failure fails closed without returning actor data.
+    - Numerical thresholds (`10`/15m per principal, `5`/15m denied, `30`/15m system-wide) remain configurable engineering defaults subject to security/operational review prior to production enforcement.
 11. **Idempotent deletion & non-reactivation:** `execute_account_deletion` anonymises idempotently via internal `private.anonymise_ai_actor()` (`profile_id = NULL, deleted_at`); deleted mappings cannot be restored; `public.ai_audit_events` remains untouched.
 
 ### D. Scheduled-Job Identity & Staging Verification (`[Batch 03.3]`)
