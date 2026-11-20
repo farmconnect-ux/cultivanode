@@ -93,7 +93,7 @@ select is(
   (select count(*)::int from public.audit_log
    where actor_id = 'e7000000-0000-0000-0000-000000000001'
      and action = 'ai_actor_compliance_lookup'
-     and details->>'outcome' = 'unavailable'),
+     and new_values->>'outcome' = 'unavailable'),
   1,
   'disabled lookup attempt is durably audited'
 );
@@ -169,7 +169,7 @@ select is(
   (select count(*)::int from public.audit_log
    where actor_id = 'e7000000-0000-0000-0000-000000000002'
      and action = 'ai_actor_compliance_lookup'
-     and details->>'outcome' = 'denied'),
+     and new_values->>'outcome' = 'denied'),
   1,
   'permission denial is audited'
 );
@@ -206,7 +206,7 @@ select is(
   (select count(*)::int from public.audit_log
    where actor_id = 'e7000000-0000-0000-0000-000000000001'
      and action = 'ai_actor_compliance_lookup'
-     and details->>'outcome' = 'throttled'),
+     and new_values->>'outcome' = 'throttled'),
   1,
   'throttled request is also audited'
 );
@@ -240,7 +240,7 @@ select is(
 select is(
   (select count(*)::int from public.audit_log
    where action = 'ai_actor_compliance_lookup'
-     and details->>'outcome' = 'throttled'),
+     and new_values->>'outcome' = 'throttled'),
   2,
   'principal and system throttles are both durably audited'
 );
