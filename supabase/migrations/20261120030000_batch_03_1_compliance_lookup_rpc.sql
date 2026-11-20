@@ -54,7 +54,7 @@ set search_path = ''
 as $$
 declare
   v_principal_id uuid := auth.uid();
-  v_purpose text := nullif(trim(p_purpose), '');
+  v_purpose text := nullif(lower(trim(p_purpose)), '');
   v_now timestamptz := clock_timestamp();
   v_config private.ai_compliance_lookup_config%rowtype;
   v_principal_attempts integer := 0;
@@ -66,6 +66,10 @@ declare
 begin
   if v_principal_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
+  end if;
+
+  if v_purpose is not null and v_purpose not in ('data_subject_request', 'regulatory_inquiry', 'security_incident', 'legal_obligation') then
+    v_purpose := null;
   end if;
 
   -- Acquire global first, then principal lock in a stable order. This makes the
@@ -118,12 +122,14 @@ begin
     end if;
   end if;
 
-  insert into private.ai_compliance_lookup_limits (
-    principal_id, requested_subject_id, purpose_code, outcome, attempted_at
-  ) values (
-    v_principal_id, p_actor_subject_id,
-    left(coalesce(v_purpose, '[missing]'), 200), v_outcome, v_now
-  );
+  if v_outcome <> 'unavailable' then
+    insert into private.ai_compliance_lookup_limits (
+      principal_id, requested_subject_id, purpose_code, outcome, attempted_at
+    ) values (
+      v_principal_id, p_actor_subject_id,
+      left(coalesce(v_purpose, '[invalid_or_missing]'), 200), v_outcome, v_now
+    );
+  end if;
 
   -- Every outcome is recorded in the existing append-only audit log. If this
   -- insert fails, the function raises and returns no actor data (fail closed).
@@ -135,7 +141,7 @@ begin
     'ai_actor_directory',
     p_actor_subject_id,
     jsonb_build_object(
-      'purpose', left(coalesce(v_purpose, '[missing]'), 200),
+      'purpose', left(coalesce(v_purpose, '[invalid_or_missing]'), 200),
       'outcome', v_outcome,
       'attempted_at', v_now
     )
