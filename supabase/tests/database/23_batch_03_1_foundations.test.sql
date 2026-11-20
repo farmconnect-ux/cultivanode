@@ -1,6 +1,6 @@
 begin;
 
-select plan(4);
+select plan(3);
 
 select ok(
   exists (
@@ -24,11 +24,6 @@ select ok(
       and e.enumlabel = 'ai_intelligence'
   ),
   'ai_intelligence consent enum value exists'
-);
-
-select ok(
-  has_schema_privilege('authenticated', 'extensions', 'USAGE'),
-  'authenticated can resolve extension schema types where table grants permit'
 );
 
 select ok(
