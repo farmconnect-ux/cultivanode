@@ -79,7 +79,14 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('public', 'private.anonymise_ai_actor(uuid)', 'EXECUTE'),
+  not exists (
+    select 1
+    from pg_proc p
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where p.oid = 'private.anonymise_ai_actor(uuid)'::regprocedure
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  ),
   'PUBLIC cannot execute the anonymisation function'
 );
 
