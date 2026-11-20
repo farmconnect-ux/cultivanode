@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildGroundedPrompt, type FarmerContext } from '@cultivanode/shared';
-import { authorizeRequest, parseJsonBody } from '@/lib/engines-api-helper';
+import { authorizeFarmRequest, parseJsonBody } from '@/lib/engines-api-helper';
 
 const GroundSchema = z.object({
   query: z.string().min(1).max(4000),
   context: z.object({
-    farmerId: z.string().min(1).max(80),
+    farmId: z.string().uuid(),
     cropId: z.string().max(80).optional(),
     zone: z.enum(['rainforest', 'derived_savanna']).optional(),
     stageName: z.string().max(80).optional(),
@@ -16,19 +16,21 @@ const GroundSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const auth = await authorizeRequest(req);
-  if (!auth.authorized) return auth.response;
-
   const parsed = await parseJsonBody(req, GroundSchema);
   if (!parsed.ok) return parsed.response;
 
+  const auth = await authorizeFarmRequest(req, parsed.data.context.farmId);
+  if (!auth.authorized) return auth.response;
+
   try {
-    const prompt = buildGroundedPrompt(
-      parsed.data.query,
-      parsed.data.context as FarmerContext,
-      parsed.data.language ?? 'en',
-    );
-    return NextResponse.json(prompt);
+    const context: FarmerContext = {
+      farmerId: auth.user.id,
+      cropId: parsed.data.context.cropId ?? '',
+      zone: parsed.data.context.zone ?? 'rainforest',
+      stageName: parsed.data.context.stageName,
+      daysAfterPlanting: parsed.data.context.daysAfterPlanting,
+    };
+    return NextResponse.json(buildGroundedPrompt(parsed.data.query, context, parsed.data.language ?? 'en'));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid request';
     return NextResponse.json({ error: message }, { status: 400 });
