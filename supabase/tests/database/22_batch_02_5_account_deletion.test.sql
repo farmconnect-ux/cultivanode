@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(36);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -194,6 +194,31 @@ select is(
   'Test 10: Organization with no remaining members is explicitly archived and anonymised'
 );
 
+-- Batch 03.1B: AI actor mapping must be stable and inaccessible to application roles.
+select is(
+  private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001'),
+  private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001'),
+  'Test 10a: repeated actor resolution returns the same pseudonymous subject'
+);
+
+select is(
+  (select count(*)::int from private.ai_actor_directory
+   where profile_id = 'e5000000-0000-0000-0000-000000000001'
+     and actor_kind = 'user' and deleted_at is null),
+  1,
+  'Test 10b: one active user actor mapping exists per profile'
+);
+
+select ok(
+  not has_table_privilege('anon', 'private.ai_actor_directory', 'SELECT')
+  and not has_table_privilege('authenticated', 'private.ai_actor_directory', 'SELECT')
+  and not has_table_privilege('service_role', 'private.ai_actor_directory', 'SELECT')
+  and not has_function_privilege('service_role', 'private.resolve_or_create_ai_actor(uuid)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'private.anonymise_ai_actor(uuid)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'private.lookup_ai_actor_subject(uuid)', 'EXECUTE'),
+  'Test 10c: actor directory and internal functions are inaccessible to application roles'
+);
+
 -- 11-18: Execute deletion for u1 -> durable Storage queue populated, data_requests stays open until finalized
 select is(
   (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'No longer needed'))->>'deletion_status'),
@@ -229,6 +254,14 @@ select is(
   (select count(*)::int from public.marketplace_journal_entries where reference_id = 'e5000000-0000-0000-0000-0000000000d1'),
   1,
   'Test 16: financial ledger entry preserved'
+);
+
+select is(
+  (select (d.profile_id is null and d.deleted_at is not null)::text
+   from private.ai_actor_directory d
+   where d.actor_subject_id = private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')),
+  'true',
+  'Test 18a: account deletion anonymises the AI actor mapping without changing its subject ID'
 );
 
 -- 17: New orders/bookings against deleting/deleted u1 are blocked by trigger
