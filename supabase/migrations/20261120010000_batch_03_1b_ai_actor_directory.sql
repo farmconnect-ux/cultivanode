@@ -371,6 +371,8 @@ begin
 end;
 $$;
 
+alter function public.execute_account_deletion(uuid, text) owner to postgres;
+
 revoke all on function public.execute_account_deletion(uuid, text)
   from public, anon, authenticated;
 grant execute on function public.execute_account_deletion(uuid, text)
