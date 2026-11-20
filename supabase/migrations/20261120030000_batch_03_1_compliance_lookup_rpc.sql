@@ -1,14 +1,19 @@
--- Batch 03.1B M4: audited, concurrency-safe AI actor compliance lookup.
--- Lookup is disabled by default. The provisional limits are configuration defaults only;
--- enforcement is enabled only after an explicit operational/security approval.
+-- Batch 03.1B M4 / M4.1: audited, concurrency-safe AI actor compliance lookup
+-- with bounded-write admission control and cooldown-based throttle-state write suppression.
 --
--- Bounded-write admission control:
--- - Unauthenticated and inactive callers are rejected before any persistent write.
--- - private.ai_compliance_lookup_limits records only admitted attempts ('permitted' | 'denied'),
---   so its size is strictly bounded by system_attempt_limit per rolling window.
--- - Repeated throttled or disabled-feature calls update a single per-scope row in
---   private.ai_compliance_lookup_throttle_state in place and emit at most one summary
---   audit_log event per window, preventing unbounded persistent writes under abuse.
+-- Lookup is disabled by default. The provisional limits and cooldown interval are
+-- configuration defaults only; enforcement is enabled only after explicit approval.
+--
+-- Bounded-write guarantees:
+-- 1. Unauthenticated, suspended, deleting, and deleted accounts are rejected before
+--    any lock or persistent write.
+-- 2. private.ai_compliance_lookup_limits records only admitted attempts ('permitted' | 'denied'),
+--    so active-window rows are strictly bounded by system_attempt_limit.
+-- 3. Repeated throttled or disabled-feature calls inside throttle_write_cooldown_seconds
+--    perform ZERO persistent DML (no INSERT, UPDATE, or DELETE).
+-- 4. Once per rolling window, at most one summary audit_log row is emitted per scope;
+--    once per cooldown interval after that, at most one throttle-state UPDATE records
+--    an approximate sampled suppression event without resetting window_started_at.
 
 create table private.ai_compliance_lookup_limits (
   id bigint generated always as identity primary key,
@@ -30,11 +35,14 @@ alter table private.ai_compliance_lookup_limits owner to postgres;
 revoke all on table private.ai_compliance_lookup_limits
   from public, anon, authenticated, service_role;
 
+-- Stores at most one row per active rejection scope ('unavailable:<uid>', 'principal:<uid>',
+-- 'system:global'). sampled_suppression_events is an approximate, cooldown-sampled write
+-- count (not an exact count of all rejected requests).
 create table private.ai_compliance_lookup_throttle_state (
   scope_key text primary key,
   window_started_at timestamptz not null,
-  suppressed_count integer not null default 1 check (suppressed_count >= 1),
-  last_attempted_at timestamptz not null default clock_timestamp()
+  sampled_suppression_events integer not null default 1 check (sampled_suppression_events >= 1),
+  last_recorded_at timestamptz not null default clock_timestamp()
 );
 
 alter table private.ai_compliance_lookup_throttle_state enable row level security;
@@ -46,6 +54,7 @@ create table private.ai_compliance_lookup_config (
   singleton boolean primary key default true check (singleton),
   enabled boolean not null default false,
   window_seconds integer not null default 900 check (window_seconds between 60 and 3600),
+  throttle_write_cooldown_seconds integer not null default 60 check (throttle_write_cooldown_seconds between 5 and 3600),
   principal_attempt_limit integer not null default 10 check (principal_attempt_limit between 1 and 1000),
   principal_denied_limit integer not null default 5 check (principal_denied_limit between 1 and 1000),
   system_attempt_limit integer not null default 30 check (system_attempt_limit between 1 and 10000),
@@ -58,9 +67,9 @@ revoke all on table private.ai_compliance_lookup_config
   from public, anon, authenticated, service_role;
 
 insert into private.ai_compliance_lookup_config (
-  singleton, enabled, window_seconds,
+  singleton, enabled, window_seconds, throttle_write_cooldown_seconds,
   principal_attempt_limit, principal_denied_limit, system_attempt_limit
-) values (true, false, 900, 10, 5, 30)
+) values (true, false, 900, 60, 10, 5, 30)
 on conflict (singleton) do nothing;
 
 create or replace function public.compliance_lookup_ai_actor(
@@ -78,12 +87,12 @@ declare
   v_now timestamptz := clock_timestamp();
   v_config private.ai_compliance_lookup_config%rowtype;
   v_window_cutoff timestamptz;
+  v_cooldown_cutoff timestamptz;
   v_principal_attempts integer := 0;
   v_principal_denied integer := 0;
   v_system_attempts integer := 0;
   v_throttle_scope text;
   v_existing_throttle private.ai_compliance_lookup_throttle_state%rowtype;
-  v_emit_audit boolean := false;
   v_outcome text;
   v_actor record;
   v_result jsonb;
@@ -94,7 +103,7 @@ begin
   end if;
 
   -- 2. Verify account eligibility before any compliance audit or counter write.
-  --    Suspended, deleting, or deleted accounts must not generate compliance lookup audit events.
+  --    Suspended, deleting, or deleted accounts must not generate compliance lookup writes.
   if not private.account_active(v_principal_id)
      or not exists (
        select 1 from public.profiles p
@@ -110,15 +119,10 @@ begin
   end if;
 
   -- 3. Acquire global first, then principal lock in a stable order. This makes the
-  --    system-wide ceiling exact under concurrent callers and avoids lock-order cycles.
+  --    system-wide ceiling and write-suppression cooldown exact under concurrent callers
+  --    and prevents lock-order deadlocks.
   perform pg_advisory_xact_lock(hashtextextended('ai_compliance_lookup:system', 0));
   perform pg_advisory_xact_lock(hashtextextended('ai_compliance_lookup:principal:' || v_principal_id::text, 0));
-
-  delete from private.ai_compliance_lookup_limits
-   where attempted_at < v_now - interval '1 hour';
-
-  delete from private.ai_compliance_lookup_throttle_state
-   where last_attempted_at < v_now - interval '1 hour';
 
   select * into v_config
     from private.ai_compliance_lookup_config
@@ -129,9 +133,11 @@ begin
   end if;
 
   v_window_cutoff := v_now - make_interval(secs => v_config.window_seconds);
+  v_cooldown_cutoff := v_now - make_interval(secs => v_config.throttle_write_cooldown_seconds);
 
-  -- 4. Disabled feature check: never execute lookup and bound persistent writes to
-  --    at most one audit_log event per principal per rolling window.
+  -- 4. Disabled feature check: never execute lookup.
+  --    Inside cooldown, execute ZERO persistent writes; on new window emit one audit_log
+  --    summary; after cooldown expiry update sampled_suppression_events at most once.
   if not v_config.enabled then
     v_throttle_scope := 'unavailable:' || v_principal_id::text;
 
@@ -140,22 +146,17 @@ begin
      where scope_key = v_throttle_scope;
 
     if not found or v_existing_throttle.window_started_at < v_window_cutoff then
+      delete from private.ai_compliance_lookup_throttle_state
+       where last_recorded_at < v_now - interval '1 hour';
+
       insert into private.ai_compliance_lookup_throttle_state (
-        scope_key, window_started_at, suppressed_count, last_attempted_at
+        scope_key, window_started_at, sampled_suppression_events, last_recorded_at
       ) values (v_throttle_scope, v_now, 1, v_now)
       on conflict (scope_key) do update set
         window_started_at = excluded.window_started_at,
-        suppressed_count = 1,
-        last_attempted_at = excluded.last_attempted_at;
-      v_emit_audit := true;
-    else
-      update private.ai_compliance_lookup_throttle_state
-         set suppressed_count = suppressed_count + 1,
-             last_attempted_at = v_now
-       where scope_key = v_throttle_scope;
-    end if;
+        sampled_suppression_events = 1,
+        last_recorded_at = excluded.last_recorded_at;
 
-    if v_emit_audit then
       insert into public.audit_log (
         actor_id, action, entity, entity_id, new_values
       ) values (
@@ -169,6 +170,12 @@ begin
           'attempted_at', v_now
         )
       );
+    elsif v_existing_throttle.last_recorded_at <= v_cooldown_cutoff then
+      update private.ai_compliance_lookup_throttle_state
+         set sampled_suppression_events = sampled_suppression_events + 1,
+             last_recorded_at = v_now
+       where scope_key = v_throttle_scope
+         and last_recorded_at <= v_cooldown_cutoff;
     end if;
 
     return jsonb_build_object('status', 'unavailable');
@@ -188,8 +195,10 @@ begin
    where attempted_at >= v_window_cutoff;
 
   -- 6. Throttle path: do NOT insert into ai_compliance_lookup_limits.
-  --    Aggregate suppressed attempts in place and emit at most one audit_log row
-  --    per throttle scope per rolling window (without resetting window_started_at).
+  --    Inside cooldown, execute ZERO persistent writes. On a new rolling window,
+  --    record the throttle state and emit at most one summary audit_log row.
+  --    After cooldown expiry within the same window, update sampled_suppression_events
+  --    atomically without resetting window_started_at and without extra audit_log rows.
   if v_principal_attempts >= v_config.principal_attempt_limit
      or v_principal_denied >= v_config.principal_denied_limit
      or v_system_attempts >= v_config.system_attempt_limit then
@@ -205,22 +214,17 @@ begin
      where scope_key = v_throttle_scope;
 
     if not found or v_existing_throttle.window_started_at < v_window_cutoff then
+      delete from private.ai_compliance_lookup_throttle_state
+       where last_recorded_at < v_now - interval '1 hour';
+
       insert into private.ai_compliance_lookup_throttle_state (
-        scope_key, window_started_at, suppressed_count, last_attempted_at
+        scope_key, window_started_at, sampled_suppression_events, last_recorded_at
       ) values (v_throttle_scope, v_now, 1, v_now)
       on conflict (scope_key) do update set
         window_started_at = excluded.window_started_at,
-        suppressed_count = 1,
-        last_attempted_at = excluded.last_attempted_at;
-      v_emit_audit := true;
-    else
-      update private.ai_compliance_lookup_throttle_state
-         set suppressed_count = suppressed_count + 1,
-             last_attempted_at = v_now
-       where scope_key = v_throttle_scope;
-    end if;
+        sampled_suppression_events = 1,
+        last_recorded_at = excluded.last_recorded_at;
 
-    if v_emit_audit then
       insert into public.audit_log (
         actor_id, action, entity, entity_id, new_values
       ) values (
@@ -234,12 +238,25 @@ begin
           'attempted_at', v_now
         )
       );
+    elsif v_existing_throttle.last_recorded_at <= v_cooldown_cutoff then
+      update private.ai_compliance_lookup_throttle_state
+         set sampled_suppression_events = sampled_suppression_events + 1,
+             last_recorded_at = v_now
+       where scope_key = v_throttle_scope
+         and last_recorded_at <= v_cooldown_cutoff;
     end if;
 
     return jsonb_build_object('status', 'throttled');
   end if;
 
-  -- 7. Admitted path: validate permissions, parameters, and resolve actor subject.
+  -- 7. Admitted path: prune expired rows only on permitted write paths, then validate
+  --    permissions, parameters, and resolve actor subject.
+  delete from private.ai_compliance_lookup_limits
+   where attempted_at < v_now - interval '1 hour';
+
+  delete from private.ai_compliance_lookup_throttle_state
+   where last_recorded_at < v_now - interval '1 hour';
+
   if not public.has_permission('audit.read')
      or p_actor_subject_id is null
      or v_purpose is null

@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(41);
 
 -- 1-3: Private tables, RLS, and zero direct privileges for application roles
 select ok(
@@ -31,14 +31,15 @@ select ok(
   'compliance counters, throttle state and configuration are inaccessible to application roles'
 );
 
--- 4-6: Default config, function grants, and SECURITY DEFINER hygiene
+-- 4-6: Default config (including cooldown), function grants, and SECURITY DEFINER hygiene
 select ok(
   (select not enabled and window_seconds = 900
+     and throttle_write_cooldown_seconds = 60
      and principal_attempt_limit = 10
      and principal_denied_limit = 5
      and system_attempt_limit = 30
    from private.ai_compliance_lookup_config where singleton),
-  'lookup starts disabled with documented provisional thresholds'
+  'lookup starts disabled with documented provisional thresholds and 60s write-suppression cooldown'
 );
 
 select ok(
@@ -66,14 +67,17 @@ select ok(
 );
 
 -- Seed test principals:
--- 0001 = Super Admin A, 0002 = Ordinary User, 0003 = Target, 0004 = Inactive Admin, 0005 = Super Admin B
+-- 0001 = Super Admin A, 0002 = Ordinary User, 0003 = Target,
+-- 0004 = Deleted Admin, 0005 = Super Admin B, 0006 = Suspended Admin, 0007 = Deleting Admin
 insert into auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
   ('e7000000-0000-0000-0000-000000000001', '2348077770001', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e7000000-0000-0000-0000-000000000002', '2348077770002', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e7000000-0000-0000-0000-000000000003', '2348077770003', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
   ('e7000000-0000-0000-0000-000000000004', '2348077770004', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
-  ('e7000000-0000-0000-0000-000000000005', '2348077770005', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
+  ('e7000000-0000-0000-0000-000000000005', '2348077770005', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e7000000-0000-0000-0000-000000000006', '2348077770006', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated'),
+  ('e7000000-0000-0000-0000-000000000007', '2348077770007', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, phone, full_name, state, lga)
@@ -81,19 +85,29 @@ values
   ('e7000000-0000-0000-0000-000000000001', '2348077770001', 'Compliance Super Admin A', 'Oyo', 'Ibadan'),
   ('e7000000-0000-0000-0000-000000000002', '2348077770002', 'Compliance Officer', 'Oyo', 'Ibadan'),
   ('e7000000-0000-0000-0000-000000000003', '2348077770003', 'Compliance Target', 'Oyo', 'Ibadan'),
-  ('e7000000-0000-0000-0000-000000000004', '2348077770004', 'Inactive Compliance Admin', 'Oyo', 'Ibadan'),
-  ('e7000000-0000-0000-0000-000000000005', '2348077770005', 'Compliance Super Admin B', 'Oyo', 'Ibadan')
+  ('e7000000-0000-0000-0000-000000000004', '2348077770004', 'Deleted Compliance Admin', 'Oyo', 'Ibadan'),
+  ('e7000000-0000-0000-0000-000000000005', '2348077770005', 'Compliance Super Admin B', 'Oyo', 'Ibadan'),
+  ('e7000000-0000-0000-0000-000000000006', '2348077770006', 'Suspended Compliance Admin', 'Oyo', 'Ibadan'),
+  ('e7000000-0000-0000-0000-000000000007', '2348077770007', 'Deleting Compliance Admin', 'Oyo', 'Ibadan')
 on conflict (id) do nothing;
 
 update public.profiles
    set deletion_status = 'completed', deleted_at = now()
  where id = 'e7000000-0000-0000-0000-000000000004';
+update public.profiles
+   set suspended_at = now()
+ where id = 'e7000000-0000-0000-0000-000000000006';
+update public.profiles
+   set deletion_status = 'storage_pending'
+ where id = 'e7000000-0000-0000-0000-000000000007';
 
 insert into public.admin_roles (profile_id, admin_role)
 values
   ('e7000000-0000-0000-0000-000000000001', 'super_admin'),
   ('e7000000-0000-0000-0000-000000000004', 'super_admin'),
-  ('e7000000-0000-0000-0000-000000000005', 'super_admin')
+  ('e7000000-0000-0000-0000-000000000005', 'super_admin'),
+  ('e7000000-0000-0000-0000-000000000006', 'super_admin'),
+  ('e7000000-0000-0000-0000-000000000007', 'super_admin')
 on conflict do nothing;
 
 select private.resolve_or_create_ai_actor('e7000000-0000-0000-0000-000000000003') as actor_id
@@ -109,23 +123,60 @@ select throws_ok(
   'unauthenticated caller without JWT sub is rejected'
 );
 
--- 8-9: Inactive/deleted account returns denied and writes ZERO audit or counter rows
+-- 8-11: Deleted, suspended, and deleting accounts are denied with ZERO persistent writes
 select set_config('request.jwt.claims',
   '{"sub":"e7000000-0000-0000-0000-000000000004","role":"authenticated"}', true);
 select is(
   public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
   'denied',
-  'inactive account is denied compliance lookup'
+  'deleted account is denied compliance lookup'
+);
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'denied',
+  'suspended account is denied compliance lookup'
+);
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000007","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'denied',
+  'deleting account is denied compliance lookup'
 );
 reset role;
 select ok(
-  (select count(*) = 0 from public.audit_log where actor_id = 'e7000000-0000-0000-0000-000000000004' and action = 'ai_actor_compliance_lookup')
-  and (select count(*) = 0 from private.ai_compliance_lookup_limits where principal_id = 'e7000000-0000-0000-0000-000000000004')
-  and (select count(*) = 0 from private.ai_compliance_lookup_throttle_state where scope_key like '%e7000000-0000-0000-0000-000000000004%'),
-  'inactive account generates zero compliance audit, limit or throttle records'
+  (select count(*) = 0 from public.audit_log
+    where actor_id in (
+      'e7000000-0000-0000-0000-000000000004',
+      'e7000000-0000-0000-0000-000000000006',
+      'e7000000-0000-0000-0000-000000000007'
+    ) and action = 'ai_actor_compliance_lookup')
+  and (select count(*) = 0 from private.ai_compliance_lookup_limits)
+  and (select count(*) = 0 from private.ai_compliance_lookup_throttle_state),
+  'deleted, suspended and deleting accounts generate zero compliance audit, limit or throttle records'
 );
 
--- 10-12: Disabled feature bounds persistent writes across 10 repeated calls
+-- 12-16: Disabled feature write suppression inside cooldown + deterministic cooldown expiry
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+
+select is(
+  public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')->>'status',
+  'unavailable',
+  'first disabled-feature call returns unavailable'
+);
+
+reset role;
+select set_config('test.disabled_ctid_before',
+  (select ctid::text from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001'), true);
+select set_config('test.disabled_ts_before',
+  (select last_recorded_at::text from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001'), true);
+
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
@@ -134,22 +185,44 @@ select is(
   (select count(*)::int from generate_series(1, 10)
    where public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')->>'status' = 'unavailable'),
   10,
-  'disabled feature rejects all 10 calls with unavailable status'
+  '10 subsequent disabled-feature calls inside cooldown all return unavailable'
 );
+
 reset role;
-select is(
-  (select count(*)::int from public.audit_log
-   where actor_id = 'e7000000-0000-0000-0000-000000000001'
-     and action = 'ai_actor_compliance_lookup'
-     and new_values->>'outcome' = 'unavailable'),
-  1,
-  '10 disabled-feature calls emit at most one bounded audit_log row per window'
-);
 select ok(
-  (select count(*) = 0 from private.ai_compliance_lookup_limits)
-  and (select suppressed_count = 10 from private.ai_compliance_lookup_throttle_state
-        where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001'),
-  'disabled-feature calls write zero limit rows and aggregate suppressed_count in place'
+  (select ctid::text = current_setting('test.disabled_ctid_before')
+      and last_recorded_at::text = current_setting('test.disabled_ts_before')
+      and sampled_suppression_events = 1
+     from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001')
+  and (select count(*) = 0 from private.ai_compliance_lookup_limits),
+  '10 disabled-feature calls inside cooldown execute ZERO UPDATEs (ctid, last_recorded_at and sampled_suppression_events unchanged)'
+);
+
+-- Deterministically expire cooldown (shift last_recorded_at back 65s while remaining inside 900s window)
+update private.ai_compliance_lookup_throttle_state
+   set last_recorded_at = last_recorded_at - interval '65 seconds'
+ where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001';
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')->>'status',
+  'unavailable',
+  'disabled-feature call after cooldown expiry still returns unavailable'
+);
+
+reset role;
+select ok(
+  (select sampled_suppression_events = 2
+     from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'unavailable:e7000000-0000-0000-0000-000000000001')
+  and (select count(*) = 1 from public.audit_log
+        where actor_id = 'e7000000-0000-0000-0000-000000000001'
+          and action = 'ai_actor_compliance_lookup'
+          and new_values->>'outcome' = 'unavailable'),
+  'disabled-feature call after cooldown expiry increments sampled_suppression_events to 2 without adding extra audit_log rows'
 );
 
 -- Enable compliance lookup for functional & rate-limiting tests
@@ -158,13 +231,14 @@ delete from private.ai_compliance_lookup_throttle_state;
 update private.ai_compliance_lookup_config
    set enabled = true,
        window_seconds = 900,
+       throttle_write_cooldown_seconds = 60,
        principal_attempt_limit = 10,
        principal_denied_limit = 5,
        system_attempt_limit = 30,
        updated_at = clock_timestamp()
  where singleton = true;
 
--- 13-19: Permitted, unknown, malformed, unapproved purpose, and permission denial
+-- 17-24: Permitted, unknown, malformed, unapproved purpose, and permission denial
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
@@ -224,7 +298,7 @@ select is(
   'permission denial is audited'
 );
 
--- 21-26: Principal-level limit, parameter-variation resistance, bounded writes under 20 rejected calls, and principal isolation
+-- 25-33: Principal-level limit, write suppression proof (ctid unchanged), cooldown expiry, parameter-variation resistance, and principal isolation
 delete from private.ai_compliance_lookup_limits;
 delete from private.ai_compliance_lookup_throttle_state;
 
@@ -239,7 +313,28 @@ select is(
   'five unsuccessful lookups reach principal_denied_limit'
 );
 
--- Vary subject IDs and purposes across 20 subsequent calls; all must be throttled
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'first over-limit request is throttled and creates initial throttle state'
+);
+
+reset role;
+select set_config('test.principal_ctid_before',
+  (select ctid::text from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'principal:e7000000-0000-0000-0000-000000000001'), true);
+select set_config('test.principal_win_before',
+  (select window_started_at::text from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'principal:e7000000-0000-0000-0000-000000000001'), true);
+select set_config('test.principal_ts_before',
+  (select last_recorded_at::text from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'principal:e7000000-0000-0000-0000-000000000001'), true);
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+
+-- Vary subject IDs and purposes across 20 subsequent calls inside cooldown
 select is(
   (select count(*)::int from generate_series(1, 20) g
    where public.compliance_lookup_ai_actor(
@@ -247,7 +342,7 @@ select is(
      case when g % 3 = 0 then 'regulatory_inquiry' when g % 3 = 1 then 'security_incident' else 'legal_obligation' end
    )->>'status' = 'throttled'),
   20,
-  '20 repeated calls after principal limit (with varied subject IDs and purposes) are all throttled'
+  '20 repeated calls inside cooldown (with varied subject IDs and purposes) are all throttled'
 );
 
 reset role;
@@ -255,7 +350,17 @@ select is(
   (select count(*)::int from private.ai_compliance_lookup_limits
    where principal_id = 'e7000000-0000-0000-0000-000000000001'),
   5,
-  'ai_compliance_lookup_limits stays bounded at 5 rows despite 20 subsequent throttled calls'
+  'ai_compliance_lookup_limits stays bounded at 5 rows despite 21 throttled calls'
+);
+
+select ok(
+  (select ctid::text = current_setting('test.principal_ctid_before')
+      and last_recorded_at::text = current_setting('test.principal_ts_before')
+      and window_started_at::text = current_setting('test.principal_win_before')
+      and sampled_suppression_events = 1
+     from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'principal:e7000000-0000-0000-0000-000000000001'),
+  '20 repeated throttled calls inside cooldown execute ZERO UPDATEs on throttle_state (ctid and timestamps unchanged)'
 );
 
 select is(
@@ -264,14 +369,34 @@ select is(
      and action = 'ai_actor_compliance_lookup'
      and new_values->>'outcome' = 'throttled'),
   1,
-  '20 repeated principal-throttled calls emit exactly one bounded audit_log row per window'
+  '21 throttled calls in one rolling window emit exactly one bounded audit_log summary row'
 );
 
+-- Deterministically expire cooldown (shift last_recorded_at back 65s, preserving window_started_at)
+update private.ai_compliance_lookup_throttle_state
+   set last_recorded_at = last_recorded_at - interval '65 seconds'
+ where scope_key = 'principal:e7000000-0000-0000-0000-000000000001';
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
 select is(
-  (select suppressed_count from private.ai_compliance_lookup_throttle_state
-   where scope_key = 'principal:e7000000-0000-0000-0000-000000000001'),
-  20,
-  'principal throttle state aggregates all 20 suppressed calls in a single row'
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'request after cooldown expiry remains throttled'
+);
+
+reset role;
+select ok(
+  (select sampled_suppression_events = 2
+      and window_started_at::text = current_setting('test.principal_win_before')
+     from private.ai_compliance_lookup_throttle_state
+    where scope_key = 'principal:e7000000-0000-0000-0000-000000000001')
+  and (select count(*) = 1 from public.audit_log
+        where actor_id = 'e7000000-0000-0000-0000-000000000001'
+          and action = 'ai_actor_compliance_lookup'
+          and new_values->>'outcome' = 'throttled'),
+  'cooldown expiry permits exactly one sampled update without resetting window_started_at or emitting extra audit_log rows'
 );
 
 -- Principal B is unaffected by Principal A hitting its individual limit
@@ -284,7 +409,7 @@ select is(
   'one principal exhausting its individual allowance does not block another principal'
 );
 
--- 27-30: System-wide ceiling and bounded writes under 20 repeated rejected calls
+-- 34-37: System-wide ceiling and write suppression under 20 repeated rejected calls
 reset role;
 delete from private.ai_compliance_lookup_limits;
 delete from private.ai_compliance_lookup_throttle_state;
@@ -312,29 +437,39 @@ select is(
 );
 
 select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'first request past system-wide ceiling creates initial system throttle state'
+);
+
+reset role;
+select set_config('test.sys_ctid_before',
+  (select ctid::text from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'), true);
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
   (select count(*)::int from generate_series(1, 20)
    where public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status' = 'throttled'),
   20,
-  '20 repeated calls after system-wide ceiling are all throttled'
+  '20 repeated calls after system-wide ceiling inside cooldown are all throttled'
 );
 
 reset role;
 select ok(
   (select count(*) = 8 from private.ai_compliance_lookup_limits)
-  and (select suppressed_count = 20 from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'),
-  'system-wide throttling keeps limits at 8 rows and aggregates 20 suppressed calls in one state row'
+  and (select ctid::text = current_setting('test.sys_ctid_before')
+          and sampled_suppression_events = 1
+         from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global')
+  and ((select count(*)::int from public.audit_log
+         where action = 'ai_actor_compliance_lookup'
+           and new_values->>'outcome' = 'throttled')
+       - current_setting('test.sys_throttle_audit_before')::integer = 1),
+  'system-wide throttling keeps limits at 8, executes ZERO UPDATEs inside cooldown (ctid unchanged) and emits 1 audit_log row'
 );
 
-select is(
-  (select count(*)::int from public.audit_log
-   where action = 'ai_actor_compliance_lookup'
-     and new_values->>'outcome' = 'throttled')
-  - current_setting('test.sys_throttle_audit_before')::integer,
-  1,
-  '20 repeated system-throttled calls emit exactly one bounded audit_log row per window'
-);
-
--- 31: Transaction rollback leaves counters and audit_log consistent
+-- 38: Transaction rollback leaves counters, throttle state, and audit_log consistent
 delete from private.ai_compliance_lookup_limits;
 delete from private.ai_compliance_lookup_throttle_state;
 select set_config('test.rollback_audit_before',
@@ -356,12 +491,13 @@ end $$;
 
 select ok(
   (select count(*) = 0 from private.ai_compliance_lookup_limits)
+  and (select count(*) = 0 from private.ai_compliance_lookup_throttle_state)
   and (select count(*)::int from public.audit_log where action = 'ai_actor_compliance_lookup')
       = current_setting('test.rollback_audit_before')::integer,
-  'rolled-back lookup transaction leaves zero counter or audit_log artifacts'
+  'rolled-back lookup transaction leaves zero counter, throttle-state or audit_log artifacts'
 );
 
--- 32-34: service_role revocation, direct directory isolation, and inactive-account enabled-feature check
+-- 39-41: service_role revocation, direct directory isolation, and deleted-account enabled-feature check
 set local role service_role;
 select throws_ok(
   $$select public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')$$,
@@ -383,7 +519,7 @@ select set_config('request.jwt.claims',
 select is(
   public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
   'denied',
-  'inactive account remains denied with zero audit writes even when feature is enabled'
+  'deleted account remains denied with zero writes even when feature is enabled'
 );
 
 select * from finish();

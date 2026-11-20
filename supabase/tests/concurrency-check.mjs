@@ -627,6 +627,7 @@ async function main() {
     UPDATE private.ai_compliance_lookup_config
        SET enabled = true,
            window_seconds = 900,
+           throttle_write_cooldown_seconds = 60,
            principal_attempt_limit = 100,
            principal_denied_limit = 100,
            system_attempt_limit = 2,
@@ -653,7 +654,8 @@ async function main() {
     COMMIT;
   `;
 
-  // 5a: 6 genuinely concurrent requests compete for the final 2 system-wide slots
+  // 5a: 6 genuinely concurrent requests compete for the final 2 system-wide slots.
+  //     4 are throttled; inside the 60s cooldown only the first throttled caller writes throttle_state.
   const concurrentBatch = await Promise.all(
     Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(), `conc_ai_compliance_${i}`)),
   );
@@ -666,8 +668,17 @@ async function main() {
   assert.equal(batchOutcomes.filter((s) => s === 'permitted').length, 2, `Expected exactly 2 permitted, got ${batchOutcomes}`);
   assert.equal(batchOutcomes.filter((s) => s === 'throttled').length, 4, `Expected exactly 4 throttled, got ${batchOutcomes}`);
 
+  // Capture exact physical tuple identity (ctid + xmin) and telemetry before sustained rejected burst
+  const beforeBurstTuple = await runPsql(`
+    SELECT ctid::text || '|' || xmin::text || '|' || sampled_suppression_events::text || '|' || last_recorded_at::text
+      FROM private.ai_compliance_lookup_throttle_state
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(beforeBurstTuple.code, 0, beforeBurstTuple.stderr);
+  assert.match(beforeBurstTuple.stdout, /^\(\d+,\d+\)\|\d+\|1\|/, `Expected initial sampled_suppression_events=1, got ${beforeBurstTuple.stdout}`);
+
   // 5b: Sustained rejected burst (15 more calls across 5 concurrent waves with rotating subjects)
-  //     must NOT grow ai_compliance_lookup_limits or public.audit_log beyond bounded window counts.
+  //     inside cooldown must execute ZERO UPDATEs against throttle_state (ctid & xmin identical).
   for (let wave = 0; wave < 5; wave++) {
     const waveResults = await Promise.all(
       Array.from({ length: 3 }, (_, j) => runPsql(complianceTx(randomUUID()), `conc_ai_burst_${wave}_${j}`)),
@@ -678,11 +689,40 @@ async function main() {
     }
   }
 
+  const afterBurstTuple = await runPsql(`
+    SELECT ctid::text || '|' || xmin::text || '|' || sampled_suppression_events::text || '|' || last_recorded_at::text
+      FROM private.ai_compliance_lookup_throttle_state
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(afterBurstTuple.code, 0, afterBurstTuple.stderr);
+  assert.equal(
+    afterBurstTuple.stdout,
+    beforeBurstTuple.stdout,
+    `Expected ZERO throttle_state UPDATEs during 15-call cooldown burst (ctid/xmin must match): before=${beforeBurstTuple.stdout}, after=${afterBurstTuple.stdout}`,
+  );
+
+  // 5c: Cooldown expiry boundary under concurrency: deterministically expire cooldown, then launch
+  //     6 concurrent rejected callers. Exactly ONE caller may increment sampled_suppression_events (1 -> 2).
+  const expireCooldown = await runPsql(`
+    UPDATE private.ai_compliance_lookup_throttle_state
+       SET last_recorded_at = last_recorded_at - interval '65 seconds'
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(expireCooldown.code, 0, expireCooldown.stderr);
+
+  const postCooldownBatch = await Promise.all(
+    Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(randomUUID()), `conc_ai_cooldown_boundary_${i}`)),
+  );
+  for (const r of postCooldownBatch) {
+    assert.equal(r.code, 0, `Post-cooldown concurrent call failed: ${r.stderr}`);
+    assert.equal(complianceStatus(r), 'throttled', `Expected throttled after cooldown expiry, got ${r.stdout}`);
+  }
+
   const complianceCounts = await runPsql(`
     SELECT
       (SELECT count(*) FROM private.ai_compliance_lookup_limits)::text || '|' ||
       (SELECT count(*) FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
-      (SELECT suppressed_count FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT sampled_suppression_events FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
       (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup')::text || '|' ||
       (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'permitted')::text || '|' ||
       (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'throttled')::text;
@@ -690,8 +730,8 @@ async function main() {
   assert.equal(complianceCounts.code, 0, complianceCounts.stderr);
   assert.equal(
     complianceCounts.stdout,
-    '2|1|19|3|2|1',
-    `Expected bounded counts (limits=2, state_rows=1, suppressed=19, audit_total=3, audit_permitted=2, audit_throttled=1), got ${complianceCounts.stdout}`,
+    '2|1|2|3|2|1',
+    `Expected bounded counts (limits=2, state_rows=1, sampled_events=2, audit_total=3, audit_permitted=2, audit_throttled=1), got ${complianceCounts.stdout}`,
   );
 
   const resetCompliance = await runPsql(`
@@ -700,7 +740,7 @@ async function main() {
     DELETE FROM private.ai_compliance_lookup_throttle_state;
   `);
   assert.equal(resetCompliance.code, 0, resetCompliance.stderr);
-  console.log('   PASS: 6 concurrent callers + 15 sustained rejected burst calls serialised atomically with strictly bounded limits (2) and audit_log (3).');
+  console.log('   PASS: 6 concurrent callers + 15 cooldown-suppressed burst calls (ctid/xmin unchanged) + 6 cooldown-expiry boundary callers serialised atomically with strictly bounded writes (sampled_events=2, limits=2, audit_log=3).');
 
 }
 

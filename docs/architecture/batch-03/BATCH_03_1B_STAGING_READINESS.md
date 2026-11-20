@@ -9,22 +9,30 @@
 
 ---
 
-## 1. M4 Compliance Lookup Rate-Limiting Remediation Report
+## 1. M4 / M4.1 Compliance Lookup Rate-Limiting & Write-Suppression Report
 
-### Verified Weakness in Previous Implementation
-In `e468dadce957f1f284f2cda1f2fa78b77c9f15be`, `public.compliance_lookup_ai_actor(uuid, text)` inserted a new row into both `private.ai_compliance_lookup_limits` and `public.audit_log` on **every** call — including repeated throttled calls, disabled-feature calls, and inactive-account calls — allowing sustained rejected traffic to generate unbounded persistent database writes.
+### Verified Weaknesses Remediated
+1. **Original unbounded row growth (`e468dad`):** `public.compliance_lookup_ai_actor(uuid, text)` inserted a new row into both `private.ai_compliance_lookup_limits` and `public.audit_log` on every rejected call.
+2. **M4.1 write-amplification defect (`8509e46`):** Although `private.ai_compliance_lookup_throttle_state` bounded row cardinality to one row per scope, every repeated rejected call still executed an `UPDATE ... SET suppressed_count = suppressed_count + 1` against that row, creating unbounded persistent database write operations and contention under sustained abuse.
 
-### Implemented Remediation (`20261120030000_batch_03_1_compliance_lookup_rpc.sql`)
+### Implemented M4.1 Remediation (`20261120030000_batch_03_1_compliance_lookup_rpc.sql`)
 1. **Fail-fast pre-write eligibility checks:**
    - Unauthenticated callers (`auth.uid() IS NULL`) raise `28000` before acquiring locks or writing any rows.
-   - Inactive or deleted accounts (`NOT private.account_active(v_principal_id)`) return `{"status": "denied"}` immediately with **zero** rows written to `private.ai_compliance_lookup_limits`, `private.ai_compliance_lookup_throttle_state`, or `public.audit_log`.
-2. **Bounded admission-control storage:**
-   - `private.ai_compliance_lookup_limits` now records **only admitted attempts** (`outcome IN ('permitted', 'denied')`). Its active-window row count is strictly bounded by `system_attempt_limit` across the entire database.
-   - Added `private.ai_compliance_lookup_throttle_state` (RLS enabled, `postgres`-owned, `REVOKE ALL` from `PUBLIC, anon, authenticated, service_role`) keyed by `scope_key` (`'unavailable:<principal>'`, `'principal:<principal>'`, `'system:global'`).
-   - Repeated disabled-feature or throttled calls **update a single row in place** (`suppressed_count = suppressed_count + 1, last_attempted_at = v_now` without resetting `window_started_at`) and emit **at most one** `public.audit_log` summary row per scope per rolling window.
-3. **Concurrency & parameter-evasion safety:**
-   - Retains global-then-principal `pg_advisory_xact_lock` ordering; rate-limit keys depend strictly on `auth.uid()` and `'system:global'`, so rotating `p_actor_subject_id` or `p_purpose` cannot evade limits or reset the window.
-   - One principal exhausting its individual allowance does not block another principal while system capacity remains.
+   - Suspended, deleting, or deleted accounts (`NOT private.account_active(v_principal_id)` OR `deleted_at IS NOT NULL` OR `deletion_status IS NOT NULL`) return `{"status": "denied"}` immediately with **zero** persistent writes.
+2. **Cooldown-based write suppression (`throttle_write_cooldown_seconds`, default `60`s, range `5..3600`s):**
+   - `private.ai_compliance_lookup_limits` records **only admitted attempts** (`outcome IN ('permitted', 'denied')`), bounding active-window rows strictly by `system_attempt_limit`.
+   - `private.ai_compliance_lookup_throttle_state` (RLS enabled, `postgres`-owned, all application roles revoked) stores at most one row per scope (`'unavailable:<principal>'`, `'principal:<principal>'`, `'system:global'`) with `window_started_at`, `sampled_suppression_events`, and `last_recorded_at`.
+   - **Permitted throttle-state writes:**
+     - **New rolling window** (`not found` or `window_started_at < v_window_cutoff`): upserts the scope row with `sampled_suppression_events = 1` and emits **at most one** `public.audit_log` summary row for the window.
+     - **Inside cooldown interval** (`last_recorded_at > v_now - throttle_write_cooldown_seconds`): executes **ZERO persistent DML** (no `INSERT`, `UPDATE`, or `DELETE`) and immediately returns `'unavailable'` or `'throttled'`.
+     - **After cooldown expiry within the same rolling window** (`last_recorded_at <= v_now - throttle_write_cooldown_seconds`): executes one atomic guarded `UPDATE` incrementing `sampled_suppression_events` and updating `last_recorded_at` **without** resetting `window_started_at` and **without** emitting extra `public.audit_log` rows.
+3. **Explicit telemetry semantics (approximate vs. exact):**
+   - **Total rejected requests:** Known only **approximately** under sustained load (intentionally not counted per request so persistent writes remain strictly bounded).
+   - **Persisted throttle-state updates (`sampled_suppression_events`):** Strictly bounded to at most `ceil(window_seconds / throttle_write_cooldown_seconds)` writes per scope per rolling window (e.g., at most `15` updates per 15-minute window at the default `60`s cooldown).
+   - **Audit summary records (`public.audit_log`):** Strictly bounded to at most **1** `'throttled'` or `'unavailable'` summary row per scope per rolling window.
+4. **Concurrency & lock ordering:**
+   - Retains global-first, principal-second `pg_advisory_xact_lock` ordering; concurrent callers at both the slot boundary and the cooldown-expiry boundary are serialised atomically in PostgreSQL.
+   - Rate-limit keys remain strictly tied to `auth.uid()` and `'system:global'` (rotating `p_actor_subject_id` or `p_purpose` cannot bypass limits or trigger writes inside cooldown), and principal isolation is preserved.
 
 ---
 
