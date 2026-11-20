@@ -35,12 +35,24 @@ export async function authorizeFarmRequest(req: Request, farmId: string) {
     return { authorized: false as const, response: NextResponse.json({ error: 'Authentication is not configured.' }, { status: 503 }) };
   }
 
-  const { data: { user }, error: authError } = await client.auth.getUser(token);
-  if (authError || !user) return { authorized: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  let user: Awaited<ReturnType<typeof client.auth.getUser>>['data']['user'];
+  try {
+    const result = await client.auth.getUser(token);
+    if (result.error || !result.data.user) {
+      return { authorized: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    }
+    user = result.data.user;
+  } catch {
+    return { authorized: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
 
-  const { data: farm, error } = await client.from('farms').select('id').eq('id', farmId).maybeSingle();
-  if (error) return { authorized: false as const, response: NextResponse.json({ error: 'Unable to verify farm access.' }, { status: 500 }) };
-  if (!farm) return { authorized: false as const, response: NextResponse.json({ error: 'Farm not found or access denied.' }, { status: 404 }) };
+  try {
+    const { data: farm, error } = await client.from('farms').select('id').eq('id', farmId).maybeSingle();
+    if (error) return { authorized: false as const, response: NextResponse.json({ error: 'Unable to verify farm access.' }, { status: 500 }) };
+    if (!farm) return { authorized: false as const, response: NextResponse.json({ error: 'Farm not found or access denied.' }, { status: 404 }) };
+  } catch {
+    return { authorized: false as const, response: NextResponse.json({ error: 'Unable to verify farm access.' }, { status: 500 }) };
+  }
 
   return { authorized: true as const, user, client };
 }
