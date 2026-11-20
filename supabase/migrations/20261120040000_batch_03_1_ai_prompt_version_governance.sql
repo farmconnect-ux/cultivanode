@@ -222,6 +222,7 @@ begin
   select from_version into v_previous
     from private.ai_prompt_activation_history
    where prompt_key = p_prompt_key
+     and operation = 'activate'
      and to_version = v_current
      and from_version is not null
    order by created_at desc, id desc
