@@ -44,17 +44,19 @@ describe('Claude as the farm assistant', () => {
     vi.stubGlobal('fetch', vi.fn(async () => claudeReply('Spray paraquat before planting.')));
     const res = await askGroundedAiAssistant({ query: 'Weeds?', context, anthropicApiKey: 'k' });
     expect(res.passedSafetyGuardrail).toBe(false);
-    expect(res.answer).toContain('BANNED');
+    expect(res.answer).toContain('SAFETY BLOCK');
+    expect(res.answer.toLowerCase()).not.toContain('spray paraquat');
   });
 });
 
 describe('NAFDAC guardrail reads the sentence, not just the word', async () => {
   const { checkChemicalSafetyGuardrails } = await import('./chemical-guardrail');
-  it('lets a warning against a banned product through unchanged', () => {
+  it('blocks even a warning against a banned product', () => {
     const text = 'Apply NPK 15:15:15 at planting. Never use paraquat for weeding; it is banned in Nigeria.';
     const r = checkChemicalSafetyGuardrails(text);
-    expect(r.passed).toBe(true);
-    expect(r.sanitizedResponseText).toContain('NPK 15:15:15');
+    expect(r.passed).toBe(false);
+    expect(r.sanitizedResponseText).toContain('SAFETY BLOCK');
+    expect(r.sanitizedResponseText).not.toContain('NPK 15:15:15');
     expect(r.bannedChemicalsDetected).toContain('paraquat');
   });
   it('still blocks a sentence that recommends one, even next to a warning', () => {

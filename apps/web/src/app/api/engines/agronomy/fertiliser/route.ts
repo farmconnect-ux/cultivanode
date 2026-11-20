@@ -1,20 +1,8 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
+
 import { calculateFertiliserRecommendation, type SoilNutrientProfile } from '@cultivanode/shared';
 import { authorizeRequest, parseJsonBody } from '@/lib/engines-api-helper';
-
-const FertiliserSchema = z.object({
-  cropId: z.string().min(1).max(80),
-  targetYieldTonnesPerHa: z.number().positive().max(100),
-  farmAreaHectares: z.number().positive().max(100_000),
-  soil: z.object({
-    ph: z.number().min(0).max(14).optional(),
-    nitrogenPpm: z.number().min(0).optional(),
-    phosphorusPpm: z.number().min(0).optional(),
-    potassiumPpm: z.number().min(0).optional(),
-    organicMatterPct: z.number().min(0).max(100).optional(),
-  }),
-});
+import { FertiliserSchema } from '@/lib/fertiliser-schema';
 
 export async function POST(req: Request) {
   const auth = await authorizeRequest(req);

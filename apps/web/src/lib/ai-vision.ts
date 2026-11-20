@@ -88,7 +88,6 @@ async function gemini(images: CropImage[], text: string): Promise<string | null>
         responseMimeType: "application/json",
         temperature: 0.2,
         maxOutputTokens: 2048,
-        // Gemini 2.5 "thinking" counts against the output budget and can leave the answer empty.
         ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
     }),
@@ -126,11 +125,17 @@ async function openai(images: CropImage[], text: string): Promise<string | null>
 const str = (v: unknown, max = 400) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const list = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => str(x)).filter(Boolean).slice(0, n) : []);
 
-/** Shape-checks the model's JSON and runs the chemical guardrail over every word of it. */
+class GuardrailEvaluationError extends Error {
+  constructor() {
+    super("Chemical safety evaluation failed");
+    this.name = "GuardrailEvaluationError";
+  }
+}
+
+/** Shape-checks the model JSON and prevents unsafe content in every farmer-visible field. */
 function clean(raw: string): Diagnosis | null {
   let j: Record<string, unknown>;
   try {
-    // Models sometimes wrap the JSON in a code fence or a sentence: keep only the outermost object.
     const body = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
     j = JSON.parse(body) as Record<string, unknown>;
   } catch {
@@ -156,10 +161,22 @@ function clean(raw: string): Diagnosis | null {
     unclear: j.unclear === true,
   };
   const all = [d.summary, ...d.likely.map((l) => `${l.name} ${l.why}`), ...d.checks, ...d.actions, d.see_expert_if].join("\n");
-  const guard = checkChemicalSafetyGuardrails(all);
+  let guard: ReturnType<typeof checkChemicalSafetyGuardrails>;
+  try {
+    guard = checkChemicalSafetyGuardrails(all);
+  } catch {
+    throw new GuardrailEvaluationError();
+  }
   if (!guard.passed) {
-    // A banned product slipped in: drop the actions entirely and send the farmer to an extension agent.
+    // Fail closed across the entire diagnosis, not only the action field.
+    d.summary = "A potentially unsafe pesticide reference was detected. Do not apply any chemical based on this diagnosis. Contact an agricultural extension officer for approved guidance.";
+    d.likely = [];
+    d.checks = [];
     d.actions = [guard.sanitizedResponseText];
+    d.urgent = false;
+    d.see_expert_if = "Speak to an agricultural extension officer before taking chemical action.";
+    d.safety = [];
+    return d;
   }
   d.safety = guard.safetyAppendices.slice(0, 4);
   return d;
@@ -188,6 +205,10 @@ export async function diagnoseCropPhotos(images: CropImage[], context: Context):
       if (diagnosis) return { ok: true, diagnosis, model };
       logger.warn("ai_vision_bad_json", { model });
     } catch (err) {
+      if (err instanceof GuardrailEvaluationError) {
+        logger.error("ai_vision_guardrail_failed", { model });
+        return { ok: false, error: "failed" };
+      }
       logger.warn("ai_vision_failed", { model, reason: err instanceof Error ? err.message : "unknown" });
     }
   }

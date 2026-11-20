@@ -11,7 +11,46 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
 
     expect(result.passed).toBe(false);
     expect(result.bannedChemicalsDetected).toContain('paraquat');
-    expect(result.sanitizedResponseText).toContain('BANNED');
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+  });
+
+  it('blocks even educational warnings that mention a banned pesticide', () => {
+    const result = checkChemicalSafetyGuardrails('Never use paraquat. It is prohibited.');
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toContain('paraquat');
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+  });
+
+  it('blocks a mixed warning and recommendation mentioning a banned pesticide', () => {
+    const result = checkChemicalSafetyGuardrails('Avoid paraquat, but apply paraquat at 1 L/ha.');
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toContain('paraquat');
+  });
+
+  it('blocks every banned chemical name, including aldrin, regardless of context', () => {
+    for (const chemical of ['paraquat', 'carbofuran', 'ddt', 'endosulfan', 'lindane', 'monocrotophos', 'aldrin']) {
+      const result = checkChemicalSafetyGuardrails(`Educational note: do not use ${chemical}.`);
+      expect(result.passed).toBe(false);
+      expect(result.bannedChemicalsDetected).toContain(chemical);
+      expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+      expect(result.sanitizedResponseText.toLowerCase()).not.toContain(`do not use ${chemical}`);
+    }
+  });
+
+  it('blocks multiple banned chemicals found across distinct response fields', () => {
+    const allFields = [
+      'Summary: historical paraquat use was reported.',
+      'Likely cause: carbofuran exposure.',
+      'Checks: inspect for DDT residue.',
+      'Actions: never apply aldrin.',
+      'Expert guidance: avoid lindane.',
+    ].join(' ');
+    const result = checkChemicalSafetyGuardrails(allFields);
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toEqual(expect.arrayContaining(['paraquat', 'carbofuran', 'ddt', 'aldrin', 'lindane']));
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+    expect(result.sanitizedResponseText).not.toContain('historical paraquat');
+    expect(result.sanitizedResponseText).not.toContain('carbofuran exposure');
   });
 
   it('appends safety notices for approved chemicals like Atrazine', () => {
@@ -78,10 +117,11 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
       language: 'en',
     });
 
-    // The answer is itself a warning, so it is shown as written; the banned name is still recorded.
-    expect(res.passedSafetyGuardrail).toBe(true);
+    // Any mention of a banned chemical blocks the answer, including educational discussion.
+    expect(res.passedSafetyGuardrail).toBe(false);
     expect(res.bannedChemicalsDetected).toContain('paraquat');
-    expect(res.answer).toContain('BANNED');
+    expect(res.answer).toContain('SAFETY BLOCK');
+    expect(res.answer.toLowerCase()).not.toContain('spray paraquat');
   });
 
   // M6 Master Plan Acceptance Gate: "At least 100 agronomy questions evaluated" (docs/AI.md)
@@ -129,7 +169,8 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
       const guardrail = checkChemicalSafetyGuardrails(simulatedResponse);
       if (i % 10 === 0) {
         expect(guardrail.passed).toBe(false);
-        expect(guardrail.sanitizedResponseText).toContain('BANNED');
+        expect(guardrail.sanitizedResponseText).toContain('SAFETY BLOCK');
+        expect(guardrail.sanitizedResponseText.toLowerCase()).not.toContain('spray paraquat');
       } else if (i % 5 === 0) {
         expect(guardrail.passed).toBe(true);
         expect(guardrail.safetyAppendices.length).toBeGreaterThan(0);
