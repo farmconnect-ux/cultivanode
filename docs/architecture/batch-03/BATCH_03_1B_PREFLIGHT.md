@@ -40,7 +40,7 @@ The intended order remains:
 | M1 | Enable `vector` in `extensions`; add `ai_intelligence` to `public.consent_type` | Ready for code and tests |
 | M2 | Private actor directory, internal functions and deletion anonymisation hook | Implemented on branch; awaiting CI and review |
 | M3 | Append-only AI audit events, trusted writer and constrained feedback RPC | Ready for code after RLS and append-only tests |
-| M4 | Audited, concurrency-safe compliance lookup | Permission key and provisional rate thresholds require owner decision |
+| M4 | Audited, concurrency-safe compliance lookup | Implemented on branch; latest CI verification pending; disabled by default pending operational approval |
 | M5 | Immutable prompt versions, active pointers and audited activation/rollback | Activation permission key requires owner decision |
 
 M1 must not reference the newly added enum label in a data statement in the same migration transaction. Extension installation must use the unpinned form `CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions`; Supabase deprecated explicit extension version clauses from 2026-08-05.
@@ -58,6 +58,31 @@ The M4 provisional rate limits remain: 10 attempts per principal per 15 minutes,
 The read-only Staging security advisor currently reports pre-existing findings, including RLS-enabled tables with no policies, SECURITY DEFINER functions executable by anon/authenticated, and disabled leaked-password protection. These are baseline findings, not regressions introduced by Batch 03.1B. New migrations must not increase the relevant findings; targeted grant checks and advisor comparisons will be required after Staging application.
 
 
+
+
+## 10. M3 final security review and M4 implementation record
+
+### M3 final security review
+
+M3's database migration and 29-assertion pgTAP suite passed complete CI on commit `f5d5d9167f6fb19ee8ca9dba4a3952aa8426fb4b`, workflow run `44790090869`. Typecheck, lint, unit tests, production build, clean migration replay, pgTAP, concurrency, Storage integration and live API/database integration all passed.
+
+The final review confirms that audit-event and feedback tables are append-only; direct application-role table writes are revoked; event reads are farm-scoped; the trusted writer is PostgreSQL-owned, SECURITY DEFINER, empty-search-path and service_role-only; the feedback RPC is authenticated-only, derives the submitting identity from `auth.uid()`, and cannot mutate the original event. Trace ID idempotency rejects conflicting replays. Context references reject unrecognised fields and require source and record identifiers.
+
+The remaining boundary is explicit and intentional: `private.write_ai_audit_event` accepts a profile identifier and farm identifier from the trusted server caller. Since Next.js server modules share the Supabase service-role credential, PostgreSQL cannot establish which module invoked the writer. The future central `apps/web/src/lib/ai-audit.ts` must verify the JWT identity, active account, AI consent and farm membership under the caller's JWT before invoking the writer. The database writer must not be called directly from route handlers or arbitrary server modules. This is an application-level trust boundary, not an independent PostgreSQL identity boundary.
+
+### M4 implementation
+
+M4 has been implemented in `20261120030000_batch_03_1_compliance_lookup_rpc.sql`.
+
+It creates two private, RLS-enabled, application-inaccessible tables. `private.ai_compliance_lookup_limits` stores principal-keyed attempts, requested subject, purpose code, outcome and timestamp. `private.ai_compliance_lookup_config` stores the operational switch and rate thresholds. The default configuration is disabled, with provisional thresholds of 10 attempts per principal, 5 denied attempts per principal and 30 attempts system-wide in a 15-minute rolling window.
+
+`public.compliance_lookup_ai_actor(uuid,text)` is PostgreSQL-owned, SECURITY DEFINER, uses an empty search path and is executable only by `authenticated`. It requires an active account and `public.has_permission('audit.read')`, validates a fixed purpose-code allowlist, returns only the minimum actor attribution fields, and returns no actor data for denied, throttled or disabled requests. The existing permission catalogue does not grant `audit.read` to ordinary staff roles; therefore, only super-admins currently satisfy the permission check. No permission grant to other roles is introduced by this migration.
+
+Two transaction-scoped advisory locks are acquired in a stable order, system-wide first and principal second. This serialises counter evaluation and insertions, prevents concurrent requests from exceeding configured limits, and prevents subject-ID rotation from bypassing the principal-level ceiling. Every returned outcome is written to the existing append-only `public.audit_log`; audit-write errors abort the lookup and return no actor data. Old counter records are pruned after one hour.
+
+The dedicated pgTAP suite is `26_batch_03_1_compliance_lookup.test.sql`. It covers disabled-by-default behaviour, function/table privileges, permission denial, purpose validation, permitted and unknown subjects, principal denial limits, system-wide limits, and durable audit outcomes. The repository concurrency suite now also runs two genuinely concurrent authenticated lookup requests against a system limit of one, asserting exactly one permitted response, one throttled response and two audit records.
+
+**Operational restriction:** M4 does not enable compliance lookup in Staging or Production. The feature remains disabled until the owner approves the operating thresholds and an authorised database operation enables it. No hosted database changes have been made.
 
 ## 9. M3 implementation record
 
