@@ -1,5 +1,5 @@
 begin;
-select plan(36);
+select plan(39);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -264,6 +264,27 @@ select is(
    where d.actor_subject_id = current_setting('test.ai_actor_subject_id')::uuid),
   'true',
   'Test 18a: account deletion anonymises the existing AI actor mapping while retaining its subject ID'
+);
+
+select is(
+  (select (profile_id is null and deleted_at is not null)
+   from private.lookup_ai_actor_subject(current_setting('test.ai_actor_subject_id')::uuid)),
+  true,
+  'Test 18b: internal actor lookup returns the anonymised subject without profile attribution'
+);
+
+select throws_ok(
+  $select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')$,
+  'P0001',
+  'Deleted profiles cannot be mapped to an AI actor.',
+  'Test 18c: deleted profiles cannot receive a new or restored actor mapping'
+);
+
+select throws_ok(
+  $select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000099')$,
+  'P0002',
+  'Profile not found.',
+  'Test 18d: actor resolver rejects nonexistent profiles'
 );
 
 -- 17: New orders/bookings against deleting/deleted u1 are blocked by trigger
