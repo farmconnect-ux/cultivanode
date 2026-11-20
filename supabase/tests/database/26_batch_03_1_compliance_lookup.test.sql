@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(26);
 
 select ok(
   to_regclass('private.ai_compliance_lookup_limits') is not null
@@ -202,6 +202,7 @@ select is(
 );
 
 reset role;
+delete from private.ai_compliance_lookup_limits;
 update private.ai_compliance_lookup_config
    set principal_attempt_limit = 100,
        principal_denied_limit = 100,
