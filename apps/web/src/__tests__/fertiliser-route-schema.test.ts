@@ -6,7 +6,7 @@ vi.mock("@/lib/engines-api-helper", () => ({
   parseJsonBody: vi.fn(),
 }));
 
-import { FertiliserSchema, SoilSchema } from "@/app/api/engines/agronomy/fertiliser/route";
+import { FertiliserSchema, SoilSchema } from "@/lib/fertiliser-schema";
 
 const validSoil = {
   pH: 6.2,
