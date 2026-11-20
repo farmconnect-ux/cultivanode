@@ -16,6 +16,12 @@
 2. **M4.1 write-amplification defect (`8509e46`):** Although `private.ai_compliance_lookup_throttle_state` bounded row cardinality to one row per scope, every repeated rejected call still executed an `UPDATE ... SET suppressed_count = suppressed_count + 1` against that row, creating unbounded persistent database write operations and contention under sustained abuse.
 
 ### Implemented M4.1 Remediation (`20261120030000_batch_03_1_compliance_lookup_rpc.sql`)
+### M4.1.2 deterministic exact-boundary regression coverage
+
+The production RPC now delegates both rolling-window expiry decisions to the same private immutable predicate, `private.ai_compliance_window_expired(window_started_at, window_cutoff)`. The predicate is not executable by application roles. The pgTAP suite exercises it with fixed timestamps for all three relations: earlier than cutoff (expired), exactly equal to cutoff (expired), and later than cutoff (still active). The equality assertion is a direct regression guard: changing the shared production predicate from `<=` to `<` makes that assertion fail.
+
+This is deterministic predicate-level coverage of the exact function used by both production branches, not a claim that the complete RPC's internal `clock_timestamp()` was frozen at equality. The concurrency suite's former “exact 900s boundary” label was inaccurate because its setup timestamp precedes the RPC's separately captured clock value; it is now correctly described as a concurrent expired-window reset. That test continues to verify a single reset under six concurrent callers.
+
 1. **Fail-fast pre-write eligibility checks:**
    - Unauthenticated callers (`auth.uid() IS NULL`) raise `28000` before acquiring locks or writing any rows.
    - Suspended, deleting, or deleted accounts (`NOT private.account_active(v_principal_id)` OR `deleted_at IS NOT NULL` OR `deletion_status IS NOT NULL`) return `{"status": "denied"}` immediately with **zero** persistent writes.
