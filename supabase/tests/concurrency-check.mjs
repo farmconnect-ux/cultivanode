@@ -603,7 +603,7 @@ async function main() {
         || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4g}');
   `);
   assert.equal(verify4g.stdout, 'failed:Worker B Storage 503|storage_pending');
-  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');\n
+  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');
   console.log('5. Testing concurrent AI compliance lookups against the system-wide limit...');
   const compliancePrincipal = randomUUID();
   const complianceTarget = randomUUID();
