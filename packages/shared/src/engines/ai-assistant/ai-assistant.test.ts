@@ -11,7 +11,7 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
 
     expect(result.passed).toBe(false);
     expect(result.bannedChemicalsDetected).toContain('paraquat');
-    expect(result.sanitizedResponseText).toContain('BANNED');
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
   });
 
   it('blocks even educational warnings that mention a banned pesticide', () => {
@@ -91,8 +91,8 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
       language: 'en',
     });
 
-    // The answer is itself a warning, so it is shown as written; the banned name is still recorded.
-    expect(res.passedSafetyGuardrail).toBe(true);
+    // Any mention of a banned chemical blocks the answer, including educational discussion.
+    expect(res.passedSafetyGuardrail).toBe(false);
     expect(res.bannedChemicalsDetected).toContain('paraquat');
     expect(res.answer).toContain('BANNED');
   });
