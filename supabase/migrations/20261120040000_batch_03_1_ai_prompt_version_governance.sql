@@ -168,7 +168,7 @@ begin
     updated_at = excluded.updated_at;
 
   insert into private.ai_prompt_activation_history(
-    prompt_key, from_version, to_version, operation, reason, actor_id
+    prompt_key, from_version, to_version, operation, reason, actor_subject_id
   ) values (p_prompt_key, v_previous, p_version, 'activate', trim(p_reason), v_actor_subject_id);
 
   insert into public.audit_log(actor_id, action, entity, entity_id, new_values)
@@ -244,7 +244,7 @@ begin
    where prompt_key = p_prompt_key;
 
   insert into private.ai_prompt_activation_history(
-    prompt_key, from_version, to_version, operation, reason, actor_id
+    prompt_key, from_version, to_version, operation, reason, actor_subject_id
   ) values (p_prompt_key, v_current, v_previous, 'rollback', trim(p_reason), v_actor_subject_id);
 
   insert into public.audit_log(actor_id, action, entity, entity_id, new_values)
