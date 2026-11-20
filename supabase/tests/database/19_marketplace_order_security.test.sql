@@ -7,7 +7,7 @@
 --        single-settlement-per-order (rejects second distinct reference), DB-level unique
 --        escrow/ledger constraints, and legitimate retry after a failed payment.
 begin;
-select plan(21);
+select plan(44);
 
 -- 1. Seed users, seller, category, listing, and pre-existing orders (as postgres)
 insert into auth.users (id, phone) values
@@ -267,6 +267,219 @@ select is(
   (select total_amount_kobo from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
   5300000::bigint,
   'Test 7: place_marketplace_order() computes server-side total (2 * 2,500,000 + 300,000 delivery = 5,300,000 kobo)'
+);
+
+reset role;
+select is(
+  (select count(*)::integer from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  1,
+  'Test 7a: New checkout creates exactly one notification for its seller'
+);
+select ok(
+  (select data->>'item_summary' like '%NPK 15-15-15 Bag 50kg%' from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  'Test 7b: Seller notification includes the purchased product and quantity summary'
+);
+select is(
+  (select data->>'order_number' from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  (select order_number from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'Test 7c: Seller notification carries the correct order reference'
+);
+
+
+-- 7d: Fulfilment lifecycle, tracking requirement, buyer notification, and order completion.
+reset role;
+create temp table lifecycle_fulfilment as
+  select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.placed_order) limit 1;
+grant select on pg_temp.lifecycle_fulfilment to authenticated;
+update public.marketplace_orders
+   set payment_mode = 'direct', payment_status = 'paid', paid_at = now()
+ where id = (select id from pg_temp.placed_order);
+update public.marketplace_fulfilments
+   set direct_payment_status = 'confirmed', seller_confirmed_paid_at = now()
+ where id = (select id from pg_temp.lifecycle_fulfilment);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'confirmed');
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'preparing');
+select throws_ok(
+  $$select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'dispatched', null, null)$$,
+  '22023',
+  'Add a tracking number, vehicle registration or delivery contact before dispatch.',
+  'Test 7d: Seller cannot dispatch seller-delivery fulfilment without tracking information'
+);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'dispatched', 'Leaving the farm', 'TEST-VAN-001');
+reset role;
+select ok(
+  (select dispatched_at is not null and tracking_number = 'TEST-VAN-001' from public.marketplace_fulfilments where id = (select id from pg_temp.lifecycle_fulfilment)),
+  'Test 7e: Dispatch records timestamp and tracking reference'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'delivered', 'Delivered to customer', null);
+reset role;
+select ok(
+  (select delivered_at is not null from public.marketplace_fulfilments where id = (select id from pg_temp.lifecycle_fulfilment)),
+  'Test 7f: Seller delivery action records delivered_at'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
+select public.buyer_confirm_direct_delivery((select id from pg_temp.lifecycle_fulfilment));
+reset role;
+select is(
+  (select status from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'completed',
+  'Test 7g: Parent order becomes completed after buyer confirms the only fulfilment'
+);
+select ok(
+  (select completed_at is not null from public.marketplace_orders where id = (select id from pg_temp.placed_order)),
+  'Test 7h: Parent order completion timestamp is recorded'
+);
+select is(
+  (select count(*)::integer from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000001' and kind = 'marketplace_order_dispatched' and data->>'order_id' = (select id::text from pg_temp.placed_order)),
+  1,
+  'Test 7i: Dispatch creates a buyer notification'
+);
+
+-- 7j-7o: PR 0 reconciliation regression coverage:
+--   temp-table isolation across repeated checkouts, notification RLS boundary,
+--   ready_for_pickup -> dispatched for seller-delivery (proves 20261117190000 ran after 20261117180000
+--   and does not double-settle inventory), pre-handover buyer receipt guard,
+--   buyer/seller access boundaries, and terminal accepted-state protection.
+reset role;
+create temp table inv_before_second_checkout as
+  select physical_quantity, reserved_quantity
+    from public.marketplace_inventory_lots
+   where id = 'b5000000-0000-0000-0000-000000000041';
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
+create table pg_temp.second_order (id uuid);
+insert into pg_temp.second_order
+  select public.place_marketplace_order(
+    '[{"listing_id":"b5000000-0000-0000-0000-000000000040","quantity":1}]'::jsonb,
+    '{"line":"14 Ring Road","state":"Oyo","lga":"Ibadan South","phone":"08012345678"}'::jsonb,
+    'Second checkout in same transaction'
+  );
+select is(
+  (select total_amount_kobo from public.marketplace_orders where id = (select id from pg_temp.second_order)),
+  2800000::bigint,
+  'Test 7j: Second place_marketplace_order() in same transaction isolates pg_temp.order_lines (1 * 2,500,000 + 300,000 = 2,800,000 kobo)'
+);
+select is(
+  (select count(*)::integer from public.notifications where profile_id = 'b5000000-0000-0000-0000-000000000002' and kind = 'marketplace_order_placed'),
+  0,
+  'Test 7k: Buyer cannot read seller marketplace_order_placed notifications under RLS'
+);
+
+reset role;
+select ok(
+  (select l.physical_quantity = b.physical_quantity and l.reserved_quantity = b.reserved_quantity + 1
+     from public.marketplace_inventory_lots l, pg_temp.inv_before_second_checkout b
+    where l.id = 'b5000000-0000-0000-0000-000000000041'),
+  'Test 7j-inv: Second checkout reserves 1 unit on lot without deducting physical stock yet'
+);
+create temp table second_fulfilment as
+  select id from public.marketplace_fulfilments where order_id = (select id from pg_temp.second_order) limit 1;
+grant select on pg_temp.second_fulfilment to authenticated;
+update public.marketplace_orders
+   set payment_mode = 'direct', payment_status = 'paid', paid_at = now()
+ where id = (select id from pg_temp.second_order);
+update public.marketplace_fulfilments
+   set direct_payment_status = 'confirmed', seller_confirmed_paid_at = now()
+ where id = (select id from pg_temp.second_fulfilment);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'confirmed');
+select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'ready_for_pickup');
+
+reset role;
+select ok(
+  (select l.physical_quantity = b.physical_quantity - 1 and l.reserved_quantity = b.reserved_quantity
+     from public.marketplace_inventory_lots l, pg_temp.inv_before_second_checkout b
+    where l.id = 'b5000000-0000-0000-0000-000000000041'),
+  'Test 7l-ready-inv: Entering ready_for_pickup settles 1 unit (physical -1, reserved -1)'
+);
+create temp table inv_after_ready as
+  select physical_quantity, reserved_quantity
+    from public.marketplace_inventory_lots
+   where id = 'b5000000-0000-0000-0000-000000000041';
+
+-- Pre-handover receipt guard while ready_for_pickup on seller-delivery order
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
+select throws_ok(
+  $$select public.buyer_confirm_direct_delivery((select id from pg_temp.second_fulfilment))$$,
+  'P0001',
+  'You can confirm receipt after the seller has handed over the goods.',
+  'Test 7m-1: Buyer cannot confirm receipt on seller-delivery order while still ready_for_pickup'
+);
+
+-- Buyer access boundary on seller_update_fulfilment
+select throws_ok(
+  $$select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'dispatched', null, 'BUYER-SPOOF')$$,
+  '42501',
+  'Only the seller can update this order.',
+  'Test 7n-1: Buyer cannot invoke seller_update_fulfilment'
+);
+
+-- Seller can dispatch seller-delivery order from ready_for_pickup (verifies 20261117190000 active after 20261117180000)
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select is(
+  (select (public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'dispatched', 'Ready to roll', 'VAN-READY-02'))->>'status'),
+  'dispatched',
+  'Test 7l: Seller-delivery order can transition from ready_for_pickup to dispatched'
+);
+
+reset role;
+select ok(
+  (select status = 'dispatched' and dispatched_at is not null from public.marketplace_fulfilments where id = (select id from pg_temp.second_fulfilment)),
+  'Test 7l-dispatch-ts: Transitioning ready_for_pickup -> dispatched sets status and dispatched_at'
+);
+select is(
+  (select physical_quantity from public.marketplace_inventory_lots where id = 'b5000000-0000-0000-0000-000000000041'),
+  (select physical_quantity from pg_temp.inv_after_ready),
+  'Test 7l-no-double-settle-phys: Transitioning ready_for_pickup -> dispatched does not deduct physical_quantity a second time'
+);
+select is(
+  (select reserved_quantity from public.marketplace_inventory_lots where id = 'b5000000-0000-0000-0000-000000000041'),
+  (select reserved_quantity from pg_temp.inv_after_ready),
+  'Test 7l-no-double-settle-res: Transitioning ready_for_pickup -> dispatched does not deduct reserved_quantity a second time'
+);
+
+-- Pre-handover receipt guard while dispatched (not yet delivered)
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000001"}', true);
+select throws_ok(
+  $$select public.buyer_confirm_direct_delivery((select id from pg_temp.second_fulfilment))$$,
+  'P0001',
+  'You can confirm receipt after the seller has handed over the goods.',
+  'Test 7m-2: Buyer cannot confirm receipt on seller-delivery order while dispatched before delivered'
+);
+
+-- Seller access boundary on buyer_confirm_direct_delivery
+select set_config('request.jwt.claims', '{"sub":"b5000000-0000-0000-0000-000000000002"}', true);
+select public.seller_update_fulfilment((select id from pg_temp.second_fulfilment), 'delivered', 'Handed over', null);
+select throws_ok(
+  $$select public.buyer_confirm_direct_delivery((select id from pg_temp.second_fulfilment))$$,
+  'P0001',
+  'You can confirm receipt after the seller has handed over the goods.',
+  'Test 7n-2: Seller cannot confirm buyer receipt via buyer_confirm_direct_delivery'
+);
+
+-- Terminal-state protection on accepted fulfilment (lifecycle_fulfilment is already accepted)
+select throws_ok(
+  $$select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'dispatched', null, 'REPLAY-VAN')$$,
+  '22023',
+  'This order can''t go from accepted to dispatched.',
+  'Test 7o-1: Terminal accepted fulfilment rejects further dispatch transitions'
+);
+select throws_ok(
+  $$select public.seller_update_fulfilment((select id from pg_temp.lifecycle_fulfilment), 'delivered', 'Duplicate', null)$$,
+  '22023',
+  'This order can''t go from accepted to delivered.',
+  'Test 7o-2: Terminal accepted fulfilment rejects further delivery transitions'
 );
 
 -- Test 8: Payment webhook security, idempotency, duplicate-settlement protection & retry

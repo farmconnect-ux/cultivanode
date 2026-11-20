@@ -69,6 +69,7 @@ export default async function OrderDetailPage({
         notes,
         dispatched_at,
         delivered_at,
+        confirmed_at,
         marketplace_sellers ( business_name )
       )
     `)
@@ -102,6 +103,8 @@ export default async function OrderDetailPage({
     payouts = new Map(((data ?? []) as Payout[]).map((p) => [p.seller_id, p]));
   }
   const isPaid = ["paid", "escrowed", "released"].includes(order.payment_status);
+  const allDispatched = fulfilments.length > 0 && fulfilments.every((f) => Boolean(f.dispatched_at) || Boolean(f.delivered_at) || (f.status === "accepted" && Boolean(f.confirmed_at)));
+  const allReceived = fulfilments.length > 0 && fulfilments.every((f) => Boolean(f.confirmed_at) && ["delivered", "accepted"].includes(f.status));
 
   return (
     <Container className="py-10 sm:py-14 max-w-4xl flex flex-col gap-8">
@@ -176,25 +179,25 @@ export default async function OrderDetailPage({
           </div>
           <div className="flex flex-col items-center">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold mb-1 ${
-              order.status !== 'placed' && order.status !== 'draft' ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
+              isPaid ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
             }`}>
-              {order.status !== 'placed' && order.status !== 'draft' ? '✓' : '2'}
+              {isPaid ? '✓' : '2'}
             </div>
             <span className="font-bold text-ink">{isDirect ? "Paid" : "Paid / Escrow"}</span>
           </div>
           <div className="flex flex-col items-center">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold mb-1 ${
-              order.status === 'delivered' || order.status === 'completed' ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
+              allDispatched ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
             }`}>
-              {order.status === 'delivered' || order.status === 'completed' ? '✓' : '3'}
+              {allDispatched ? '✓' : '3'}
             </div>
-            <span className="font-bold text-ink">Dispatched</span>
+            <span className="font-bold text-ink">Handed over</span>
           </div>
           <div className="flex flex-col items-center">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold mb-1 ${
-              order.status === 'completed' ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
+              allReceived ? 'bg-leaf-700 text-white' : 'bg-line text-muted'
             }`}>
-              {order.status === 'completed' ? '✓' : '4'}
+              {allReceived ? '✓' : '4'}
             </div>
             <span className="font-bold text-ink">{isDirect ? "Received" : "Settled"}</span>
           </div>
@@ -255,7 +258,10 @@ export default async function OrderDetailPage({
               </div>
               <h3 className="font-bold text-ink mt-1">Seller: {f.marketplace_sellers?.business_name}</h3>
               <p className="text-xs text-muted">Method: {f.delivery_method} · Amount: {formatNaira(f.subtotal_kobo)}</p>
-              {f.tracking_number && <p className="text-xs text-ink">Tracking / vehicle: <strong>{f.tracking_number}</strong></p>}
+              {f.tracking_number && <p className="text-xs text-ink">Tracking / delivery reference: <strong>{f.tracking_number}</strong></p>}
+              {f.dispatched_at && <p className="text-xs text-muted">Dispatched: {new Date(f.dispatched_at).toLocaleString()}</p>}
+              {f.delivered_at && <p className="text-xs text-muted">Marked delivered: {new Date(f.delivered_at).toLocaleString()}</p>}
+              {f.confirmed_at && <p className="text-xs text-muted">Receipt confirmed: {new Date(f.confirmed_at).toLocaleString()}</p>}
               {f.notes && <p className="mt-1 whitespace-pre-line text-xs text-muted">Seller notes: {f.notes}</p>}
               {isDirect && <DirectPayBox d={direct.get(f.id)} payout={payouts.get(f.seller_id)} reference={f.fulfilment_number} amount={formatNaira(f.subtotal_kobo)} />}
             </div>

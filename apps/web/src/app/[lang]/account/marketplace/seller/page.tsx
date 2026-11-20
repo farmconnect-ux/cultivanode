@@ -52,7 +52,7 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
       .order("created_at", { ascending: false }),
     supabase
       .from("marketplace_fulfilments")
-      .select("id, order_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method, tracking_number, notes, created_at, marketplace_orders ( order_number, payment_status, delivery_address, buyer_notes )")
+      .select("id, order_id, fulfilment_number, status, subtotal_kobo, delivery_fee_kobo, delivery_method, tracking_number, notes, dispatched_at, delivered_at, confirmed_at, created_at, marketplace_orders ( order_number, payment_status, delivery_address, buyer_notes )")
       .eq("seller_id", shopId)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -262,12 +262,22 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
                 );
               },
             },
-            { label: "Status", cell: (f) => <Status value={f.status} /> },
+            { label: "Status", cell: (f) => (
+              <div className="flex flex-col items-start gap-1">
+                <Status value={f.status} />
+                {f.dispatched_at && <span className="text-xs text-on-surface-variant">Dispatched: {new Date(f.dispatched_at).toLocaleString()}</span>}
+                {f.delivered_at && <span className="text-xs text-on-surface-variant">Delivered: {new Date(f.delivered_at).toLocaleString()}</span>}
+                {f.confirmed_at && <span className="text-xs text-on-surface-variant">Buyer confirmed receipt</span>}
+                {f.status === "accepted" && <span className="text-xs text-on-surface-variant">Complete, no further action required</span>}
+              </div>
+            ) },
             {
               label: "",
               cell: (f) => (
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  {(NEXT_STEPS[f.status] ?? []).map(([to, text]) =>
+                  {(f.status === "ready_for_pickup" && f.delivery_method !== "pickup"
+                    ? [["dispatched", "Dispatch"] as [string, string]]
+                    : NEXT_STEPS[f.status] ?? []).map(([to, text]) =>
                     to === "rejected" || to === "dispatched" ? (
                       <ActionDialog
                         key={to}
@@ -283,7 +293,7 @@ export default async function SellerShopPage({ params }: PageProps<"/[lang]/acco
                           to === "rejected"
                             ? [{ name: "note", label: "Reason", type: "textarea", required: true, placeholder: "e.g. Out of stock until next harvest" }]
                             : [
-                                { name: "tracking", label: "Tracking / vehicle number" },
+                                { name: "tracking", label: "Tracking number, vehicle registration or delivery contact", required: true, hint: "Required for dispatch so the buyer can identify and follow the delivery." },
                                 { name: "note", label: "Note to buyer", type: "textarea", placeholder: "e.g. Arriving Thursday afternoon" },
                               ]
                         }
