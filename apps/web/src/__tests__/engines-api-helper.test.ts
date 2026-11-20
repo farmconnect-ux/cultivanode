@@ -121,9 +121,18 @@ describe("authorizeFarmRequest", () => {
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
-  it("does not query farms when Supabase rejects the JWT", async () => {
+  it("fails closed when Supabase auth throws", async () => {
     mocks.getUser.mockRejectedValueOnce(new Error("network failure"));
-    await expect(authorizeFarmRequest(request("Bearer valid-token"), FARM_ID)).rejects.toThrow("network failure");
+    const result = await authorizeFarmRequest(request("Bearer valid-token"), FARM_ID);
+    expect(result.authorized).toBe(false);
+    if (!result.authorized) expect(result.response.status).toBe(401);
     expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic access error when the farm query throws", async () => {
+    mocks.maybeSingle.mockRejectedValueOnce(new Error("internal database detail"));
+    const result = await authorizeFarmRequest(request("Bearer valid-token"), FARM_ID);
+    expect(result.authorized).toBe(false);
+    if (!result.authorized) expect(result.response.status).toBe(500);
   });
 });
