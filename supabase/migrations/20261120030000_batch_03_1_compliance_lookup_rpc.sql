@@ -72,6 +72,25 @@ insert into private.ai_compliance_lookup_config (
 ) values (true, false, 900, 60, 10, 5, 30)
 on conflict (singleton) do nothing;
 
+-- Shared deterministic predicate for rolling-window expiry. Keeping this predicate
+-- in one private function lets pgTAP exercise the exact production comparison with
+-- fixed timestamps, without introducing a clock override into the compliance RPC.
+create or replace function private.ai_compliance_window_expired(
+  p_window_started_at timestamptz,
+  p_window_cutoff timestamptz
+)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $
+  select p_window_started_at <= p_window_cutoff;
+$;
+
+alter function private.ai_compliance_window_expired(timestamptz, timestamptz) owner to postgres;
+revoke all on function private.ai_compliance_window_expired(timestamptz, timestamptz)
+  from public, anon, authenticated, service_role;
+
 create or replace function public.compliance_lookup_ai_actor(
   p_actor_subject_id uuid,
   p_purpose text
@@ -145,7 +164,7 @@ begin
       from private.ai_compliance_lookup_throttle_state
      where scope_key = v_throttle_scope;
 
-    if not found or v_existing_throttle.window_started_at <= v_window_cutoff then
+    if not found or private.ai_compliance_window_expired(v_existing_throttle.window_started_at, v_window_cutoff) then
       delete from private.ai_compliance_lookup_throttle_state
        where last_recorded_at < v_now - interval '1 hour';
 
@@ -213,7 +232,7 @@ begin
       from private.ai_compliance_lookup_throttle_state
      where scope_key = v_throttle_scope;
 
-    if not found or v_existing_throttle.window_started_at <= v_window_cutoff then
+    if not found or private.ai_compliance_window_expired(v_existing_throttle.window_started_at, v_window_cutoff) then
       delete from private.ai_compliance_lookup_throttle_state
        where last_recorded_at < v_now - interval '1 hour';
 
