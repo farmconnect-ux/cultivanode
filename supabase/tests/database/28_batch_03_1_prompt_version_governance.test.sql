@@ -27,9 +27,9 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('service_role', 'private.get_active_ai_prompt(text)', 'EXECUTE')
-  and not has_function_privilege('authenticated', 'private.get_active_ai_prompt(text)', 'EXECUTE')
-  and not has_function_privilege('anon', 'private.get_active_ai_prompt(text)', 'EXECUTE'),
+  has_function_privilege('service_role', 'public.get_active_ai_prompt(text)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.get_active_ai_prompt(text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.get_active_ai_prompt(text)', 'EXECUTE'),
   'runtime prompt reader is service_role-only'
 );
 
@@ -74,7 +74,7 @@ select is(
 reset role;
 set local role service_role;
 select is(
-  private.get_active_ai_prompt('agronomy.advisor')->>'content',
+  public.get_active_ai_prompt('agronomy.advisor')->>'content',
   'Initial safe agronomy prompt',
   'service runtime can resolve active prompt content'
 );
@@ -111,7 +111,7 @@ select throws_ok(
 reset role;
 set local role service_role;
 select is(
-  private.get_active_ai_prompt('agronomy.advisor')->>'content',
+  public.get_active_ai_prompt('agronomy.advisor')->>'content',
   'Initial safe agronomy prompt',
   'runtime resolves restored prompt content after rollback'
 );
