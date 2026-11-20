@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(18);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'private.ai_prompt_versions'::regclass)
@@ -99,6 +99,13 @@ select is(
   public.rollback_active_ai_prompt_version('agronomy.advisor', 'Rollback after observed quality regression')->>'active_version',
   '1.0.0',
   'rollback restores the previous immutable version'
+);
+
+select throws_ok(
+  $select public.rollback_active_ai_prompt_version('agronomy.advisor', 'Attempt a second rollback without a prior activation')$,
+  'P0002',
+  null,
+  'rollback does not toggle forward to a version created by an earlier rollback'
 );
 
 reset role;
