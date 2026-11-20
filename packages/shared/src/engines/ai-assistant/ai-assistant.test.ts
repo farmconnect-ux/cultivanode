@@ -14,6 +14,19 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
     expect(result.sanitizedResponseText).toContain('BANNED');
   });
 
+  it('blocks even educational warnings that mention a banned pesticide', () => {
+    const result = checkChemicalSafetyGuardrails('Never use paraquat. It is prohibited.');
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toContain('paraquat');
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+  });
+
+  it('blocks a mixed warning and recommendation mentioning a banned pesticide', () => {
+    const result = checkChemicalSafetyGuardrails('Avoid paraquat, but apply paraquat at 1 L/ha.');
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toContain('paraquat');
+  });
+
   it('appends safety notices for approved chemicals like Atrazine', () => {
     const rawResponse = 'Apply Atrazine at 3 liters per hectare for early weed control.';
     const result = checkChemicalSafetyGuardrails(rawResponse);
