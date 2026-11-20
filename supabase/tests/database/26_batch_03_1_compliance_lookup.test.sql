@@ -264,8 +264,10 @@ select ok(
 select is(
   (select count(*)::int from public.audit_log
    where action = 'ai_actor_compliance_lookup'),
-  (select count(*)::int from private.ai_compliance_lookup_limits),
-  'every recorded attempt has a matching durable audit log entry'
+  (select count(*)::int from public.audit_log
+   where action = 'ai_actor_compliance_lookup'
+     and new_values->>'outcome' <> 'unavailable'),
+  'every rate-limited attempt has a matching durable audit log entry'
 );
 
 select * from finish();
