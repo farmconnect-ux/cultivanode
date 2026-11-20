@@ -3,17 +3,28 @@ import { z } from 'zod';
 import { calculateFertiliserRecommendation, type SoilNutrientProfile } from '@cultivanode/shared';
 import { authorizeRequest, parseJsonBody } from '@/lib/engines-api-helper';
 
+const SoilSchema = z.object({
+  pH: z.number().min(0).max(14).optional(),
+  ph: z.number().min(0).max(14).optional(),
+  nitrogenPpm: z.number().min(0).optional(),
+  phosphorusPpm: z.number().min(0),
+  potassiumPpm: z.number().min(0),
+  organicMatterPercent: z.number().min(0).max(100).optional(),
+  organicMatterPct: z.number().min(0).max(100).optional(),
+}).refine((soil) => soil.pH !== undefined || soil.ph !== undefined, {
+  message: 'Soil pH is required.',
+}).transform((soil) => ({
+  pH: soil.pH ?? soil.ph!,
+  phosphorusPpm: soil.phosphorusPpm,
+  potassiumPpm: soil.potassiumPpm,
+  organicMatterPercent: soil.organicMatterPercent ?? soil.organicMatterPct,
+}));
+
 const FertiliserSchema = z.object({
   cropId: z.string().min(1).max(80),
   targetYieldTonnesPerHa: z.number().positive().max(100),
   farmAreaHectares: z.number().positive().max(100_000),
-  soil: z.object({
-    ph: z.number().min(0).max(14).optional(),
-    nitrogenPpm: z.number().min(0).optional(),
-    phosphorusPpm: z.number().min(0).optional(),
-    potassiumPpm: z.number().min(0).optional(),
-    organicMatterPct: z.number().min(0).max(100).optional(),
-  }),
+  soil: SoilSchema,
 });
 
 export async function POST(req: Request) {
