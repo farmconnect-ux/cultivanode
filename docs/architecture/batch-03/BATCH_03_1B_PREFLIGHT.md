@@ -38,7 +38,7 @@ The intended order remains:
 | Migration | Purpose | Current readiness |
 |---|---|---|
 | M1 | Enable `vector` in `extensions`; add `ai_intelligence` to `public.consent_type` | Ready for code and tests |
-| M2 | Private actor directory, internal functions and deletion anonymisation hook | Ready for code after exact deletion-function and ownership/ACL tests |
+| M2 | Private actor directory, internal functions and deletion anonymisation hook | Implemented on branch; awaiting CI and review |
 | M3 | Append-only AI audit events, trusted writer and constrained feedback RPC | Ready for code after RLS and append-only tests |
 | M4 | Audited, concurrency-safe compliance lookup | Permission key and provisional rate thresholds require owner decision |
 | M5 | Immutable prompt versions, active pointers and audited activation/rollback | Activation permission key requires owner decision |
@@ -56,6 +56,25 @@ The M4 provisional rate limits remain: 10 attempts per principal per 15 minutes,
 ## 6. Security-advisor baseline
 
 The read-only Staging security advisor currently reports pre-existing findings, including RLS-enabled tables with no policies, SECURITY DEFINER functions executable by anon/authenticated, and disabled leaked-password protection. These are baseline findings, not regressions introduced by Batch 03.1B. New migrations must not increase the relevant findings; targeted grant checks and advisor comparisons will be required after Staging application.
+
+
+## 8. M2 implementation record
+
+M2 has been implemented in `20261120010000_batch_03_1b_ai_actor_directory.sql`.
+
+The migration creates `private.ai_actor_directory` with stable pseudonymous `actor_subject_id`, `actor_kind`, nullable profile attribution, creation/update timestamps and deletion timestamp. A partial unique index permits only one active user actor mapping per profile. Constraints distinguish user and system actors and prevent a deleted actor from retaining profile attribution. RLS is enabled and all table privileges are revoked from `PUBLIC`, `anon`, `authenticated` and `service_role`.
+
+Three `SECURITY DEFINER` functions use an empty search path and are owned by `postgres`, with execution revoked from application roles:
+
+- `private.resolve_or_create_ai_actor(uuid)` validates an existing, non-deleted profile, takes a key-share lock to coordinate with account deletion, and creates or returns its stable actor subject.
+- `private.anonymise_ai_actor(uuid)` idempotently nulls the profile reference and records `deleted_at`; it does not alter the subject identifier or any AI audit event.
+- `private.lookup_ai_actor_subject(uuid)` provides a minimal internal lookup and is not directly executable by application roles or `service_role`.
+
+The migration replaces `public.execute_account_deletion(uuid,text)` using the exact lease-safe, operationally guarded implementation from the current Batch 02.5 hardening migration. The only functional addition is an internal call to `private.anonymise_ai_actor(p_user_id)` in the same transaction, before the existing account-deletion audit-log insertion. Existing idempotency, advisory locks, super-admin protection, booking/order/fulfilment/escrow/settlement blockers, organisation transfer/archive, Storage queueing, PII anonymisation and audit behaviour are retained. The existing `service_role`-only execute grant is retained.
+
+Regression coverage adds three assertions to the existing account-deletion lifecycle test for stable actor resolution, application-role access restrictions and anonymisation. It also verifies the anonymised subject remains internally resolvable, deleted profiles cannot be remapped, and nonexistent profiles are rejected. A dedicated M2 pgTAP file checks schema/table/function ACLs, RLS, identity constraints, the partial unique index and the SECURITY DEFINER/empty-search-path boundary.
+
+**Verification status:** source and test files are committed to the Batch 03.1B branch. CI has not yet been run for this branch. No Staging or Production migration has been applied.
 
 ## 7. Execution boundary
 
