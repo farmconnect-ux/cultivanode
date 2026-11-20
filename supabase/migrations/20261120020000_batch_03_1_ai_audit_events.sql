@@ -155,6 +155,8 @@ begin
   loop
     if jsonb_typeof(v_ref) <> 'object'
        or v_ref - array['source', 'record_id', 'observed_at']::text[] <> '{}'::jsonb
+       or not (v_ref ? 'source')
+       or not (v_ref ? 'record_id')
        or jsonb_typeof(v_ref -> 'source') <> 'string'
        or char_length(v_ref ->> 'source') not between 1 and 64
        or jsonb_typeof(v_ref -> 'record_id') <> 'string'
