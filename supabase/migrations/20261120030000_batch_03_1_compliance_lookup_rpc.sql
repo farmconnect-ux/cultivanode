@@ -84,52 +84,52 @@ begin
     from private.ai_compliance_lookup_config
    where singleton = true;
 
-  if not found or not v_config.enabled then
+  if not found then
+    raise exception 'Compliance lookup configuration is unavailable.' using errcode = 'P0001';
+  end if;
+
+  select count(*)::integer,
+         count(*) filter (where outcome = 'denied')::integer
+    into v_principal_attempts, v_principal_denied
+    from private.ai_compliance_lookup_limits
+   where principal_id = v_principal_id
+     and attempted_at >= v_now - make_interval(secs => v_config.window_seconds);
+
+  select count(*)::integer
+    into v_system_attempts
+    from private.ai_compliance_lookup_limits
+   where attempted_at >= v_now - make_interval(secs => v_config.window_seconds);
+
+  if v_principal_attempts >= v_config.principal_attempt_limit
+     or v_principal_denied >= v_config.principal_denied_limit
+     or v_system_attempts >= v_config.system_attempt_limit then
+    v_outcome := 'throttled';
+  elsif not v_config.enabled then
     v_outcome := 'unavailable';
+  elsif not private.account_active(v_principal_id)
+     or not public.has_permission('audit.read')
+     or p_actor_subject_id is null
+     or v_purpose is null
+     or char_length(v_purpose) not between 3 and 200
+     or v_purpose not in ('data_subject_request', 'regulatory_inquiry', 'security_incident', 'legal_obligation') then
+    v_outcome := 'denied';
   else
-    select count(*)::integer,
-           count(*) filter (where outcome = 'denied')::integer
-      into v_principal_attempts, v_principal_denied
-      from private.ai_compliance_lookup_limits
-     where principal_id = v_principal_id
-       and attempted_at >= v_now - make_interval(secs => v_config.window_seconds);
+    select * into v_actor
+      from private.lookup_ai_actor_subject(p_actor_subject_id);
 
-    select count(*)::integer
-      into v_system_attempts
-      from private.ai_compliance_lookup_limits
-     where attempted_at >= v_now - make_interval(secs => v_config.window_seconds);
-
-    if v_principal_attempts >= v_config.principal_attempt_limit
-       or v_principal_denied >= v_config.principal_denied_limit
-       or v_system_attempts >= v_config.system_attempt_limit then
-      v_outcome := 'throttled';
-    elsif not private.account_active(v_principal_id)
-       or not public.has_permission('audit.read')
-       or p_actor_subject_id is null
-       or v_purpose is null
-       or char_length(v_purpose) not between 3 and 200
-       or v_purpose not in ('data_subject_request', 'regulatory_inquiry', 'security_incident', 'legal_obligation') then
+    if not found then
       v_outcome := 'denied';
     else
-      select * into v_actor
-        from private.lookup_ai_actor_subject(p_actor_subject_id);
-
-      if not found then
-        v_outcome := 'denied';
-      else
-        v_outcome := 'permitted';
-      end if;
+      v_outcome := 'permitted';
     end if;
   end if;
 
-  if v_outcome <> 'unavailable' then
-    insert into private.ai_compliance_lookup_limits (
-      principal_id, requested_subject_id, purpose_code, outcome, attempted_at
-    ) values (
-      v_principal_id, p_actor_subject_id,
-      left(coalesce(v_purpose, '[invalid_or_missing]'), 200), v_outcome, v_now
-    );
-  end if;
+  insert into private.ai_compliance_lookup_limits (
+    principal_id, requested_subject_id, purpose_code, outcome, attempted_at
+  ) values (
+    v_principal_id, p_actor_subject_id,
+    left(coalesce(v_purpose, '[invalid_or_missing]'), 200), v_outcome, v_now
+  );
 
   -- Every outcome is recorded in the existing append-only audit log. If this
   -- insert fails, the function raises and returns no actor data (fail closed).
