@@ -20,7 +20,7 @@ export const SoilSchema = z.object({
 }));
 
 export const FertiliserSchema = z.object({
-  cropId: z.string().min(1).max(80),
+  cropId: z.enum(['maize', 'tomato', 'cassava', 'yam', 'rice']),
   targetYieldTonnesPerHa: z.number().finite().positive().max(100),
   farmAreaHectares: z.number().finite().positive().max(100_000),
   soil: SoilSchema,
