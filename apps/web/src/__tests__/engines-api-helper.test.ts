@@ -79,6 +79,7 @@ describe("authorizeFarmRequest", () => {
   it("authorises a farm visible to the verified caller through the caller JWT", async () => {
     const result = await authorizeFarmRequest(request("Bearer valid-token"), FARM_ID);
     expect(result.authorized).toBe(true);
+    if (result.authorized) expect(result.user.id).toBe(USER_ID);
     expect(mocks.createClient).toHaveBeenCalledWith(
       "https://example.supabase.co",
       "public-anon-or-publishable-key",
