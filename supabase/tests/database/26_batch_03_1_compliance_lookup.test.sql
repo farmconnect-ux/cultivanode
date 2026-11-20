@@ -99,6 +99,7 @@ select is(
 );
 
 reset role;
+delete from private.ai_compliance_lookup_limits;
 update private.ai_compliance_lookup_config
    set enabled = true,
        window_seconds = 900,
