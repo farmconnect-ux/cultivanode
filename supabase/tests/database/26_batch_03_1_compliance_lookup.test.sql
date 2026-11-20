@@ -219,7 +219,8 @@ update private.ai_compliance_lookup_config
        system_attempt_limit = 8,
        updated_at = clock_timestamp()
  where singleton = true;
-select set_config('test.ai_compliance_window_start', clock_timestamp()::text, true);
+select set_config('test.ai_compliance_audit_baseline',
+  (select count(*)::text from public.audit_log where action = 'ai_actor_compliance_lookup'), true);
 
 set local role authenticated;
 select set_config('request.jwt.claims',
@@ -264,9 +265,8 @@ select ok(
 
 select is(
   (select count(*)::int from public.audit_log
-   where action = 'ai_actor_compliance_lookup'
-     and created_at >= current_setting('test.ai_compliance_window_start')::timestamptz
-     and new_values->>'outcome' <> 'unavailable'),
+   where action = 'ai_actor_compliance_lookup')
+  - current_setting('test.ai_compliance_audit_baseline')::integer,
   (select count(*)::int from private.ai_compliance_lookup_limits),
   'every rate-limited attempt has a matching durable audit log entry'
 );
