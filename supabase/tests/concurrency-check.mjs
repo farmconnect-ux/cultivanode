@@ -663,8 +663,8 @@ async function main() {
 
   const complianceAudit = await runPsql(`
     SELECT count(*)::text || '|' ||
-           count(*) FILTER (WHERE details->>'outcome' = 'permitted')::text || '|' ||
-           count(*) FILTER (WHERE details->>'outcome' = 'throttled')::text
+           count(*) FILTER (WHERE new_values->>'outcome' = 'permitted')::text || '|' ||
+           count(*) FILTER (WHERE new_values->>'outcome' = 'throttled')::text
       FROM public.audit_log
      WHERE actor_id = '${compliancePrincipal}'
        AND action = 'ai_actor_compliance_lookup';
