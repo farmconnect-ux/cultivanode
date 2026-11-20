@@ -247,7 +247,7 @@ select is(
 
 set local role service_role;
 select throws_ok(
-  $select public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')$,
+  $$select public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')$$,
   '42501',
   null,
   'service_role cannot invoke the compliance lookup RPC'
