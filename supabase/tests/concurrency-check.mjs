@@ -644,7 +644,7 @@ async function main() {
   const complianceTx = () => `
     BEGIN;
     SET LOCAL ROLE authenticated;
-    SELECT set_config('request.jwt.claims', '{"sub":"${compliancePrincipal}","role":"authenticated"}', true);
+    SET LOCAL request.jwt.claims = '{"sub":"${compliancePrincipal}","role":"authenticated"}';
     SELECT public.compliance_lookup_ai_actor(
       '${complianceActorResult.stdout}'::uuid,
       'data_subject_request'
