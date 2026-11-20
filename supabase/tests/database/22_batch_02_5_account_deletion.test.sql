@@ -1,5 +1,5 @@
 begin;
-select plan(39);
+select plan(42);
 
 -- 1-3: service_role-only privileges for account-deletion RPCs and queue table
 select is(
@@ -221,6 +221,56 @@ select ok(
 
 select set_config('test.ai_actor_subject_id', private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')::text, true);
 
+-- Seed AI audit event, feedback, and prompt governance rows attributed to u1's pseudonymous actor_subject_id
+-- to verify that none of M3/M5's immutable tables block account deletion.
+insert into public.farms (id, name, location, owner_id, zone, state, lga)
+values (
+  'e5000000-0000-0000-0000-0000000000f9',
+  'u1 Deletion AI Farm',
+  extensions.st_geogfromtext('SRID=4326;POINT(3.9 7.3)'),
+  'e5000000-0000-0000-0000-000000000001',
+  'derived_savanna',
+  'Oyo',
+  'Ibadan'
+) on conflict (id) do nothing;
+
+select private.write_ai_audit_event(
+  'e5000000-0000-0000-0000-000000000001',
+  'e5000000-0000-0000-0000-0000000000f9',
+  'e5000000-0000-0000-0000-0000000000a9',
+  'claude',
+  'claude-sonnet-5-5',
+  'farm-intelligence-v1',
+  'completed',
+  '{"status":"passed","rule_ids":[],"reason_codes":[],"blocked":false}'::jsonb,
+  '[{"source":"farms","record_id":"e5000000-0000-0000-0000-0000000000f9"}]'::jsonb,
+  '{}'::uuid[]
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"e5000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select public.record_ai_feedback('e5000000-0000-0000-0000-0000000000a9', 'accepted', 'Helpful before deletion');
+reset role;
+
+insert into private.ai_prompt_versions (prompt_key, version, content, content_sha256, created_by)
+values (
+  'deletion.compat.test',
+  '1.0.0',
+  'Prompt authored before account deletion',
+  encode(extensions.digest('Prompt authored before account deletion', 'sha256'), 'hex'),
+  current_setting('test.ai_actor_subject_id')::uuid
+);
+
+insert into private.ai_prompt_activation_history (prompt_key, from_version, to_version, operation, reason, actor_subject_id)
+values (
+  'deletion.compat.test',
+  null,
+  '1.0.0',
+  'activate',
+  'Account deletion compatibility test activation',
+  current_setting('test.ai_actor_subject_id')::uuid
+);
+
 -- 11-18: Execute deletion for u1 -> durable Storage queue populated, data_requests stays open until finalized
 select is(
   (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'No longer needed'))->>'deletion_status'),
@@ -285,6 +335,32 @@ select throws_ok(
   'P0002',
   'Profile not found.',
   'Test 18d: actor resolver rejects nonexistent profiles'
+);
+
+select ok(
+  (select count(*) = 1 from public.ai_audit_events
+    where trace_id = 'e5000000-0000-0000-0000-0000000000a9'
+      and actor_subject_id = current_setting('test.ai_actor_subject_id')::uuid)
+  and (select count(*) = 1 from public.ai_audit_feedback
+    where trace_id = 'e5000000-0000-0000-0000-0000000000a9'
+      and actor_subject_id = current_setting('test.ai_actor_subject_id')::uuid),
+  'Test 18e: AI audit events and feedback remain intact under pseudonymous actor_subject_id after account deletion'
+);
+
+select ok(
+  (select count(*) = 1 from private.ai_prompt_versions
+    where prompt_key = 'deletion.compat.test'
+      and created_by = current_setting('test.ai_actor_subject_id')::uuid)
+  and (select count(*) = 1 from private.ai_prompt_activation_history
+    where prompt_key = 'deletion.compat.test'
+      and actor_subject_id = current_setting('test.ai_actor_subject_id')::uuid),
+  'Test 18f: AI prompt versions and activation history remain intact under pseudonymous actor_subject_id after account deletion'
+);
+
+select is(
+  (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'Idempotent retry'))->>'status'),
+  'already_anonymized',
+  'Test 18g: repeated execute_account_deletion remains idempotent with AI actor anonymisation hook'
 );
 
 -- 17: New orders/bookings against deleting/deleted u1 are blocked by trigger

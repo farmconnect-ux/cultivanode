@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(38);
 
 select ok(
   to_regclass('public.ai_audit_events') is not null,
@@ -208,6 +208,127 @@ select throws_ok(
   '22023',
   null,
   'context references require a record_id field'
+);
+
+-- M3 stricter context_refs validation: source allowlist, record_id format (no PII/secrets/images),
+-- observed_at ISO-8601/calendar check, duplicate rejection, array length, and valid multi-source refs.
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a5',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"auth_users","record_id":"user-1"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Unsupported context reference source.',
+  'context references reject unsupported source tables outside allowlist'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a6',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"farms","record_id":"farmer@example.com"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid context reference record_id format.',
+  'context references reject raw email PII in record_id'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a7',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"farms","record_id":"eyJhbGciOiJIUzI1NiJ9.payload.sig"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid context reference record_id format.',
+  'context references reject JWT/token strings in record_id'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a8',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"crop_observations","record_id":"data:image/png;base64,AAAA"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid context reference record_id format.',
+  'context references reject base64 image payloads in record_id'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a9',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"soil_records","record_id":"soil-001","observed_at":"not-a-timestamp"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid context reference observed_at timestamp.',
+  'context references reject malformed observed_at strings'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000aa',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"soil_records","record_id":"soil-001","observed_at":"2026-02-31T00:00:00Z"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid context reference observed_at timestamp.',
+  'context references reject impossible calendar timestamps in observed_at'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000ab',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"soil_records","record_id":"soil-001"},{"source":"soil_records","record_id":"soil-001"}]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '22023',
+  'Duplicate context references are not permitted.',
+  'context references reject duplicate (source, record_id) pairs'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000ac',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,
+    (select jsonb_agg(jsonb_build_object('source','soil_records','record_id','soil-' || g::text)) from generate_series(1, 101) g),
+    '{}'::uuid[]
+  )$q$,
+  '22023',
+  'Invalid or oversized context references.',
+  'context references reject arrays exceeding 100 entries'
+);
+
+select ok(
+  private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000ad',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{"status":"passed","rule_ids":[],"reason_codes":[],"blocked":false}'::jsonb,
+    '[{"source":"soil_records","record_id":"soil-001","observed_at":"2026-11-20T10:00:00+01:00"},{"source":"machinery_telemetry","record_id":"e6000000-0000-0000-0000-000000000099"},{"source":"weather_cache","record_id":"oyo:ibadan:2026-11-20"}]'::jsonb,
+    '{}'::uuid[]
+  ) is not null,
+  'valid multi-source context references with UUIDs, structured slugs and RFC 3339 timestamps succeed'
 );
 
 reset role;

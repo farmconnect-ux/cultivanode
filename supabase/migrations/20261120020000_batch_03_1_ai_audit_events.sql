@@ -112,6 +112,22 @@ declare
   v_event_id uuid;
   v_existing public.ai_audit_events%rowtype;
   v_ref jsonb;
+  v_source text;
+  v_record_id text;
+  v_observed_at text;
+  v_parsed_ts timestamptz;
+  v_seen_refs text[] := '{}'::text[];
+  c_allowed_sources constant text[] := array[
+    'farms', 'plots', 'crop_cycles', 'crop_cycle_operations',
+    'crop_observations', 'crop_alerts', 'crop_harvests', 'soil_records',
+    'farm_agronomic_standards', 'farm_inventory', 'farm_inventory_transactions',
+    'farm_financial_transactions', 'farm_machinery_assets',
+    'farm_machinery_maintenance', 'farm_machinery_usage_logs',
+    'machinery_telemetry', 'farm_operational_tasks', 'farm_livestock',
+    'farm_livestock_health_events', 'farm_livestock_production_logs',
+    'telemetry_readings', 'telemetry_rollups', 'weather_cache',
+    'marketplace_orders', 'marketplace_journal_entries'
+  ];
 begin
   if p_profile_id is null or p_farm_id is null or p_trace_id is null then
     raise exception 'Profile, farm and trace identifiers are required.' using errcode = '22023';
@@ -158,11 +174,43 @@ begin
        or not (v_ref ? 'source')
        or not (v_ref ? 'record_id')
        or jsonb_typeof(v_ref -> 'source') <> 'string'
-       or char_length(v_ref ->> 'source') not between 1 and 64
        or jsonb_typeof(v_ref -> 'record_id') <> 'string'
-       or char_length(v_ref ->> 'record_id') not between 1 and 128
        or (v_ref ? 'observed_at' and jsonb_typeof(v_ref -> 'observed_at') <> 'string') then
       raise exception 'Context references must contain only source, record_id and optional observed_at.' using errcode = '22023';
+    end if;
+
+    v_source := v_ref ->> 'source';
+    v_record_id := v_ref ->> 'record_id';
+
+    if not (v_source = any(c_allowed_sources)) then
+      raise exception 'Unsupported context reference source.' using errcode = '22023';
+    end if;
+
+    -- Restrict record_id to compact non-secret identifiers (UUIDs or structured slugs),
+    -- rejecting whitespace, emails, JWTs, credentials, base64 image payloads and free text.
+    if v_record_id !~ '^[A-Za-z0-9][A-Za-z0-9:_-]{0,63}$' then
+      raise exception 'Invalid context reference record_id format.' using errcode = '22023';
+    end if;
+
+    if (v_source || '|' || v_record_id) = any(v_seen_refs) then
+      raise exception 'Duplicate context references are not permitted.' using errcode = '22023';
+    end if;
+    v_seen_refs := array_append(v_seen_refs, v_source || '|' || v_record_id);
+
+    if v_ref ? 'observed_at' then
+      v_observed_at := v_ref ->> 'observed_at';
+      if v_observed_at !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$' then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
+      begin
+        v_parsed_ts := v_observed_at::timestamptz;
+      exception
+        when invalid_datetime_format or datetime_field_overflow then
+          raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end;
+      if v_parsed_ts is null then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
     end if;
   end loop;
 

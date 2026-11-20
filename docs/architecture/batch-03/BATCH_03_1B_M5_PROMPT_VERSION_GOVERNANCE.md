@@ -17,7 +17,7 @@ All tables have RLS enabled and no direct privileges for application roles. Prom
 - `public.create_ai_prompt_version`: authenticated management RPC, validates key/version/content/metadata, computes the digest server-side, and records creation in `public.audit_log`.
 - `public.set_active_ai_prompt_version`: authenticated management RPC, requires `ai.manage`, serialises by prompt key, verifies the immutable target exists, updates the pointer, and records reason/history/audit in one transaction.
 - `public.rollback_active_ai_prompt_version`: authenticated management RPC, requires `ai.manage`, serialises by prompt key, selects the previous version from activation history, restores its pointer, and records rollback reason/history/audit transactionally.
-- `private.get_active_ai_prompt`: service-role-only runtime reader. Runtime can read the selected prompt but cannot directly mutate prompt tables.
+- `public.get_active_ai_prompt(text)`: PostgreSQL-owned `SECURITY DEFINER` function with `SET search_path = ''` and `EXECUTE` privileges restricted exclusively to `service_role` (`PUBLIC`, `anon`, and `authenticated` revoked). Runtime can resolve the active prompt by explicit key without directly reading or mutating `private.ai_prompt_*` tables.
 
 The current permission catalogue resolves `ai.manage` through the super-admin permission bypass. This migration does not grant it to any additional role.
 
