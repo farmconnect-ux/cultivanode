@@ -245,11 +245,12 @@ select is(
   'principal and system throttles are both durably audited'
 );
 
+set local role service_role;
 select throws_ok(
-  $$select public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')$$,
+  $select public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')$,
   '42501',
   null,
-  'lookup function does not expose private counter tables'
+  'service_role cannot invoke the compliance lookup RPC'
 );
 
 reset role;
