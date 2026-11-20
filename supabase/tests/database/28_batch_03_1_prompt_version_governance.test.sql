@@ -102,7 +102,7 @@ select is(
 );
 
 select throws_ok(
-  $select public.rollback_active_ai_prompt_version('agronomy.advisor', 'Attempt a second rollback without a prior activation')$,
+  $$select public.rollback_active_ai_prompt_version('agronomy.advisor', 'Attempt a second rollback without a prior activation')$$,
   'P0002',
   null,
   'rollback does not toggle forward to a version created by an earlier rollback'
