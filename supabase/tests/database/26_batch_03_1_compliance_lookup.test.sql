@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(27);
 
 select ok(
   to_regclass('private.ai_compliance_lookup_limits') is not null
@@ -135,6 +135,11 @@ select is(
   'denied',
   'malformed purpose is denied'
 );
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'personal curiosity')->>'status',
+  'denied',
+  'unapproved free-text purposes are denied'
+);
 
 select is(
   public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
@@ -176,6 +181,9 @@ select is(
   1,
   'denied attempts are counted against the requesting principal'
 );
+
+reset role;
+delete from private.ai_compliance_lookup_limits;
 
 set local role authenticated;
 select set_config('request.jwt.claims',
