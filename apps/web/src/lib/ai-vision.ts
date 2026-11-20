@@ -125,6 +125,13 @@ async function openai(images: CropImage[], text: string): Promise<string | null>
 const str = (v: unknown, max = 400) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const list = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => str(x)).filter(Boolean).slice(0, n) : []);
 
+class GuardrailEvaluationError extends Error {
+  constructor() {
+    super("Chemical safety evaluation failed");
+    this.name = "GuardrailEvaluationError";
+  }
+}
+
 /** Shape-checks the model JSON and prevents unsafe content in every farmer-visible field. */
 function clean(raw: string): Diagnosis | null {
   let j: Record<string, unknown>;
@@ -154,7 +161,12 @@ function clean(raw: string): Diagnosis | null {
     unclear: j.unclear === true,
   };
   const all = [d.summary, ...d.likely.map((l) => `${l.name} ${l.why}`), ...d.checks, ...d.actions, d.see_expert_if].join("\n");
-  const guard = checkChemicalSafetyGuardrails(all);
+  let guard: ReturnType<typeof checkChemicalSafetyGuardrails>;
+  try {
+    guard = checkChemicalSafetyGuardrails(all);
+  } catch {
+    throw new GuardrailEvaluationError();
+  }
   if (!guard.passed) {
     // Fail closed across the entire diagnosis, not only the action field.
     d.summary = "A potentially unsafe pesticide reference was detected. Do not apply any chemical based on this diagnosis. Contact an agricultural extension officer for approved guidance.";
@@ -193,6 +205,10 @@ export async function diagnoseCropPhotos(images: CropImage[], context: Context):
       if (diagnosis) return { ok: true, diagnosis, model };
       logger.warn("ai_vision_bad_json", { model });
     } catch (err) {
+      if (err instanceof GuardrailEvaluationError) {
+        logger.error("ai_vision_guardrail_failed", { model });
+        return { ok: false, error: "failed" };
+      }
       logger.warn("ai_vision_failed", { model, reason: err instanceof Error ? err.message : "unknown" });
     }
   }
