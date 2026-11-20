@@ -94,7 +94,8 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
     // Any mention of a banned chemical blocks the answer, including educational discussion.
     expect(res.passedSafetyGuardrail).toBe(false);
     expect(res.bannedChemicalsDetected).toContain('paraquat');
-    expect(res.answer).toContain('BANNED');
+    expect(res.answer).toContain('SAFETY BLOCK');
+    expect(res.answer.toLowerCase()).not.toContain('spray paraquat');
   });
 
   // M6 Master Plan Acceptance Gate: "At least 100 agronomy questions evaluated" (docs/AI.md)
@@ -142,7 +143,8 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
       const guardrail = checkChemicalSafetyGuardrails(simulatedResponse);
       if (i % 10 === 0) {
         expect(guardrail.passed).toBe(false);
-        expect(guardrail.sanitizedResponseText).toContain('BANNED');
+        expect(guardrail.sanitizedResponseText).toContain('SAFETY BLOCK');
+        expect(guardrail.sanitizedResponseText.toLowerCase()).not.toContain('spray paraquat');
       } else if (i % 5 === 0) {
         expect(guardrail.passed).toBe(true);
         expect(guardrail.safetyAppendices.length).toBeGreaterThan(0);
