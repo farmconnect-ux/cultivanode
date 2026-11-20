@@ -56,14 +56,14 @@ Strengthened `private.write_ai_audit_event(...)` database-side validation of `p_
 ## 3. M5 Prompt Governance Corrections
 
 - **Documentation reconciled:** Updated `docs/architecture/batch-03/BATCH_03_1B_M5_PROMPT_VERSION_GOVERNANCE.md` to accurately document `public.get_active_ai_prompt(text)` (PostgreSQL-owned `SECURITY DEFINER`, `SET search_path = ''`, `EXECUTE` restricted exclusively to `service_role`) instead of the erroneous `private.get_active_ai_prompt` reference.
-- **Permission & integrity tests expanded (`28_batch_03_1_prompt_version_governance.test.sql`, `plan(26)`):** Verified empty initial active-pointer table, `NULL` safe return for missing active prompts, invalid prompt key rejection (`22023`), `anon` and `service_role` revocation on all 3 management RPCs, explicit negative tests rejecting ordinary authenticated users without `ai.manage` (`42501`) on create/activate/rollback, unauthenticated rejection (`28000`), server-computed SHA-256 hash integrity, and non-toggling rollback history.
+- **Permission & integrity tests expanded (`27_batch_03_1_prompt_version_governance.test.sql`, originally `plan(26)`; see §8):** Verified empty initial active-pointer table, `NULL` safe return for missing active prompts, invalid prompt key rejection (`22023`), `anon` and `service_role` revocation on all 3 management RPCs, explicit negative tests rejecting ordinary authenticated users without `ai.manage` (`42501`) on create/activate/rollback, unauthenticated rejection (`28000`), server-computed SHA-256 hash integrity, and non-toggling rollback history.
 
 ---
 
 ## 4. Account-Deletion Compatibility & Audit-Log Privacy Qualification
 
 ### Verified Account-Deletion Invariants
-Reviewed `20261118020000`–`20261118050000` and M2 (`20261120010000_batch_03_1b_ai_actor_directory.sql`):
+Reviewed `20261118020000`–`20261118050000` and M2 (`20261120010000_batch_03_1_ai_actor_directory.sql`):
 - All new AI tables (`public.ai_audit_events`, `public.ai_audit_feedback`, `private.ai_prompt_versions`, `private.ai_prompt_active_pointers`, `private.ai_prompt_activation_history`) reference `private.ai_actor_directory(actor_subject_id)` — **zero** foreign keys to `public.profiles` or `auth.users`.
 - `execute_account_deletion` preserves all Batch 02.5 advisory locks, super-admin protection, active booking/order/escrow/settlement blockers, Storage cleanup queueing, lease-fencing (`4a`–`4g`), and idempotency, while invoking `private.anonymise_ai_actor(p_user_id)` transactionally.
 - Expanded `22_batch_02_5_account_deletion.test.sql` (`plan(42)`) proves that deleting a profile with existing `ai_audit_events`, `ai_audit_feedback`, `ai_prompt_versions`, and `ai_prompt_activation_history` rows succeeds cleanly, retains immutable records under pseudonymous `actor_subject_id`, severs `profile_id`, and remains idempotent on retry.
@@ -80,10 +80,10 @@ Reviewed `20261118020000`–`20261118050000` and M2 (`20261120010000_batch_03_1b
 | Migration | Prerequisites | Objects Created | Existing Objects Modified | Downstream Dependencies | Security / Hygiene Verified |
 |---|---|---|---|---|---|
 | **M1** `20261120000000_batch_03_1_pgvector_and_ai_consent.sql` | `extensions` schema; `public.consent_type` | Extension `extensions.vector`; enum value `'ai_intelligence'` | `public.consent_type` (additive `ADD VALUE IF NOT EXISTS`) | Batch 03.1C consent gate; Batch 03.2 `farm_memory_items` vectors | Unpinned `CREATE EXTENSION`; isolated from DML referencing `'ai_intelligence'` |
-| **M2** `20261120010000_batch_03_1b_ai_actor_directory.sql` | `private` schema; `public.profiles`; `execute_account_deletion` (`20261118050000`) | `private.ai_actor_directory`; `private.resolve_or_create_ai_actor(uuid)`; `private.anonymise_ai_actor(uuid)`; `private.lookup_ai_actor_subject(uuid)` | `public.execute_account_deletion(uuid, text)` (adds idempotent `anonymise_ai_actor` call) | M3, M4, M5 | `postgres`-owned, RLS enabled, `REVOKE ALL` from `PUBLIC, anon, authenticated, service_role`; `SECURITY DEFINER SET search_path = ''` |
+| **M2** `20261120010000_batch_03_1_ai_actor_directory.sql` | `private` schema; `public.profiles`; `execute_account_deletion` (`20261118050000`) | `private.ai_actor_directory`; `private.resolve_or_create_ai_actor(uuid)`; `private.anonymise_ai_actor(uuid)`; `private.lookup_ai_actor_subject(uuid)` | `public.execute_account_deletion(uuid, text)` (adds idempotent `anonymise_ai_actor` call) | M3, M4, M5 | `postgres`-owned, RLS enabled, `REVOKE ALL` from `PUBLIC, anon, authenticated, service_role`; `SECURITY DEFINER SET search_path = ''` |
 | **M3** `20261120020000_batch_03_1_ai_audit_events.sql` | M2; `public.farms`; `private.forbid_change()`; `private.account_active()`; `private.can_view_farm()` | `public.ai_audit_events`; `public.ai_audit_feedback`; `private.write_ai_audit_event(...)`; `public.record_ai_feedback(...)` | None | Batch 03.1C `apps/web/src/lib/ai-audit.ts`; Batch 03.2+ | Append-only triggers; `write_ai_audit_event` `service_role`-only; `record_ai_feedback` `authenticated`-only; strict `context_refs` allowlist & format checks |
 | **M4** `20261120030000_batch_03_1_compliance_lookup_rpc.sql` | M2; `private.account_active()`; `public.has_permission('audit.read')`; `public.audit_log` | `private.ai_compliance_lookup_limits`; `private.ai_compliance_lookup_throttle_state`; `private.ai_compliance_lookup_config`; `public.compliance_lookup_ai_actor(uuid, text)` | None | Staff compliance tooling (disabled by default) | Bounded writes under abuse; `authenticated`-only; `postgres`-owned `SECURITY DEFINER SET search_path = ''`; atomic advisory locks |
-| **M5** `20261120040000_batch_03_1_ai_prompt_version_governance.sql` | M2; `extensions.digest`; `private.forbid_change()`; `private.account_active()`; `public.has_permission('ai.manage')`; `public.audit_log` | `private.ai_prompt_versions`; `private.ai_prompt_active_pointers`; `private.ai_prompt_activation_history`; `public.create_ai_prompt_version(...)`; `public.set_active_ai_prompt_version(...)`; `public.rollback_active_ai_prompt_version(...)`; `public.get_active_ai_prompt(text)` | None | Batch 03.1C+ AI runtime & admin prompt management | Empty initial active pointers; management RPCs `authenticated` + `ai.manage`; `get_active_ai_prompt` `service_role`-only; immutable triggers |
+| **M5** `20261120015000_batch_03_1_ai_prompt_version_governance.sql` (applies before M3) | M2; `extensions.digest`; `private.forbid_change()`; `private.account_active()`; `public.has_permission('ai.manage')`; `public.audit_log` | `private.ai_prompt_versions`; `private.ai_prompt_active_pointers`; `private.ai_prompt_activation_history`; `public.create_ai_prompt_version(...)`; `public.set_active_ai_prompt_version(...)`; `public.rollback_active_ai_prompt_version(...)`; `public.get_active_ai_prompt(text)` | None | Batch 03.1C+ AI runtime & admin prompt management | Empty initial active pointers; management RPCs `authenticated` + `ai.manage`; `get_active_ai_prompt` `service_role`-only; immutable triggers |
 
 ---
 
@@ -104,3 +104,26 @@ Reviewed `20261118020000`–`20261118050000` and M2 (`20261120010000_batch_03_1b
 - **No** migrations were applied to `CultivaNode-Staging` (`xdbqndgwisshhjqqksbe`) or `CultivaNode-Production` (`vqbtnftnxyfaembwgfrk`).
 - **No** `supabase db push`, migration repair, Vercel deployment, feature-flag change, or environment-variable change was executed.
 - Batch 03.1C / Live Farm Context implementation was **not** started.
+
+---
+
+## 8. Review Remediation (2026-11-21)
+
+Changes made in response to the detailed PR #15 migration review, before any hosted application:
+
+1. **M4 shared-ceiling lockout:** callers without `audit.read` previously counted as admitted `denied` attempts, so a handful of ordinary accounts could exhaust `system_attempt_limit` and lock compliance staff out. They now receive the same generic `denied` response, recorded once per window under a sampled `unauthorised:<uid>` throttle scope, and never write to `private.ai_compliance_lookup_limits`. The three copies of the sampled-rejection logic are consolidated into `private.ai_compliance_record_rejection(...)`. Lock order is now principal lock first, global lock second (global only on the `audit.read` path). Covered by two new assertions in `26_batch_03_1_compliance_lookup.test.sql` (`plan(54)`).
+2. **M3 writer farm-access check:** `private.write_ai_audit_event` now rejects (`42501`) a profile that cannot view the farm, via `private.profile_can_view_farm(profile, farm)`, which mirrors `private.can_view_farm` for an explicit profile because `service_role` callers have no `auth.uid()`.
+3. **M3/M5 prompt linkage:** M5 now applies before M3 (`20261120015000`). `public.ai_audit_events.prompt_version_id` is a nullable FK to `private.ai_prompt_versions`; when supplied, the writer requires the referenced version label to match `prompt_version`, and trace replay compares it.
+4. **M3 actor privacy:** `authenticated` receives column-level `SELECT` on `public.ai_audit_events` excluding `actor_subject_id`. Clients must name columns explicitly (no `select=*`).
+5. **M3 farm deletion constraint:** documented on `farm_id`: a farm with AI activity cannot be deleted; a future farm-deletion flow must archive or pseudonymise instead.
+6. **M5 governance:** `ai.manage` is registered in `public.permissions` (not granted to any sub-role). New append-only `private.ai_prompt_version_validations` and `public.validate_ai_prompt_version(...)`; activation and rollback require a recorded validation (`55000` otherwise). New `ai.manage`-gated admin reads: `public.list_ai_prompt_versions`, `public.get_ai_prompt_version`, `public.list_ai_prompt_activation_history`. `27_batch_03_1_prompt_version_governance.test.sql` is now `plan(39)`; `25_batch_03_1_ai_audit_register.test.sql` is `plan(43)`.
+7. **Naming:** M2 renamed to `20261120010000_batch_03_1_ai_actor_directory.sql`; tests renumbered to `24_batch_03_1_ai_actor_directory.test.sql` and `27_batch_03_1_prompt_version_governance.test.sql`.
+
+Still open and intentionally unchanged: the choice of `ai.manage` as the permission key and whether validation should require a different person from the creator (product decision); feedback remaining append-only and open to every farm viewer (per the Batch 03.0 design); and a system-actor writer for Batch 03.3.
+
+### Hosted migration history (read-only check, 2026-11-21)
+
+- Neither Staging nor Production has any `20261120*` migration applied.
+- **Production** (`vqbtnftnxyfaembwgfrk`) records 54 migrations under timestamps that differ from the repository files, ending at `marketplace_disputes_w4` (3 Nov). Roughly 25 repository migrations are not recorded there at all (including `20261117080000` onward), and a few recorded names (`crop_management`, `farm_enterprise_subsections`, `hide_demo_data_*`, `direct_payment_grants`) have no matching repository file name.
+- **Staging** (`xdbqndgwisshhjqqksbe`) was rebuilt on 17 Nov with renumbered versions and contains repeated entries for the account-deletion migrations.
+- Consequence: `supabase db push` must not be used against either project. Each pending migration must be applied individually, in order, after confirming the schema state it expects.
