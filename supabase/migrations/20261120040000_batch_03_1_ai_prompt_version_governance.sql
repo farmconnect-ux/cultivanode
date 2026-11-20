@@ -276,7 +276,7 @@ grant execute on function public.rollback_active_ai_prompt_version(text, text) t
 
 -- Runtime read path: service_role may resolve the active prompt, but cannot mutate
 -- prompt tables directly. Content is returned only for an explicit prompt key.
-create or replace function private.get_active_ai_prompt(p_prompt_key text)
+create or replace function public.get_active_ai_prompt(p_prompt_key text)
 returns jsonb
 language plpgsql
 security definer
@@ -305,7 +305,7 @@ begin
 end;
 $$;
 
-alter function private.get_active_ai_prompt(text) owner to postgres;
-revoke all on function private.get_active_ai_prompt(text)
+alter function public.get_active_ai_prompt(text) owner to postgres;
+revoke all on function public.get_active_ai_prompt(text)
   from public, anon, authenticated, service_role;
-grant execute on function private.get_active_ai_prompt(text) to service_role;
+grant execute on function public.get_active_ai_prompt(text) to service_role;
