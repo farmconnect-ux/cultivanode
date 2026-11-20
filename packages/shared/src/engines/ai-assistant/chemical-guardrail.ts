@@ -1,7 +1,7 @@
 import type { GuardrailCheckResult } from './types';
 import { APPROVED_CHEMICALS_REGISTRY } from '../inputs/spray-planner';
 
-const BANNED_CHEMICAL_NAMES = ['paraquat', 'carbofuran', 'ddt', 'endosulfan', 'lindane', 'monocrotophos'];
+const BANNED_CHEMICAL_NAMES = ['paraquat', 'carbofuran', 'ddt', 'endosulfan', 'lindane', 'monocrotophos', 'aldrin'];
 
 /** Words that show a sentence is warning against a product rather than recommending it (English, Pidgin, Yorùbá). */
 const WARNING_CONTEXT =
@@ -16,25 +16,20 @@ export function checkChemicalSafetyGuardrails(responseText: string): GuardrailCh
   const bannedDetected: string[] = [];
   const approvedDetected: string[] = [];
   const safetyAppendices: string[] = [];
-
-  // 1. Scan for banned chemicals. A sentence that warns against one ("never use paraquat, it is banned")
-  //    is good advice; only a sentence that names one without such a warning is treated as recommending it.
   const unsafe: string[] = [];
   const sentences = lower.split(/(?<=[.!?;:\n])\s+|\n+/);
   for (const banned of BANNED_CHEMICAL_NAMES) {
-    const word = new RegExp(`\\b${banned}\\b`);
+    const word = new RegExp(`\\\\b${banned}\\\\b`);
     const hits = sentences.filter((x) => word.test(x));
     if (!hits.length) continue;
     bannedDetected.push(banned);
     if (hits.some((x) => !WARNING_CONTEXT.test(x))) unsafe.push(banned);
   }
 
-  // 2. Scan for approved chemicals to attach verified safety guidance
   for (const chemical of APPROVED_CHEMICALS_REGISTRY) {
     if (!chemical.isBannedInNigeria) {
       const activeMatch = lower.includes(chemical.activeIngredient.toLowerCase());
       const brandMatch = lower.includes(chemical.brandName.toLowerCase().split(' ')[0]!.toLowerCase());
-
       if (activeMatch || brandMatch) {
         approvedDetected.push(chemical.brandName);
         safetyAppendices.push(
@@ -50,20 +45,14 @@ export function checkChemicalSafetyGuardrails(responseText: string): GuardrailCh
       bannedChemicalsDetected: bannedDetected,
       approvedChemicalsDetected: approvedDetected,
       safetyAppendices: [],
-      sanitizedResponseText: `WARNING: The recommended substance (${unsafe.join(
-        ', '
-      )}) is BANNED from agricultural use in Nigeria by NAFDAC due to extreme toxicity. Please consult an extension agent for approved alternatives.`,
+      sanitizedResponseText: `WARNING: The recommended substance (${unsafe.join(', ')}) is BANNED from agricultural use in Nigeria by NAFDAC due to extreme toxicity. Please consult an extension agent for approved alternatives.`,
     };
   }
 
   let sanitized = responseText;
-  if (safetyAppendices.length > 0) {
-    sanitized = `${responseText}\n\n---\n${safetyAppendices.join('\n')}`;
-  }
-
+  if (safetyAppendices.length > 0) sanitized = `${responseText}\n\n---\n${safetyAppendices.join('\n')}`;
   return {
     passed: true,
-    // Banned names that appeared only in warnings (kept for logging; the answer is shown as written).
     bannedChemicalsDetected: bannedDetected,
     approvedChemicalsDetected: approvedDetected,
     safetyAppendices,
