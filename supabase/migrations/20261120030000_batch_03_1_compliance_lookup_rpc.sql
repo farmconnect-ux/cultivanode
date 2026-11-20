@@ -94,8 +94,14 @@ begin
   end if;
 
   -- 2. Verify account eligibility before any compliance audit or counter write.
-  --    Inactive or deleted accounts must not generate compliance lookup audit events.
-  if not private.account_active(v_principal_id) then
+  --    Suspended, deleting, or deleted accounts must not generate compliance lookup audit events.
+  if not private.account_active(v_principal_id)
+     or not exists (
+       select 1 from public.profiles p
+        where p.id = v_principal_id
+          and p.deleted_at is null
+          and p.deletion_status is null
+     ) then
     return jsonb_build_object('status', 'denied');
   end if;
 
