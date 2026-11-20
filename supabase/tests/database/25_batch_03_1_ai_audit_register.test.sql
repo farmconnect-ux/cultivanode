@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(43);
 
 select ok(
   to_regclass('public.ai_audit_events') is not null,
@@ -41,14 +41,16 @@ select ok(
 );
 
 select ok(
-  has_table_privilege('authenticated', 'public.ai_audit_events', 'SELECT')
+  has_column_privilege('authenticated', 'public.ai_audit_events', 'trace_id', 'SELECT')
+  and has_column_privilege('authenticated', 'public.ai_audit_events', 'prompt_version_id', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.ai_audit_events', 'actor_subject_id', 'SELECT')
   and not has_table_privilege('authenticated', 'public.ai_audit_events', 'INSERT')
   and not has_table_privilege('authenticated', 'public.ai_audit_events', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.ai_audit_events', 'DELETE')
   and not has_table_privilege('anon', 'public.ai_audit_events', 'SELECT')
   and not has_table_privilege('service_role', 'public.ai_audit_events', 'SELECT')
   and not has_table_privilege('service_role', 'public.ai_audit_events', 'INSERT'),
-  'only authenticated users receive SELECT privilege on audit events'
+  'only authenticated users can read audit events, and never actor_subject_id'
 );
 
 select ok(
@@ -73,15 +75,15 @@ select ok(
 
 select ok(
   has_function_privilege('service_role',
-    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[])', 'EXECUTE')
+    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[],uuid)', 'EXECUTE')
   and not has_function_privilege('anon',
-    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[])', 'EXECUTE')
+    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[],uuid)', 'EXECUTE')
   and not has_function_privilege('authenticated',
-    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[])', 'EXECUTE')
+    'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[],uuid)', 'EXECUTE')
   and not exists (
     select 1 from pg_proc p
     cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-    where p.oid = 'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[])'::regprocedure
+    where p.oid = 'private.write_ai_audit_event(uuid,uuid,uuid,text,text,text,text,jsonb,jsonb,uuid[],uuid)'::regprocedure
       and a.grantee = 0 and a.privilege_type = 'EXECUTE'
   ),
   'trusted writer is executable only by service_role, not PUBLIC or clients'
@@ -120,6 +122,16 @@ values (
   'derived_savanna',
   'Oyo',
   'Ibadan'
+);
+
+insert into private.ai_prompt_versions (id, prompt_key, version, content, content_sha256, created_by)
+values (
+  'e6000000-0000-0000-0000-0000000000b1',
+  'farm.intelligence',
+  'farm-intelligence-v1',
+  'Registered farm intelligence prompt',
+  encode(extensions.digest('Registered farm intelligence prompt', 'sha256'), 'hex'),
+  private.resolve_or_create_ai_actor('e6000000-0000-0000-0000-000000000001')
 );
 
 set local role service_role;
@@ -331,6 +343,58 @@ select ok(
   'valid multi-source context references with UUIDs, structured slugs and RFC 3339 timestamps succeed'
 );
 
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000002',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000b2',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '42501',
+  'Profile cannot access this farm.',
+  'trusted writer rejects events for a profile that cannot view the farm'
+);
+
+select ok(
+  private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000b3',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[]'::jsonb,'{}'::uuid[],
+    'e6000000-0000-0000-0000-0000000000b1'
+  ) is not null,
+  'events can reference a registered prompt version whose label matches'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000b4',
+    'claude','claude-sonnet-5-5','farm-intelligence-v2','completed',
+    '{}'::jsonb,'[]'::jsonb,'{}'::uuid[],
+    'e6000000-0000-0000-0000-0000000000b1'
+  )$q$,
+  '22023',
+  'Prompt version reference does not match a registered prompt version.',
+  'prompt version references must match the recorded prompt label'
+);
+
+select throws_ok(
+  $q$select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000b3',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[]'::jsonb,'{}'::uuid[]
+  )$q$,
+  '23505',
+  'Trace ID is already associated with a different AI audit event.',
+  'trace ID replay without the original prompt version reference is rejected'
+);
+
 reset role;
 
 select is(
@@ -349,6 +413,14 @@ select is(
    where trace_id = 'e6000000-0000-0000-0000-0000000000a1'),
   1,
   'farm owner can read the audit event through farm-scoped RLS'
+);
+
+select throws_ok(
+  $$select actor_subject_id from public.ai_audit_events
+    where trace_id = 'e6000000-0000-0000-0000-0000000000a1'$$,
+  '42501',
+  null,
+  'farm viewers cannot read the pseudonymous actor_subject_id'
 );
 
 select ok(
