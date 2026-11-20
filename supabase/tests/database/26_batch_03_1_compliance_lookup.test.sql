@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(54);
 
 -- Deterministic rolling-window predicate coverage. Fixed timestamps exercise the
 -- exact helper called by both production branches, avoiding wall-clock race windows.
@@ -443,6 +443,25 @@ update private.ai_compliance_lookup_config
        system_attempt_limit = 8,
        updated_at = clock_timestamp()
  where singleton = true;
+
+-- Callers without audit.read must not consume the shared system-wide ceiling.
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+select is(
+  (select count(*)::int from generate_series(1, 20)
+   where public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status' = 'denied'),
+  20,
+  '20 calls from a caller without audit.read are all denied'
+);
+reset role;
+select ok(
+  (select count(*) = 0 from private.ai_compliance_lookup_limits)
+  and (select sampled_suppression_events = 1
+         from private.ai_compliance_lookup_throttle_state
+        where scope_key = 'unauthorised:e7000000-0000-0000-0000-000000000002'),
+  'callers without audit.read write no admission counters and only one sampled throttle record'
+);
 
 select set_config('test.sys_throttle_audit_before',
   (select count(*)::text from public.audit_log
