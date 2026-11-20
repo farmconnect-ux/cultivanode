@@ -21,7 +21,7 @@ type Note = {
   id: string;
   kind: string;
   booking_id: string | null;
-  data: { title?: string; job_date?: string; name?: string; item_summary?: string; order_id?: string; order_number?: string };
+  data: { title?: string; job_date?: string; name?: string; item_summary?: string; order_id?: string; order_number?: string; tracking?: string; note?: string };
   read_at: string | null;
   created_at: string;
 };
@@ -72,7 +72,7 @@ export default async function InboxPage({
     .select("id, kind, booking_id, data, read_at, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
-  const all = ((data ?? []) as unknown as Note[]).filter((n) => m.kinds[n.kind as keyof typeof m.kinds]);
+  const all = (data ?? []) as unknown as Note[];
   const notes = currentCat === "all" ? all : all.filter((n) => categoryOf(n) === currentCat);
   const unread = all.filter((n) => !n.read_at).length;
   const count = (k: string) => (k === "all" ? all.length : all.filter((n) => categoryOf(n) === k).length);
@@ -130,10 +130,12 @@ export default async function InboxPage({
               notes.map((n) => {
                 const cat = categoryOf(n);
                 const look = LOOK[cat] ?? LOOK.system!;
-                const text = fill(m.kinds[n.kind as keyof typeof m.kinds], {
+                const text = fill(m.kinds[n.kind as keyof typeof m.kinds] ?? m.unknown, {
                   name: n.data.name || "—",
                   title: n.data.item_summary ?? n.data.title ?? "",
                   order_number: n.data.order_number ?? "",
+                  tracking: n.data.tracking ?? "",
+                  note: n.data.note ?? "",
                   date: n.data.job_date ? formatDay(n.data.job_date, lang) : "",
                 });
                 return (
