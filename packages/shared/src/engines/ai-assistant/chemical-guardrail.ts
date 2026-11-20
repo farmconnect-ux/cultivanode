@@ -19,8 +19,7 @@ export function checkChemicalSafetyGuardrails(responseText: string): GuardrailCh
   const unsafe: string[] = [];
   const sentences = lower.split(/(?<=[.!?;:\n])\s+|\n+/);
   for (const banned of BANNED_CHEMICAL_NAMES) {
-    const word = new RegExp(`\\\\b${banned}\\\\b`);
-    const hits = sentences.filter((x) => word.test(x));
+    const hits = sentences.filter((sentence) => sentence.split(/[^a-z0-9]+/).includes(banned));
     if (!hits.length) continue;
     bannedDetected.push(banned);
     if (hits.some((x) => !WARNING_CONTEXT.test(x))) unsafe.push(banned);
