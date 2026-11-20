@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(49);
 
 -- 1-3: Private tables, RLS, and zero direct privileges for application roles
 select ok(
@@ -468,6 +468,134 @@ select ok(
        - current_setting('test.sys_throttle_audit_before')::integer = 1),
   'system-wide throttling keeps limits at 8, executes ZERO UPDATEs inside cooldown (ctid unchanged) and emits 1 audit_log row'
 );
+
+-- 38-44: M4.1.1 deterministic rolling-window boundary & N_max = ceil(900/60) = 15 verification
+-- Case A: Just before rolling-window boundary (899s elapsed, inside cooldown) -> no reset, no update, no extra audit
+update private.ai_compliance_lookup_throttle_state
+   set window_started_at = clock_timestamp() - interval '899 seconds',
+       last_recorded_at = clock_timestamp() - interval '10 seconds'
+ where scope_key = 'system:global';
+
+select set_config('test.before_win_ctid',
+  (select ctid::text from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'), true);
+select set_config('test.before_win_started',
+  (select window_started_at::text from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'), true);
+select set_config('test.before_win_audit',
+  (select count(*)::text from public.audit_log where action = 'ai_actor_compliance_lookup' and new_values->>'outcome' = 'throttled'), true);
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'just before rolling-window boundary (899s), request remains throttled'
+);
+
+reset role;
+select ok(
+  (select ctid::text = current_setting('test.before_win_ctid')
+      and window_started_at::text = current_setting('test.before_win_started')
+      and sampled_suppression_events = 1
+     from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global')
+  and (select count(*)::int from public.audit_log
+        where action = 'ai_actor_compliance_lookup' and new_values->>'outcome' = 'throttled')
+      = current_setting('test.before_win_audit')::integer,
+  'just before rolling-window boundary (899s), window does not reset and zero DML or audit writes occur'
+);
+
+-- Case E + B: Simulate all 14 subsequent 60s cooldown steps (reaching 840s -> sampled_suppression_events = 15),
+-- verify suppression inside cooldown at step 15, then test exact 900s boundary resets to 1 (never 16).
+do $$
+declare
+  v_step integer;
+  v_status text;
+begin
+  for v_step in 1..14 loop
+    update private.ai_compliance_lookup_throttle_state
+       set window_started_at = clock_timestamp() - make_interval(secs => v_step * 60),
+           last_recorded_at = clock_timestamp() - interval '60 seconds'
+     where scope_key = 'system:global';
+
+    perform set_config('role', 'authenticated', true);
+    perform set_config('request.jwt.claims',
+      '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+    v_status := public.compliance_lookup_ai_actor(gen_random_uuid(), 'data_subject_request')->>'status';
+    if v_status <> 'throttled' then
+      raise exception 'Expected throttled at cooldown step %, got %', v_step, v_status;
+    end if;
+    reset role;
+  end loop;
+end $$;
+
+select ok(
+  (select sampled_suppression_events = 15
+     from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global')
+  and (select count(*)::int from public.audit_log
+        where action = 'ai_actor_compliance_lookup' and new_values->>'outcome' = 'throttled')
+      = current_setting('test.before_win_audit')::integer,
+  '14 cooldown expiries within 900s window reach exact maximum N_max = ceil(900/60) = 15 with zero extra audit rows'
+);
+
+-- Verify suppression inside cooldown immediately after the 15th sampled write
+select set_config('test.step15_ctid',
+  (select ctid::text from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'), true);
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'request inside cooldown after 15th sampled write remains throttled'
+);
+reset role;
+select ok(
+  (select ctid::text = current_setting('test.step15_ctid')
+      and sampled_suppression_events = 15
+     from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global'),
+  'request inside cooldown after 15th sampled write executes ZERO UPDATEs (ctid unchanged)'
+);
+
+-- Case B: At exact 900s rolling-window boundary (window_started_at <= v_window_cutoff),
+-- window resets to sampled_suppression_events = 1 (never 16) and emits exactly 1 new audit summary row.
+update private.ai_compliance_lookup_throttle_state
+   set window_started_at = clock_timestamp() - interval '900 seconds',
+       last_recorded_at = clock_timestamp() - interval '60 seconds'
+ where scope_key = 'system:global';
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select is(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status',
+  'throttled',
+  'at exact 900s boundary, request remains throttled while limits still hold 8 active rows'
+);
+reset role;
+select ok(
+  (select count(*) = 1 from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global')
+  and (select sampled_suppression_events = 1
+         from private.ai_compliance_lookup_throttle_state where scope_key = 'system:global')
+  and ((select count(*)::int from public.audit_log
+         where action = 'ai_actor_compliance_lookup' and new_values->>'outcome' = 'throttled')
+       = current_setting('test.before_win_audit')::integer + 1),
+  'at exact 900s boundary, rolling window resets cleanly to sampled_suppression_events = 1 (never 16) with 1 new audit summary'
+);
+
+-- Case C: Just after rolling-window boundary (905s elapsed) -> expired window is replaced cleanly
+update private.ai_compliance_lookup_throttle_state
+   set window_started_at = clock_timestamp() - interval '905 seconds',
+       last_recorded_at = clock_timestamp() - interval '65 seconds'
+ where scope_key = 'system:global';
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select ok(
+  public.compliance_lookup_ai_actor(:'actor_id'::uuid, 'data_subject_request')->>'status' = 'throttled',
+  'just after rolling-window boundary (905s), expired window is replaced cleanly and returns throttled'
+);
+reset role;
 
 -- 38: Transaction rollback leaves counters, throttle state, and audit_log consistent
 delete from private.ai_compliance_lookup_limits;

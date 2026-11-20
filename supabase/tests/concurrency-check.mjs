@@ -734,13 +734,49 @@ async function main() {
     `Expected bounded counts (limits=2, state_rows=1, sampled_events=2, audit_total=3, audit_permitted=2, audit_throttled=1), got ${complianceCounts.stdout}`,
   );
 
+  // 5d: M4.1.1 concurrent calls at the exact 900s rolling-window boundary:
+  //     All 6 concurrent callers must be throttled, exactly ONE window reset occurs
+  //     (sampled_suppression_events resets to 1, audit_throttled increments 1 -> 2),
+  //     and no duplicate throttle-state or audit rows are created.
+  const expireWindowBoundary = await runPsql(`
+    UPDATE private.ai_compliance_lookup_throttle_state
+       SET window_started_at = clock_timestamp() - interval '900 seconds',
+           last_recorded_at = clock_timestamp() - interval '60 seconds'
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(expireWindowBoundary.code, 0, expireWindowBoundary.stderr);
+
+  const windowBoundaryBatch = await Promise.all(
+    Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(randomUUID()), `conc_ai_window_boundary_${i}`)),
+  );
+  for (const r of windowBoundaryBatch) {
+    assert.equal(r.code, 0, `Window-boundary concurrent call failed: ${r.stderr}`);
+    assert.equal(complianceStatus(r), 'throttled', `Expected throttled at window boundary, got ${r.stdout}`);
+  }
+
+  const boundaryCounts = await runPsql(`
+    SELECT
+      (SELECT count(*) FROM private.ai_compliance_lookup_limits)::text || '|' ||
+      (SELECT count(*) FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT sampled_suppression_events FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'permitted')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'throttled')::text;
+  `);
+  assert.equal(boundaryCounts.code, 0, boundaryCounts.stderr);
+  assert.equal(
+    boundaryCounts.stdout,
+    '2|1|1|4|2|2',
+    `Expected exactly one window reset at 900s boundary (limits=2, state_rows=1, sampled_events=1, audit_total=4, audit_permitted=2, audit_throttled=2), got ${boundaryCounts.stdout}`,
+  );
+
   const resetCompliance = await runPsql(`
     UPDATE private.ai_compliance_lookup_config SET enabled = false WHERE singleton = true;
     DELETE FROM private.ai_compliance_lookup_limits;
     DELETE FROM private.ai_compliance_lookup_throttle_state;
   `);
   assert.equal(resetCompliance.code, 0, resetCompliance.stderr);
-  console.log('   PASS: 6 concurrent callers + 15 cooldown-suppressed burst calls (ctid/xmin unchanged) + 6 cooldown-expiry boundary callers serialised atomically with strictly bounded writes (sampled_events=2, limits=2, audit_log=3).');
+  console.log('   PASS: 6 concurrent callers + 15 cooldown-suppressed burst calls (ctid/xmin unchanged) + 6 cooldown-expiry callers + 6 rolling-window boundary callers serialised atomically with exact N_max=15 semantics.');
 
 }
 

@@ -145,7 +145,7 @@ begin
       from private.ai_compliance_lookup_throttle_state
      where scope_key = v_throttle_scope;
 
-    if not found or v_existing_throttle.window_started_at < v_window_cutoff then
+    if not found or v_existing_throttle.window_started_at <= v_window_cutoff then
       delete from private.ai_compliance_lookup_throttle_state
        where last_recorded_at < v_now - interval '1 hour';
 
@@ -213,7 +213,7 @@ begin
       from private.ai_compliance_lookup_throttle_state
      where scope_key = v_throttle_scope;
 
-    if not found or v_existing_throttle.window_started_at < v_window_cutoff then
+    if not found or v_existing_throttle.window_started_at <= v_window_cutoff then
       delete from private.ai_compliance_lookup_throttle_state
        where last_recorded_at < v_now - interval '1 hour';
 
