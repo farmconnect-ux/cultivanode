@@ -22,7 +22,8 @@ export function checkChemicalSafetyGuardrails(responseText: string): GuardrailCh
     const hits = sentences.filter((sentence) => sentence.split(/[^a-z0-9]+/).includes(banned));
     if (!hits.length) continue;
     bannedDetected.push(banned);
-    if (hits.some((x) => !WARNING_CONTEXT.test(x))) unsafe.push(banned);
+    // Any occurrence is blocked, including quotations, warnings and educational discussion.
+    unsafe.push(banned);
   }
 
   for (const chemical of APPROVED_CHEMICALS_REGISTRY) {
@@ -44,7 +45,7 @@ export function checkChemicalSafetyGuardrails(responseText: string): GuardrailCh
       bannedChemicalsDetected: bannedDetected,
       approvedChemicalsDetected: approvedDetected,
       safetyAppendices: [],
-      sanitizedResponseText: `WARNING: The recommended substance (${unsafe.join(', ')}) is BANNED from agricultural use in Nigeria by NAFDAC due to extreme toxicity. Please consult an extension agent for approved alternatives.`,
+      sanitizedResponseText: `SAFETY BLOCK: This response mentions a pesticide prohibited for agricultural use in Nigeria (${unsafe.join(', ')}). Do not use or apply it. Consult an agricultural extension officer for safe, approved alternatives.`,
     };
   }
 
