@@ -125,9 +125,10 @@ begin
     raise exception 'Farm not found.' using errcode = 'P0002';
   end if;
 
-  if p_provider not in ('claude', 'gemini', 'openai', 'rule-engine')
+  if p_provider is null or p_provider not in ('claude', 'gemini', 'openai', 'rule-engine')
      or p_model_id is null or char_length(p_model_id) not between 1 and 128
      or p_prompt_version is null or char_length(p_prompt_version) not between 1 and 128
+     or p_execution_outcome is null
      or p_execution_outcome not in ('completed', 'blocked', 'failed', 'fallback') then
     raise exception 'Invalid AI audit event attributes.' using errcode = '22023';
   end if;
@@ -241,7 +242,7 @@ begin
     raise exception 'Active account required.' using errcode = '42501';
   end if;
 
-  if p_trace_id is null or p_outcome not in ('accepted', 'rejected', 'modified')
+  if p_trace_id is null or p_outcome is null or p_outcome not in ('accepted', 'rejected', 'modified')
      or (v_note is not null and char_length(v_note) > 1000) then
     raise exception 'Invalid AI feedback.' using errcode = '22023';
   end if;
