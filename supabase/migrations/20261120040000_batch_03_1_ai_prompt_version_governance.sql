@@ -10,7 +10,7 @@ create table private.ai_prompt_versions (
   content_sha256 text not null check (content_sha256 ~ '^[a-f0-9]{64}$'),
   metadata jsonb not null default '{}'::jsonb
     check (jsonb_typeof(metadata) = 'object' and pg_column_size(metadata) <= 8192),
-  created_by uuid not null references public.profiles(id) on delete restrict,
+  created_by uuid not null references private.ai_actor_directory(actor_subject_id) on delete restrict,
   created_at timestamptz not null default clock_timestamp(),
   unique (prompt_key, version),
   unique (id, prompt_key, version),
@@ -23,7 +23,7 @@ create table private.ai_prompt_active_pointers (
   prompt_key text primary key check (prompt_key ~ '^[a-z][a-z0-9_.-]{1,99}$'),
   version_id uuid not null,
   version text not null,
-  updated_by uuid not null references public.profiles(id) on delete restrict,
+  updated_by uuid not null references private.ai_actor_directory(actor_subject_id) on delete restrict,
   updated_at timestamptz not null default clock_timestamp(),
   foreign key (version_id, prompt_key, version)
     references private.ai_prompt_versions(id, prompt_key, version) on delete restrict
@@ -36,7 +36,7 @@ create table private.ai_prompt_activation_history (
   to_version text not null,
   operation text not null check (operation in ('activate', 'rollback')),
   reason text not null check (char_length(reason) between 10 and 500),
-  actor_id uuid not null references public.profiles(id) on delete restrict,
+  actor_subject_id uuid not null references private.ai_actor_directory(actor_subject_id) on delete restrict,
   created_at timestamptz not null default clock_timestamp()
 );
 
@@ -76,16 +76,18 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_actor uuid := auth.uid();
+  v_profile_id uuid := auth.uid();
+  v_actor_subject_id uuid;
   v_hash text;
   v_id uuid;
 begin
-  if v_actor is null then
+  if v_profile_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
   end if;
-  if not private.account_active(v_actor) or not public.has_permission('ai.manage') then
+  if not private.account_active(v_profile_id) or not public.has_permission('ai.manage') then
     raise exception 'AI prompt management permission required.' using errcode = '42501';
   end if;
+  v_actor_subject_id := private.resolve_or_create_ai_actor(v_profile_id);
   if p_prompt_key is null or p_prompt_key !~ '^[a-z][a-z0-9_.-]{1,99}$'
      or p_version is null or p_version !~ '^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$'
      or p_content is null or char_length(p_content) not between 1 and 100000
@@ -98,12 +100,12 @@ begin
   insert into private.ai_prompt_versions(
     prompt_key, version, content, content_sha256, metadata, created_by
   ) values (
-    p_prompt_key, p_version, p_content, v_hash, p_metadata, v_actor
+    p_prompt_key, p_version, p_content, v_hash, p_metadata, v_actor_subject_id
   ) returning id into v_id;
 
   insert into public.audit_log(actor_id, action, entity, entity_id, new_values)
   values (
-    v_actor, 'ai_prompt_version_created', 'ai_prompt_versions', v_id,
+    v_profile_id, 'ai_prompt_version_created', 'ai_prompt_versions', v_id,
     jsonb_build_object('prompt_key', p_prompt_key, 'version', p_version, 'content_sha256', v_hash)
   );
 
@@ -123,16 +125,18 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_actor uuid := auth.uid();
+  v_profile_id uuid := auth.uid();
+  v_actor_subject_id uuid;
   v_target private.ai_prompt_versions%rowtype;
   v_previous text;
 begin
-  if v_actor is null then
+  if v_profile_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
   end if;
-  if not private.account_active(v_actor) or not public.has_permission('ai.manage') then
+  if not private.account_active(v_profile_id) or not public.has_permission('ai.manage') then
     raise exception 'AI prompt management permission required.' using errcode = '42501';
   end if;
+  v_actor_subject_id := private.resolve_or_create_ai_actor(v_profile_id);
   if p_prompt_key is null or p_prompt_key !~ '^[a-z][a-z0-9_.-]{1,99}$'
      or p_version is null or p_reason is null
      or char_length(trim(p_reason)) not between 10 and 500 then
@@ -156,7 +160,7 @@ begin
 
   insert into private.ai_prompt_active_pointers(
     prompt_key, version_id, version, updated_by, updated_at
-  ) values (p_prompt_key, v_target.id, v_target.version, v_actor, clock_timestamp())
+  ) values (p_prompt_key, v_target.id, v_target.version, v_actor_subject_id, clock_timestamp())
   on conflict (prompt_key) do update set
     version_id = excluded.version_id,
     version = excluded.version,
@@ -165,11 +169,11 @@ begin
 
   insert into private.ai_prompt_activation_history(
     prompt_key, from_version, to_version, operation, reason, actor_id
-  ) values (p_prompt_key, v_previous, p_version, 'activate', trim(p_reason), v_actor);
+  ) values (p_prompt_key, v_previous, p_version, 'activate', trim(p_reason), v_actor_subject_id);
 
   insert into public.audit_log(actor_id, action, entity, entity_id, new_values)
   values (
-    v_actor, 'ai_prompt_version_activated', 'ai_prompt_active_pointers', v_target.id,
+    v_profile_id, 'ai_prompt_version_activated', 'ai_prompt_active_pointers', v_target.id,
     jsonb_build_object('prompt_key', p_prompt_key, 'from_version', v_previous,
       'to_version', p_version, 'reason', trim(p_reason))
   );
@@ -189,17 +193,19 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_actor uuid := auth.uid();
+  v_profile_id uuid := auth.uid();
+  v_actor_subject_id uuid;
   v_current text;
   v_previous text;
   v_target private.ai_prompt_versions%rowtype;
 begin
-  if v_actor is null then
+  if v_profile_id is null then
     raise exception 'Authentication is required.' using errcode = '28000';
   end if;
-  if not private.account_active(v_actor) or not public.has_permission('ai.manage') then
+  if not private.account_active(v_profile_id) or not public.has_permission('ai.manage') then
     raise exception 'AI prompt management permission required.' using errcode = '42501';
   end if;
+  v_actor_subject_id := private.resolve_or_create_ai_actor(v_profile_id);
   if p_prompt_key is null or p_prompt_key !~ '^[a-z][a-z0-9_.-]{1,99}$'
      or p_reason is null or char_length(trim(p_reason)) not between 10 and 500 then
     raise exception 'Invalid prompt rollback request.' using errcode = '22023';
@@ -233,16 +239,16 @@ begin
 
   update private.ai_prompt_active_pointers
      set version_id = v_target.id, version = v_target.version,
-         updated_by = v_actor, updated_at = clock_timestamp()
+         updated_by = v_actor_subject_id, updated_at = clock_timestamp()
    where prompt_key = p_prompt_key;
 
   insert into private.ai_prompt_activation_history(
     prompt_key, from_version, to_version, operation, reason, actor_id
-  ) values (p_prompt_key, v_current, v_previous, 'rollback', trim(p_reason), v_actor);
+  ) values (p_prompt_key, v_current, v_previous, 'rollback', trim(p_reason), v_actor_subject_id);
 
   insert into public.audit_log(actor_id, action, entity, entity_id, new_values)
   values (
-    v_actor, 'ai_prompt_version_rolled_back', 'ai_prompt_active_pointers', v_target.id,
+    v_profile_id, 'ai_prompt_version_rolled_back', 'ai_prompt_active_pointers', v_target.id,
     jsonb_build_object('prompt_key', p_prompt_key, 'from_version', v_current,
       'to_version', v_previous, 'reason', trim(p_reason))
   );
@@ -266,3 +272,39 @@ revoke all on function public.rollback_active_ai_prompt_version(text, text)
 grant execute on function public.create_ai_prompt_version(text, text, text, jsonb) to authenticated;
 grant execute on function public.set_active_ai_prompt_version(text, text, text) to authenticated;
 grant execute on function public.rollback_active_ai_prompt_version(text, text) to authenticated;
+
+-- Runtime read path: service_role may resolve the active prompt, but cannot mutate
+-- prompt tables directly. Content is returned only for an explicit prompt key.
+create or replace function private.get_active_ai_prompt(p_prompt_key text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+begin
+  if p_prompt_key is null or p_prompt_key !~ '^[a-z][a-z0-9_.-]{1,99}$' then
+    raise exception 'Invalid prompt key.' using errcode = '22023';
+  end if;
+
+  select jsonb_build_object(
+    'prompt_key', v.prompt_key,
+    'version', v.version,
+    'content', v.content,
+    'content_sha256', v.content_sha256,
+    'metadata', v.metadata
+  ) into v_result
+  from private.ai_prompt_active_pointers p
+  join private.ai_prompt_versions v
+    on v.id = p.version_id and v.prompt_key = p.prompt_key and v.version = p.version
+  where p.prompt_key = p_prompt_key;
+
+  return v_result;
+end;
+$$;
+
+alter function private.get_active_ai_prompt(text) owner to postgres;
+revoke all on function private.get_active_ai_prompt(text)
+  from public, anon, authenticated, service_role;
+grant execute on function private.get_active_ai_prompt(text) to service_role;
