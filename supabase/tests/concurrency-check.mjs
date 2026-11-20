@@ -6,7 +6,7 @@ const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@12
 
 function runPsql(sqlOrCommands, appName) {
   const cmds = Array.isArray(sqlOrCommands) ? sqlOrCommands : [sqlOrCommands];
-  const args = [DB_URL, '-v', 'ON_ERROR_STOP=1', '-t', '-A'];
+  const args = [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-t', '-A'];
   for (const c of cmds) {
     args.push('-c', c);
   }
@@ -604,6 +604,180 @@ async function main() {
   `);
   assert.equal(verify4g.stdout, 'failed:Worker B Storage 503|storage_pending');
   console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');
+  console.log('5. Testing concurrent AI compliance lookups against the system-wide limit...');
+  const compliancePrincipal = randomUUID();
+  const complianceTarget = randomUUID();
+  const compliancePhone = `23480${Math.floor(10000000 + Math.random() * 89999999)}`;
+  const complianceSetup = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${compliancePrincipal}', '${compliancePhone}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${compliancePrincipal}', '${compliancePhone}', 'Compliance Concurrency Admin')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
+    INSERT INTO public.admin_roles (profile_id, admin_role)
+    VALUES ('${compliancePrincipal}', 'super_admin');
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${complianceTarget}', '${compliancePhone.slice(0, 5)}${Math.floor(10000000 + Math.random() * 89999999)}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, full_name)
+    VALUES ('${complianceTarget}', 'Compliance Concurrency Target')
+    ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name;
+    SELECT private.resolve_or_create_ai_actor('${complianceTarget}');
+    DELETE FROM private.ai_compliance_lookup_limits;
+    DELETE FROM private.ai_compliance_lookup_throttle_state;
+    UPDATE private.ai_compliance_lookup_config
+       SET enabled = true,
+           window_seconds = 900,
+           throttle_write_cooldown_seconds = 60,
+           principal_attempt_limit = 100,
+           principal_denied_limit = 100,
+           system_attempt_limit = 2,
+           updated_at = clock_timestamp()
+     WHERE singleton = true;
+  `);
+  assert.equal(complianceSetup.code, 0, `Compliance concurrency setup failed: ${complianceSetup.stderr}`);
+  const complianceActorResult = await runPsql(`
+    SELECT actor_subject_id::text
+      FROM private.ai_actor_directory
+     WHERE profile_id = '${complianceTarget}';
+  `);
+  assert.equal(complianceActorResult.code, 0, complianceActorResult.stderr);
+  assert.match(complianceActorResult.stdout, /^[0-9a-f-]{36}$/i, 'Compliance actor subject must be resolved before authenticated calls');
+
+  const complianceTx = (subjectId = complianceActorResult.stdout) => `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${compliancePrincipal}","role":"authenticated"}';
+    SELECT public.compliance_lookup_ai_actor(
+      '${subjectId}'::uuid,
+      'data_subject_request'
+    )->>'status';
+    COMMIT;
+  `;
+
+  // 5a: 6 genuinely concurrent requests compete for the final 2 system-wide slots.
+  //     4 are throttled; inside the 60s cooldown only the first throttled caller writes throttle_state.
+  const concurrentBatch = await Promise.all(
+    Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(), `conc_ai_compliance_${i}`)),
+  );
+  for (const res of concurrentBatch) {
+    assert.equal(res.code, 0, `Concurrent compliance request failed: ${res.stderr}`);
+  }
+  const complianceStatus = (result) =>
+    result.stdout.includes('permitted') ? 'permitted' : result.stdout.includes('throttled') ? 'throttled' : undefined;
+  const batchOutcomes = concurrentBatch.map(complianceStatus);
+  assert.equal(batchOutcomes.filter((s) => s === 'permitted').length, 2, `Expected exactly 2 permitted, got ${batchOutcomes}`);
+  assert.equal(batchOutcomes.filter((s) => s === 'throttled').length, 4, `Expected exactly 4 throttled, got ${batchOutcomes}`);
+
+  // Capture exact physical tuple identity (ctid + xmin) and telemetry before sustained rejected burst
+  const beforeBurstTuple = await runPsql(`
+    SELECT ctid::text || '|' || xmin::text || '|' || sampled_suppression_events::text || '|' || last_recorded_at::text
+      FROM private.ai_compliance_lookup_throttle_state
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(beforeBurstTuple.code, 0, beforeBurstTuple.stderr);
+  assert.match(beforeBurstTuple.stdout, /^\(\d+,\d+\)\|\d+\|1\|/, `Expected initial sampled_suppression_events=1, got ${beforeBurstTuple.stdout}`);
+
+  // 5b: Sustained rejected burst (15 more calls across 5 concurrent waves with rotating subjects)
+  //     inside cooldown must execute ZERO UPDATEs against throttle_state (ctid & xmin identical).
+  for (let wave = 0; wave < 5; wave++) {
+    const waveResults = await Promise.all(
+      Array.from({ length: 3 }, (_, j) => runPsql(complianceTx(randomUUID()), `conc_ai_burst_${wave}_${j}`)),
+    );
+    for (const r of waveResults) {
+      assert.equal(r.code, 0, `Burst compliance call failed: ${r.stderr}`);
+      assert.equal(complianceStatus(r), 'throttled', `Expected throttled during burst, got ${r.stdout}`);
+    }
+  }
+
+  const afterBurstTuple = await runPsql(`
+    SELECT ctid::text || '|' || xmin::text || '|' || sampled_suppression_events::text || '|' || last_recorded_at::text
+      FROM private.ai_compliance_lookup_throttle_state
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(afterBurstTuple.code, 0, afterBurstTuple.stderr);
+  assert.equal(
+    afterBurstTuple.stdout,
+    beforeBurstTuple.stdout,
+    `Expected ZERO throttle_state UPDATEs during 15-call cooldown burst (ctid/xmin must match): before=${beforeBurstTuple.stdout}, after=${afterBurstTuple.stdout}`,
+  );
+
+  // 5c: Cooldown expiry boundary under concurrency: deterministically expire cooldown, then launch
+  //     6 concurrent rejected callers. Exactly ONE caller may increment sampled_suppression_events (1 -> 2).
+  const expireCooldown = await runPsql(`
+    UPDATE private.ai_compliance_lookup_throttle_state
+       SET last_recorded_at = last_recorded_at - interval '65 seconds'
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(expireCooldown.code, 0, expireCooldown.stderr);
+
+  const postCooldownBatch = await Promise.all(
+    Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(randomUUID()), `conc_ai_cooldown_boundary_${i}`)),
+  );
+  for (const r of postCooldownBatch) {
+    assert.equal(r.code, 0, `Post-cooldown concurrent call failed: ${r.stderr}`);
+    assert.equal(complianceStatus(r), 'throttled', `Expected throttled after cooldown expiry, got ${r.stdout}`);
+  }
+
+  const complianceCounts = await runPsql(`
+    SELECT
+      (SELECT count(*) FROM private.ai_compliance_lookup_limits)::text || '|' ||
+      (SELECT count(*) FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT sampled_suppression_events FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'permitted')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'throttled')::text;
+  `);
+  assert.equal(complianceCounts.code, 0, complianceCounts.stderr);
+  assert.equal(
+    complianceCounts.stdout,
+    '2|1|2|3|2|1',
+    `Expected bounded counts (limits=2, state_rows=1, sampled_events=2, audit_total=3, audit_permitted=2, audit_throttled=1), got ${complianceCounts.stdout}`,
+  );
+
+  // 5d: M4.1.1 concurrent calls after a 900s rolling-window expiry:
+  //     All 6 concurrent callers must be throttled, exactly ONE window reset occurs
+  //     (sampled_suppression_events resets to 1, audit_throttled increments 1 -> 2),
+  //     and no duplicate throttle-state or audit rows are created.
+  const expireWindowBoundary = await runPsql(`
+    UPDATE private.ai_compliance_lookup_throttle_state
+       SET window_started_at = clock_timestamp() - interval '900 seconds',
+           last_recorded_at = clock_timestamp() - interval '60 seconds'
+     WHERE scope_key = 'system:global';
+  `);
+  assert.equal(expireWindowBoundary.code, 0, expireWindowBoundary.stderr);
+
+  const windowBoundaryBatch = await Promise.all(
+    Array.from({ length: 6 }, (_, i) => runPsql(complianceTx(randomUUID()), `conc_ai_window_boundary_${i}`)),
+  );
+  for (const r of windowBoundaryBatch) {
+    assert.equal(r.code, 0, `Window-boundary concurrent call failed: ${r.stderr}`);
+    assert.equal(complianceStatus(r), 'throttled', `Expected throttled at window boundary, got ${r.stdout}`);
+  }
+
+  const boundaryCounts = await runPsql(`
+    SELECT
+      (SELECT count(*) FROM private.ai_compliance_lookup_limits)::text || '|' ||
+      (SELECT count(*) FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT sampled_suppression_events FROM private.ai_compliance_lookup_throttle_state WHERE scope_key = 'system:global')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'permitted')::text || '|' ||
+      (SELECT count(*) FROM public.audit_log WHERE actor_id = '${compliancePrincipal}' AND action = 'ai_actor_compliance_lookup' AND new_values->>'outcome' = 'throttled')::text;
+  `);
+  assert.equal(boundaryCounts.code, 0, boundaryCounts.stderr);
+  assert.equal(
+    boundaryCounts.stdout,
+    '2|1|1|4|2|2',
+    `Expected exactly one window reset at 900s boundary (limits=2, state_rows=1, sampled_events=1, audit_total=4, audit_permitted=2, audit_throttled=2), got ${boundaryCounts.stdout}`,
+  );
+
+  const resetCompliance = await runPsql(`
+    UPDATE private.ai_compliance_lookup_config SET enabled = false WHERE singleton = true;
+    DELETE FROM private.ai_compliance_lookup_limits;
+    DELETE FROM private.ai_compliance_lookup_throttle_state;
+  `);
+  assert.equal(resetCompliance.code, 0, resetCompliance.stderr);
+  console.log('   PASS: 6 concurrent callers + 15 cooldown-suppressed burst calls (ctid/xmin unchanged) + 6 cooldown-expiry callers + 6 rolling-window boundary callers serialised atomically with exact N_max=15 semantics.');
+
 }
 
 main().catch((err) => {
