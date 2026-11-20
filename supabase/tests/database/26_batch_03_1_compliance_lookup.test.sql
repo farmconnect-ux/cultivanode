@@ -159,6 +159,7 @@ select is(
   'authenticated users without audit.read cannot look up actors'
 );
 
+reset role;
 select is(
   (select count(*)::int from public.audit_log
    where actor_id = 'e7000000-0000-0000-0000-000000000002'
@@ -176,6 +177,7 @@ select is(
   'denied attempts are counted against the requesting principal'
 );
 
+set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"e7000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
 
