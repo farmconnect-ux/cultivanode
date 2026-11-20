@@ -66,6 +66,13 @@ describe("fertiliser route input validation", () => {
     expect(FertiliserSchema.safeParse(validRequest).success).toBe(true);
   });
 
+  it("rejects crops without validated nutrient coefficients instead of using generic defaults", () => {
+    expect(FertiliserSchema.safeParse({
+      ...validRequest,
+      cropId: "bell-pepper",
+    }).success).toBe(false);
+  });
+
   it("rejects non-finite yield and area values", () => {
     expect(FertiliserSchema.safeParse({
       ...validRequest,
