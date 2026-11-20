@@ -219,6 +219,8 @@ select ok(
   'Test 10c: actor directory and internal functions are inaccessible to application roles'
 );
 
+select set_config('test.ai_actor_subject_id', private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')::text, true);
+
 -- 11-18: Execute deletion for u1 -> durable Storage queue populated, data_requests stays open until finalized
 select is(
   (select (public.execute_account_deletion('e5000000-0000-0000-0000-000000000001', 'No longer needed'))->>'deletion_status'),
@@ -259,9 +261,9 @@ select is(
 select is(
   (select (d.profile_id is null and d.deleted_at is not null)::text
    from private.ai_actor_directory d
-   where d.actor_subject_id = private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')),
+   where d.actor_subject_id = current_setting('test.ai_actor_subject_id')::uuid),
   'true',
-  'Test 18a: account deletion anonymises the AI actor mapping without changing its subject ID'
+  'Test 18a: account deletion anonymises the existing AI actor mapping while retaining its subject ID'
 );
 
 -- 17: New orders/bookings against deleting/deleted u1 are blocked by trigger
