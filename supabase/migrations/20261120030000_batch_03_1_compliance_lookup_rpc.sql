@@ -83,9 +83,9 @@ returns boolean
 language sql
 immutable
 set search_path = ''
-as $
+as $ai_compliance_window_expired$
   select p_window_started_at <= p_window_cutoff;
-$;
+$ai_compliance_window_expired$;
 
 alter function private.ai_compliance_window_expired(timestamptz, timestamptz) owner to postgres;
 revoke all on function private.ai_compliance_window_expired(timestamptz, timestamptz)
