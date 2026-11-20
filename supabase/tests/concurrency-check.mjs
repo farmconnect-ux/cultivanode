@@ -603,7 +603,74 @@ async function main() {
         || '|' || (SELECT deletion_status FROM public.profiles WHERE id = '${u4g}');
   `);
   assert.equal(verify4g.stdout, 'failed:Worker B Storage 503|storage_pending');
-  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');
+  console.log('   PASS: 4g stale Worker A completion rejected; cleanup stayed failed and profile stayed storage_pending.');\n
+  console.log('5. Testing concurrent AI compliance lookups against the system-wide limit...');
+  const compliancePrincipal = randomUUID();
+  const complianceTarget = randomUUID();
+  const compliancePhone = `23480${Math.floor(10000000 + Math.random() * 89999999)}`;
+  const complianceSetup = await runPsql(`
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${compliancePrincipal}', '${compliancePhone}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, phone, full_name)
+    VALUES ('${compliancePrincipal}', '${compliancePhone}', 'Compliance Concurrency Admin');
+    INSERT INTO public.admin_roles (profile_id, admin_role)
+    VALUES ('${compliancePrincipal}', 'super_admin');
+    INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+    VALUES ('${complianceTarget}', '${compliancePhone.slice(0, 5)}${Math.floor(10000000 + Math.random() * 89999999)}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
+    INSERT INTO public.profiles (id, full_name)
+    VALUES ('${complianceTarget}', 'Compliance Concurrency Target');
+    SELECT private.resolve_or_create_ai_actor('${complianceTarget}');
+    DELETE FROM private.ai_compliance_lookup_limits;
+    UPDATE private.ai_compliance_lookup_config
+       SET enabled = true,
+           window_seconds = 900,
+           principal_attempt_limit = 100,
+           principal_denied_limit = 100,
+           system_attempt_limit = 1,
+           updated_at = clock_timestamp()
+     WHERE singleton = true;
+  `);
+  assert.equal(complianceSetup.code, 0, `Compliance concurrency setup failed: ${complianceSetup.stderr}`);
+
+  const complianceTx = () => `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SELECT set_config('request.jwt.claims', '{"sub":"${compliancePrincipal}","role":"authenticated"}', true);
+    SELECT public.compliance_lookup_ai_actor(
+      (SELECT actor_subject_id FROM private.ai_actor_directory WHERE profile_id = '${complianceTarget}'),
+      'data_subject_request'
+    )->>'status';
+    COMMIT;
+  `;
+  const [complianceA, complianceB] = await Promise.all([
+    runPsql(complianceTx(), 'conc_ai_compliance_a'),
+    runPsql(complianceTx(), 'conc_ai_compliance_b'),
+  ]);
+  assert.equal(complianceA.code, 0, `Concurrent compliance request A failed: ${complianceA.stderr}`);
+  assert.equal(complianceB.code, 0, `Concurrent compliance request B failed: ${complianceB.stderr}`);
+  const complianceOutcomes = [complianceA.stdout, complianceB.stdout].sort();
+  assert.deepEqual(complianceOutcomes, ['permitted', 'throttled'],
+    `Expected one permitted and one throttled lookup, got ${complianceOutcomes}`);
+
+  const complianceAudit = await runPsql(`
+    SELECT count(*)::text || '|' ||
+           count(*) FILTER (WHERE details->>'outcome' = 'permitted')::text || '|' ||
+           count(*) FILTER (WHERE details->>'outcome' = 'throttled')::text
+      FROM public.audit_log
+     WHERE actor_id = '${compliancePrincipal}'
+       AND action = 'ai_actor_compliance_lookup';
+  `);
+  assert.equal(complianceAudit.code, 0, complianceAudit.stderr);
+  assert.equal(complianceAudit.stdout, '2|1|1',
+    `Expected both concurrent outcomes to be durably audited, got ${complianceAudit.stdout}`);
+
+  const resetCompliance = await runPsql(`
+    UPDATE private.ai_compliance_lookup_config SET enabled = false WHERE singleton = true;
+    DELETE FROM private.ai_compliance_lookup_limits;
+  `);
+  assert.equal(resetCompliance.code, 0, resetCompliance.stderr);
+  console.log('   PASS: Concurrent lookups serialised at the global lock; exactly one permitted, one throttled, both audited.');
+
 }
 
 main().catch((err) => {
