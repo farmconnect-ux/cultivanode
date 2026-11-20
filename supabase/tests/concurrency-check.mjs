@@ -612,13 +612,15 @@ async function main() {
     INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
     VALUES ('${compliancePrincipal}', '${compliancePhone}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
     INSERT INTO public.profiles (id, phone, full_name)
-    VALUES ('${compliancePrincipal}', '${compliancePhone}', 'Compliance Concurrency Admin');
+    VALUES ('${compliancePrincipal}', '${compliancePhone}', 'Compliance Concurrency Admin')
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, full_name = EXCLUDED.full_name;
     INSERT INTO public.admin_roles (profile_id, admin_role)
     VALUES ('${compliancePrincipal}', 'super_admin');
     INSERT INTO auth.users (id, phone, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
     VALUES ('${complianceTarget}', '${compliancePhone.slice(0, 5)}${Math.floor(10000000 + Math.random() * 89999999)}', now(), '{}'::jsonb, '{}'::jsonb, 'authenticated', 'authenticated');
     INSERT INTO public.profiles (id, full_name)
-    VALUES ('${complianceTarget}', 'Compliance Concurrency Target');
+    VALUES ('${complianceTarget}', 'Compliance Concurrency Target')
+    ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name;
     SELECT private.resolve_or_create_ai_actor('${complianceTarget}');
     DELETE FROM private.ai_compliance_lookup_limits;
     UPDATE private.ai_compliance_lookup_config
