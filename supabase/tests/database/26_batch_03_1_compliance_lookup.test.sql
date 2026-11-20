@@ -1,7 +1,31 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(49);
+select plan(52);
+
+-- Deterministic rolling-window predicate coverage. Fixed timestamps exercise the
+-- exact helper called by both production branches, avoiding wall-clock race windows.
+select ok(
+  private.ai_compliance_window_expired(
+    '2026-11-20 11:59:59+00'::timestamptz,
+    '2026-11-20 12:00:00+00'::timestamptz
+  ),
+  'window start earlier than cutoff is expired'
+);
+select ok(
+  private.ai_compliance_window_expired(
+    '2026-11-20 12:00:00+00'::timestamptz,
+    '2026-11-20 12:00:00+00'::timestamptz
+  ),
+  'window start exactly equal to cutoff is expired (inclusive boundary)'
+);
+select ok(
+  not private.ai_compliance_window_expired(
+    '2026-11-20 12:00:01+00'::timestamptz,
+    '2026-11-20 12:00:00+00'::timestamptz
+  ),
+  'window start later than cutoff remains active'
+);
 
 -- 1-3: Private tables, RLS, and zero direct privileges for application roles
 select ok(
