@@ -71,11 +71,17 @@ select is(
   'first prompt version can be activated'
 );
 
+reset role;
+set local role service_role;
 select is(
   private.get_active_ai_prompt('agronomy.advisor')->>'content',
   'Initial safe agronomy prompt',
   'service runtime can resolve active prompt content'
 );
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e8000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
 
 select is(
   public.create_ai_prompt_version('agronomy.advisor', '1.0.1', 'Updated safe agronomy prompt', '{}'::jsonb)->>'version',
@@ -95,11 +101,17 @@ select is(
   'rollback restores the previous immutable version'
 );
 
+reset role;
+set local role service_role;
 select is(
   private.get_active_ai_prompt('agronomy.advisor')->>'content',
   'Initial safe agronomy prompt',
   'runtime resolves restored prompt content after rollback'
 );
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"e8000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
 
 select throws_ok(
   $$update private.ai_prompt_versions set content = 'tampered' where prompt_key = 'agronomy.advisor'$$,
