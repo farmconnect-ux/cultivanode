@@ -631,13 +631,20 @@ async function main() {
      WHERE singleton = true;
   `);
   assert.equal(complianceSetup.code, 0, `Compliance concurrency setup failed: ${complianceSetup.stderr}`);
+  const complianceActorResult = await runPsql(`
+    SELECT actor_subject_id::text
+      FROM private.ai_actor_directory
+     WHERE profile_id = '${complianceTarget}';
+  `);
+  assert.equal(complianceActorResult.code, 0, complianceActorResult.stderr);
+  assert.match(complianceActorResult.stdout, /^[0-9a-f-]{36}$/i, 'Compliance actor subject must be resolved before authenticated calls');
 
   const complianceTx = () => `
     BEGIN;
     SET LOCAL ROLE authenticated;
     SELECT set_config('request.jwt.claims', '{"sub":"${compliancePrincipal}","role":"authenticated"}', true);
     SELECT public.compliance_lookup_ai_actor(
-      (SELECT actor_subject_id FROM private.ai_actor_directory WHERE profile_id = '${complianceTarget}'),
+      '${complianceActorResult.stdout}'::uuid,
       'data_subject_request'
     )->>'status';
     COMMIT;
