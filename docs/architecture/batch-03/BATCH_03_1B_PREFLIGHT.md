@@ -37,10 +37,10 @@ The intended order remains:
 
 | Migration | Purpose | Current readiness |
 |---|---|---|
-| M1 | Enable `vector` in `extensions`; add `ai_intelligence` to `public.consent_type` | Ready for code and tests |
-| M2 | Private actor directory, internal functions and deletion anonymisation hook | Implemented on branch; awaiting CI and review |
+| M1 | Enable `vector` in `extensions`; add `ai_intelligence` to `public.consent_type` | Implemented; clean migration replay and pgTAP verified |
+| M2 | Private actor directory, internal functions and deletion anonymisation hook | Implemented; full CI verified on `aeb910ce415da79c7fef6eb4f65fa72d85b7d962` |
 | M3 | Append-only AI audit events, trusted writer and constrained feedback RPC | Ready for code after RLS and append-only tests |
-| M4 | Audited, concurrency-safe compliance lookup | Implemented on branch; latest CI verification pending; disabled by default pending operational approval |
+| M4 | Audited, concurrency-safe compliance lookup | Implemented; full CI verified on `286e3b905171b9ad1d8399c6b1e7690ad4b72004`; disabled by default pending operational approval |
 | M5 | Immutable prompt versions, active pointers and audited activation/rollback | Activation permission key requires owner decision |
 
 M1 must not reference the newly added enum label in a data statement in the same migration transaction. Extension installation must use the unpinned form `CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions`; Supabase deprecated explicit extension version clauses from 2026-08-05.
@@ -78,7 +78,9 @@ It creates two private, RLS-enabled, application-inaccessible tables. `private.a
 
 `public.compliance_lookup_ai_actor(uuid,text)` is PostgreSQL-owned, SECURITY DEFINER, uses an empty search path and is executable only by `authenticated`. It requires an active account and `public.has_permission('audit.read')`, validates a fixed purpose-code allowlist, returns only the minimum actor attribution fields, and returns no actor data for denied, throttled or disabled requests. The existing permission catalogue does not grant `audit.read` to ordinary staff roles; therefore, only super-admins currently satisfy the permission check. No permission grant to other roles is introduced by this migration.
 
-Two transaction-scoped advisory locks are acquired in a stable order, system-wide first and principal second. This serialises counter evaluation and insertions, prevents concurrent requests from exceeding configured limits, and prevents subject-ID rotation from bypassing the principal-level ceiling. Every returned outcome is written to the existing append-only `public.audit_log`; audit-write errors abort the lookup and return no actor data. Old counter records are pruned after one hour.
+Two transaction-scoped advisory locks are acquired in a stable order, system-wide first and principal second. This serialises counter evaluation and insertions, prevents concurrent requests from exceeding configured limits, and prevents subject-ID rotation from bypassing the principal-level ceiling. Attempts made while the feature is disabled also consume the configured rate budget, preventing an unauthorised caller from using the disabled endpoint to generate unbounded audit rows. Every returned outcome is written to the existing append-only `public.audit_log`; audit-write errors abort the lookup and return no actor data. Old counter records are pruned after one hour.
+
+**Verification:** workflow run `44799102052` passed on `286e3b905171b9ad1d8399c6b1e7690ad4b72004`. It completed typecheck, lint, unit tests, production build, clean migration replay, all 887 pgTAP assertions across 26 files, existing database concurrency checks plus the new two-request compliance lookup race, Storage API integration and live API/database integration. The compliance concurrency test observed exactly one permitted response and one throttled response, with both outcomes durably audited.
 
 The dedicated pgTAP suite is `26_batch_03_1_compliance_lookup.test.sql`. It covers disabled-by-default behaviour, function/table privileges, permission denial, purpose validation, permitted and unknown subjects, principal denial limits, system-wide limits, and durable audit outcomes. The repository concurrency suite now also runs two genuinely concurrent authenticated lookup requests against a system limit of one, asserting exactly one permitted response, one throttled response and two audit records.
 
