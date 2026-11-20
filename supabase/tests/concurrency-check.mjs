@@ -734,7 +734,7 @@ async function main() {
     `Expected bounded counts (limits=2, state_rows=1, sampled_events=2, audit_total=3, audit_permitted=2, audit_throttled=1), got ${complianceCounts.stdout}`,
   );
 
-  // 5d: M4.1.1 concurrent calls at the exact 900s rolling-window boundary:
+  // 5d: M4.1.1 concurrent calls after a 900s rolling-window expiry:
   //     All 6 concurrent callers must be throttled, exactly ONE window reset occurs
   //     (sampled_suppression_events resets to 1, audit_throttled increments 1 -> 2),
   //     and no duplicate throttle-state or audit rows are created.
