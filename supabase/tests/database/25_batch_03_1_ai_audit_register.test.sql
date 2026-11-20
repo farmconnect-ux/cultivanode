@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(29);
 
 select ok(
   to_regclass('public.ai_audit_events') is not null,
@@ -182,6 +182,32 @@ select throws_ok(
   '22023',
   null,
   'context references reject arbitrary or prompt-bearing fields'
+);
+
+select throws_ok(
+  $select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a3',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"record_id":"soil-001"}]'::jsonb,'{}'::uuid[]
+  )$,
+  '22023',
+  null,
+  'context references require a source field'
+);
+
+select throws_ok(
+  $select private.write_ai_audit_event(
+    'e6000000-0000-0000-0000-000000000001',
+    'e6000000-0000-0000-0000-0000000000f1',
+    'e6000000-0000-0000-0000-0000000000a4',
+    'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
+    '{}'::jsonb,'[{"source":"soil_records"}]'::jsonb,'{}'::uuid[]
+  )$,
+  '22023',
+  null,
+  'context references require a record_id field'
 );
 
 reset role;
