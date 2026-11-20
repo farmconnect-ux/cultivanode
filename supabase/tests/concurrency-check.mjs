@@ -6,7 +6,7 @@ const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@12
 
 function runPsql(sqlOrCommands, appName) {
   const cmds = Array.isArray(sqlOrCommands) ? sqlOrCommands : [sqlOrCommands];
-  const args = [DB_URL, '-v', 'ON_ERROR_STOP=1', '-t', '-A'];
+  const args = [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-t', '-A'];
   for (const c of cmds) {
     args.push('-c', c);
   }
