@@ -58,6 +58,23 @@ The M4 provisional rate limits remain: 10 attempts per principal per 15 minutes,
 The read-only Staging security advisor currently reports pre-existing findings, including RLS-enabled tables with no policies, SECURITY DEFINER functions executable by anon/authenticated, and disabled leaked-password protection. These are baseline findings, not regressions introduced by Batch 03.1B. New migrations must not increase the relevant findings; targeted grant checks and advisor comparisons will be required after Staging application.
 
 
+
+## 9. M3 implementation record
+
+M3 has been implemented in `20261120020000_batch_03_1_ai_audit_events.sql`.
+
+The migration creates `public.ai_audit_events` with one immutable execution record per unique `trace_id`, farm-scoped visibility, a pseudonymous actor reference, provider/model/prompt-version identifiers, execution outcome, bounded guardrail metadata, bounded context references and memory-item identifiers. Raw prompts, model responses, images, credentials and arbitrary request payloads are not accepted by the writer contract.
+
+The audit-event table is append-only through the existing `private.forbid_change()` trigger on UPDATE and DELETE. Direct table writes are revoked from all application roles. Authenticated users receive SELECT only, protected by RLS requiring an active account and `private.can_view_farm(farm_id)`. `service_role` has no direct table privileges.
+
+`private.write_ai_audit_event(...)` is a postgres-owned SECURITY DEFINER function with an empty search path. It is executable only by `service_role`, validates the event contract, resolves the pseudonymous actor internally, and provides first-write-wins idempotency for repeated trace submissions. Reuse of a trace ID with different actor, farm or event content is rejected. As explicitly documented in ADR-005, farm membership and caller identity must be verified by the central server audit client under the caller's JWT before the shared service-role credential invokes this function; PostgreSQL cannot distinguish individual Next.js server modules sharing that credential.
+
+The migration also creates append-only `public.ai_audit_feedback` and `public.record_ai_feedback(trace_id, outcome, note)`. The RPC derives the submitting user from `auth.uid()`, checks account activity, verifies access to the farm attached to the existing user execution, restricts outcomes to `accepted`, `rejected` or `modified`, and permits one feedback record per actor per trace. Feedback cannot alter the original AI execution event.
+
+The dedicated regression suite is `supabase/tests/database/25_batch_03_1_ai_audit_register.test.sql`. It covers table and function privileges, RLS, append-only triggers, unique trace IDs, writer idempotency, payload allowlists, farm-scoped visibility, feedback outcome and duplicate constraints, and rejection of cross-farm feedback.
+
+**Verification status:** M3 source and pgTAP tests have been committed to the Batch 03.1B branch. CI for M3 is pending. No Staging or Production migration has been applied.
+
 ## 8. M2 implementation record
 
 M2 has been implemented in `20261120010000_batch_03_1b_ai_actor_directory.sql`.
