@@ -274,14 +274,14 @@ select is(
 );
 
 select throws_ok(
-  $select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')$,
+  $q$select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000001')$q$,
   'P0001',
   'Deleted profiles cannot be mapped to an AI actor.',
   'Test 18c: deleted profiles cannot receive a new or restored actor mapping'
 );
 
 select throws_ok(
-  $select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000099')$,
+  $q$select private.resolve_or_create_ai_actor('e5000000-0000-0000-0000-000000000099')$q$,
   'P0002',
   'Profile not found.',
   'Test 18d: actor resolver rejects nonexistent profiles'
