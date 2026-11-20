@@ -657,9 +657,10 @@ async function main() {
   ]);
   assert.equal(complianceA.code, 0, `Concurrent compliance request A failed: ${complianceA.stderr}`);
   assert.equal(complianceB.code, 0, `Concurrent compliance request B failed: ${complianceB.stderr}`);
-  const complianceOutcomes = [complianceA.stdout, complianceB.stdout].sort();
+  const complianceStatus = (result) => result.stdout.split(/\\r?\\n/).find((line) => line === 'permitted' || line === 'throttled');
+  const complianceOutcomes = [complianceStatus(complianceA), complianceStatus(complianceB)].sort();
   assert.deepEqual(complianceOutcomes, ['permitted', 'throttled'],
-    `Expected one permitted and one throttled lookup, got ${complianceOutcomes}`);
+    `Expected one permitted and one throttled lookup, got ${complianceA.stdout} | ${complianceB.stdout}`);
 
   const complianceAudit = await runPsql(`
     SELECT count(*)::text || '|' ||
