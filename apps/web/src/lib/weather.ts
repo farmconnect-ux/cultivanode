@@ -199,7 +199,7 @@ export async function getLivePilotWeather(): Promise<WeatherResponse> {
 
     const result: Extract<WeatherResponse, { ok: true }> = {
       ok: true,
-      provider: "nimet",
+      provider: "open-meteo",
       fetchedAt: new Date().toISOString(),
       stale: false,
       forecasts,
