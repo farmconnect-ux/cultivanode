@@ -103,7 +103,8 @@ begin
        or not public.has_permission('audit.read')
        or p_actor_subject_id is null
        or v_purpose is null
-       or char_length(v_purpose) not between 3 and 200 then
+       or char_length(v_purpose) not between 3 and 200
+       or v_purpose not in ('data_subject_request', 'regulatory_inquiry', 'security_incident', 'legal_obligation') then
       v_outcome := 'denied';
     else
       select * into v_actor
