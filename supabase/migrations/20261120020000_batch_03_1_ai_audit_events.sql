@@ -1,11 +1,14 @@
 -- Batch 03.1B M3: append-only AI audit register and constrained human feedback.
 -- The trusted server client must authenticate the caller and verify farm visibility
 -- under the caller's JWT before invoking the service_role-only writer. PostgreSQL
--- cannot distinguish apps/web modules sharing the same service_role credential.
+-- cannot distinguish apps/web modules sharing the same service_role credential, so
+-- the writer re-checks the profile's farm access itself.
 
 create table public.ai_audit_events (
   id uuid primary key default gen_random_uuid(),
   trace_id uuid not null unique,
+  -- Events can never be deleted, so a farm with AI activity cannot be deleted either.
+  -- Any future farm-deletion flow must archive or pseudonymise the farm instead.
   farm_id uuid not null references public.farms (id) on delete restrict,
   actor_subject_id uuid not null references private.ai_actor_directory (actor_subject_id) on delete restrict,
   actor_kind text not null check (actor_kind in ('user', 'system')),
@@ -13,6 +16,8 @@ create table public.ai_audit_events (
   provider text not null check (provider in ('claude', 'gemini', 'openai', 'rule-engine')),
   model_id text not null check (char_length(model_id) between 1 and 128),
   prompt_version text not null check (char_length(prompt_version) between 1 and 128),
+  -- Null only for prompts not yet registered in private.ai_prompt_versions.
+  prompt_version_id uuid references private.ai_prompt_versions (id) on delete restrict,
   execution_outcome text not null check (execution_outcome in ('completed', 'blocked', 'failed', 'fallback')),
   guardrail_result jsonb not null default '{}'::jsonb,
   context_refs jsonb not null default '[]'::jsonb,
@@ -46,7 +51,11 @@ create index ai_audit_events_actor_created_idx
 alter table public.ai_audit_events enable row level security;
 alter table public.ai_audit_events owner to postgres;
 revoke all on table public.ai_audit_events from public, anon, authenticated, service_role;
-grant select on table public.ai_audit_events to authenticated;
+-- actor_subject_id is withheld so farm viewers cannot link one person's AI activity across farms.
+grant select (
+  id, trace_id, farm_id, actor_kind, event_kind, provider, model_id, prompt_version,
+  prompt_version_id, execution_outcome, guardrail_result, context_refs, memory_item_ids, created_at
+) on table public.ai_audit_events to authenticated;
 
 create policy ai_audit_events_select_visible_farm
   on public.ai_audit_events
@@ -90,6 +99,40 @@ create trigger ai_audit_feedback_forbid_delete
   before delete on public.ai_audit_feedback
   for each row execute function private.forbid_change();
 
+-- Same access rules as private.can_view_farm, evaluated for an explicit profile
+-- because service_role callers have no auth.uid(). Keep the two in step.
+create or replace function private.profile_can_view_farm(p_profile_id uuid, p_farm_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.farms f
+    where f.id = p_farm_id
+      and (
+        f.owner_id = p_profile_id
+        or (f.organization_id is not null and exists (
+              select 1 from public.org_members m
+               where m.organization_id = f.organization_id and m.profile_id = p_profile_id))
+        or (f.onboarded_by = p_profile_id and exists (
+              select 1 from public.user_roles r
+               where r.profile_id = p_profile_id and r.role = 'field_agent'))
+        or exists (
+              select 1 from public.admin_roles a
+               where a.profile_id = p_profile_id
+                 and (a.admin_role = 'super_admin'
+                      or exists (select 1 from public.admin_role_permissions rp
+                                  where rp.admin_role = a.admin_role and rp.permission = 'farms.read')))
+      )
+  );
+$$;
+
+alter function private.profile_can_view_farm(uuid, uuid) owner to postgres;
+revoke all on function private.profile_can_view_farm(uuid, uuid)
+  from public, anon, authenticated, service_role;
+
 create or replace function private.write_ai_audit_event(
   p_profile_id uuid,
   p_farm_id uuid,
@@ -100,7 +143,8 @@ create or replace function private.write_ai_audit_event(
   p_execution_outcome text,
   p_guardrail_result jsonb,
   p_context_refs jsonb,
-  p_memory_item_ids uuid[]
+  p_memory_item_ids uuid[],
+  p_prompt_version_id uuid default null
 )
 returns uuid
 language plpgsql
@@ -141,12 +185,23 @@ begin
     raise exception 'Farm not found.' using errcode = 'P0002';
   end if;
 
+  if not private.profile_can_view_farm(p_profile_id, p_farm_id) then
+    raise exception 'Profile cannot access this farm.' using errcode = '42501';
+  end if;
+
   if p_provider is null or p_provider not in ('claude', 'gemini', 'openai', 'rule-engine')
      or p_model_id is null or char_length(p_model_id) not between 1 and 128
      or p_prompt_version is null or char_length(p_prompt_version) not between 1 and 128
      or p_execution_outcome is null
      or p_execution_outcome not in ('completed', 'blocked', 'failed', 'fallback') then
     raise exception 'Invalid AI audit event attributes.' using errcode = '22023';
+  end if;
+
+  if p_prompt_version_id is not null and not exists (
+    select 1 from private.ai_prompt_versions v
+     where v.id = p_prompt_version_id and v.version = p_prompt_version
+  ) then
+    raise exception 'Prompt version reference does not match a registered prompt version.' using errcode = '22023';
   end if;
 
   if p_guardrail_result is null
@@ -218,18 +273,16 @@ begin
     raise exception 'Too many memory references.' using errcode = '22023';
   end if;
 
-  -- Identity and farm membership are verified by the central server audit client
-  -- under the caller's JWT before this service_role-only RPC is invoked.
   v_actor_subject_id := private.resolve_or_create_ai_actor(p_profile_id);
 
   insert into public.ai_audit_events (
     trace_id, farm_id, actor_subject_id, actor_kind, event_kind,
-    provider, model_id, prompt_version, execution_outcome,
+    provider, model_id, prompt_version, prompt_version_id, execution_outcome,
     guardrail_result, context_refs, memory_item_ids
   )
   select
     p_trace_id, p_farm_id, v_actor_subject_id, d.actor_kind, 'ai_execution',
-    p_provider, p_model_id, p_prompt_version, p_execution_outcome,
+    p_provider, p_model_id, p_prompt_version, p_prompt_version_id, p_execution_outcome,
     p_guardrail_result, p_context_refs, coalesce(p_memory_item_ids, '{}'::uuid[])
   from private.ai_actor_directory d
   where d.actor_subject_id = v_actor_subject_id
@@ -251,6 +304,7 @@ begin
      or v_existing.provider is distinct from p_provider
      or v_existing.model_id is distinct from p_model_id
      or v_existing.prompt_version is distinct from p_prompt_version
+     or v_existing.prompt_version_id is distinct from p_prompt_version_id
      or v_existing.execution_outcome is distinct from p_execution_outcome
      or v_existing.guardrail_result is distinct from p_guardrail_result
      or v_existing.context_refs is distinct from p_context_refs
@@ -262,10 +316,10 @@ begin
 end;
 $$;
 
-alter function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[]) owner to postgres;
-revoke all on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[])
+alter function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid) owner to postgres;
+revoke all on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid)
   from public, anon, authenticated, service_role;
-grant execute on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[])
+grant execute on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid)
   to service_role;
 
 create or replace function public.record_ai_feedback(

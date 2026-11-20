@@ -104,7 +104,7 @@ The dedicated regression suite is `supabase/tests/database/25_batch_03_1_ai_audi
 
 ## 8. M2 implementation record
 
-M2 has been implemented in `20261120010000_batch_03_1b_ai_actor_directory.sql`.
+M2 has been implemented in `20261120010000_batch_03_1_ai_actor_directory.sql`.
 
 The migration creates `private.ai_actor_directory` with stable pseudonymous `actor_subject_id`, `actor_kind`, nullable profile attribution, creation/update timestamps and deletion timestamp. A partial unique index permits only one active user actor mapping per profile. Constraints distinguish user and system actors and prevent a deleted actor from retaining profile attribution. RLS is enabled and all table privileges are revoked from `PUBLIC`, `anon`, `authenticated` and `service_role`.
 
