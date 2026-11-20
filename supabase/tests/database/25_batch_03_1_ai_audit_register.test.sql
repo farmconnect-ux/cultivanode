@@ -198,13 +198,13 @@ select throws_ok(
 );
 
 select throws_ok(
-  $select private.write_ai_audit_event(
+  $q$select private.write_ai_audit_event(
     'e6000000-0000-0000-0000-000000000001',
     'e6000000-0000-0000-0000-0000000000f1',
     'e6000000-0000-0000-0000-0000000000a4',
     'claude','claude-sonnet-5-5','farm-intelligence-v1','completed',
     '{}'::jsonb,'[{"source":"soil_records"}]'::jsonb,'{}'::uuid[]
-  )$,
+  )$q$,
   '22023',
   null,
   'context references require a record_id field'
