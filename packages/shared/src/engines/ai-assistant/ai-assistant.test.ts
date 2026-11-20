@@ -27,6 +27,32 @@ describe('AI Grounding and Chemical Safety Guardrails', () => {
     expect(result.bannedChemicalsDetected).toContain('paraquat');
   });
 
+  it('blocks every banned chemical name, including aldrin, regardless of context', () => {
+    for (const chemical of ['paraquat', 'carbofuran', 'ddt', 'endosulfan', 'lindane', 'monocrotophos', 'aldrin']) {
+      const result = checkChemicalSafetyGuardrails(`Educational note: do not use ${chemical}.`);
+      expect(result.passed).toBe(false);
+      expect(result.bannedChemicalsDetected).toContain(chemical);
+      expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+      expect(result.sanitizedResponseText.toLowerCase()).not.toContain(`do not use ${chemical}`);
+    }
+  });
+
+  it('blocks multiple banned chemicals found across distinct response fields', () => {
+    const allFields = [
+      'Summary: historical paraquat use was reported.',
+      'Likely cause: carbofuran exposure.',
+      'Checks: inspect for DDT residue.',
+      'Actions: never apply aldrin.',
+      'Expert guidance: avoid lindane.',
+    ].join(' ');
+    const result = checkChemicalSafetyGuardrails(allFields);
+    expect(result.passed).toBe(false);
+    expect(result.bannedChemicalsDetected).toEqual(expect.arrayContaining(['paraquat', 'carbofuran', 'ddt', 'aldrin', 'lindane']));
+    expect(result.sanitizedResponseText).toContain('SAFETY BLOCK');
+    expect(result.sanitizedResponseText).not.toContain('historical paraquat');
+    expect(result.sanitizedResponseText).not.toContain('carbofuran exposure');
+  });
+
   it('appends safety notices for approved chemicals like Atrazine', () => {
     const rawResponse = 'Apply Atrazine at 3 liters per hectare for early weed control.';
     const result = checkChemicalSafetyGuardrails(rawResponse);
