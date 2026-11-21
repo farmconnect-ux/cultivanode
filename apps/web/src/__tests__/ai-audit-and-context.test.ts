@@ -319,7 +319,7 @@ describe("Batch 03.1C — Central Trusted AI Audit Client (ai-audit.ts)", () => 
         modelId: "claude-sonnet-4-5",
         promptVersion: "assistant-v1",
         executionOutcome: "completed",
-        guardrailResult: { rule_ids: [value] },
+        guardrailResult: { rule_ids: [value as never] },
       });
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.code).toBe("invalid_payload");
@@ -332,7 +332,7 @@ describe("Batch 03.1C — Central Trusted AI Audit Client (ai-audit.ts)", () => 
         modelId: "claude-sonnet-4-5",
         promptVersion: "assistant-v1",
         executionOutcome: "completed",
-        guardrailResult: { reason_codes: [value] },
+        guardrailResult: { reason_codes: [value as never] },
       });
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.code).toBe("invalid_payload");
