@@ -27,7 +27,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Keep in step with the "supabase" devDependency in package.json. "latest" makes an
+          # unauthenticated GitHub API call that shared runners hit rate limits on.
+          version: 2.118.0
       - name: Start local Supabase (applies all migrations)
         # The default registry (public.ecr.aws) rate-limits shared CI runners ("toomanyrequests").
         # Pull from GitHub's registry first, then Docker Hub, retrying once each.
