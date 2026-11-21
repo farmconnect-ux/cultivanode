@@ -1218,7 +1218,7 @@ async function loadEquipmentTelemetryDomain(
       // Retrieve the NEWEST 200 telemetry readings descending, then arrange chronologically before evaluation.
       client
         .from("machinery_telemetry")
-        .select("id, machinery_id, engine_hours, recorded_at")
+        .select("id, machinery_id, engine_hours, recorded_at, source_category, validation_status, trust_classification")
         .eq("farm_id", farmId)
         .order("recorded_at", { ascending: false })
         .order("id", { ascending: false })
@@ -1251,10 +1251,27 @@ async function loadEquipmentTelemetryDomain(
       usageByMachinery.set(u.machineryId, arr);
     }
 
-    const telByMachinery = new Map<string, Array<{ id: string; engineHours: number | null; recordedAt: string }>>();
+    const telByMachinery = new Map<
+      string,
+      Array<{
+        id: string;
+        engineHours: number | null;
+        recordedAt: string;
+        sourceCategory?: string | null;
+        validationStatus?: string | null;
+        trustClassification?: string | null;
+      }>
+    >();
     for (const t of machTelRes.data ?? []) {
       const arr = telByMachinery.get(t.machinery_id) ?? [];
-      arr.push({ id: t.id, engineHours: t.engine_hours, recordedAt: t.recorded_at });
+      arr.push({
+        id: t.id,
+        engineHours: t.engine_hours,
+        recordedAt: t.recorded_at,
+        sourceCategory: t.source_category,
+        validationStatus: t.validation_status,
+        trustClassification: t.trust_classification,
+      });
       telByMachinery.set(t.machinery_id, arr);
     }
 
