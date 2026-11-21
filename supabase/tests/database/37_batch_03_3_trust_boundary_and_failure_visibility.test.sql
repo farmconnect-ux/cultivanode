@@ -83,6 +83,8 @@ select ok(
 );
 
 reset role;
+-- Clear the transaction-local JWT identity: scheduler functions refuse JWT-authenticated sessions.
+select set_config('request.jwt.claim.sub', '', true);
 
 -- 6. The failure assertion is private to the scheduler.
 select ok(
