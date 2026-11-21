@@ -342,8 +342,9 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     assertNoDelimiterBreakout(prompt.userPrompt, 2);
     expect(prompt.userPrompt).not.toMatch(/Ignore all safety rules/i);
     expect(prompt.userPrompt).not.toContain('SYSTEM:');
-    expect(pkg.sanitizationSummary.sanitizedRecordCount).toBeGreaterThanOrEqual(1);
-    expect(pkg.sanitizationSummary.neutralizedFieldCount).toBeGreaterThanOrEqual(1);
+    expect(pkg.sanitizationSummary.fieldsTransformed).toBeGreaterThanOrEqual(1);
+    expect(pkg.sanitizationSummary.fieldsModified).toBeGreaterThanOrEqual(1);
+    expect(pkg.sanitizationSummary.delimiterEscapingApplied).toBe(true);
   });
 
   it('Case 2: neutralises delimiter-closing tags injected into memory category and title', () => {
