@@ -16,14 +16,34 @@ import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context
 import { logger } from "@/lib/logger";
 import { supabaseEnv } from "@/lib/supabase/env";
 
+/**
+ * Explicit AI Assistant Audit Policy (Batch 03.1D Finding 09):
+ *
+ * 1. Farm-specific execution (`context.farmId` supplied):
+ *    - Requires verified JWT, active account, verified farm visibility (RLS), and active
+ *      `ai_intelligence` consent via `authorizeAiFarmRequest`.
+ *    - Loads RLS-scoped `LiveFarmContextSnapshot`.
+ *    - Persists an append-only audit record via `recordAiAuditEvent` for every outcome
+ *      (`completed`, `blocked`, `fallback`, or `failed` on provider exception).
+ *    - Fails closed (`409` on duplicate traceId conflict, `503` on audit persistence failure).
+ *
+ * 2. Farm-independent execution (`context.farmId` omitted):
+ *    - Current `public.ai_audit_events` schema enforces `farm_id NOT NULL` (`20261120020000`).
+ *    - No farm-independent audit table/RPC is currently approved.
+ *    - Therefore, after caller authentication, active-account, and consent checks, requests
+ *      without `context.farmId` FAIL CLOSED with `422 FARM_CONTEXT_REQUIRED_FOR_AUDIT`.
+ *    - Never fabricates a farm ID and never executes an unaudited AI completion.
+ */
+
 const AssistantBodySchema = z.object({
+  traceId: z.string().uuid("traceId must be a valid UUID.").optional(),
   query: z.string().max(4000).optional(),
   language: z.enum(["en", "yo", "pcm"]).optional(),
   imageBase64: z.string().max(8_000_000).optional(),
   imageMimeType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
   context: z
     .object({
-      farmId: z.string().uuid().optional(),
+      farmId: z.string().uuid("context.farmId must be a valid UUID.").optional(),
       cropId: z.string().max(80).optional(),
       zone: z.string().max(80).optional(),
       stageName: z.string().max(80).optional(),
@@ -38,6 +58,29 @@ function mapAuditProvider(providerUsed: string): "claude" | "gemini" | "openai" 
   if (lower.includes("gemini") || lower.includes("google")) return "gemini";
   if (lower.includes("openai") || lower.includes("gpt")) return "openai";
   return "rule-engine";
+}
+
+async function resolveAuthenticatedUser(
+  req: Request,
+): Promise<{ user: User; client: SupabaseClient<Database> } | null> {
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      const { url, key } = supabaseEnv();
+      const client = createSupabaseJs<Database>(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data } = await client.auth.getUser(token);
+      if (data.user) return { user: data.user, client };
+    }
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (data.user) return { user: data.user, client: supabase };
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -66,111 +109,141 @@ export async function POST(req: Request) {
     }
 
     const farmId = body.context?.farmId;
-    let verifiedFarmCaller: VerifiedAiFarmCallerContext | null = null;
-    let authenticatedUserId: string | null = null;
+    let verifiedFarmCaller: VerifiedAiFarmCallerContext;
 
     if (farmId) {
       // Farm-scoped AI intelligence requires Bearer JWT -> active account -> farm RLS -> AI consent.
       const farmAuth = await authorizeAiFarmRequest(req, farmId);
       if (!farmAuth.authorized) return farmAuth.response;
       verifiedFarmCaller = farmAuth.caller;
-      authenticatedUserId = farmAuth.caller.user.id;
     } else {
-      let user: User | null = null;
-      let userClient: SupabaseClient<Database> | null = null;
-
-      const authHeader = req.headers.get("authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.slice(7).trim();
-        if (token) {
-          const { url, key } = supabaseEnv();
-          const client = createSupabaseJs<Database>(url, key, {
-            auth: { persistSession: false, autoRefreshToken: false },
-            global: { headers: { Authorization: `Bearer ${token}` } },
-          });
-          const { data } = await client.auth.getUser(token);
-          if (data.user) {
-            user = data.user;
-            userClient = client;
-          }
-        }
-      }
-
-      if (!user) {
-        const supabase = await createClient();
-        const { data } = await supabase.auth.getUser();
-        if (data.user) {
-          user = data.user;
-          userClient = supabase;
-        }
-      }
-
-      if (!user || !userClient) {
+      // Authenticate first so unauthenticated callers receive 401 before policy checks.
+      const session = await resolveAuthenticatedUser(req);
+      if (!session) {
         return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
       }
 
-      const activeCheck = await verifyActiveAccount(userClient, user.id);
+      const activeCheck = await verifyActiveAccount(session.client, session.user.id);
       if (!activeCheck.ok) return activeCheck.response;
 
-      const consentCheck = await verifyAiIntelligenceConsent(userClient, user.id);
+      const consentCheck = await verifyAiIntelligenceConsent(session.client, session.user.id);
       if (!consentCheck.ok) return consentCheck.response;
 
-      authenticatedUserId = user.id;
+      // Fail closed: farm-independent AI execution cannot currently be audited in `public.ai_audit_events`.
+      return NextResponse.json(
+        {
+          error:
+            "A verified farmId (context.farmId) is required for audited AI assistant execution. Farm-independent AI audit storage is not yet approved.",
+          code: "FARM_CONTEXT_REQUIRED_FOR_AUDIT",
+          auditPolicy: "fail_closed_farm_audit_required",
+        },
+        { status: 422 },
+      );
     }
 
-    const snapshot = verifiedFarmCaller ? await getLiveFarmContextSnapshot(verifiedFarmCaller) : null;
-    const activeCycle = snapshot?.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
+    const traceId = body.traceId ?? randomUUID();
+    const snapshot = await getLiveFarmContextSnapshot(verifiedFarmCaller);
+    const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
 
     const c = aiConfig();
-    const result = await askGroundedAiAssistant({
-      query: body.query?.trim() || "Please examine this crop photo and advise what to do.",
-      // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
-      context: {
-        ...(body.context ?? {}),
-        cropId: body.context?.cropId ?? activeCycle?.cropId,
-        zone: body.context?.zone ?? snapshot?.farmZone ?? undefined,
-        stageName: body.context?.stageName ?? activeCycle?.currentStage,
-        farmerId: authenticatedUserId,
-      } as FarmerContext,
-      language: body.language ?? "en",
-      imageBase64: body.imageBase64,
-      imageMimeType: body.imageMimeType,
-      anthropicApiKey: c.anthropicApiKey,
-      claudeModels: c.claudeModels,
-      geminiApiKey: c.geminiApiKey,
-      openaiApiKey: c.openaiApiKey,
-      primaryModel: c.primaryModel,
-      fallbackModel: c.fallbackModel,
-      timeoutMs: c.timeoutMs,
-    });
+    let result: Awaited<ReturnType<typeof askGroundedAiAssistant>>;
 
-    const traceId = randomUUID();
-    if (verifiedFarmCaller && snapshot) {
-      const executionOutcome = !result.passedSafetyGuardrail
-        ? "blocked"
-        : result.providerErrors.length > 0
-          ? "fallback"
-          : "completed";
+    try {
+      result = await askGroundedAiAssistant({
+        query: body.query?.trim() || "Please examine this crop photo and advise what to do.",
+        // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
+        context: {
+          ...(body.context ?? {}),
+          cropId: body.context?.cropId ?? activeCycle?.cropId,
+          zone: body.context?.zone ?? snapshot.farmZone ?? undefined,
+          stageName: body.context?.stageName ?? activeCycle?.currentStage,
+          farmerId: verifiedFarmCaller.user.id,
+        } as FarmerContext,
+        language: body.language ?? "en",
+        imageBase64: body.imageBase64,
+        imageMimeType: body.imageMimeType,
+        anthropicApiKey: c.anthropicApiKey,
+        claudeModels: c.claudeModels,
+        geminiApiKey: c.geminiApiKey,
+        openaiApiKey: c.openaiApiKey,
+        primaryModel: c.primaryModel,
+        fallbackModel: c.fallbackModel,
+        timeoutMs: c.timeoutMs,
+      });
+    } catch (providerErr) {
+      const errMsg = providerErr instanceof Error ? providerErr.message : "AI provider execution failed.";
+      logger.error("ai_assistant_provider_failed", { traceId, message: errMsg });
 
-      const audit = await recordAiAuditEvent(verifiedFarmCaller, {
+      const failedAudit = await recordAiAuditEvent(verifiedFarmCaller, {
         traceId,
-        provider: mapAuditProvider(result.providerUsed),
-        modelId: (result.modelUsed || "rule-engine").slice(0, 128),
+        provider: mapAuditProvider(c.primaryModel || "rule-engine"),
+        modelId: (c.primaryModel || "rule-engine").slice(0, 128),
         promptVersion: "assistant-v1",
-        executionOutcome,
+        executionOutcome: "failed",
         guardrailResult: {
-          status: result.passedSafetyGuardrail ? "passed" : "blocked",
-          rule_ids: ["nafdac_chemical_guardrail"],
-          reason_codes: result.passedSafetyGuardrail ? [] : ["prohibited_chemical"],
-          blocked: !result.passedSafetyGuardrail,
+          status: "error",
+          rule_ids: [],
+          reason_codes: ["provider_execution_failed"],
+          blocked: false,
         },
         contextRefs: snapshot.auditContextRefs,
         memoryItemIds: [],
       });
 
-      if (!audit.ok) {
-        return NextResponse.json({ error: "Unable to record AI audit trace." }, { status: 503 });
+      if (!failedAudit.ok) {
+        const status = failedAudit.code === "trace_conflict" ? 409 : 503;
+        return NextResponse.json(
+          { error: failedAudit.error, code: failedAudit.code, traceId },
+          { status },
+        );
       }
+
+      return NextResponse.json(
+        {
+          error: "AI provider failed to complete the request.",
+          code: "AI_PROVIDER_FAILED",
+          traceId,
+          auditStatus: "persisted_failed_outcome",
+        },
+        { status: 502 },
+      );
+    }
+
+    const executionOutcome = !result.passedSafetyGuardrail
+      ? "blocked"
+      : result.providerErrors.length > 0
+        ? "fallback"
+        : "completed";
+
+    const audit = await recordAiAuditEvent(verifiedFarmCaller, {
+      traceId,
+      provider: mapAuditProvider(result.providerUsed),
+      modelId: (result.modelUsed || "rule-engine").slice(0, 128),
+      promptVersion: "assistant-v1",
+      executionOutcome,
+      guardrailResult: {
+        status: result.passedSafetyGuardrail ? "passed" : "blocked",
+        rule_ids: ["nafdac_chemical_guardrail"],
+        reason_codes: result.passedSafetyGuardrail ? [] : ["prohibited_chemical"],
+        blocked: !result.passedSafetyGuardrail,
+      },
+      contextRefs: snapshot.auditContextRefs,
+      memoryItemIds: [],
+    });
+
+    if (!audit.ok) {
+      const status = audit.code === "trace_conflict" ? 409 : 503;
+      return NextResponse.json(
+        {
+          error:
+            audit.code === "trace_conflict"
+              ? "Duplicate AI audit trace identifier."
+              : "Unable to record AI audit trace.",
+          code: audit.code,
+          traceId,
+        },
+        { status },
+      );
     }
 
     if (result.providerErrors.length > 0) {
@@ -182,7 +255,11 @@ export async function POST(req: Request) {
       logger.info("ai_assistant_ok", { provider: result.providerUsed, model: result.modelUsed });
     }
 
-    return NextResponse.json(verifiedFarmCaller ? { ...result, traceId } : result);
+    return NextResponse.json({
+      ...result,
+      traceId,
+      auditStatus: "persisted",
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process AI request.";
     logger.error("ai_assistant_error", { message });

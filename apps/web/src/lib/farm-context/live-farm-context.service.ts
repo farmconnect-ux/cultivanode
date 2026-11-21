@@ -2,16 +2,23 @@ import "server-only";
 import {
   PROVISIONAL_SOIL_TEST_VALIDITY_DAYS,
   PROVISIONAL_SOIL_VALIDITY_NOTE,
+  aggregateMachineryUsageLogs,
+  calculateInventoryLedgerBalances,
   evaluateInventoryLedgerConsistency,
   evaluateMachineryTelemetryConsistency,
   extractSnapshotAuditReferences,
   makeNumericFact,
+  matchFarmWeatherForecast,
   normalizeAuditContextReferences,
+  parseFarmLocationCoordinates,
   selectAuthoritativeSoilRecord,
   type AuditContextReference,
   type ContextConflictDetail,
   type ContextFact,
+  type ContextState,
   type ContextValidationIssue,
+  type CoreQueryError,
+  type CoreQueryStatus,
   type CropIdentityDomainData,
   type DomainContextSection,
   type EquipmentTelemetryDomainData,
@@ -19,7 +26,10 @@ import {
   type FarmInventoryDomainData,
   type FarmerObservationsDomainData,
   type FinancialMarketplaceDomainData,
+  type InventoryTransactionInput,
   type LiveFarmContextSnapshot,
+  type MachineryUsageLogInput,
+  type QueryErrorKind,
   type SoilChemistryDomainData,
   type SoilMoistureDomainData,
   type SoilRecordCandidate,
@@ -28,23 +38,54 @@ import {
 import type { VerifiedFarmCallerContext } from "@/lib/engines-api-helper";
 
 /**
- * CultivaNode 3.0 — Batch 03.1C RLS-Scoped LiveFarmContextService (ADR-001, ADR-007).
+ * CultivaNode 3.0 — Batch 03.1C / 03.1D RLS-Scoped LiveFarmContextService (ADR-001, ADR-007).
  *
- * Security invariants:
+ * Security & data-integrity invariants:
  * - Server-only.
  * - Executes 100% of queries through `caller.client` (the caller's verified Supabase JWT + RLS).
  * - ZERO `service_role` reads of farm data.
- * - Explicit column selection, bounded limits, deterministic ordering.
- * - Query errors produce `status: 'error'` with a validation issue (never confused with `missing`).
+ * - Explicit column selection, deterministic ordering, complete pagination for ledger/usage aggregates.
+ * - Initial `farms` and `plots` query errors are explicitly classified and propagated — never coerced to empty/missing.
+ * - Every fact carries provenance pointing to its actual evidence table and record ID (never fabricated).
  */
 
 const MAX_DOMAIN_ROWS = 50;
+const PAGINATION_PAGE_SIZE = 1000;
+const MAX_INVENTORY_TX_PAGES = 50; // 50,000 transactions safety bound
+const MAX_USAGE_LOG_PAGES = 20; // 20,000 usage sessions safety bound
 
-function makeErrorSection<T>(domain: FarmContextDomain, message: string): DomainContextSection<T> {
+interface SupabaseQueryErrorLike {
+  code?: string | null;
+  message?: string | null;
+  status?: number | null;
+}
+
+function classifyQueryError(error: SupabaseQueryErrorLike | null | undefined): QueryErrorKind {
+  const code = String(error?.code ?? "");
+  const msg = String(error?.message ?? "").toLowerCase();
+  if (code === "PGRST301" || error?.status === 401 || msg.includes("jwt") || msg.includes("unauthorized")) {
+    return "auth_error";
+  }
+  if (code === "42501" || error?.status === 403 || msg.includes("permission denied") || msg.includes("row-level security")) {
+    return "rls_denied";
+  }
+  if (code === "57014" || msg.includes("timeout") || msg.includes("canceling statement") || msg.includes("aborted")) {
+    return "timeout";
+  }
+  return "database_error";
+}
+
+function makeErrorSection<T>(
+  domain: FarmContextDomain,
+  message: string,
+  errorKind: QueryErrorKind = "database_error",
+  code: ContextValidationIssue["code"] = "domain_query_error",
+): DomainContextSection<T> {
   return {
     domain,
     status: "error",
     data: null,
+    errorKind,
     errorMessage: message,
     sourceRefs: [],
     conflicts: [],
@@ -53,15 +94,31 @@ function makeErrorSection<T>(domain: FarmContextDomain, message: string): Domain
       {
         domain,
         field: "domain_query",
-        code: "domain_query_error",
+        code,
         message,
       },
     ],
   };
 }
 
-function emptyFact<T>(): ContextFact<T> {
-  return { value: null, state: "missing", provenance: null };
+function emptyFact<T>(state: ContextState = "missing", note?: string): ContextFact<T> {
+  return { value: null, state, provenance: null, ...(note ? { note } : {}) };
+}
+
+function emptyWeatherData(state: ContextState = "missing", note?: string): WeatherDomainData {
+  return {
+    locationLabel: emptyFact<string>(state, note),
+    matchedBy: null,
+    provider: emptyFact<string>(state, note),
+    fetchedAt: emptyFact<string>(state, note),
+    observedAt: emptyFact<string>(state, note),
+    forecastPeriod: emptyFact<string>(state, note),
+    temperatureC: emptyFact<number>(state, note),
+    rainfallMm: emptyFact<number>(state, note),
+    humidityPct: emptyFact<number>(state, note),
+    windSpeedKmh: emptyFact<number>(state, note),
+    ageHours: null,
+  };
 }
 
 export async function getLiveFarmContextSnapshot(
@@ -71,12 +128,12 @@ export async function getLiveFarmContextSnapshot(
   const retrievedAt = (options.now ?? new Date()).toISOString();
   const { client, farmId } = caller;
 
-  // Fetch core farm identity + plots first (RLS-scoped under caller JWT) so plot-scoped
-  // domains (`soil_records`, `telemetry_rollups`, `telemetry_readings`) can filter cleanly.
+  // Fetch core farm identity + plots first (RLS-scoped under caller JWT).
+  // Errors MUST be inspected explicitly and never coerced into empty arrays or missing facts.
   const [farmRes, plotsRes] = await Promise.all([
     client
       .from("farms")
-      .select("id, name, zone, state, lga, soil_information, updated_at")
+      .select("id, name, zone, state, lga, location, soil_information, updated_at")
       .eq("id", farmId)
       .maybeSingle(),
     client
@@ -87,11 +144,42 @@ export async function getLiveFarmContextSnapshot(
       .limit(MAX_DOMAIN_ROWS),
   ]);
 
-  const farm = farmRes.data ?? null;
-  const plots = plotsRes.data ?? [];
+  const coreQueryErrors: CoreQueryError[] = [];
+  let farmQueryStatus: CoreQueryStatus = "ok";
+  let plotsQueryStatus: CoreQueryStatus = "ok";
+  let farmError: CoreQueryError | null = null;
+  let plotsError: CoreQueryError | null = null;
+
+  if (farmRes.error) {
+    farmQueryStatus = "error";
+    farmError = {
+      target: "farms",
+      kind: classifyQueryError(farmRes.error),
+      message: `Failed to retrieve farm record (${classifyQueryError(farmRes.error)}).`,
+    };
+    coreQueryErrors.push(farmError);
+  } else if (!farmRes.data) {
+    farmQueryStatus = "empty";
+  }
+
+  if (plotsRes.error) {
+    plotsQueryStatus = "error";
+    plotsError = {
+      target: "plots",
+      kind: classifyQueryError(plotsRes.error),
+      message: `Failed to retrieve farm plots (${classifyQueryError(plotsRes.error)}).`,
+    };
+    coreQueryErrors.push(plotsError);
+  } else if (!plotsRes.data || plotsRes.data.length === 0) {
+    plotsQueryStatus = "empty";
+  }
+
+  const farm = farmError ? null : (farmRes.data ?? null);
+  const plots = plotsError ? [] : (plotsRes.data ?? []);
   const plotIds = plots.map((p) => p.id);
 
-  // Parallelise all 8 independent bounded domain queries under the caller's JWT.
+  // Parallelise all 8 independent domain queries under the caller's JWT.
+  // Plot-dependent domains receive `plotsError` so they fail explicitly rather than assuming 0 plots.
   const [
     soilSection,
     moistureSection,
@@ -102,13 +190,13 @@ export async function getLiveFarmContextSnapshot(
     equipmentSection,
     observationsSection,
   ] = await Promise.all([
-    loadSoilChemistryDomain(client, farm, plots, plotIds, retrievedAt),
-    loadSoilMoistureDomain(client, farmId, plotIds, retrievedAt),
-    loadCropIdentityDomain(client, farmId, plots, retrievedAt),
-    loadWeatherDomain(client, retrievedAt),
+    loadSoilChemistryDomain(client, farm, plots, plotIds, plotsError, retrievedAt),
+    loadSoilMoistureDomain(client, farmId, plotIds, plotsError, retrievedAt),
+    loadCropIdentityDomain(client, farmId, plots, plotsError, retrievedAt),
+    loadWeatherDomain(client, farm, farmError, retrievedAt),
     loadInventoryDomain(client, farmId, retrievedAt),
     loadFinancialMarketplaceDomain(client, farmId, retrievedAt),
-    loadEquipmentTelemetryDomain(client, farmId, plotIds, retrievedAt),
+    loadEquipmentTelemetryDomain(client, farmId, plotIds, plotsError, retrievedAt),
     loadFarmerObservationsDomain(client, farmId, retrievedAt),
   ]);
 
@@ -135,6 +223,9 @@ export async function getLiveFarmContextSnapshot(
     farmZone: farm?.zone ?? null,
     farmState: farm?.state ?? null,
     farmLga: farm?.lga ?? null,
+    farmQueryStatus,
+    plotsQueryStatus,
+    coreQueryErrors,
     retrievedAt,
     scope: "farm",
     domains,
@@ -165,9 +256,13 @@ async function loadSoilChemistryDomain(
     updated_at: string;
   }>,
   plotIds: string[],
+  plotsError: CoreQueryError | null,
   retrievedAt: string,
 ): Promise<DomainContextSection<SoilChemistryDomainData>> {
   const domain: FarmContextDomain = "soil_chemistry_and_nutrients";
+  if (plotsError) {
+    return makeErrorSection(domain, plotsError.message, plotsError.kind, "core_query_error");
+  }
   try {
     let soilRows: SoilRecordCandidate[] = [];
     if (plotIds.length > 0) {
@@ -179,7 +274,7 @@ async function loadSoilChemistryDomain(
         .in("plot_id", plotIds)
         .order("tested_on", { ascending: false, nullsFirst: false })
         .limit(MAX_DOMAIN_ROWS);
-      if (error) return makeErrorSection(domain, "Failed to retrieve soil records.");
+      if (error) return makeErrorSection(domain, "Failed to retrieve soil records.", classifyQueryError(error));
       soilRows = (data ?? []).map((r) => ({
         id: r.id,
         plotId: r.plot_id,
@@ -328,9 +423,13 @@ async function loadSoilMoistureDomain(
   client: VerifiedFarmCallerContext["client"],
   farmId: string,
   plotIds: string[],
+  plotsError: CoreQueryError | null,
   retrievedAt: string,
 ): Promise<DomainContextSection<SoilMoistureDomainData>> {
   const domain: FarmContextDomain = "soil_moisture_and_irrigation";
+  if (plotsError) {
+    return makeErrorSection(domain, plotsError.message, plotsError.kind, "core_query_error");
+  }
   try {
     const [rollupsRes, eventsRes, zonesRes] = await Promise.all([
       plotIds.length > 0
@@ -356,8 +455,9 @@ async function loadSoilMoistureDomain(
         .limit(20),
     ]);
 
-    if (rollupsRes.error || eventsRes.error || zonesRes.error) {
-      return makeErrorSection(domain, "Failed to retrieve soil moisture and irrigation data.");
+    const firstErr = rollupsRes.error ?? eventsRes.error ?? zonesRes.error;
+    if (firstErr) {
+      return makeErrorSection(domain, "Failed to retrieve soil moisture and irrigation data.", classifyQueryError(firstErr));
     }
 
     const sourceRefs: AuditContextReference[] = [];
@@ -365,6 +465,7 @@ async function loadSoilMoistureDomain(
     const nowMs = new Date(retrievedAt).getTime();
 
     // Precedence: telemetry_rollups (valid_count > 0) > irrigation_zones.current_moisture_pct
+    // Provenance MUST identify the actual source table & record ID (never fabricated under `farms`).
     const moistureRollup = (rollupsRes.data ?? []).find((r) => /moisture/i.test(r.channel_code));
     const zoneWithMoisture = (zonesRes.data ?? []).find((z) => z.current_moisture_pct !== null);
     let moistureFact: ContextFact<number> = emptyFact<number>();
@@ -386,8 +487,8 @@ async function loadSoilMoistureDomain(
       });
     } else if (zoneWithMoisture) {
       moistureFact = makeNumericFact(zoneWithMoisture.current_moisture_pct, "unverified_provisional", {
-        source: "farms",
-        recordId: farmId,
+        source: "irrigation_zones",
+        recordId: zoneWithMoisture.id,
         sourceTrust: "self_reported",
         observedAt: zoneWithMoisture.updated_at,
         retrievedAt,
@@ -402,8 +503,8 @@ async function loadSoilMoistureDomain(
           value: latestEvent.started_at,
           state: "verified_current",
           provenance: {
-            source: "farms",
-            recordId: farmId,
+            source: "irrigation_events",
+            recordId: latestEvent.id,
             sourceTrust: "platform_verified",
             observedAt: latestEvent.started_at,
             retrievedAt,
@@ -412,8 +513,8 @@ async function loadSoilMoistureDomain(
       : emptyFact<string>();
     const latestIrrigationVolumeLitres = latestEvent
       ? makeNumericFact(latestEvent.volume_litres, "verified_current", {
-          source: "farms",
-          recordId: farmId,
+          source: "irrigation_events",
+          recordId: latestEvent.id,
           sourceTrust: "platform_verified",
           observedAt: latestEvent.started_at,
           retrievedAt,
@@ -445,6 +546,7 @@ async function loadCropIdentityDomain(
   client: VerifiedFarmCallerContext["client"],
   farmId: string,
   plots: Array<{ id: string; name: string; current_crop: string | null; updated_at: string }>,
+  plotsError: CoreQueryError | null,
   _retrievedAt: string,
 ): Promise<DomainContextSection<CropIdentityDomainData>> {
   const domain: FarmContextDomain = "crop_identity_variety_and_stage";
@@ -457,7 +559,7 @@ async function loadCropIdentityDomain(
       .order("planting_date", { ascending: false })
       .limit(MAX_DOMAIN_ROWS);
 
-    if (error) return makeErrorSection(domain, "Failed to retrieve active crop cycles.");
+    if (error) return makeErrorSection(domain, "Failed to retrieve active crop cycles.", classifyQueryError(error));
 
     const cycles = (data ?? []).map((c) => ({
       cycleId: c.id,
@@ -470,6 +572,11 @@ async function loadCropIdentityDomain(
       healthScore: c.health_score,
       state: "verified_current" as const,
     }));
+
+    // If there are no active crop cycles and the plots query failed, we cannot conclude crop identity is missing.
+    if (cycles.length === 0 && plotsError) {
+      return makeErrorSection(domain, plotsError.message, plotsError.kind, "core_query_error");
+    }
 
     const sourceRefs: AuditContextReference[] = (data ?? []).map((c) => ({
       source: "crop_cycles",
@@ -494,14 +601,25 @@ async function loadCropIdentityDomain(
       }
     }
 
+    const validationIssues: ContextValidationIssue[] = plotsError
+      ? [
+          {
+            domain,
+            field: "plots",
+            code: "core_query_error",
+            message: plotsError.message,
+          },
+        ]
+      : [];
+
     return {
       domain,
-      status: cycles.length > 0 ? "ok" : fallbackPlotCrops.length > 0 ? "partial" : "empty",
+      status: plotsError ? "partial" : cycles.length > 0 ? "ok" : fallbackPlotCrops.length > 0 ? "partial" : "empty",
       data: { activeCycles: cycles, fallbackPlotCrops },
       sourceRefs: normalizeAuditContextReferences(sourceRefs),
       conflicts: [],
       missingFields: cycles.length === 0 && fallbackPlotCrops.length === 0 ? ["activeCycles"] : [],
-      validationIssues: [],
+      validationIssues,
     };
   } catch {
     return makeErrorSection(domain, "Unexpected error retrieving crop identity domain.");
@@ -510,23 +628,90 @@ async function loadCropIdentityDomain(
 
 async function loadWeatherDomain(
   client: VerifiedFarmCallerContext["client"],
+  farm: { id: string; state: string | null; location: unknown } | null,
+  farmError: CoreQueryError | null,
   retrievedAt: string,
 ): Promise<DomainContextSection<WeatherDomainData>> {
   const domain: FarmContextDomain = "weather_and_environment";
+  if (farmError) {
+    return makeErrorSection(domain, farmError.message, farmError.kind, "core_query_error");
+  }
+  if (!farm) {
+    return {
+      domain,
+      status: "empty",
+      data: emptyWeatherData("missing", "Farm record unavailable for weather location matching."),
+      sourceRefs: [],
+      conflicts: [],
+      missingFields: ["farm_location"],
+      validationIssues: [],
+    };
+  }
+
+  const parsedLocation = parseFarmLocationCoordinates(farm.location);
+  const coords = parsedLocation.status === "valid" ? parsedLocation.coords : null;
+  const farmState = farm.state?.trim() || null;
+
+  if (!coords && !farmState) {
+    const isInvalid = parsedLocation.status === "invalid";
+    return {
+      domain,
+      status: "empty",
+      data: emptyWeatherData(
+        isInvalid ? "invalid_rejected" : "missing",
+        isInvalid
+          ? "Farm coordinates are invalid and no verified state is available."
+          : "Farm location coordinates and state are missing.",
+      ),
+      sourceRefs: [],
+      conflicts: [],
+      missingFields: ["farm_location"],
+      validationIssues: [
+        {
+          domain,
+          field: "location",
+          code: "missing_or_invalid_farm_location",
+          message: isInvalid
+            ? "Farm coordinates are invalid; weather cannot be matched to this farm."
+            : "Farm has no verified coordinates or state for farm-specific weather matching.",
+          source: "farms",
+          recordId: farm.id,
+        },
+      ],
+    };
+  }
+
   try {
     const { data, error } = await client
       .from("weather_cache")
-      .select("provider, fetched_at")
+      .select("provider, payload, fetched_at")
       .order("fetched_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
 
-    if (error) return makeErrorSection(domain, "Failed to retrieve weather cache.");
-    if (!data) {
+    if (error) {
+      const kind = classifyQueryError(error);
+      if (kind === "rls_denied") {
+        return {
+          domain,
+          status: "unavailable",
+          data: emptyWeatherData("missing", "Weather cache is not directly readable under caller RLS."),
+          errorKind: kind,
+          errorMessage: "Weather cache is unavailable under caller RLS.",
+          sourceRefs: [],
+          conflicts: [],
+          missingFields: ["weather_cache"],
+          validationIssues: [],
+        };
+      }
+      return makeErrorSection(domain, "Failed to retrieve weather cache.", kind);
+    }
+
+    const cacheRows = data ?? [];
+    if (cacheRows.length === 0) {
       return {
         domain,
         status: "empty",
-        data: { provider: emptyFact<string>(), fetchedAt: emptyFact<string>(), ageHours: null },
+        data: emptyWeatherData("missing"),
         sourceRefs: [],
         conflicts: [],
         missingFields: ["weather_cache"],
@@ -534,34 +719,158 @@ async function loadWeatherDomain(
       };
     }
 
-    const ageHours = Math.max(0, (new Date(retrievedAt).getTime() - new Date(data.fetched_at).getTime()) / 3_600_000);
-    const state = ageHours > 12 ? "stale" : "verified_current";
+    // Search cached provider rows for a verified match to THIS farm's coordinates or state.
+    let matchedRow: (typeof cacheRows)[number] | null = null;
+    let matchedForecast: ReturnType<typeof matchFarmWeatherForecast> = null;
+
+    for (const row of cacheRows) {
+      const match = matchFarmWeatherForecast(row.payload, { state: farmState, coords });
+      if (match) {
+        matchedRow = row;
+        matchedForecast = match;
+        break;
+      }
+    }
+
+    if (!matchedRow || !matchedForecast) {
+      return {
+        domain,
+        status: "empty",
+        data: emptyWeatherData("missing", "No cached weather record matches this farm's verified location."),
+        sourceRefs: [],
+        conflicts: [],
+        missingFields: ["weather_cache"],
+        validationIssues: [
+          {
+            domain,
+            field: "weather_cache",
+            code: "weather_location_mismatch",
+            message: "Available weather cache entries do not match this farm's verified geographical location.",
+            source: "farms",
+            recordId: farm.id,
+          },
+        ],
+      };
+    }
+
+    const ageHours = Math.max(0, (new Date(retrievedAt).getTime() - new Date(matchedRow.fetched_at).getTime()) / 3_600_000);
+    const baseState: ContextState =
+      ageHours > 12 ? "stale" : matchedForecast.matchedBy === "coordinates" ? "verified_current" : "unverified_provisional";
+    const observedTimestamp = matchedForecast.forecast.now?.observedAt ?? matchedRow.fetched_at;
     const prov = {
       source: "weather_cache" as const,
-      recordId: data.provider,
+      recordId: matchedRow.provider,
       sourceTrust: "cache" as const,
-      observedAt: data.fetched_at,
+      observedAt: observedTimestamp,
       retrievedAt,
     };
 
+    const days = matchedForecast.forecast.days ?? [];
+    const firstDay = days[0];
+    const lastDay = days[days.length - 1];
+    const forecastPeriodValue =
+      firstDay?.date && lastDay?.date
+        ? firstDay.date === lastDay.date
+          ? firstDay.date
+          : `${firstDay.date}..${lastDay.date}`
+        : null;
+
+    const place = matchedForecast.forecast.place;
+    const locationLabelValue =
+      place?.town && place?.state ? `${place.town}, ${place.state}` : (place?.state ?? farmState);
+
+    const temperatureC = makeNumericFact(matchedForecast.forecast.now?.tempC ?? null, baseState, prov);
+    const humidityPct = makeNumericFact(matchedForecast.forecast.now?.humidity ?? null, baseState, prov);
+    const windSpeedKmh = makeNumericFact(matchedForecast.forecast.now?.windKmh ?? null, baseState, prov);
+    const rainfallMm = makeNumericFact(firstDay?.rainMm ?? null, baseState, {
+      ...prov,
+      observedAt: firstDay?.date ? `${firstDay.date}T00:00:00Z` : matchedRow.fetched_at,
+    });
+
+    const missingFields: string[] = [];
+    if (temperatureC.state === "missing") missingFields.push("temperatureC");
+    if (rainfallMm.state === "missing") missingFields.push("rainfallMm");
+    if (humidityPct.state === "missing") missingFields.push("humidityPct");
+    if (windSpeedKmh.state === "missing") missingFields.push("windSpeedKmh");
+
     return {
       domain,
-      status: "ok",
+      status: missingFields.length > 0 ? "partial" : "ok",
       data: {
-        provider: { value: data.provider, state, provenance: prov },
-        fetchedAt: { value: data.fetched_at, state, provenance: prov },
+        locationLabel: locationLabelValue
+          ? { value: locationLabelValue, state: baseState, provenance: prov }
+          : emptyFact<string>(),
+        matchedBy: matchedForecast.matchedBy,
+        provider: { value: matchedRow.provider, state: baseState, provenance: prov },
+        fetchedAt: { value: matchedRow.fetched_at, state: baseState, provenance: prov },
+        observedAt: { value: observedTimestamp, state: baseState, provenance: prov },
+        forecastPeriod: forecastPeriodValue
+          ? { value: forecastPeriodValue, state: baseState, provenance: prov }
+          : emptyFact<string>(),
+        temperatureC,
+        rainfallMm,
+        humidityPct,
+        windSpeedKmh,
         ageHours: Math.round(ageHours * 10) / 10,
       },
       sourceRefs: normalizeAuditContextReferences([
-        { source: "weather_cache", record_id: data.provider, observed_at: data.fetched_at },
+        { source: "weather_cache", record_id: matchedRow.provider, observed_at: matchedRow.fetched_at },
       ]),
       conflicts: [],
-      missingFields: [],
+      missingFields,
       validationIssues: [],
     };
   } catch {
     return makeErrorSection(domain, "Unexpected error retrieving weather domain.");
   }
+}
+
+async function fetchAllFarmInventoryTransactions(
+  client: VerifiedFarmCallerContext["client"],
+  farmId: string,
+): Promise<{
+  ok: true;
+  rows: InventoryTransactionInput[];
+  isComplete: boolean;
+} | { ok: false; errorKind: QueryErrorKind }> {
+  const rows: InventoryTransactionInput[] = [];
+  let isComplete = true;
+
+  for (let page = 0; page < MAX_INVENTORY_TX_PAGES; page++) {
+    const from = page * PAGINATION_PAGE_SIZE;
+    const to = from + PAGINATION_PAGE_SIZE - 1;
+    const { data, error } = await client
+      .from("farm_inventory_transactions")
+      .select("id, inventory_id, transaction_type, quantity, created_at")
+      .eq("farm_id", farmId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      return { ok: false, errorKind: classifyQueryError(error) };
+    }
+
+    const batch = data ?? [];
+    for (const tx of batch) {
+      rows.push({
+        id: tx.id,
+        inventoryId: tx.inventory_id,
+        transactionType: tx.transaction_type,
+        quantity: tx.quantity,
+        createdAt: tx.created_at,
+      });
+    }
+
+    if (batch.length < PAGINATION_PAGE_SIZE) {
+      return { ok: true, rows, isComplete: true };
+    }
+    if (page === MAX_INVENTORY_TX_PAGES - 1) {
+      isComplete = false;
+    }
+  }
+
+  return { ok: true, rows, isComplete };
 }
 
 async function loadInventoryDomain(
@@ -571,43 +880,39 @@ async function loadInventoryDomain(
 ): Promise<DomainContextSection<FarmInventoryDomainData>> {
   const domain: FarmContextDomain = "farm_inventory_and_stock";
   try {
-    const [invRes, txRes] = await Promise.all([
+    const [invRes, txResult] = await Promise.all([
       client
         .from("farm_inventory")
         .select("id, item_name, category, quantity, unit, updated_at")
         .eq("farm_id", farmId)
         .order("updated_at", { ascending: false })
         .limit(MAX_DOMAIN_ROWS),
-      client
-        .from("farm_inventory_transactions")
-        .select("id, inventory_id, transaction_type, quantity, created_at")
-        .eq("farm_id", farmId)
-        .order("created_at", { ascending: false })
-        .limit(200),
+      fetchAllFarmInventoryTransactions(client, farmId),
     ]);
 
-    if (invRes.error || txRes.error) {
-      return makeErrorSection(domain, "Failed to retrieve farm inventory or transaction ledger.");
+    if (invRes.error) {
+      return makeErrorSection(domain, "Failed to retrieve farm inventory.", classifyQueryError(invRes.error));
+    }
+    if (!txResult.ok) {
+      return makeErrorSection(domain, "Failed to retrieve farm inventory transaction ledger.", txResult.errorKind);
     }
 
-    const ledgerTotals = new Map<string, number>();
-    for (const tx of txRes.data ?? []) {
-      const sign = /out|use|consume|issue|write_off|loss/i.test(tx.transaction_type) ? -1 : 1;
-      ledgerTotals.set(tx.inventory_id, (ledgerTotals.get(tx.inventory_id) ?? 0) + sign * tx.quantity);
-    }
-
+    const ledgerSummaries = calculateInventoryLedgerBalances(txResult.rows);
     const conflicts: ContextConflictDetail[] = [];
     const validationIssues: ContextValidationIssue[] = [];
     const sourceRefs: AuditContextReference[] = [];
 
     const items = (invRes.data ?? []).map((item) => {
-      const hasLedger = ledgerTotals.has(item.id);
-      const ledgerQty = hasLedger ? ledgerTotals.get(item.id)! : null;
+      const summary = ledgerSummaries.get(item.id) ?? null;
+      const ledgerQty = summary ? summary.balance : null;
       const check = evaluateInventoryLedgerConsistency({
         inventoryId: item.id,
         itemName: item.item_name,
         cachedQuantity: item.quantity,
         ledgerQuantity: ledgerQty,
+        latestTransactionId: summary?.latestTransactionId ?? null,
+        latestTransactionAt: summary?.latestTransactionAt ?? null,
+        isLedgerComplete: txResult.isComplete,
         retrievedAt,
         updatedAt: item.updated_at,
       });
@@ -615,6 +920,13 @@ async function loadInventoryDomain(
       if (check.conflict) conflicts.push(check.conflict);
       if (check.issue) validationIssues.push(check.issue);
       sourceRefs.push({ source: "farm_inventory", record_id: item.id, observed_at: item.updated_at });
+      if (summary) {
+        sourceRefs.push({
+          source: "farm_inventory_transactions",
+          record_id: summary.latestTransactionId,
+          observed_at: summary.latestTransactionAt,
+        });
+      }
 
       return {
         inventoryId: item.id,
@@ -628,20 +940,24 @@ async function loadInventoryDomain(
           observedAt: item.updated_at,
           retrievedAt,
         }),
-        ledgerQuantity: makeNumericFact(ledgerQty, check.state, {
-          source: "farm_inventory_transactions",
-          recordId: item.id,
-          sourceTrust: "derived_ledger",
-          observedAt: retrievedAt,
-          retrievedAt,
-        }),
+        ledgerQuantity: summary
+          ? makeNumericFact(ledgerQty, check.state, {
+              source: "farm_inventory_transactions",
+              recordId: summary.latestTransactionId,
+              sourceTrust: "derived_ledger",
+              observedAt: summary.latestTransactionAt,
+              retrievedAt,
+            })
+          : emptyFact<number>(),
+        ledgerComplete: txResult.isComplete,
+        transactionCount: summary?.transactionCount ?? 0,
         state: check.state,
       };
     });
 
     return {
       domain,
-      status: items.length > 0 ? "ok" : "empty",
+      status: items.length > 0 ? (txResult.isComplete ? "ok" : "partial") : "empty",
       data: { items },
       sourceRefs: normalizeAuditContextReferences(sourceRefs),
       conflicts,
@@ -660,7 +976,10 @@ async function loadFinancialMarketplaceDomain(
 ): Promise<DomainContextSection<FinancialMarketplaceDomainData>> {
   const domain: FarmContextDomain = "financial_and_marketplace_records";
   try {
-    const [txRes, ordersRes] = await Promise.all([
+    // Marketplace orders do not carry a direct `farm_id` column; authoritative farm association
+    // runs through `marketplace_produce_provenance.farm_id -> listing_id -> marketplace_order_items.order_id`.
+    // Orders without a verified farm provenance link (including ambiguous buyer-side orders) are excluded.
+    const [txRes, provRes] = await Promise.all([
       client
         .from("farm_financial_transactions")
         .select("id, transaction_date, created_at")
@@ -668,21 +987,49 @@ async function loadFinancialMarketplaceDomain(
         .order("transaction_date", { ascending: false })
         .limit(MAX_DOMAIN_ROWS),
       client
-        .from("marketplace_orders")
-        .select("id, placed_at, updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(20),
+        .from("marketplace_produce_provenance")
+        .select("listing_id")
+        .eq("farm_id", farmId)
+        .limit(MAX_DOMAIN_ROWS),
     ]);
 
-    if (txRes.error || ordersRes.error) {
-      return makeErrorSection(domain, "Failed to retrieve financial or marketplace records.");
+    const firstErr = txRes.error ?? provRes.error;
+    if (firstErr) {
+      return makeErrorSection(domain, "Failed to retrieve financial or farm marketplace provenance records.", classifyQueryError(firstErr));
+    }
+
+    const farmListingIds = Array.from(new Set((provRes.data ?? []).map((p) => p.listing_id).filter(Boolean)));
+    let farmOrders: Array<{ id: string; placed_at: string | null; updated_at: string }> = [];
+
+    if (farmListingIds.length > 0) {
+      const itemsRes = await client
+        .from("marketplace_order_items")
+        .select("order_id, listing_id")
+        .in("listing_id", farmListingIds)
+        .limit(200);
+      if (itemsRes.error) {
+        return makeErrorSection(domain, "Failed to retrieve farm-associated marketplace order items.", classifyQueryError(itemsRes.error));
+      }
+
+      const farmOrderIds = Array.from(new Set((itemsRes.data ?? []).map((i) => i.order_id).filter(Boolean)));
+      if (farmOrderIds.length > 0) {
+        const ordersRes = await client
+          .from("marketplace_orders")
+          .select("id, placed_at, updated_at")
+          .in("id", farmOrderIds)
+          .order("updated_at", { ascending: false })
+          .limit(MAX_DOMAIN_ROWS);
+        if (ordersRes.error) {
+          return makeErrorSection(domain, "Failed to retrieve farm-associated marketplace orders.", classifyQueryError(ordersRes.error));
+        }
+        farmOrders = ordersRes.data ?? [];
+      }
     }
 
     const txs = txRes.data ?? [];
-    const orders = ordersRes.data ?? [];
     const sourceRefs: AuditContextReference[] = [
       ...txs.slice(0, 10).map((t) => ({ source: "farm_financial_transactions" as const, record_id: t.id, observed_at: t.created_at })),
-      ...orders.slice(0, 10).map((o) => ({ source: "marketplace_orders" as const, record_id: o.id, observed_at: o.updated_at })),
+      ...farmOrders.slice(0, 10).map((o) => ({ source: "marketplace_orders" as const, record_id: o.id, observed_at: o.updated_at })),
     ];
 
     const latestTx = txs[0] ?? null;
@@ -702,15 +1049,15 @@ async function loadFinancialMarketplaceDomain(
 
     return {
       domain,
-      status: txs.length > 0 || orders.length > 0 ? "ok" : "empty",
+      status: txs.length > 0 || farmOrders.length > 0 ? "ok" : "empty",
       data: {
         recentFarmTransactionsCount: txs.length,
-        recentMarketplaceOrdersCount: orders.length,
+        recentMarketplaceOrdersCount: farmOrders.length,
         latestTransactionDate,
       },
       sourceRefs: normalizeAuditContextReferences(sourceRefs),
       conflicts: [],
-      missingFields: txs.length === 0 && orders.length === 0 ? ["financial_records"] : [],
+      missingFields: txs.length === 0 && farmOrders.length === 0 ? ["financial_records"] : [],
       validationIssues: [],
     };
   } catch {
@@ -718,32 +1065,81 @@ async function loadFinancialMarketplaceDomain(
   }
 }
 
+async function fetchAllFarmMachineryUsageLogs(
+  client: VerifiedFarmCallerContext["client"],
+  farmId: string,
+): Promise<{
+  ok: true;
+  rows: MachineryUsageLogInput[];
+  isComplete: boolean;
+} | { ok: false; errorKind: QueryErrorKind }> {
+  const rows: MachineryUsageLogInput[] = [];
+  let isComplete = true;
+
+  for (let page = 0; page < MAX_USAGE_LOG_PAGES; page++) {
+    const from = page * PAGINATION_PAGE_SIZE;
+    const to = from + PAGINATION_PAGE_SIZE - 1;
+    const { data, error } = await client
+      .from("farm_machinery_usage_logs")
+      .select("id, machinery_id, hours_operated, start_time, end_time")
+      .eq("farm_id", farmId)
+      .order("end_time", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      return { ok: false, errorKind: classifyQueryError(error) };
+    }
+
+    const batch = data ?? [];
+    for (const u of batch) {
+      rows.push({
+        id: u.id,
+        machineryId: u.machinery_id,
+        hoursOperated: u.hours_operated,
+        startTime: u.start_time,
+        endTime: u.end_time,
+      });
+    }
+
+    if (batch.length < PAGINATION_PAGE_SIZE) {
+      return { ok: true, rows, isComplete: true };
+    }
+    if (page === MAX_USAGE_LOG_PAGES - 1) {
+      isComplete = false;
+    }
+  }
+
+  return { ok: true, rows, isComplete };
+}
+
 async function loadEquipmentTelemetryDomain(
   client: VerifiedFarmCallerContext["client"],
   farmId: string,
   plotIds: string[],
+  plotsError: CoreQueryError | null,
   retrievedAt: string,
 ): Promise<DomainContextSection<EquipmentTelemetryDomainData>> {
   const domain: FarmContextDomain = "equipment_and_iot_telemetry";
+  if (plotsError) {
+    return makeErrorSection(domain, plotsError.message, plotsError.kind, "core_query_error");
+  }
   try {
-    const [assetsRes, usageRes, machTelRes, iotRes] = await Promise.all([
+    const [assetsRes, usageResult, machTelRes, iotRes] = await Promise.all([
       client
         .from("farm_machinery_assets")
         .select("id, name, category, current_status, engine_hours, updated_at")
         .eq("farm_id", farmId)
         .order("updated_at", { ascending: false })
         .limit(MAX_DOMAIN_ROWS),
-      client
-        .from("farm_machinery_usage_logs")
-        .select("id, machinery_id, hours_operated, end_time")
-        .eq("farm_id", farmId)
-        .order("end_time", { ascending: false })
-        .limit(100),
+      fetchAllFarmMachineryUsageLogs(client, farmId),
+      // Retrieve the NEWEST 200 telemetry readings descending, then arrange chronologically before evaluation.
       client
         .from("machinery_telemetry")
         .select("id, machinery_id, engine_hours, recorded_at")
         .eq("farm_id", farmId)
-        .order("recorded_at", { ascending: true })
+        .order("recorded_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(200),
       plotIds.length > 0
         ? client
@@ -755,13 +1151,22 @@ async function loadEquipmentTelemetryDomain(
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-    if (assetsRes.error || usageRes.error || machTelRes.error || iotRes.error) {
-      return makeErrorSection(domain, "Failed to retrieve equipment or telemetry data.");
+    if (assetsRes.error) {
+      return makeErrorSection(domain, "Failed to retrieve farm machinery assets.", classifyQueryError(assetsRes.error));
+    }
+    if (!usageResult.ok) {
+      return makeErrorSection(domain, "Failed to retrieve machinery usage logs.", usageResult.errorKind);
+    }
+    const telErr = machTelRes.error ?? iotRes.error;
+    if (telErr) {
+      return makeErrorSection(domain, "Failed to retrieve equipment or IoT telemetry data.", classifyQueryError(telErr));
     }
 
-    const usageByMachinery = new Map<string, number>();
-    for (const u of usageRes.data ?? []) {
-      usageByMachinery.set(u.machinery_id, (usageByMachinery.get(u.machinery_id) ?? 0) + u.hours_operated);
+    const usageByMachinery = new Map<string, MachineryUsageLogInput[]>();
+    for (const u of usageResult.rows) {
+      const arr = usageByMachinery.get(u.machineryId) ?? [];
+      arr.push(u);
+      usageByMachinery.set(u.machineryId, arr);
     }
 
     const telByMachinery = new Map<string, Array<{ id: string; engineHours: number | null; recordedAt: string }>>();
@@ -776,23 +1181,88 @@ async function loadEquipmentTelemetryDomain(
     const sourceRefs: AuditContextReference[] = [];
 
     const machinery = (assetsRes.data ?? []).map((asset) => {
-      const samples = telByMachinery.get(asset.id) ?? [];
-      const loggedHours = usageByMachinery.has(asset.id) ? usageByMachinery.get(asset.id)! : null;
+      // Arrange the newest bounded telemetry sample chronologically ascending before consistency checks.
+      const samples = [...(telByMachinery.get(asset.id) ?? [])].sort(
+        (a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id),
+      );
+
+      const usageAgg = aggregateMachineryUsageLogs(usageByMachinery.get(asset.id) ?? [], {
+        machineryName: asset.name,
+        isCompleteHistory: usageResult.isComplete,
+      });
+
       const check = evaluateMachineryTelemetryConsistency({
         machineryId: asset.id,
         machineryName: asset.name,
         assetEngineHours: asset.engine_hours,
-        loggedUsageHoursTotal: loggedHours,
         telemetrySamples: samples,
+        retrievedAt,
       });
 
       conflicts.push(...check.conflicts);
-      validationIssues.push(...check.issues);
+      validationIssues.push(...check.issues, ...usageAgg.issues);
       sourceRefs.push({ source: "farm_machinery_assets", record_id: asset.id, observed_at: asset.updated_at });
-      const latestSample = samples[samples.length - 1];
-      if (latestSample) {
-        sourceRefs.push({ source: "machinery_telemetry", record_id: latestSample.id, observed_at: latestSample.recordedAt });
+      if (check.latestValidSampleId && check.latestValidObservedAt) {
+        sourceRefs.push({
+          source: "machinery_telemetry",
+          record_id: check.latestValidSampleId,
+          observed_at: check.latestValidObservedAt,
+        });
       }
+      if (usageAgg.latestRecordId && usageAgg.latestObservedAt) {
+        sourceRefs.push({
+          source: "farm_machinery_usage_logs",
+          record_id: usageAgg.latestRecordId,
+          observed_at: usageAgg.latestObservedAt,
+        });
+      }
+
+      const latestObservedTelemetryEngineHours: ContextFact<number> =
+        check.latestObservedId !== null && check.latestObservedHours !== null
+          ? makeNumericFact(
+              check.latestObservedHours,
+              check.latestObservedId === check.latestValidSampleId ? check.state : "invalid_rejected",
+              {
+                source: "machinery_telemetry",
+                recordId: check.latestObservedId,
+                sourceTrust:
+                  check.state === "conflicting" || check.latestObservedId !== check.latestValidSampleId
+                    ? "sensor_suspicious"
+                    : "sensor_valid",
+                observedAt: check.latestObservedAt,
+                retrievedAt,
+              },
+            )
+          : emptyFact<number>();
+
+      const latestTelemetryEngineHours: ContextFact<number> =
+        check.latestValidSampleId !== null && check.latestValidHours !== null
+          ? makeNumericFact(check.latestValidHours, check.state, {
+              source: "machinery_telemetry",
+              recordId: check.latestValidSampleId,
+              sourceTrust: check.state === "conflicting" ? "sensor_suspicious" : "sensor_valid",
+              observedAt: check.latestValidObservedAt,
+              retrievedAt,
+            })
+          : emptyFact<number>(check.state === "invalid_rejected" ? "invalid_rejected" : "missing");
+
+      const recentLoggedUsageHours: ContextFact<number> =
+        usageAgg.latestRecordId !== null && usageAgg.totalHours !== null
+          ? makeNumericFact(
+              usageAgg.totalHours,
+              usageAgg.isCompleteHistory ? "verified_current" : "unverified_provisional",
+              {
+                source: "farm_machinery_usage_logs",
+                recordId: usageAgg.latestRecordId,
+                sourceTrust: "derived_ledger",
+                observedAt: usageAgg.latestObservedAt,
+                retrievedAt,
+              },
+              usageAgg.isCompleteHistory
+                ? "Aggregated from complete farm machinery session usage logs."
+                : "Recent bounded session usage subset; not a complete lifetime total.",
+            )
+          : emptyFact<number>();
 
       return {
         machineryId: asset.id,
@@ -806,14 +1276,16 @@ async function loadEquipmentTelemetryDomain(
           observedAt: asset.updated_at,
           retrievedAt,
         }),
-        latestTelemetryEngineHours: makeNumericFact(check.latestValidHours, check.state, {
-          source: "machinery_telemetry",
-          recordId: latestSample?.id ?? asset.id,
-          sourceTrust: check.state === "conflicting" ? "sensor_suspicious" : "sensor_valid",
-          observedAt: check.latestObservedAt,
-          retrievedAt,
-        }),
-        loggedUsageHoursTotal: loggedHours,
+        latestObservedTelemetryEngineHours,
+        latestTelemetryEngineHours,
+        recentLoggedUsageHours,
+        loggedUsageSummary: {
+          totalHours: usageAgg.totalHours,
+          recordCount: usageAgg.recordCount,
+          isCompleteHistory: usageAgg.isCompleteHistory,
+          periodStart: usageAgg.periodStart,
+          periodEnd: usageAgg.periodEnd,
+        },
         state: check.state,
       };
     });
@@ -827,7 +1299,7 @@ async function loadEquipmentTelemetryDomain(
 
     return {
       domain,
-      status: machinery.length > 0 || validReadings.length > 0 ? "ok" : "empty",
+      status: machinery.length > 0 || validReadings.length > 0 ? (usageResult.isComplete ? "ok" : "partial") : "empty",
       data: {
         machinery,
         validSensorReadingsCount: validReadings.length,
@@ -861,8 +1333,9 @@ async function loadFarmerObservationsDomain(
         .limit(MAX_DOMAIN_ROWS),
     ]);
 
-    if (cyclesRes.error || alertsRes.error) {
-      return makeErrorSection(domain, "Failed to retrieve scouting observations or crop alerts.");
+    const firstErr = cyclesRes.error ?? alertsRes.error;
+    if (firstErr) {
+      return makeErrorSection(domain, "Failed to retrieve scouting observations or crop alerts.", classifyQueryError(firstErr));
     }
 
     const cycleIds = (cyclesRes.data ?? []).map((c) => c.id);
@@ -883,7 +1356,7 @@ async function loadFarmerObservationsDomain(
         .in("crop_cycle_id", cycleIds)
         .order("observed_at", { ascending: false })
         .limit(MAX_DOMAIN_ROWS);
-      if (obsRes.error) return makeErrorSection(domain, "Failed to retrieve crop observations.");
+      if (obsRes.error) return makeErrorSection(domain, "Failed to retrieve crop observations.", classifyQueryError(obsRes.error));
       obsRows = obsRes.data ?? [];
     }
 
