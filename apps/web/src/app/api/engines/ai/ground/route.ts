@@ -1,10 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { buildGroundedPrompt, type FarmerContext } from '@cultivanode/shared';
+import {
+  assembleGroundedEvidencePackage,
+  buildGroundedPrompt,
+  type FarmMemoryItemRecord,
+  type FarmerContext,
+  type PublishedStandardPassage,
+} from '@cultivanode/shared';
 import { recordAiAuditEvent } from '@/lib/ai-audit';
 import { authorizeAiFarmRequest, parseJsonBody } from '@/lib/engines-api-helper';
 import { getLiveFarmContextSnapshot } from '@/lib/farm-context/live-farm-context.service';
+import { retrieveFarmMemories } from '@/lib/memory/farm-memory.service';
+import { retrievePublishedAgronomicStandards } from '@/lib/rag/agronomic-standards-rag.service';
 
 const GroundSchema = z.object({
   traceId: z.string().uuid('traceId must be a valid UUID.').optional(),
@@ -31,13 +39,52 @@ export async function POST(req: Request) {
   try {
     const snapshot = await getLiveFarmContextSnapshot(auth.caller);
     const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
+    const resolvedCropId = parsed.data.context.cropId ?? activeCycle?.cropId ?? '';
     const resolvedZone =
       parsed.data.context.zone ??
       (snapshot.farmZone === 'derived_savanna' ? 'derived_savanna' : 'rainforest');
 
+    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards.
+    let retrievedMemories: FarmMemoryItemRecord[] = [];
+    let publishedStandards: PublishedStandardPassage[] = [];
+
+    if (typeof auth.caller.client?.rpc === 'function') {
+      const [memRes, ragRes] = await Promise.all([
+        retrieveFarmMemories(auth.caller.client, {
+          farmId: auth.caller.farmId,
+          includeProfile: true,
+          includeProvisional: true,
+          queryText: parsed.data.query,
+          limit: 15,
+        }),
+        retrievePublishedAgronomicStandards(auth.caller.client, {
+          cropOrLivestockId: resolvedCropId || undefined,
+          agroZone: resolvedZone,
+          queryText: parsed.data.query,
+          limit: 5,
+        }),
+      ]);
+      if (memRes.ok) {
+        retrievedMemories = [
+          ...memRes.result.confirmedFarmMemories,
+          ...memRes.result.provisionalFarmMemories,
+          ...memRes.result.profileMemories,
+        ];
+      }
+      if (ragRes.ok) {
+        publishedStandards = ragRes.passages;
+      }
+    }
+
+    const evidencePackage = assembleGroundedEvidencePackage({
+      liveFarmContext: snapshot,
+      memories: retrievedMemories,
+      publishedStandards,
+    });
+
     const context: FarmerContext = {
       farmerId: auth.caller.user.id,
-      cropId: parsed.data.context.cropId ?? activeCycle?.cropId ?? '',
+      cropId: resolvedCropId,
       zone: resolvedZone,
       stageName: parsed.data.context.stageName ?? activeCycle?.currentStage,
       daysAfterPlanting: parsed.data.context.daysAfterPlanting,
@@ -59,8 +106,8 @@ export async function POST(req: Request) {
           reason_codes: ['grounding_execution_failed'],
           blocked: false,
         },
-        contextRefs: snapshot.auditContextRefs,
-        memoryItemIds: [],
+        contextRefs: evidencePackage.auditContextRefs,
+        memoryItemIds: evidencePackage.memoryItemIds,
       });
       if (!failedAudit.ok) {
         return NextResponse.json(
@@ -86,8 +133,8 @@ export async function POST(req: Request) {
         reason_codes: [],
         blocked: false,
       },
-      contextRefs: snapshot.auditContextRefs,
-      memoryItemIds: [],
+      contextRefs: evidencePackage.auditContextRefs,
+      memoryItemIds: evidencePackage.memoryItemIds,
     });
 
     if (!audit.ok) {
@@ -111,6 +158,14 @@ export async function POST(req: Request) {
         conflictCount: snapshot.conflicts.length,
         missingFieldCount: snapshot.missingInformation.length,
         validationIssueCount: snapshot.validationIssues.length,
+      },
+      groundedEvidence: {
+        confirmedMemoryCount: evidencePackage.confirmedHistoricalMemories.length,
+        provisionalMemoryCount: evidencePackage.provisionalMemories.length,
+        profilePreferenceCount: evidencePackage.profilePreferences.length,
+        publishedStandardCount: evidencePackage.publishedAgronomicStandards.length,
+        reconciliationNotes: evidencePackage.reconciliationNotes,
+        untrustedContentSanitized: evidencePackage.untrustedContentSanitized,
       },
     });
   } catch (err: unknown) {

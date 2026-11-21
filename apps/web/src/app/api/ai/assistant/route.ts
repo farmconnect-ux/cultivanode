@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient as createSupabaseJs, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { askGroundedAiAssistant, type Database, type FarmerContext } from "@cultivanode/shared";
+import {
+  askGroundedAiAssistant,
+  assembleGroundedEvidencePackage,
+  type Database,
+  type FarmMemoryItemRecord,
+  type FarmerContext,
+  type PublishedStandardPassage,
+} from "@cultivanode/shared";
 import { createClient } from "@/lib/supabase/server";
 import { aiConfig } from "@/lib/ai-config";
 import { recordAiAuditEvent } from "@/lib/ai-audit";
@@ -13,6 +20,8 @@ import {
   type VerifiedAiFarmCallerContext,
 } from "@/lib/engines-api-helper";
 import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context.service";
+import { retrieveFarmMemories } from "@/lib/memory/farm-memory.service";
+import { retrievePublishedAgronomicStandards } from "@/lib/rag/agronomic-standards-rag.service";
 import { logger } from "@/lib/logger";
 import { supabaseEnv } from "@/lib/supabase/env";
 
@@ -144,6 +153,51 @@ export async function POST(req: Request) {
     const traceId = body.traceId ?? randomUUID();
     const snapshot = await getLiveFarmContextSnapshot(verifiedFarmCaller);
     const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
+    const resolvedCropId = body.context?.cropId ?? activeCycle?.cropId;
+    const resolvedZone = body.context?.zone ?? snapshot.farmZone ?? undefined;
+
+    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards.
+    let retrievedMemories: FarmMemoryItemRecord[] = [];
+    let publishedStandards: PublishedStandardPassage[] = [];
+
+    if (typeof verifiedFarmCaller.client?.rpc === "function") {
+      const [memRes, ragRes] = await Promise.all([
+        retrieveFarmMemories(verifiedFarmCaller.client, {
+          farmId: verifiedFarmCaller.farmId,
+          includeProfile: true,
+          includeProvisional: true,
+          queryText: body.query?.trim() || undefined,
+          limit: 15,
+        }),
+        retrievePublishedAgronomicStandards(verifiedFarmCaller.client, {
+          cropOrLivestockId: resolvedCropId || undefined,
+          agroZone: resolvedZone,
+          queryText: body.query?.trim() || undefined,
+          limit: 5,
+        }),
+      ]);
+      if (memRes.ok) {
+        retrievedMemories = [
+          ...memRes.result.confirmedFarmMemories,
+          ...memRes.result.provisionalFarmMemories,
+          ...memRes.result.profileMemories,
+        ];
+      }
+      if (ragRes.ok) {
+        publishedStandards = ragRes.passages;
+      }
+    }
+
+    const evidencePackage =
+      snapshot.domains && snapshot.auditContextRefs
+        ? assembleGroundedEvidencePackage({
+            liveFarmContext: snapshot,
+            memories: retrievedMemories,
+            publishedStandards,
+          })
+        : null;
+    const auditContextRefs = evidencePackage?.auditContextRefs ?? snapshot.auditContextRefs;
+    const memoryItemIds = evidencePackage?.memoryItemIds ?? [];
 
     const c = aiConfig();
     let result: Awaited<ReturnType<typeof askGroundedAiAssistant>>;
@@ -154,8 +208,8 @@ export async function POST(req: Request) {
         // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
         context: {
           ...(body.context ?? {}),
-          cropId: body.context?.cropId ?? activeCycle?.cropId,
-          zone: body.context?.zone ?? snapshot.farmZone ?? undefined,
+          cropId: resolvedCropId,
+          zone: resolvedZone,
           stageName: body.context?.stageName ?? activeCycle?.currentStage,
           farmerId: verifiedFarmCaller.user.id,
         } as FarmerContext,
@@ -186,8 +240,8 @@ export async function POST(req: Request) {
           reason_codes: ["provider_execution_failed"],
           blocked: false,
         },
-        contextRefs: snapshot.auditContextRefs,
-        memoryItemIds: [],
+        contextRefs: auditContextRefs,
+        memoryItemIds,
       });
 
       if (!failedAudit.ok) {
@@ -227,8 +281,8 @@ export async function POST(req: Request) {
         reason_codes: result.passedSafetyGuardrail ? [] : ["prohibited_chemical"],
         blocked: !result.passedSafetyGuardrail,
       },
-      contextRefs: snapshot.auditContextRefs,
-      memoryItemIds: [],
+      contextRefs: auditContextRefs,
+      memoryItemIds,
     });
 
     if (!audit.ok) {
