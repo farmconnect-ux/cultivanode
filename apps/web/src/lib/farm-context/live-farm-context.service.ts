@@ -122,7 +122,6 @@ function emptyWeatherData(state: ContextState = "missing", note?: string): Weath
 }
 
 const WEATHER_OBSERVATION_MAX_AGE_HOURS = 12;
-const WEATHER_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const ISO_TIMESTAMP_WITH_ZONE_RE =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
 
@@ -159,7 +158,7 @@ function assessWeatherObservationTimestamp(
   }
 
   const retrievedMs = Date.parse(retrievedAt);
-  if (!Number.isFinite(retrievedMs) || parsedMs > retrievedMs + WEATHER_FUTURE_CLOCK_SKEW_MS) {
+  if (!Number.isFinite(retrievedMs) || parsedMs > retrievedMs) {
     return { value: null, state: "invalid_rejected", note: "Weather observation timestamp is in the future or retrieval time is invalid." };
   }
   if (retrievedMs - parsedMs > WEATHER_OBSERVATION_MAX_AGE_HOURS * 3_600_000) {
