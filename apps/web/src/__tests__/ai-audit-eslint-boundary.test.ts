@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Linter } from "eslint";
+import { Linter, type Rule } from "eslint";
 import { noDirectAiAuditWriterRule } from "../../eslint.config.mjs";
 
 function lintSnippet(code: string, filename: string) {
@@ -11,7 +11,10 @@ function lintSnippet(code: string, filename: string) {
         languageOptions: { ecmaVersion: 2022, sourceType: "module" },
         plugins: {
           cultivanode: {
-            rules: { "no-direct-ai-audit-writer": noDirectAiAuditWriterRule },
+            rules: {
+              "no-direct-ai-audit-writer":
+                noDirectAiAuditWriterRule as unknown as Rule.RuleModule,
+            },
           },
         },
         rules: {

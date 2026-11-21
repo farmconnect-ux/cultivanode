@@ -7371,6 +7371,8 @@ export type Database = {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
           created_at: string
+          deleted_at: string | null
+          deletion_status: string | null
           email: string | null
           flag_reason: string | null
           flagged_at: string | null
@@ -7393,6 +7395,8 @@ export type Database = {
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
+          deleted_at?: string | null
+          deletion_status?: string | null
           email?: string | null
           flag_reason?: string | null
           flagged_at?: string | null
@@ -7415,6 +7419,8 @@ export type Database = {
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
+          deleted_at?: string | null
+          deletion_status?: string | null
           email?: string | null
           flag_reason?: string | null
           flagged_at?: string | null

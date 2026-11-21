@@ -203,7 +203,7 @@ async function loadSoilChemistryDomain(
     if (freshness.issue) validationIssues.push(freshness.issue);
 
     if (selected) {
-      const trust =
+      const trust: "agent_verified" | "platform_verified" | "self_reported" =
         selected.source === "agent_verified"
           ? "agent_verified"
           : selected.source === "platform_verified"
