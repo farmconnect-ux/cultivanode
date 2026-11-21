@@ -89,7 +89,7 @@ export default async function AdminMarketplaceDisputeDetailPage({
   if (!UUID.test(id)) notFound();
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: MarketplaceDisputeDetail | null; error: unknown }>;

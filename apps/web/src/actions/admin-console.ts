@@ -2,7 +2,9 @@
 
 import { refresh } from "next/cache";
 import { DbConstants } from "@cultivanode/shared";
+import { runAccountDeletion } from "@/lib/account-deletion";
 import { logger } from "@/lib/logger";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // Staff actions. Each database function checks the staff member's permission itself (has_permission),
@@ -103,6 +105,32 @@ export async function resolveDataRequest(_prev: AdminResult | null, form: FormDa
     p_request_id: requestId, p_status: status, p_note: field(form, "note", 1000),
   });
   return explain(error, "Request closed.");
+}
+
+export async function deleteAccountForRequest(_prev: AdminResult | null, form: FormData): Promise<AdminResult> {
+  const requestId = id(form);
+  if (!requestId) return failed("Invalid request.");
+  if (field(form, "confirm", 10) !== "DELETE") return failed("Type DELETE to confirm. This cannot be undone.");
+
+  const supabaseAdmin = createServiceClient();
+  if (!supabaseAdmin) {
+    logger.error("admin_account_delete_no_service_key");
+    return failed("Account deletion is not configured on this server.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_authorize_account_deletion", { p_request_id: requestId });
+  if (error) return explain(error, "");
+  const target = data as { profile_id?: string; reason?: string | null } | null;
+  if (!target?.profile_id) return failed("This request has no account attached.");
+
+  const outcome = await runAccountDeletion(supabaseAdmin, target.profile_id, target.reason ?? undefined);
+  refresh();
+  if (!outcome.ok) {
+    if (outcome.error === "deletion_blocked" || outcome.error === "invalid_deletion_request") return failed(outcome.message);
+    return failed(`Deletion did not finish (${outcome.error}). Try again; background recovery also retries it.`);
+  }
+  return done(outcome.alreadyDeleted ? "This account was already deleted." : "Account deleted. The request is closed.");
 }
 
 /* ------------------------------------------------------------------ MVP week 1: account and marketplace controls */
@@ -301,7 +329,7 @@ export async function adminCreateStandardDraft(_prev: AdminResult | null, form: 
   }
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
@@ -330,7 +358,7 @@ export async function adminSubmitStandardForReview(_prev: AdminResult | null, fo
   if (!standardId) return failed("Invalid standard ID.");
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
@@ -351,7 +379,7 @@ export async function adminPublishStandard(_prev: AdminResult | null, form: Form
   if (!standardId) return failed("Invalid standard ID.");
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
@@ -395,7 +423,7 @@ export async function adminResolveMarketplaceDispute(_prev: AdminResult | null, 
   }
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
@@ -421,7 +449,7 @@ export async function adminReopenMarketplaceDispute(_prev: AdminResult | null, f
   }
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
@@ -448,7 +476,7 @@ export async function adminRequestMarketplaceDisputeEvidence(_prev: AdminResult 
   }
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;

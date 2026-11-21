@@ -3,7 +3,7 @@
 -- Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(57);
+select plan(61);
 
 insert into auth.users (id, phone) values
   ('80000000-0000-0000-0000-000000000001', '2348000000801'),  -- Ada: individual farmer
@@ -117,11 +117,17 @@ select throws_ok($$ insert into public.data_requests (kind) values ('deletion') 
   'requests are made through the functions only');
 select throws_ok($$ select public.admin_resolve_data_request((select id from public.data_requests where kind = 'deletion'), 'completed', 'Deleted everything') $$,
   '42501', null, 'users cannot resolve requests');
+select throws_ok($$ select public.admin_authorize_account_deletion((select id from public.data_requests where kind = 'deletion')) $$,
+  '42501', null, 'users cannot start a staff deletion');
 
 select set_config('request.jwt.claims', '{"sub":"80000000-0000-0000-0000-000000000005"}', true);
 select is((select count(*)::int from public.data_requests where status = 'open'), 1, 'support sees the open request');
-select lives_ok($$ select public.admin_resolve_data_request((select id from public.data_requests where kind = 'deletion'), 'completed', 'Account and farm records deleted') $$,
-  'support resolves the deletion request');
+select throws_ok($$ select public.admin_resolve_data_request((select id from public.data_requests where kind = 'deletion'), 'completed', 'Account and farm records deleted') $$,
+  '22023', 'Use Delete account to complete a deletion request.', 'a deletion request cannot be marked completed by hand');
+select is((select public.admin_authorize_account_deletion((select id from public.data_requests where kind = 'deletion')) ->> 'profile_id'),
+  '80000000-0000-0000-0000-000000000001', 'support starts the deletion and gets the account to delete');
+select lives_ok($$ select public.admin_resolve_data_request((select id from public.data_requests where kind = 'deletion'), 'rejected', 'Open orders must finish first') $$,
+  'support can still reject a deletion request');
 
 ---------------------------------------------------------------- staff tools
 select is((public.admin_dashboard() ->> 'open_data_requests')::int, 0, 'support sees the privacy queue');
@@ -137,6 +143,9 @@ select throws_ok($$ select public.admin_grant_admin_role('80000000-0000-0000-000
 
 -- Field agent approval needs tier 1 (a verified NIN).
 reset role;
+select is((select count(*)::int from public.admin_actions
+            where action = 'account_deletion_started' and actor_id = '80000000-0000-0000-0000-000000000005'), 1,
+  'starting a deletion is recorded as a staff action');
 insert into public.role_requests (profile_id, role) values ('80000000-0000-0000-0000-000000000001', 'field_agent');
 insert into public.verification_documents (profile_id, role_request_id, document_type, storage_path, mime_type, size_bytes, status)
 select profile_id, id, 'national_id', profile_id::text || '/agent-id-card-0001.jpg', 'image/jpeg', 1000, 'accepted'

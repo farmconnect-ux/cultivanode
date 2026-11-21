@@ -53,7 +53,7 @@ export default async function AdminSupportPage({
   const offset = (page - 1) * PAGE_SIZE;
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as <T>(
+  const rpc = supabase.rpc.bind(supabase) as unknown as <T>(
     fn: string,
     args?: Record<string, unknown>,
   ) => Promise<{ data: T | null; error: { message: string } | null }>;

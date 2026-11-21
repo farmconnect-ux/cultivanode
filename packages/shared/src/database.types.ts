@@ -8661,6 +8661,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_authorize_account_deletion: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       admin_clear_integration_secret: {
         Args: {
           p_field: string

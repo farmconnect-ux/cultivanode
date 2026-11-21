@@ -99,7 +99,7 @@ export default async function AdminFinancePage({
   const toIso = toDate ? `${toDate}T23:59:59.999Z` : null;
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as <T>(
+  const rpc = supabase.rpc.bind(supabase) as unknown as <T>(
     fn: string,
     args?: Record<string, unknown>,
   ) => Promise<{ data: T | null; error: { message: string } | null }>;
