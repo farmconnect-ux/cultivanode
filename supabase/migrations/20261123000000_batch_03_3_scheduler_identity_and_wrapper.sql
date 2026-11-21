@@ -19,10 +19,23 @@
 --      runs and records `skipped_concurrent`.
 --    - Catches task exceptions inside a subtransaction so partial task mutations roll back
 --      while the `failed` ledger entry persists durably.
--- 4. Re-registers the three approved pg_cron jobs to invoke `private.run_scheduled_task(...)`
---    and attempts `cron.alter_job(..., username := 'cultivanode_scheduler')`, transparently
---    recording the actual effective `cron.job.username` in `private.scheduled_task_registry`
---    (because Supabase Hosted `pg_cron` may restrict non-superuser `username` reassignment).
+-- 4. Re-registers the three approved pg_cron jobs to invoke `private.run_scheduled_task(...)`.
+--    The jobs deliberately keep running as the migration role (`postgres` on Supabase Hosted)
+--    and the effective `cron.job.username` is recorded in `private.scheduled_task_registry`.
+--
+-- Why the jobs are NOT reassigned to `cultivanode_scheduler` (PR #24 review, High 1):
+--    Supabase Hosted runs pg_cron 1.6 with `cron.use_background_workers = off` (verified on
+--    CultivaNode-Staging, 21 Nov 2026), so every job opens a libpq connection to localhost AS the
+--    job's username. `cultivanode_scheduler` is NOLOGIN, so a reassigned job would fail to connect
+--    on every run (bookings stop expiring, notifications stop) and the failure would only appear
+--    in cron.job_run_details. Making the role LOGIN needs a credential and pg_hba entry that
+--    Supabase Hosted does not let us manage.
+--    Even with a working login, `private.run_scheduled_task` is SECURITY DEFINER owned by
+--    `postgres` (BYPASSRLS on Hosted), so the task bodies execute with postgres privileges.
+--    What this migration does achieve: one narrow, allowlisted, concurrency-safe, logged entry
+--    point that is the only thing cron invokes, and a scheduler role that holds no privilege
+--    except EXECUTE on that entry point. True least privilege for task bodies (per-task owner
+--    roles) and any cron identity change must be proven on Staging in a separate, authorised step.
 --
 -- Rollback notes: Restore direct `cron.schedule` commands for the 3 jobs, drop
 -- `private.run_scheduled_task(text)`, and retain `private.scheduled_task_runs` for audit.
@@ -346,18 +359,11 @@ begin
       format('select private.run_scheduled_task(%L)', v_task.task_name)
     ) into v_job_id;
 
-    v_note := 'Assigned to desired role cultivanode_scheduler';
-    begin
-      execute format(
-        'select cron.alter_job(job_id := %s, username := %L)',
-        v_job_id,
-        v_task.desired_cron_username
-      );
-    exception when others then
-      -- Hosted Supabase pg_cron restricts non-superuser username reassignment in cron.alter_job.
-      -- Record the exact limitation honestly instead of misrepresenting the effective role.
-      v_note := left('cron.alter_job username reassignment not permitted: ' || sqlerrm, 400);
-    end;
+    -- Deliberately no cron.alter_job(username := ...): see header (PR #24 review, High 1).
+    -- With cron.use_background_workers = off a NOLOGIN username makes every run fail to connect.
+    v_note := 'Not reassigned: pg_cron connects via libpq (cron.use_background_workers=off on Hosted) '
+              || 'and cultivanode_scheduler is NOLOGIN. Job runs as the migration role and only calls '
+              || 'private.run_scheduled_task. Reassignment requires a separate verified Staging change.';
 
     execute format('select username from cron.job where jobid = %s', v_job_id) into v_actual_user;
 
