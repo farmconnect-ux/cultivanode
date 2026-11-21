@@ -94,3 +94,33 @@
 - Farm-independent assistant requests continue to fail closed with HTTP 422 because the current audit schema requires a non-null `farm_id`. No schema change was introduced.
 - Weather cache reads remain unavailable when caller RLS denies access. No privileged farm-data read or weather RPC was introduced.
 - The changes above are committed to the existing feature branch. CI for the final corrective commit must pass, followed by a fresh independent review. PR #22 remains open and unmerged.
+
+
+---
+
+## 5. Batch 03.1F Corrective Pass
+
+**Implementation date:** 2026-11-21  
+**Scope:** Repository-only remediation of the two follow-up review findings. No database migration, hosted database change, deployment, feature-flag change, or merge was performed.
+
+### 5.1 Guardrail audit metadata
+
+- Replaced permissive length-only validation of `guardrail_result.rule_ids` and `guardrail_result.reason_codes` with a strict lowercase `snake_case` identifier schema.
+- Applied the shared secret/data-URI rejection check to every rule ID and reason code. Free-form prose, prompt fragments, bearer/JWT-shaped strings, `sk_live_` / `sk_test_` values, and key/secret/password assignment strings are rejected before creation of the service-role client.
+- Added regression tests for both arrays covering natural-language prompt fragments, secret-shaped values, bearer/JWT-shaped values, and arbitrary hyphenated text. Tests assert that invalid payloads do not invoke the service-role client or audit RPC.
+
+### 5.2 Weather observation validity
+
+- Separated weather-cache retrieval freshness from current-condition observation validity.
+- Current temperature, humidity, and wind facts can be `verified_current` only when the cache is not stale, the farm is matched by coordinates, and the provider observation timestamp is valid, timezone-qualified ISO 8601, no more than five minutes in the future, and no older than 12 hours at retrieval.
+- Missing observation timestamps leave current-condition measurements `unverified_provisional`; malformed or future-dated timestamps produce `invalid_rejected`; observations older than 12 hours produce `stale`.
+- State-only location matches remain `unverified_provisional` even when their observation timestamp is valid.
+- Cache `fetched_at` remains separately available as retrieval metadata. Forecast-period rainfall remains distinct from current observed conditions.
+- Added regression coverage for missing, malformed, future, stale, and fresh observation timestamps, and for state-only location matching.
+
+### 5.3 Verification status
+
+- Regression tests were added to the existing AI audit and Live Farm Context test suite. They exercise the service through mocked caller-scoped Supabase clients; they are not live database-backed weather-service integration tests.
+- CI must pass on the final Batch 03.1F commit. A fresh independent review is required before merge.
+- Existing limitations remain: irrigation audit-source whitelist support, farm-independent audit schema support, and caller-RLS access to weather cache. No privileged farm-data read or unapproved schema change was introduced.
+- PR #22 remains open and unmerged. No Staging or Production database changes, migrations, or deployments were performed.
