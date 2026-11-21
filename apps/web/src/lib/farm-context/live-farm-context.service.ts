@@ -124,7 +124,7 @@ function emptyWeatherData(state: ContextState = "missing", note?: string): Weath
 const WEATHER_OBSERVATION_MAX_AGE_HOURS = 12;
 const WEATHER_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const ISO_TIMESTAMP_WITH_ZONE_RE =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
 
 function assessWeatherObservationTimestamp(
   value: unknown,
