@@ -242,8 +242,8 @@ export async function createFarmMemory(
       promptVersion: "memory-governance-v1",
       executionOutcome: "completed",
       guardrailResult: {
-        status: "passed",
-        rule_ids: ["memory_lifecycle_guard"],
+        status: "not_applicable",
+        rule_ids: [],
         reason_codes: [],
         blocked: false,
       },
@@ -340,8 +340,8 @@ export async function transitionFarmMemory(
       promptVersion: "memory-governance-v1",
       executionOutcome: "completed",
       guardrailResult: {
-        status: "passed",
-        rule_ids: ["memory_lifecycle_guard"],
+        status: "not_applicable",
+        rule_ids: [],
         reason_codes: [],
         blocked: false,
       },

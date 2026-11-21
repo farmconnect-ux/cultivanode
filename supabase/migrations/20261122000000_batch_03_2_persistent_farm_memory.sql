@@ -161,7 +161,7 @@ as $$
            from public.consents c2
           where c2.profile_id = p_profile_id
             and c2.consent_type = 'ai_intelligence'
-          order by c2.recorded_at desc, c2.id desc
+          order by c2.created_at desc, c2.id asc
           limit 1
        )
        and c.granted = true

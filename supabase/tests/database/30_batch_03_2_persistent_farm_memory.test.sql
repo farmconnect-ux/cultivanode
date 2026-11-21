@@ -16,10 +16,10 @@ values
   ('32000000-0000-4000-8000-000000000102', '32000000-0000-4000-8000-000000000002', 'Beta Farm', 'derived_savanna', 'Ogun', extensions.st_geogfromtext('POINT(3.3619 7.1475)'))
 on conflict (id) do nothing;
 
-insert into public.consents (profile_id, consent_type, granted, recorded_at)
+insert into public.consents (profile_id, consent_type, granted, document_version, created_at)
 values
-  ('32000000-0000-4000-8000-000000000001', 'ai_intelligence', true, now()),
-  ('32000000-0000-4000-8000-000000000002', 'ai_intelligence', true, now());
+  ('32000000-0000-4000-8000-000000000001', 'ai_intelligence', true, 'v1.0', clock_timestamp()),
+  ('32000000-0000-4000-8000-000000000002', 'ai_intelligence', true, 'v1.0', clock_timestamp());
 
 -- 1. Table exists with RLS enabled and forced.
 select ok(
@@ -231,8 +231,8 @@ select throws_ok(
 
 -- 15. Withdrawn consent denies memory creation & retrieval.
 reset role;
-insert into public.consents (profile_id, consent_type, granted, recorded_at)
-values ('32000000-0000-4000-8000-000000000002', 'ai_intelligence', false, now() + interval '1 second');
+insert into public.consents (profile_id, consent_type, granted, document_version, created_at)
+values ('32000000-0000-4000-8000-000000000002', 'ai_intelligence', false, 'v1.0', clock_timestamp() + interval '1 second');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '32000000-0000-4000-8000-000000000002', true);
