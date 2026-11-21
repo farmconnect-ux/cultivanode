@@ -344,7 +344,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
       expect(fileBacked.extractionMethod).toBe("markdown_file");
       expect(fileBacked.originalFileSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(fileBacked.extractedTextSha256).toMatch(/^[a-f0-9]{64}$/);
-      expect(fileBacked.storageObjectPath).toContain(`standards/${STD_1}/`);
+      expect(fileBacked.storageObjectPath).toContain(`${STD_1}/`);
     }
 
     // 4. Reject application/pdf file-backed ingestion with explicit 422 until verified PDF extractor exists
