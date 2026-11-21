@@ -168,7 +168,7 @@ describe('Batch 03.2 — Embedding Provider, Chunking & Evidence Assembly', () =
 
     const memories: FarmMemoryItemRecord[] = [
       baseMem({ id: 'mem-confirmed-soil' }),
-      baseMem({ id: 'mem-provisional', lifecycleStatus: 'proposed', verificationStatus: 'provisional', sourceKind: 'ai_inferred' }),
+      baseMem({ id: 'mem-provisional', memoryType: 'pest_history', lifecycleStatus: 'proposed', verificationStatus: 'provisional', sourceKind: 'ai_inferred' }),
       baseMem({ id: 'mem-profile', memoryScope: 'profile', farmId: null, profileId: 'u1', category: 'preference', memoryType: 'language' }),
       baseMem({ id: 'mem-other-farm', farmId: otherFarmId }),
       baseMem({ id: 'mem-rejected', lifecycleStatus: 'rejected', verificationStatus: 'rejected' }),

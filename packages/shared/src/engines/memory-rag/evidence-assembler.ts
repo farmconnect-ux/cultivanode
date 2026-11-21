@@ -57,7 +57,7 @@ export function assembleGroundedEvidencePackage(params: {
   const profilePreferences: FarmMemoryItemRecord[] = [];
 
   const soilVerifiedAt =
-    params.liveFarmContext.domains.soil_chemistry_and_nutrients.data?.ph.state === 'verified_current'
+    params.liveFarmContext.domains?.soil_chemistry_and_nutrients?.data?.ph.state === 'verified_current'
       ? params.liveFarmContext.domains.soil_chemistry_and_nutrients.data.ph.provenance?.observedAt ?? null
       : null;
 

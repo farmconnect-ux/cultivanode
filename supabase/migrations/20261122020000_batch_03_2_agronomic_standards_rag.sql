@@ -513,74 +513,86 @@ begin
        or jsonb_typeof(v_ref -> 'source') <> 'string'
        or jsonb_typeof(v_ref -> 'record_id') <> 'string'
        or (v_ref ? 'observed_at' and jsonb_typeof(v_ref -> 'observed_at') <> 'string') then
-      raise exception 'Each context reference must contain only source, record_id, and optional observed_at.' using errcode = '22023';
+      raise exception 'Context references must contain only source, record_id and optional observed_at.' using errcode = '22023';
     end if;
 
     v_source := v_ref ->> 'source';
     v_record_id := v_ref ->> 'record_id';
-    v_observed_at := v_ref ->> 'observed_at';
 
     if not (v_source = any(c_allowed_sources)) then
-      raise exception 'Unsupported context reference source: %', v_source using errcode = '22023';
+      raise exception 'Unsupported context reference source.' using errcode = '22023';
     end if;
 
     if v_record_id !~ '^[A-Za-z0-9][A-Za-z0-9:_-]{0,63}$' then
-      raise exception 'Invalid context reference record_id.' using errcode = '22023';
+      raise exception 'Invalid context reference record_id format.' using errcode = '22023';
     end if;
 
     if (v_source || '|' || v_record_id) = any(v_seen_refs) then
-      raise exception 'Duplicate context reference.' using errcode = '22023';
+      raise exception 'Duplicate context references are not permitted.' using errcode = '22023';
     end if;
     v_seen_refs := array_append(v_seen_refs, v_source || '|' || v_record_id);
 
-    if v_observed_at is not null then
+    if v_ref ? 'observed_at' then
+      v_observed_at := v_ref ->> 'observed_at';
+      if v_observed_at !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$' then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
       begin
         v_parsed_ts := v_observed_at::timestamptz;
-      exception when others then
-        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      exception
+        when invalid_datetime_format or datetime_field_overflow then
+          raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
       end;
+      if v_parsed_ts is null then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
     end if;
   end loop;
 
-  if p_memory_item_ids is null or cardinality(p_memory_item_ids) > 100 then
-    raise exception 'Invalid or oversized memory item list.' using errcode = '22023';
+  if coalesce(cardinality(p_memory_item_ids), 0) > 100 then
+    raise exception 'Too many memory references.' using errcode = '22023';
   end if;
 
   v_actor_subject_id := private.resolve_or_create_ai_actor(p_profile_id);
 
-  select * into v_existing
-    from public.ai_audit_events e
-   where e.trace_id = p_trace_id;
-
-  if found then
-    if v_existing.farm_id = p_farm_id
-       and v_existing.actor_subject_id = v_actor_subject_id
-       and v_existing.provider = p_provider
-       and v_existing.model_id = p_model_id
-       and v_existing.prompt_version = p_prompt_version
-       and v_existing.prompt_version_id is not distinct from p_prompt_version_id
-       and v_existing.execution_outcome = p_execution_outcome
-       and v_existing.guardrail_result = p_guardrail_result
-       and v_existing.context_refs = p_context_refs
-       and v_existing.memory_item_ids = p_memory_item_ids then
-      return v_existing.id;
-    end if;
-    raise exception 'Conflicting AI audit event for existing trace_id.' using errcode = '23505';
-  end if;
-
   insert into public.ai_audit_events (
     trace_id, farm_id, actor_subject_id, actor_kind, event_kind,
-    provider, model_id, prompt_version, prompt_version_id,
-    execution_outcome, guardrail_result, context_refs, memory_item_ids
+    provider, model_id, prompt_version, prompt_version_id, execution_outcome,
+    guardrail_result, context_refs, memory_item_ids
   )
-  values (
-    p_trace_id, p_farm_id, v_actor_subject_id, 'user', 'ai_execution',
-    p_provider, p_model_id, p_prompt_version, p_prompt_version_id,
-    p_execution_outcome, p_guardrail_result, p_context_refs, p_memory_item_ids
-  )
+  select
+    p_trace_id, p_farm_id, v_actor_subject_id, d.actor_kind, 'ai_execution',
+    p_provider, p_model_id, p_prompt_version, p_prompt_version_id, p_execution_outcome,
+    p_guardrail_result, p_context_refs, coalesce(p_memory_item_ids, '{}'::uuid[])
+  from private.ai_actor_directory d
+  where d.actor_subject_id = v_actor_subject_id
+  on conflict (trace_id) do nothing
   returning id into v_event_id;
 
-  return v_event_id;
+  if v_event_id is not null then
+    return v_event_id;
+  end if;
+
+  select e.*
+    into v_existing
+  from public.ai_audit_events e
+  where e.trace_id = p_trace_id;
+
+  if not found
+     or v_existing.farm_id is distinct from p_farm_id
+     or v_existing.actor_subject_id is distinct from v_actor_subject_id
+     or v_existing.provider is distinct from p_provider
+     or v_existing.model_id is distinct from p_model_id
+     or v_existing.prompt_version is distinct from p_prompt_version
+     or v_existing.prompt_version_id is distinct from p_prompt_version_id
+     or v_existing.execution_outcome is distinct from p_execution_outcome
+     or v_existing.guardrail_result is distinct from p_guardrail_result
+     or v_existing.context_refs is distinct from p_context_refs
+     or v_existing.memory_item_ids is distinct from coalesce(p_memory_item_ids, '{}'::uuid[]) then
+    raise exception 'Trace ID is already associated with a different AI audit event.' using errcode = '23505';
+  end if;
+
+  return v_existing.id;
 end;
 $$;
 
