@@ -332,7 +332,6 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
         sourceAuthority: "IITA",
         mimeType: "text/markdown",
         sourceFileBase64: rawFileBase64,
-        originalFileName: "iita-maize-v1.md",
       },
       { embeddingProvider: failingEmbedder },
     );
