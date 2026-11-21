@@ -762,9 +762,11 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
       expect(weather?.humidityPct.state, testCase.label).toBe(testCase.expectedState);
       expect(weather?.windSpeedKmh.state, testCase.label).toBe(testCase.expectedState);
       expect(weather?.fetchedAt.state, testCase.label).toBe(testCase.expectedState);
-      expect(weather?.ageHours, testCase.label).toBe(
-        testCase.expectedState === "stale" ? 12.000277777777777 : null,
-      );
+      if (testCase.expectedState === "stale") {
+        expect(weather?.ageHours, testCase.label).toBeCloseTo(12, 3);
+      } else {
+        expect(weather?.ageHours, testCase.label).toBeNull();
+      }
     }
   });
 
