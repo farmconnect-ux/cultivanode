@@ -801,17 +801,25 @@ async function loadWeatherDomain(
       };
     }
 
-    const ageHours = Math.max(0, (new Date(retrievedAt).getTime() - new Date(matchedRow.fetched_at).getTime()) / 3_600_000);
-    const cacheState: ContextState =
-      ageHours > 12 ? "stale" : matchedForecast.matchedBy === "coordinates" ? "verified_current" : "unverified_provisional";
+    const retrievedMs = Date.parse(retrievedAt);
+    const fetchedMs = Date.parse(matchedRow.fetched_at);
+    const cacheTimestampValid = Number.isFinite(retrievedMs) && Number.isFinite(fetchedMs) && fetchedMs <= retrievedMs;
+    const ageHours = cacheTimestampValid ? (retrievedMs - fetchedMs) / 3_600_000 : null;
+    const cacheState: ContextState = !cacheTimestampValid
+      ? "invalid_rejected"
+      : ageHours !== null && ageHours > WEATHER_OBSERVATION_MAX_AGE_HOURS
+        ? "stale"
+        : matchedForecast.matchedBy === "coordinates"
+          ? "verified_current"
+          : "unverified_provisional";
     // `provider` is the weather_cache primary key (one-to-one FK to integration_providers).
     // It identifies the cache row, while fetched_at remains retrieval time, not observation time.
     const observation = assessWeatherObservationTimestamp(matchedForecast.forecast.now?.observedAt, retrievedAt);
     const currentConditionsState: ContextState =
-      cacheState === "stale" || observation.state === "stale"
-        ? "stale"
-        : observation.state === "invalid_rejected"
-          ? "invalid_rejected"
+      cacheState === "invalid_rejected" || observation.state === "invalid_rejected"
+        ? "invalid_rejected"
+        : cacheState === "stale" || observation.state === "stale"
+          ? "stale"
           : observation.state === "missing"
             ? "unverified_provisional"
             : cacheState;
@@ -877,7 +885,7 @@ async function loadWeatherDomain(
         rainfallMm,
         humidityPct,
         windSpeedKmh,
-        ageHours: Math.round(ageHours * 10) / 10,
+        ageHours: ageHours === null ? null : Math.round(ageHours * 10) / 10,
       },
       sourceRefs: normalizeAuditContextReferences([
         { source: "weather_cache", record_id: matchedRow.provider },
