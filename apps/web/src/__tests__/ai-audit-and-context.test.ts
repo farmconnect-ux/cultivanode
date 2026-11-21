@@ -737,6 +737,37 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
     expect(weather?.fetchedAt.state).toBe("unverified_provisional");
   });
 
+  it("Batch 03.1F: does not trust invalid or stale weather-cache retrieval timestamps", async () => {
+    const cases = [
+      { label: "malformed cache timestamp", fetchedAt: "not-a-date", expectedState: "invalid_rejected" as const },
+      { label: "future cache timestamp", fetchedAt: "2026-11-21T04:00:01Z", expectedState: "invalid_rejected" as const },
+      { label: "stale cache timestamp", fetchedAt: "2026-11-20T15:59:59Z", expectedState: "stale" as const },
+    ];
+
+    for (const testCase of cases) {
+      const payload = {
+        place: { state: "Oyo", town: "Ibadan", lat: 7.3775, lon: 3.947 },
+        now: { tempC: 30, humidity: 70, windKmh: 8, observedAt: "2026-11-21T03:30:00Z" },
+        days: [{ date: "2026-11-21", rainMm: 2.5 }],
+      };
+      const client = buildMockUserClient({
+        farms: { data: { id: FARM_ID, name: "Ibadan Farm", zone: "derived_savanna", state: "Oyo", lga: "Ibadan", location: { type: "Point", coordinates: [3.95, 7.38] }, soil_information: {}, updated_at: "2026-11-20T00:00:00Z" }, error: null },
+        plots: { data: [], error: null },
+        weather_cache: { data: [{ provider: "weatherapi", payload: [payload], fetched_at: testCase.fetchedAt }], error: null },
+      });
+
+      const snapshot = await getLiveFarmContextSnapshot(makeCaller(client), { now: new Date("2026-11-21T04:00:00Z") });
+      const weather = snapshot.domains.weather_and_environment.data;
+      expect(weather?.temperatureC.state, testCase.label).toBe(testCase.expectedState);
+      expect(weather?.humidityPct.state, testCase.label).toBe(testCase.expectedState);
+      expect(weather?.windSpeedKmh.state, testCase.label).toBe(testCase.expectedState);
+      expect(weather?.fetchedAt.state, testCase.label).toBe(testCase.expectedState);
+      expect(weather?.ageHours, testCase.label).toBe(
+        testCase.expectedState === "stale" ? 12.000277777777777 : null,
+      );
+    }
+  });
+
   it("Finding 06: scopes marketplace orders strictly to listings with verified produce provenance for the requested farm", async () => {
     const OTHER_FARM_ID = "99999999-9999-4999-8999-999999999999";
     const client = buildMockUserClient({
