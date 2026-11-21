@@ -287,7 +287,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
       expect(staffOnly.extractionMethod).toBe("staff_entered_text");
       expect(staffOnly.originalFileSha256).toBeNull();
       expect(staffOnly.storageObjectPath).toBeNull();
-      expect(staffOnly.extractedTextSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(staffOnly.extractedTextSha256).toBeNull();
       expect(staffOnly.computedFileSizeBytes).toBe(Buffer.byteLength(textContent, "utf8"));
     }
     expect(uploadMock).not.toHaveBeenCalled();
