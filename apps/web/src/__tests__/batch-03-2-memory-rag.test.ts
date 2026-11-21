@@ -228,7 +228,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
     expect(failedRet.ok).toBe(false);
   });
 
-  it("Finding 6: computes byte size and original_file_sha256 server-side and distinguishes staff_asserted from file_hash_verified", async () => {
+  it("Finding 6 (Batch 03.2G): enforces verifiable Storage-archived byte-to-chunk provenance chain and fail-closed failure recording", async () => {
     const failingEmbedder: EmbeddingProvider = {
       name: "failing",
       model: "broken",
@@ -237,14 +237,39 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
       embed: vi.fn().mockRejectedValue(new Error("Embedding timeout")),
     };
 
+    const storedObjects = new Map<string, Uint8Array>();
+    const uploadMock = vi.fn(async (path: string, data: Uint8Array) => {
+      storedObjects.set(path, new Uint8Array(data));
+      return { data: { path }, error: null };
+    });
+    const downloadMock = vi.fn(async (path: string) => {
+      const bytes = storedObjects.get(path);
+      if (!bytes) return { data: null, error: { message: "Not found" } };
+      return {
+        data: { arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) },
+        error: null,
+      };
+    });
+    const storageFromMock = vi.fn(() => ({ upload: uploadMock, download: downloadMock }));
+
     const rpc = vi.fn().mockResolvedValue({
-      data: { document_id: "doc-1", standard_id: STD_1, standard_status: "draft", chunk_count: 1 },
+      data: {
+        document_id: "doc-1",
+        standard_id: STD_1,
+        standard_status: "draft",
+        ingestion_status: "indexed",
+        provenance_verification_status: "staff_asserted",
+        chunk_count: 1,
+      },
       error: null,
     });
-    const client = { rpc } as unknown as SupabaseClient<Database>;
+    const client = {
+      rpc,
+      storage: { from: storageFromMock },
+    } as unknown as SupabaseClient<Database>;
 
-    // Plain staff-entered text -> staff_asserted, server-computed UTF-8 byte length
-    const textText = "# Planting\n\nPlant maize 25cm apart.";
+    // 1. Plain staff-entered text -> staff_asserted, server-computed UTF-8 byte length, zero Storage calls
+    const textContent = "# Planting\n\nPlant maize 25cm apart.";
     const staffOnly = await ingestAgronomicStandardDocument(
       client,
       {
@@ -252,7 +277,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
         documentTitle: "IITA Maize Guide",
         sourceAuthority: "IITA",
         mimeType: "text/markdown",
-        textContent: textText,
+        textContent,
       },
       { embeddingProvider: failingEmbedder },
     );
@@ -261,11 +286,44 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
       expect(staffOnly.provenanceVerificationStatus).toBe("staff_asserted");
       expect(staffOnly.extractionMethod).toBe("staff_entered_text");
       expect(staffOnly.originalFileSha256).toBeNull();
-      expect(staffOnly.computedFileSizeBytes).toBe(Buffer.byteLength(textText, "utf8"));
+      expect(staffOnly.storageObjectPath).toBeNull();
+      expect(staffOnly.extractedTextSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(staffOnly.computedFileSizeBytes).toBe(Buffer.byteLength(textContent, "utf8"));
+    }
+    expect(uploadMock).not.toHaveBeenCalled();
+
+    // 2. Reject combined sourceFileBase64 + textContent (caller cannot inject separate unverified text)
+    const rawFileBase64 = Buffer.from(textContent, "utf8").toString("base64");
+    const combinedRejected = await ingestAgronomicStandardDocument(
+      client,
+      {
+        standardId: STD_1,
+        documentTitle: "IITA Maize Guide",
+        sourceAuthority: "IITA",
+        mimeType: "text/markdown",
+        sourceFileBase64: rawFileBase64,
+        textContent: "Unverified caller-supplied text",
+      },
+      { embeddingProvider: failingEmbedder },
+    );
+    expect(combinedRejected.ok).toBe(false);
+    if (!combinedRejected.ok) {
+      expect(combinedRejected.status).toBe(400);
+      expect(combinedRejected.code).toBe("invalid_input");
     }
 
-    // Uploaded raw file bytes -> file_hash_verified with server-computed originalFileSha256
-    const rawFileBase64 = Buffer.from(textText, "utf8").toString("base64");
+    // 3. File-backed ingestion: upload -> download -> SHA-256 verify -> extract from archived bytes -> file_hash_verified
+    rpc.mockResolvedValueOnce({
+      data: {
+        document_id: "doc-2",
+        standard_id: STD_1,
+        standard_status: "draft",
+        ingestion_status: "indexed",
+        provenance_verification_status: "file_hash_verified",
+        chunk_count: 1,
+      },
+      error: null,
+    });
     const fileBacked = await ingestAgronomicStandardDocument(
       client,
       {
@@ -274,23 +332,120 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
         sourceAuthority: "IITA",
         mimeType: "text/markdown",
         sourceFileBase64: rawFileBase64,
-        storageObjectPath: "standards/iita-maize-v1.md",
-        textContent: textText,
+        originalFileName: "iita-maize-v1.md",
       },
       { embeddingProvider: failingEmbedder },
     );
     expect(fileBacked.ok).toBe(true);
+    expect(storageFromMock).toHaveBeenCalledWith("agronomic-standard-sources");
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    expect(downloadMock).toHaveBeenCalledTimes(1);
     if (fileBacked.ok) {
       expect(fileBacked.provenanceVerificationStatus).toBe("file_hash_verified");
       expect(fileBacked.extractionMethod).toBe("markdown_file");
       expect(fileBacked.originalFileSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(fileBacked.extractedTextSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(fileBacked.storageObjectPath).toContain(`standards/${STD_1}/`);
     }
 
+    // 4. Reject application/pdf file-backed ingestion with explicit 422 until verified PDF extractor exists
+    const pdfBytesBase64 = Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n", "utf8").toString("base64");
+    const pdfRejected = await ingestAgronomicStandardDocument(
+      client,
+      {
+        standardId: STD_1,
+        documentTitle: "IITA Maize PDF",
+        sourceAuthority: "IITA",
+        mimeType: "application/pdf",
+        sourceFileBase64: pdfBytesBase64,
+      },
+      { embeddingProvider: failingEmbedder },
+    );
+    expect(pdfRejected.ok).toBe(false);
+    if (!pdfRejected.ok) {
+      expect(pdfRejected.status).toBe(422);
+      expect(pdfRejected.code).toBe("pdf_extractor_not_configured");
+    }
+
+    // 5. Reject binary/NUL-byte masquerading as text/plain (signature validation)
+    const binaryBase64 = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff, 0xfe]).toString("base64");
+    const binaryRejected = await ingestAgronomicStandardDocument(
+      client,
+      {
+        standardId: STD_1,
+        documentTitle: "Spoofed Text File",
+        sourceAuthority: "IITA",
+        mimeType: "text/plain",
+        sourceFileBase64: binaryBase64,
+      },
+      { embeddingProvider: failingEmbedder },
+    );
+    expect(binaryRejected.ok).toBe(false);
+    if (!binaryRejected.ok) {
+      expect(binaryRejected.status).toBe(400);
+      expect(binaryRejected.code).toBe("invalid_file_bytes");
+    }
+
+    // 6. Storage upload failure fails closed and records durable failure via record_agronomic_document_ingestion_failure
+    uploadMock.mockResolvedValueOnce({ data: null, error: { message: "Bucket policy denied" } } as unknown as {
+      data: { path: string };
+      error: null;
+    });
+    rpc.mockResolvedValueOnce({ data: { document_id: "doc-failed-1", ingestion_status: "failed" }, error: null });
+    const uploadFailed = await ingestAgronomicStandardDocument(
+      client,
+      {
+        standardId: STD_1,
+        documentTitle: "Upload Fail Doc",
+        sourceAuthority: "IITA",
+        mimeType: "text/plain",
+        sourceFileBase64: rawFileBase64,
+      },
+      { embeddingProvider: failingEmbedder },
+    );
+    expect(uploadFailed.ok).toBe(false);
+    if (!uploadFailed.ok) {
+      expect(uploadFailed.status).toBe(502);
+      expect(uploadFailed.code).toBe("storage_upload_failed");
+    }
+    expect(rpc).toHaveBeenLastCalledWith(
+      "record_agronomic_document_ingestion_failure",
+      expect.objectContaining({ p_standard_id: STD_1, p_ingestion_status: "failed" }),
+    );
+
+    // 7. Re-downloaded Storage hash mismatch fails closed with reconciliation_required and indexes zero chunks
+    downloadMock.mockResolvedValueOnce({
+      data: { arrayBuffer: async () => new TextEncoder().encode("CORRUPTED BYTES").buffer },
+      error: null,
+    });
+    rpc.mockResolvedValueOnce({ data: { document_id: "doc-corrupt-1", ingestion_status: "reconciliation_required" }, error: null });
+    const hashMismatch = await ingestAgronomicStandardDocument(
+      client,
+      {
+        standardId: STD_1,
+        documentTitle: "Corrupted Storage Doc",
+        sourceAuthority: "IITA",
+        mimeType: "text/plain",
+        sourceFileBase64: rawFileBase64,
+      },
+      { embeddingProvider: failingEmbedder },
+    );
+    expect(hashMismatch.ok).toBe(false);
+    if (!hashMismatch.ok) {
+      expect(hashMismatch.status).toBe(500);
+      expect(hashMismatch.code).toBe("storage_hash_mismatch");
+    }
+    expect(rpc).toHaveBeenLastCalledWith(
+      "record_agronomic_document_ingestion_failure",
+      expect.objectContaining({ p_standard_id: STD_1, p_ingestion_status: "reconciliation_required" }),
+    );
+
+    // 8. Published standard retrieval exposes full provenance fields and sanitises content
     rpc.mockResolvedValueOnce({
       data: [
         {
           chunk_id: "chunk-pub-1",
-          document_id: "doc-1",
+          document_id: "doc-2",
           standard_id: STD_1,
           standard_code: "STD-MAIZE-PUB",
           version: "1.0",
@@ -303,6 +458,9 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
           effective_to: null,
           document_title: "IITA Maize Guide",
           extraction_method: "markdown_file",
+          extraction_version: "1.0",
+          original_file_sha256: "a".repeat(64),
+          storage_object_path: `standards/${STD_1}/doc.md`,
           provenance_verification_status: "file_hash_verified",
           section_ref: "Planting",
           page_number: 1,
@@ -318,6 +476,9 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
     expect(rag.ok).toBe(true);
     if (rag.ok) {
       expect(rag.passages[0]?.provenanceVerificationStatus).toBe("file_hash_verified");
+      expect(rag.passages[0]?.extractionVersion).toBe("1.0");
+      expect(rag.passages[0]?.originalFileSha256).toBe("a".repeat(64));
+      expect(rag.passages[0]?.storageObjectPath).toBe(`standards/${STD_1}/doc.md`);
       expect(rag.passages[0]?.sanitizedContent).toContain("[REDACTED_INSTRUCTION_LIKE_TEXT]");
     }
   });

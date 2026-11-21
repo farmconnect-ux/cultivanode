@@ -44,7 +44,7 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'public.agronomic_standard_chunks', 'select')
   and not has_function_privilege('anon', 'public.search_published_agronomic_standards(text,text,text,text,text,extensions.vector,integer)', 'execute')
-  and not has_function_privilege('anon', 'public.ingest_agronomic_standard_document(uuid,text,text,text,integer,text,jsonb,text,text,text,text,text)', 'execute'),
+  and not has_function_privilege('anon', 'public.ingest_agronomic_standard_document(uuid,text,text,text,integer,text,jsonb,text,text,text,text,text,text,text)', 'execute'),
   'anon has zero access to agronomic RAG tables and RPCs'
 );
 

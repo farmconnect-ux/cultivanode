@@ -1,5 +1,5 @@
 /**
- * CultivaNode 3.0 — Batch 03.2 Persistent Farm Memory & Published Agronomic Standards RAG Contracts.
+ * CultivaNode 3.0 — Batch 03.2 / 03.2G Persistent Farm Memory & Published Agronomic Standards RAG Contracts.
  * Authority: ADR-002, ADR-003, ADR-004, ADR-007, ADR-008, ADR-009.
  */
 
@@ -83,6 +83,30 @@ export interface FarmMemoryItemRecord {
   similarityScore: number | null;
 }
 
+/**
+ * Canonical model-facing memory record: every free-text field (including `memoryType`,
+ * `title`, and nested `structuredContent` keys/values) has passed through the canonical
+ * untrusted-evidence boundary and all enums are validated against their domain definitions.
+ */
+export interface ModelSafeMemoryRecord {
+  readonly id: string;
+  readonly memoryScope: MemoryScope;
+  readonly farmId: string | null;
+  readonly profileId: string | null;
+  readonly category: MemoryCategory;
+  readonly memoryType: string;
+  readonly title: string;
+  readonly structuredContent: Record<string, unknown>;
+  readonly sourceKind: MemorySourceKind;
+  readonly lifecycleStatus: MemoryLifecycleStatus;
+  readonly verificationStatus: MemoryVerificationStatus;
+  readonly confidence: number;
+  readonly syncState: MemorySyncState;
+  readonly updatedAt: string;
+  readonly similarityScore: number | null;
+  readonly sanitized: true;
+}
+
 export interface MemoryRetrievalResult {
   confirmedFarmMemories: FarmMemoryItemRecord[];
   provisionalFarmMemories: FarmMemoryItemRecord[];
@@ -116,6 +140,16 @@ export const DOCUMENT_PROVENANCE_STATUSES = [
 ] as const;
 export type DocumentProvenanceStatus = (typeof DOCUMENT_PROVENANCE_STATUSES)[number];
 
+export const DOCUMENT_INGESTION_STATUSES = [
+  'pending',
+  'source_archived',
+  'extracted',
+  'indexed',
+  'failed',
+  'reconciliation_required',
+] as const;
+export type DocumentIngestionStatus = (typeof DOCUMENT_INGESTION_STATUSES)[number];
+
 export interface AgronomicDocumentChunkDraft {
   chunkIndex: number;
   sectionRef: string | null;
@@ -143,7 +177,10 @@ export interface PublishedStandardPassage {
   effectiveTo: string | null;
   documentTitle: string;
   extractionMethod?: DocumentExtractionMethod;
+  extractionVersion?: string;
   provenanceVerificationStatus?: DocumentProvenanceStatus;
+  originalFileSha256?: string | null;
+  storageObjectPath?: string | null;
   sectionRef: string | null;
   pageNumber: number | null;
   paragraphIndex: number | null;
@@ -154,10 +191,13 @@ export interface PublishedStandardPassage {
 }
 
 /**
- * Model-facing published standard passage: raw unsanitised `content` is intentionally
- * omitted so prompt builders and LLMs can ONLY consume `sanitizedContent` (Finding 5).
+ * Canonical model-facing published standard passage: raw unsanitised `content` is omitted
+ * and EVERY metadata field (`standardCode`, `version`, `title`, `documentTitle`,
+ * `sourceAuthority`, `sectionRef`, `cropOrLivestockId`, `agroZone`) is sanitised and bounded.
  */
-export type ModelSafeStandardPassage = Omit<PublishedStandardPassage, 'content'>;
+export type ModelSafeStandardPassage = Omit<PublishedStandardPassage, 'content'> & {
+  readonly sanitized: true;
+};
 
 export type EvidenceRetrievalStatus = 'ok_with_results' | 'ok_empty' | 'failed' | 'skipped';
 
@@ -166,6 +206,12 @@ export interface EvidenceRetrievalOutcome {
   count: number;
   errorCode?: string;
   errorMessage?: string;
+}
+
+export interface EvidenceSanitizationSummary {
+  readonly fieldsTransformed: number;
+  readonly fieldsModified: number;
+  readonly delimiterEscapingApplied: true;
 }
 
 export interface EmbeddingSuccess {
@@ -195,16 +241,16 @@ export interface EmbeddingProvider {
 /**
  * Grounded evidence package passed to the Farm Intelligence Engine.
  * Strictly separates verified current farm facts, confirmed historical memories,
- * provisional memories, profile preferences, published agronomic standards (sanitised only),
+ * provisional memories, profile preferences, published agronomic standards (model-safe only),
  * retrieval outcomes, and missing/unavailable data.
  */
 export interface GroundedEvidencePackage {
   farmId: string;
   assembledAt: string;
   verifiedCurrentFarmFacts: LiveFarmContextSnapshot;
-  confirmedHistoricalMemories: FarmMemoryItemRecord[];
-  provisionalMemories: FarmMemoryItemRecord[];
-  profilePreferences: FarmMemoryItemRecord[];
+  confirmedHistoricalMemories: ModelSafeMemoryRecord[];
+  provisionalMemories: ModelSafeMemoryRecord[];
+  profilePreferences: ModelSafeMemoryRecord[];
   publishedAgronomicStandards: ModelSafeStandardPassage[];
   missingOrUnavailable: Array<{ domain: string; field: string }>;
   reconciliationNotes: string[];
@@ -215,5 +261,6 @@ export interface GroundedEvidencePackage {
   degradedGrounding: boolean;
   auditContextRefs: AuditContextReference[];
   memoryItemIds: string[];
+  sanitizationSummary: EvidenceSanitizationSummary;
   untrustedContentSanitized: true;
 }

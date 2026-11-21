@@ -13,6 +13,7 @@ import {
   sanitizeUntrustedRetrievedText,
   sha256Hex,
   validateAgronomicDocumentMetadata,
+  type AllowedAgronomicDocumentMime,
   type AuditContextReference,
   type Database,
   type DocumentExtractionMethod,
@@ -23,32 +24,58 @@ import {
 } from "@cultivanode/shared";
 
 /**
- * CultivaNode 3.0 — Batch 03.2 Published Agronomic Standards RAG & Verified Document Ingestion Service.
+ * CultivaNode 3.0 — Batch 03.2G Verifiable Agronomic Document-to-Passage Provenance Service (Finding 6).
  *
- * Security & provenance invariants (Finding 6):
- * - Server-only.
- * - Computes `fileSizeBytes` and SHA-256 hashes server-side from actual uploaded file bytes
- *   (`sourceFileBase64`) or actual UTF-8 `textContent` — never blindly trusts caller-supplied size.
- * - Explicitly distinguishes `staff_asserted` text entries from `file_hash_verified` source files.
- * - Ingestion runs strictly under authenticated staff JWT on DRAFT standards ONLY (never auto-publishes).
- * - Retrieval runs strictly under authenticated caller JWT via `search_published_agronomic_standards`,
- *   enforcing `status = 'published'` and effective dates INSIDE PostgreSQL.
+ * Verifiable Provenance Chain:
+ *   Original source bytes -> private Storage bucket (`agronomic-standard-sources`) ->
+ *   re-downloaded byte SHA-256 verification -> deterministic server-side extraction from
+ *   archived bytes -> extracted text SHA-256 -> chunks -> embeddings -> published RAG retrieval.
+ *
+ * Strictly enforces TWO mutually exclusive ingestion modes:
+ * 1. File-backed (`sourceFileBase64` supplied, `textContent` MUST be omitted):
+ *    - Validates actual bytes (rejects NUL/binary bytes for text/markdown, validates JSON for JSON,
+ *      rejects PDF until a verified server-side PDF text extractor is installed).
+ *    - Uploads exact original bytes to private `agronomic-standard-sources` bucket under staff JWT.
+ *    - Downloads back the archived object and verifies SHA-256 matches `originalFileSha256`.
+ *    - Extracts text EXCLUSIVELY from those verified archived bytes; never mixes caller `textContent`.
+ *    - Database RPC verifies `storage.objects` existence before assigning `file_hash_verified`.
+ * 2. Staff-entered text (`textContent` supplied, `sourceFileBase64` omitted):
+ *    - Unconditionally classified as `staff_asserted` / `staff_entered_text` by PostgreSQL.
  */
 
-export const IngestAgronomicDocumentSchema = z.object({
-  standardId: z.string().uuid(),
-  documentTitle: z.string().trim().min(1).max(240),
-  sourceAuthority: z.string().trim().min(1).max(120),
-  mimeType: z.enum(ALLOWED_AGRONOMIC_DOCUMENT_MIMES),
-  /** Optional raw source file bytes (base64). When provided, server computes originalFileSha256 and actual byte size. */
-  sourceFileBase64: z.string().max(14_000_000).optional(),
-  /** Optional Supabase Storage path referencing the archived original source file. */
-  storageObjectPath: z.string().trim().min(1).max(500).nullable().optional(),
-  extractionMethod: z.enum(DOCUMENT_EXTRACTION_METHODS).optional(),
-  textContent: z.string().min(1).max(2_000_000),
-  externalUri: z.string().url().max(500).nullable().optional(),
-  maxChunkChars: z.number().int().min(200).max(7500).optional(),
-});
+export const AGRONOMIC_SOURCES_BUCKET = "agronomic-standard-sources";
+export const SERVER_EXTRACTION_VERSION = "1.0";
+
+export const IngestAgronomicDocumentSchema = z
+  .object({
+    standardId: z.string().uuid(),
+    documentTitle: z.string().trim().min(1).max(240),
+    sourceAuthority: z.string().trim().min(1).max(120),
+    mimeType: z.enum(ALLOWED_AGRONOMIC_DOCUMENT_MIMES),
+    /** Raw source file bytes (base64). Mutually exclusive with `textContent` to prevent hash/text mismatch. */
+    sourceFileBase64: z.string().min(1).max(14_000_000).optional(),
+    /** Staff-entered text (no original file). Mutually exclusive with `sourceFileBase64`. */
+    textContent: z.string().min(1).max(2_000_000).optional(),
+    externalUri: z.string().url().max(500).nullable().optional(),
+    maxChunkChars: z.number().int().min(200).max(7500).optional(),
+  })
+  .superRefine((val, ctx) => {
+    const hasFile = Boolean(val.sourceFileBase64);
+    const hasText = Boolean(val.textContent);
+    if (!hasFile && !hasText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Either sourceFileBase64 (file-backed) or textContent (staff-entered) is required.",
+      });
+    }
+    if (hasFile && hasText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "File-backed ingestion derives text exclusively from the archived source file; do not supply separate textContent.",
+      });
+    }
+  });
 
 export type IngestAgronomicDocumentInput = z.input<typeof IngestAgronomicDocumentSchema>;
 
@@ -63,6 +90,94 @@ export const SearchPublishedStandardsSchema = z.object({
 
 export type SearchPublishedStandardsInput = z.input<typeof SearchPublishedStandardsSchema>;
 
+function extensionForMime(mimeType: AllowedAgronomicDocumentMime): string {
+  switch (mimeType) {
+    case "text/markdown":
+      return "md";
+    case "application/json":
+      return "json";
+    case "application/pdf":
+      return "pdf";
+    default:
+      return "txt";
+  }
+}
+
+/**
+ * Inspects actual raw file bytes (not just caller-supplied MIME) and deterministically
+ * extracts text from those exact bytes. Rejects binary/NUL payloads masquerading as text
+ * and rejects PDFs until a verified server-side PDF extractor is installed.
+ */
+export function extractTextFromVerifiedSourceBytes(
+  rawBytes: Buffer,
+  mimeType: AllowedAgronomicDocumentMime,
+):
+  | { ok: true; extractedText: string; extractionMethod: DocumentExtractionMethod }
+  | { ok: false; status: number; code: string; error: string } {
+  if (mimeType === "application/pdf") {
+    return {
+      ok: false,
+      status: 422,
+      code: "pdf_extractor_not_configured",
+      error:
+        "Server-side PDF text extraction is not yet installed; submit plain text/markdown/JSON source files or staff-entered text.",
+    };
+  }
+
+  // Reject binary/executable signatures (NUL bytes, PDF magic, PNG/ZIP headers) masquerading as text/JSON.
+  if (rawBytes.includes(0x00)) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_file_signature",
+      error: "Binary/NUL bytes detected in text/JSON source file.",
+    };
+  }
+  const head4 = rawBytes.subarray(0, 4).toString("latin1");
+  if (head4 === "%PDF" || head4 === "\x89PNG" || head4.startsWith("PK\x03\x04")) {
+    return {
+      ok: false,
+      status: 400,
+      code: "mime_signature_mismatch",
+      error: `Uploaded file signature does not match declared MIME type (${mimeType}).`,
+    };
+  }
+
+  const decoded = new TextDecoder("utf-8", { fatal: true });
+  let text: string;
+  try {
+    text = decoded.decode(rawBytes);
+  } catch {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_utf8_source",
+      error: "Uploaded source file is not valid UTF-8.",
+    };
+  }
+
+  if (mimeType === "application/json") {
+    try {
+      const parsed = JSON.parse(text);
+      const formatted = typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2);
+      return { ok: true, extractedText: formatted, extractionMethod: "json_structured_file" };
+    } catch {
+      return {
+        ok: false,
+        status: 400,
+        code: "invalid_json_source",
+        error: "Uploaded application/json source file failed JSON parsing.",
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    extractedText: text,
+    extractionMethod: mimeType === "text/markdown" ? "markdown_file" : "plain_text_file",
+  };
+}
+
 export async function ingestAgronomicStandardDocument(
   client: SupabaseClient<Database>,
   input: IngestAgronomicDocumentInput,
@@ -73,12 +188,16 @@ export async function ingestAgronomicStandardDocument(
       documentId: string;
       standardId: string;
       standardStatus: string;
+      ingestionStatus: "indexed";
       chunkCount: number;
       embeddingsGenerated: number;
       computedFileSizeBytes: number;
       originalFileSha256: string | null;
+      extractedTextSha256: string | null;
+      storageObjectPath: string | null;
       provenanceVerificationStatus: DocumentProvenanceStatus;
       extractionMethod: DocumentExtractionMethod;
+      extractionVersion: string;
     }
   | { ok: false; status: number; code: string; error: string }
 > {
@@ -93,11 +212,13 @@ export async function ingestAgronomicStandardDocument(
   }
 
   const data = parsed.data;
-
-  // Independently compute byte size and original file hash server-side.
   let computedFileSizeBytes: number;
   let originalFileSha256: string | null = null;
+  let extractedTextSha256: string | null = null;
+  let storageObjectPath: string | null = null;
+  let extractionMethod: DocumentExtractionMethod = "staff_entered_text";
   let provenanceVerificationStatus: DocumentProvenanceStatus = "staff_asserted";
+  let textToChunk: string;
 
   if (data.sourceFileBase64) {
     const rawBytes = Buffer.from(data.sourceFileBase64, "base64");
@@ -109,36 +230,109 @@ export async function ingestAgronomicStandardDocument(
         error: `Source file must be between 1 byte and ${MAX_AGRONOMIC_DOCUMENT_BYTES} bytes.`,
       };
     }
+
+    // Validate actual file signature & extractability BEFORE uploading to Storage.
+    const preCheck = extractTextFromVerifiedSourceBytes(rawBytes, data.mimeType);
+    if (!preCheck.ok) return preCheck;
+
     computedFileSizeBytes = rawBytes.length;
     originalFileSha256 = createHash("sha256").update(rawBytes).digest("hex");
+    storageObjectPath = `${data.standardId}/${originalFileSha256}.${extensionForMime(data.mimeType)}`;
+
+    // 1. Archive exact original bytes into private Storage bucket under authenticated staff JWT.
+    const uploadRes = await client.storage
+      .from(AGRONOMIC_SOURCES_BUCKET)
+      .upload(storageObjectPath, rawBytes, { contentType: data.mimeType, upsert: false });
+
+    if (uploadRes.error) {
+      await recordIngestionFailureSafe(client, {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType,
+        fileSizeBytes: computedFileSizeBytes,
+        contentSha256: originalFileSha256,
+        ingestionStatus: "failed",
+        errorMessage: `Storage upload failed: ${uploadRes.error.message}`,
+        storageObjectPath: null,
+      });
+      return {
+        ok: false,
+        status: 502,
+        code: "storage_archive_failed",
+        error: "Unable to archive original source file to private Storage.",
+      };
+    }
+
+    // 2. Re-download archived bytes and independently verify SHA-256 matches original bytes.
+    const downloadRes = await client.storage.from(AGRONOMIC_SOURCES_BUCKET).download(storageObjectPath);
+    if (downloadRes.error || !downloadRes.data) {
+      await recordIngestionFailureSafe(client, {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType,
+        fileSizeBytes: computedFileSizeBytes,
+        contentSha256: originalFileSha256,
+        ingestionStatus: "reconciliation_required",
+        errorMessage: "Uploaded source object could not be retrieved for hash verification.",
+        storageObjectPath,
+      });
+      return {
+        ok: false,
+        status: 502,
+        code: "storage_verification_failed",
+        error: "Archived source object could not be verified.",
+      };
+    }
+
+    const archivedBytes = Buffer.from(await downloadRes.data.arrayBuffer());
+    const archivedSha256 = createHash("sha256").update(archivedBytes).digest("hex");
+    if (archivedSha256 !== originalFileSha256) {
+      await recordIngestionFailureSafe(client, {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType,
+        fileSizeBytes: computedFileSizeBytes,
+        contentSha256: originalFileSha256,
+        ingestionStatus: "reconciliation_required",
+        errorMessage: "Archived Storage object SHA-256 mismatch against uploaded bytes.",
+        storageObjectPath,
+      });
+      return {
+        ok: false,
+        status: 500,
+        code: "storage_hash_mismatch",
+        error: "Archived source object hash verification failed.",
+      };
+    }
+
+    // 3. Extract text EXCLUSIVELY from the verified archived bytes.
+    const extracted = extractTextFromVerifiedSourceBytes(archivedBytes, data.mimeType);
+    if (!extracted.ok) return extracted;
+
+    textToChunk = extracted.extractedText;
+    extractionMethod = extracted.extractionMethod;
+    extractedTextSha256 = await sha256Hex(textToChunk);
     provenanceVerificationStatus = "file_hash_verified";
   } else {
-    computedFileSizeBytes = Buffer.byteLength(data.textContent, "utf8");
+    textToChunk = data.textContent!;
+    computedFileSizeBytes = Buffer.byteLength(textToChunk, "utf8");
+    extractionMethod = "staff_entered_text";
     provenanceVerificationStatus = "staff_asserted";
   }
-
-  const extractionMethod: DocumentExtractionMethod =
-    data.extractionMethod ??
-    (data.sourceFileBase64
-      ? data.mimeType === "text/markdown"
-        ? "markdown_file"
-        : data.mimeType === "application/pdf"
-          ? "pdf_text_extractor"
-          : data.mimeType === "application/json"
-            ? "json_structured_file"
-            : "plain_text_file"
-      : "staff_entered_text");
 
   const metaCheck = validateAgronomicDocumentMetadata({
     mimeType: data.mimeType,
     fileSizeBytes: computedFileSizeBytes,
-    textContent: data.textContent,
+    textContent: textToChunk,
   });
   if (!metaCheck.ok) {
     return { ok: false, status: 400, code: "invalid_document_metadata", error: metaCheck.error };
   }
 
-  const chunks = await chunkAgronomicDocument(data.textContent, { maxChunkChars: data.maxChunkChars });
+  const chunks = await chunkAgronomicDocument(textToChunk, { maxChunkChars: data.maxChunkChars });
   if (chunks.length === 0) {
     return { ok: false, status: 400, code: "empty_chunks", error: "Document produced zero text chunks." };
   }
@@ -175,7 +369,7 @@ export async function ingestAgronomicStandardDocument(
     });
   }
 
-  const contentSha256 = await sha256Hex(data.textContent);
+  const contentSha256 = await sha256Hex(textToChunk);
   const { data: result, error } = await client.rpc("ingest_agronomic_standard_document", {
     p_standard_id: data.standardId,
     p_document_title: data.documentTitle,
@@ -186,9 +380,11 @@ export async function ingestAgronomicStandardDocument(
     p_chunks: payloadChunks as unknown as Json,
     p_external_uri: data.externalUri ?? null,
     p_original_file_sha256: originalFileSha256,
-    p_storage_object_path: data.storageObjectPath ?? null,
+    p_storage_object_path: storageObjectPath,
     p_extraction_method: extractionMethod,
     p_provenance_verification_status: provenanceVerificationStatus,
+    p_extraction_version: SERVER_EXTRACTION_VERSION,
+    p_extracted_text_sha256: extractedTextSha256,
   });
 
   if (error || !result || typeof result !== "object" || Array.isArray(result)) {
@@ -207,13 +403,48 @@ export async function ingestAgronomicStandardDocument(
     documentId: String(obj.document_id ?? ""),
     standardId: String(obj.standard_id ?? data.standardId),
     standardStatus: String(obj.standard_status ?? "draft"),
+    ingestionStatus: "indexed",
     chunkCount: Number(obj.chunk_count ?? chunks.length),
     embeddingsGenerated,
     computedFileSizeBytes,
     originalFileSha256,
-    provenanceVerificationStatus,
-    extractionMethod,
+    extractedTextSha256,
+    storageObjectPath,
+    provenanceVerificationStatus: (obj.provenance_verification_status as DocumentProvenanceStatus) ?? provenanceVerificationStatus,
+    extractionMethod: (obj.extraction_method as DocumentExtractionMethod) ?? extractionMethod,
+    extractionVersion: SERVER_EXTRACTION_VERSION,
   };
+}
+
+async function recordIngestionFailureSafe(
+  client: SupabaseClient<Database>,
+  params: {
+    standardId: string;
+    documentTitle: string;
+    sourceAuthority: string;
+    mimeType: string;
+    fileSizeBytes: number;
+    contentSha256: string;
+    ingestionStatus: "failed" | "reconciliation_required";
+    errorMessage: string;
+    storageObjectPath: string | null;
+  },
+): Promise<void> {
+  try {
+    await client.rpc("record_agronomic_document_ingestion_failure", {
+      p_standard_id: params.standardId,
+      p_document_title: params.documentTitle,
+      p_source_authority: params.sourceAuthority,
+      p_mime_type: params.mimeType,
+      p_file_size_bytes: params.fileSizeBytes,
+      p_content_sha256: params.contentSha256,
+      p_ingestion_status: params.ingestionStatus,
+      p_error_message: params.errorMessage,
+      p_storage_object_path: params.storageObjectPath,
+    });
+  } catch {
+    // Best-effort durable failure logging; caller still receives fail-closed error response.
+  }
 }
 
 export async function retrievePublishedAgronomicStandards(
@@ -291,7 +522,10 @@ export async function retrievePublishedAgronomicStandards(
     effectiveTo: row.effective_to,
     documentTitle: row.document_title,
     extractionMethod: (row.extraction_method as DocumentExtractionMethod) ?? "staff_entered_text",
+    extractionVersion: row.extraction_version ?? "1.0",
     provenanceVerificationStatus: (row.provenance_verification_status as DocumentProvenanceStatus) ?? "staff_asserted",
+    originalFileSha256: row.original_file_sha256 ?? null,
+    storageObjectPath: row.storage_object_path ?? null,
     sectionRef: row.section_ref,
     pageNumber: row.page_number,
     paragraphIndex: row.paragraph_index,
@@ -312,3 +546,5 @@ export async function retrievePublishedAgronomicStandards(
 
   return { ok: true, passages, auditContextRefs, usedSemanticSearch };
 }
+
+export { DOCUMENT_EXTRACTION_METHODS };

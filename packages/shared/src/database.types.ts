@@ -2442,39 +2442,72 @@ export type Database = {
       }
       agronomic_standard_documents: {
         Row: {
+          authority_verified_at: string | null
+          authority_verified_by: string | null
           content_sha256: string
           created_at: string
           document_title: string
           external_uri: string | null
+          extracted_text_sha256: string | null
+          extraction_method: string
+          extraction_version: string
           file_size_bytes: number
           id: string
+          ingestion_error: string | null
+          ingestion_status: string
           mime_type: string
+          original_file_sha256: string | null
+          provenance_verification_status: string
           source_authority: string
           standard_id: string
+          storage_bucket_id: string | null
+          storage_object_path: string | null
           uploaded_by: string | null
         }
         Insert: {
+          authority_verified_at?: string | null
+          authority_verified_by?: string | null
           content_sha256: string
           created_at?: string
           document_title: string
           external_uri?: string | null
+          extracted_text_sha256?: string | null
+          extraction_method?: string
+          extraction_version?: string
           file_size_bytes: number
           id?: string
+          ingestion_error?: string | null
+          ingestion_status?: string
           mime_type: string
+          original_file_sha256?: string | null
+          provenance_verification_status?: string
           source_authority: string
           standard_id: string
+          storage_bucket_id?: string | null
+          storage_object_path?: string | null
           uploaded_by?: string | null
         }
         Update: {
+          authority_verified_at?: string | null
+          authority_verified_by?: string | null
           content_sha256?: string
           created_at?: string
           document_title?: string
           external_uri?: string | null
+          extracted_text_sha256?: string | null
+          extraction_method?: string
+          extraction_version?: string
           file_size_bytes?: number
           id?: string
+          ingestion_error?: string | null
+          ingestion_status?: string
           mime_type?: string
+          original_file_sha256?: string | null
+          provenance_verification_status?: string
           source_authority?: string
           standard_id?: string
+          storage_bucket_id?: string | null
+          storage_object_path?: string | null
           uploaded_by?: string | null
         }
         Relationships: []
@@ -8894,11 +8927,29 @@ export type Database = {
           p_content_sha256: string
           p_document_title: string
           p_external_uri?: string | null
+          p_extracted_text_sha256?: string | null
           p_extraction_method?: string
+          p_extraction_version?: string
           p_file_size_bytes: number
           p_mime_type: string
           p_original_file_sha256?: string | null
           p_provenance_verification_status?: string
+          p_source_authority: string
+          p_standard_id: string
+          p_storage_object_path?: string | null
+        }
+        Returns: Json
+      }
+      record_agronomic_document_ingestion_failure: {
+        Args: {
+          p_content_sha256?: string | null
+          p_document_title: string
+          p_error_message: string
+          p_external_uri?: string | null
+          p_file_size_bytes?: number
+          p_ingestion_status?: string
+          p_mime_type: string
+          p_original_file_sha256?: string | null
           p_source_authority: string
           p_standard_id: string
           p_storage_object_path?: string | null
@@ -8959,6 +9010,8 @@ export type Database = {
           effective_from: string | null
           effective_to: string | null
           extraction_method: string
+          extraction_version: string
+          original_file_sha256: string | null
           page_number: number | null
           paragraph_index: number | null
           provenance_verification_status: string
@@ -8968,6 +9021,7 @@ export type Database = {
           source_authority: string
           standard_code: string
           standard_id: string
+          storage_object_path: string | null
           title: string
           version: string
         }>
