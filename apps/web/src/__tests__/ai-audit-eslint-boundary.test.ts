@@ -8,6 +8,7 @@ function lintSnippet(code: string, filename: string) {
     code,
     [
       {
+        files: ["**/*.{js,jsx,mjs,cjs,ts,tsx}"],
         languageOptions: { ecmaVersion: 2022, sourceType: "module" },
         plugins: {
           cultivanode: {

@@ -82,6 +82,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ["**/*.{js,jsx,mjs,cjs,ts,tsx}"],
     plugins: {
       cultivanode: cultivanodeSecurityPlugin,
     },
