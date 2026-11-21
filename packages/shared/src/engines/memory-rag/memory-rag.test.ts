@@ -582,11 +582,17 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
       const rawBody = String(fetchSpy.mock.calls[0]?.[1]?.body ?? '');
       const parsedPayload = JSON.parse(rawBody) as {
         system: string;
-        messages: Array<{ role: string; content: string }>;
+        messages: Array<{ role: string; content: string | Array<{ type: string; text?: string }> }>;
       };
 
       expect(parsedPayload.system).toContain('NAFDAC');
-      const userMessage = parsedPayload.messages[0]?.content ?? '';
+      const rawContent = parsedPayload.messages[0]?.content;
+      const userMessage =
+        typeof rawContent === 'string'
+          ? rawContent
+          : Array.isArray(rawContent)
+            ? rawContent.map((part) => part.text ?? '').join('\n')
+            : '';
       assertNoDelimiterBreakout(userMessage, 3);
       expect(userMessage).not.toMatch(/Ignore all previous instructions/i);
       expect(userMessage).not.toMatch(/Ignore previous instructions/i);
