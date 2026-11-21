@@ -62,10 +62,12 @@ select is(
   'all three approved scheduled tasks are registered and enabled'
 );
 
--- 7. Unregistered task name is rejected (42501).
-set local role cultivanode_scheduler;
+-- 7. Unregistered task name is rejected (42501) when invoked as cultivanode_scheduler.
 select throws_ok(
-  $$ select private.run_scheduled_task('drop_everything_task') $$,
+  $$
+    set local role cultivanode_scheduler;
+    select private.run_scheduled_task('drop_everything_task');
+  $$,
   '42501',
   null,
   'unregistered task name is rejected'
@@ -73,38 +75,65 @@ select throws_ok(
 
 -- 8. Arbitrary SQL injection payload is rejected by strict identifier regex (22023).
 select throws_ok(
-  $$ select private.run_scheduled_task('expire_bookings; DROP TABLE public.farms;--') $$,
+  $$
+    set local role cultivanode_scheduler;
+    select private.run_scheduled_task('expire_bookings; DROP TABLE public.farms;--');
+  $$,
   '22023',
   null,
   'arbitrary SQL payload is rejected by task identifier validation'
 );
 
--- 9. JWT-authenticated context is rejected even if caller somehow holds role privilege (42501).
-select set_config('request.jwt.claim.sub', '34000000-0000-4000-8000-000000000001', true);
+-- 9. JWT-authenticated context is rejected even if caller holds role privilege (42501).
 select throws_ok(
-  $$ select private.run_scheduled_task('expire_bookings') $$,
+  $$
+    set local role cultivanode_scheduler;
+    select set_config('request.jwt.claim.sub', '34000000-0000-4000-8000-000000000001', true);
+    select private.run_scheduled_task('expire_bookings');
+  $$,
   '42501',
   null,
   'JWT-authenticated session is rejected by scheduler wrapper'
 );
-select set_config('request.jwt.claim.sub', '', true);
 
 -- 10. Legitimate cultivanode_scheduler invocation of expire_bookings completes and records structured run ledger.
+do $$
+declare
+  v_res jsonb;
+begin
+  set local role cultivanode_scheduler;
+  v_res := private.run_scheduled_task('expire_bookings');
+  reset role;
+  perform set_config('test.expire_status', v_res ->> 'status', true);
+end $$;
+
 select is(
-  (private.run_scheduled_task('expire_bookings') ->> 'status'),
+  current_setting('test.expire_status', true),
   'completed',
   'cultivanode_scheduler executes registered expire_bookings task cleanly'
 );
 
 -- 11. Legitimate cultivanode_scheduler invocation of auto_confirm_bookings and wake_notify_worker complete cleanly.
+do $$
+declare
+  v_res1 jsonb;
+  v_res2 jsonb;
+begin
+  set local role cultivanode_scheduler;
+  v_res1 := private.run_scheduled_task('auto_confirm_bookings');
+  v_res2 := private.run_scheduled_task('wake_notify_worker');
+  reset role;
+  perform set_config('test.autoconfirm_status', v_res1 ->> 'status', true);
+  perform set_config('test.wake_status', v_res2 ->> 'status', true);
+end $$;
+
 select ok(
-  (private.run_scheduled_task('auto_confirm_bookings') ->> 'status') = 'completed'
-  and (private.run_scheduled_task('wake_notify_worker') ->> 'status') = 'completed',
+  current_setting('test.autoconfirm_status', true) = 'completed'
+  and current_setting('test.wake_status', true) = 'completed',
   'cultivanode_scheduler executes auto_confirm_bookings and wake_notify_worker cleanly'
 );
 
 -- 12. Verify run ledger recorded trace_id, duration_ms, and completed status for all 3 tasks.
-reset role;
 select is(
   (select count(distinct task_name)::int from private.scheduled_task_runs where status = 'completed' and trace_id is not null and duration_ms >= 0),
   3,
@@ -113,16 +142,17 @@ select is(
 
 -- 13. Disabled task cannot be executed (42501).
 update private.scheduled_task_registry set is_enabled = false where task_name = 'wake_notify_worker';
-set local role cultivanode_scheduler;
 select throws_ok(
-  $$ select private.run_scheduled_task('wake_notify_worker') $$,
+  $$
+    set local role cultivanode_scheduler;
+    select private.run_scheduled_task('wake_notify_worker');
+  $$,
   '42501',
   null,
   'disabled scheduled task is rejected'
 );
 
 -- 14. Re-enabling restores execution cleanly; and if pg_cron is installed, no duplicate cron jobs exist for the 3 names.
-reset role;
 update private.scheduled_task_registry set is_enabled = true where task_name = 'wake_notify_worker';
 select ok(
   not exists (select 1 from pg_catalog.pg_extension where extname = 'pg_cron')

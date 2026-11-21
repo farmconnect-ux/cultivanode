@@ -651,37 +651,19 @@ export function evaluateMachineryTelemetryConsistency(params: {
     };
   }
 
-  // Batch 03.3 Workstream B4: Unverified/provisional or farmer/staff observation telemetry
-  // must NEVER be promoted to `verified_current` in Farm Context.
+  // Batch 03.3 Workstream B4: Promote to `verified_current` ONLY when the latest valid sample
+  // carries database-verified `device_authenticated` or `trusted_provider_integration` provenance.
+  // Unattributed, provisional, farmer_observation, and staff_observation readings remain `unverified_provisional`.
   const latestValidSample = previousSample;
-  const isUnverifiedProvenance =
+  const isVerifiedTrustedTelemetry =
     latestValidSample !== null &&
-    ((latestValidSample.validationStatus !== undefined &&
-      latestValidSample.validationStatus !== null &&
-      latestValidSample.validationStatus !== 'verified') ||
-      (latestValidSample.trustClassification !== undefined &&
-        latestValidSample.trustClassification !== null &&
-        latestValidSample.trustClassification !== 'verified_current') ||
-      (latestValidSample.sourceCategory !== undefined &&
-        latestValidSample.sourceCategory !== null &&
-        latestValidSample.sourceCategory !== 'device_authenticated' &&
-        latestValidSample.sourceCategory !== 'trusted_provider_integration'));
+    latestValidSample.validationStatus === 'verified' &&
+    latestValidSample.trustClassification === 'verified_current' &&
+    (latestValidSample.sourceCategory === 'device_authenticated' ||
+      latestValidSample.sourceCategory === 'trusted_provider_integration');
 
-  if (isUnverifiedProvenance) {
-    return {
-      state: 'unverified_provisional',
-      latestObservedHours,
-      latestObservedId,
-      latestObservedAt,
-      latestValidHours,
-      latestValidSampleId,
-      latestValidObservedAt,
-      conflicts,
-      issues,
-    };
-  }
   return {
-    state: 'unverified_provisional',
+    state: isVerifiedTrustedTelemetry ? 'verified_current' : 'unverified_provisional',
     latestObservedHours,
     latestObservedId,
     latestObservedAt,
