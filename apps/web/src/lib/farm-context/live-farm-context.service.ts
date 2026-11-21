@@ -786,9 +786,10 @@ async function loadWeatherDomain(
     const temperatureC = makeNumericFact(matchedForecast.forecast.now?.tempC ?? null, baseState, prov);
     const humidityPct = makeNumericFact(matchedForecast.forecast.now?.humidity ?? null, baseState, prov);
     const windSpeedKmh = makeNumericFact(matchedForecast.forecast.now?.windKmh ?? null, baseState, prov);
+    // Daily rainfall is a forecast-period value, not an observed measurement timestamp.
     const rainfallMm = makeNumericFact(firstDay?.rainMm ?? null, baseState, {
       ...prov,
-      observedAt: firstDay?.date ? `${firstDay.date}T00:00:00Z` : null,
+      observedAt: null,
     });
 
     const missingFields: string[] = [];
