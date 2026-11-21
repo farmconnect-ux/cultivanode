@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { resolveDataRequest } from "@/actions/admin-console";
+import { deleteAccountForRequest, resolveDataRequest } from "@/actions/admin-console";
 import { AdminForm } from "@/components/admin/admin-form";
 import { Alert, Badge, Card, Field, Input } from "@/components/ui";
 import { phoneLabel, when } from "@/lib/admin/labels";
@@ -28,9 +28,10 @@ export default async function PrivacyRequestsPage() {
       <div>
         <h1 className="text-3xl font-extrabold text-leaf-800">Account deletion requests</h1>
         <p className="mt-1 max-w-3xl text-muted">
-          Answer within 30 days (NDPA). Before deleting, check for open bookings or payments: payment records must be kept.
-          Delete the sign-in under Supabase Authentication; the profile and its records follow. Then close the request here
-          with what was done. People download their own data from their account, so export requests close themselves.
+          Answer within 30 days (NDPA). Delete account anonymises the profile, removes private documents and the
+          sign-in, and keeps payment records. It is refused while the person has open bookings, orders, escrows or
+          payouts. The request closes itself once deletion finishes. People download their own data from their
+          account, so export requests close themselves.
         </p>
       </div>
       {(requests ?? []).length === 0 && <p className="text-muted">No requests.</p>}
@@ -50,12 +51,19 @@ export default async function PrivacyRequestsPage() {
             {r.reason && <p className="rounded-md bg-cream p-3">&ldquo;{r.reason}&rdquo;</p>}
             {r.resolution_note && <p className="text-sm">Resolution ({when(r.handled_at)}): {r.resolution_note}</p>}
             {r.status === "open" && (
-              <AdminForm action={resolveDataRequest} hidden={{ id: r.id }}
-                         buttons={[{ label: "Completed", name: "status", value: "completed" }, { label: "Rejected", variant: "secondary", name: "status", value: "rejected" }]}>
-                <Field id={`note-${r.id}`} label="What was done (kept on record, the person sees it)">
-                  <Input id={`note-${r.id}`} name="note" maxLength={1000} />
-                </Field>
-              </AdminForm>
+              <div className="grid gap-4 md:grid-cols-2">
+                <AdminForm action={deleteAccountForRequest} hidden={{ id: r.id }} buttons={[{ label: "Delete account" }]}>
+                  <Field id={`confirm-${r.id}`} label="Type DELETE to permanently delete this account">
+                    <Input id={`confirm-${r.id}`} name="confirm" maxLength={10} autoComplete="off" />
+                  </Field>
+                </AdminForm>
+                <AdminForm action={resolveDataRequest} hidden={{ id: r.id }}
+                           buttons={[{ label: "Reject", variant: "secondary", name: "status", value: "rejected" }]}>
+                  <Field id={`note-${r.id}`} label="Why it was rejected (kept on record, the person sees it)">
+                    <Input id={`note-${r.id}`} name="note" maxLength={1000} />
+                  </Field>
+                </AdminForm>
+              </div>
             )}
           </Card>
         );
