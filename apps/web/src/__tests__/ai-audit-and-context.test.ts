@@ -762,6 +762,9 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
       expect(weather?.humidityPct.state, testCase.label).toBe(testCase.expectedState);
       expect(weather?.windSpeedKmh.state, testCase.label).toBe(testCase.expectedState);
       expect(weather?.fetchedAt.state, testCase.label).toBe(testCase.expectedState);
+      expect(weather?.temperatureC.note, testCase.label).toContain(
+        testCase.expectedState === "stale" ? "older than 12 hours" : "retrieval timestamp is invalid",
+      );
       if (testCase.expectedState === "stale") {
         expect(weather?.ageHours, testCase.label).toBeCloseTo(12, 3);
       } else {
