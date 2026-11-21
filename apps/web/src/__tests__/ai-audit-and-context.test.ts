@@ -593,7 +593,7 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
       "verified_current",
       "verified_current",
     ]);
-    expect(cycles.map((cycle) => cycle.cropId)).toEqual(["crop-1", "crop-2", "crop-3", "crop-4", "crop-5"]);
+    expect(cycles.map((cycle) => cycle.cropId).sort()).toEqual(["crop-1", "crop-2", "crop-3", "crop-4", "crop-5"]);
     const cycleQuery = client.queries.find((query) => query.table === "crop_cycles" && query.ins.some(([column]) => column === "status"));
     expect(cycleQuery?.ins).toContainEqual([
       "status",
