@@ -555,7 +555,9 @@ async function loadCropIdentityDomain(
       .from("crop_cycles")
       .select("id, plot_id, crop_id, current_stage, status, planting_date, expected_harvest_date, health_status, health_score, created_at")
       .eq("farm_id", farmId)
-      .eq("status", "active")
+      // Match the lifecycle values enforced by crop_cycles_status_check.
+      // Planning is not yet active cultivation; completed and abandoned cycles are terminal.
+      .in("status", ["land_preparation", "planting", "establishment", "maintenance", "harvesting"])
       .order("planting_date", { ascending: false })
       .limit(MAX_DOMAIN_ROWS);
 
@@ -756,7 +758,9 @@ async function loadWeatherDomain(
     const ageHours = Math.max(0, (new Date(retrievedAt).getTime() - new Date(matchedRow.fetched_at).getTime()) / 3_600_000);
     const baseState: ContextState =
       ageHours > 12 ? "stale" : matchedForecast.matchedBy === "coordinates" ? "verified_current" : "unverified_provisional";
-    const observedTimestamp = matchedForecast.forecast.now?.observedAt ?? matchedRow.fetched_at;
+    // `provider` is the weather_cache primary key (one-to-one FK to integration_providers).
+    // It identifies the cache row, while fetched_at remains retrieval time, not observation time.
+    const observedTimestamp = matchedForecast.forecast.now?.observedAt ?? null;
     const prov = {
       source: "weather_cache" as const,
       recordId: matchedRow.provider,
@@ -784,7 +788,7 @@ async function loadWeatherDomain(
     const windSpeedKmh = makeNumericFact(matchedForecast.forecast.now?.windKmh ?? null, baseState, prov);
     const rainfallMm = makeNumericFact(firstDay?.rainMm ?? null, baseState, {
       ...prov,
-      observedAt: firstDay?.date ? `${firstDay.date}T00:00:00Z` : matchedRow.fetched_at,
+      observedAt: firstDay?.date ? `${firstDay.date}T00:00:00Z` : null,
     });
 
     const missingFields: string[] = [];
@@ -803,7 +807,9 @@ async function loadWeatherDomain(
         matchedBy: matchedForecast.matchedBy,
         provider: { value: matchedRow.provider, state: baseState, provenance: prov },
         fetchedAt: { value: matchedRow.fetched_at, state: baseState, provenance: prov },
-        observedAt: { value: observedTimestamp, state: baseState, provenance: prov },
+        observedAt: observedTimestamp
+          ? { value: observedTimestamp, state: baseState, provenance: prov }
+          : emptyFact<string>("missing", "Weather cache did not provide an observation timestamp."),
         forecastPeriod: forecastPeriodValue
           ? { value: forecastPeriodValue, state: baseState, provenance: prov }
           : emptyFact<string>(),
@@ -814,7 +820,7 @@ async function loadWeatherDomain(
         ageHours: Math.round(ageHours * 10) / 10,
       },
       sourceRefs: normalizeAuditContextReferences([
-        { source: "weather_cache", record_id: matchedRow.provider, observed_at: matchedRow.fetched_at },
+        { source: "weather_cache", record_id: matchedRow.provider },
       ]),
       conflicts: [],
       missingFields,
