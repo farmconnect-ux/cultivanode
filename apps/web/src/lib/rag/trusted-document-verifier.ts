@@ -177,10 +177,14 @@ export async function completeVerifiedAgronomicDocumentIngestion(
     };
   }
 
-  let serviceClient: SupabaseClient<Database>;
+  let serviceClient: SupabaseClient<Database> | null = null;
   try {
     serviceClient = options.serviceClientOverride ?? createServiceClient();
   } catch {
+    serviceClient = null;
+  }
+
+  if (!serviceClient) {
     logger.error("agronomic_verified_ingestion_service_client_unavailable", {
       standardId: data.standardId,
       verificationTraceId: data.verificationTraceId,

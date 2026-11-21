@@ -564,7 +564,7 @@ begin
    where id = v_doc_id;
 
   -- 8. Record explicit actor-attributed audit event.
-  insert into public.audit_log (actor_id, action, entity, entity_id, details)
+  insert into public.audit_log (actor_id, action, entity, entity_id, metadata)
   values (
     p_actor_id,
     'agronomy_standard_document_file_hash_verified',

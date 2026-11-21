@@ -228,8 +228,8 @@ select ok(
     select 1 from public.audit_log
      where action = 'agronomy_standard_document_file_hash_verified'
        and actor_id = '32200000-0000-4000-8000-000000000001'
-       and details ->> 'verification_trace_id' = '32200000-0000-4000-8000-000000000910'
-       and details ->> 'file_hash_verified_at' is not null
+       and metadata ->> 'verification_trace_id' = '32200000-0000-4000-8000-000000000910'
+       and metadata ->> 'file_hash_verified_at' is not null
   ),
   'audit_log records verified actor_id, verification_trace_id, and file_hash_verified_at'
 );
