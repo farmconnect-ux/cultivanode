@@ -1,4 +1,4 @@
-# CultivaNode 3.0 — Batch 03.1C & 03.1D Implementation Report
+# CultivaNode 3.0 — Batch 03.1C, 03.1D & 03.1E Implementation Report
 
 **Date:** 2026-11-21  
 **Repository:** `farmconnect-ux/cultivanode`  
@@ -57,3 +57,40 @@
 7. **Provisional Soil-Test Validity (`365` days):** Explicitly labelled provisional pending qualified agronomy validation (ADR-007).
 8. **Offline Outbox (`awaiting_sync`):** The mobile outbox is client-local (`apps/mobile/src/lib/outbox.ts`) and not yet bridged to a server table (Batch 03.3).
 9. **Staging Prerequisites:** Batch 03.1B (`M1`–`M5`) and `20261121020000` have **not** been applied to `CultivaNode-Staging` or `CultivaNode-Production`. Hosted application requires separate explicit authorisation.
+
+
+---
+
+## 4. Batch 03.1E Corrective Pass
+
+**Implementation date:** 2026-11-21  
+**Scope:** Repository-only corrections arising from the second independent review. No database migration, hosted database change, deployment, secret change, feature-flag change, or merge was performed.
+
+### 4.1 Crop-cycle lifecycle compatibility
+
+- Corrected `loadCropIdentityDomain` to filter using the actual lifecycle values permitted by the `crop_cycles.status` check constraint: `land_preparation`, `planting`, `establishment`, `maintenance`, and `harvesting`.
+- Excluded `planning` because it is not yet active cultivation, and excluded terminal states `completed` and `abandoned`.
+- Added a regression test covering all eight permitted database statuses and asserting that only the five active cultivation states are returned.
+- This removes the previous invalid `status = 'active'` predicate.
+
+### 4.2 Weather timestamp and provenance semantics
+
+- Confirmed from generated database types that `weather_cache.provider` is the table's unique key and a one-to-one foreign key to `integration_providers.code`. It is therefore a valid cache-row identifier; the earlier review's concern that it was not a row identifier is corrected.
+- Retained `provider` as the `weather_cache` provenance `record_id`, but removed `fetched_at` from the audit reference's `observed_at` field. `fetched_at` is retained as retrieval metadata only.
+- If the provider payload omits `now.observedAt`, the context now reports the observation timestamp as missing with null provenance rather than substituting retrieval time.
+- Daily forecast rainfall is no longer labelled with an observation timestamp. Its temporal meaning is a forecast-period value, not an observed measurement.
+- Added a regression test proving that missing observation time remains missing while `fetchedAt` remains available.
+
+### 4.3 Audit metadata validation
+
+- Restricted `modelId` to a documented identifier character set and `promptVersion` to a short version identifier character set. Free-form natural-language strings are rejected.
+- Expanded secret-pattern rejection to include common `sk_live_` / `sk_test_` forms and key/secret/password assignment patterns, in addition to bearer tokens, JWT-shaped values, existing secret patterns, and image data URIs.
+- Added negative tests for natural-language prompt text, free-form prompt-version text, live/test secret-shaped values, and key assignment strings.
+- These checks are defence in depth, not a guarantee that every possible secret can be detected. Application call sites remain responsible for passing metadata only.
+
+### 4.4 Remaining limitations and approval boundaries
+
+- Irrigation facts continue to be attributed accurately in the in-memory context, but `irrigation_zones` and `irrigation_events` remain excluded from persisted audit references because the private database writer whitelist does not yet permit them. No whitelist migration was created or applied; a narrowly scoped migration requires separate approval.
+- Farm-independent assistant requests continue to fail closed with HTTP 422 because the current audit schema requires a non-null `farm_id`. No schema change was introduced.
+- Weather cache reads remain unavailable when caller RLS denies access. No privileged farm-data read or weather RPC was introduced.
+- The changes above are committed to the existing feature branch. CI for the final corrective commit must pass, followed by a fresh independent review. PR #22 remains open and unmerged.
