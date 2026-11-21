@@ -5,10 +5,13 @@
 --   write was "trusted" from the session settings app.telemetry_trusted_writer /
 --   app.telemetry_trust_transition. Any session able to run SQL can set those. The trigger was also
 --   SECURITY DEFINER, so its current_user was always postgres and its DELETE check never fired.
---   Now the trigger runs as the CALLER (SECURITY INVOKER) and trusts a write only when the effective
---   role is the owner of the reviewed SECURITY DEFINER writers (postgres / supabase_admin). Direct
---   inserts from app roles (authenticated, service_role, anon) are always constrained, whatever
---   settings they set. The old set_config(...) calls in the ingest RPCs become harmless no-ops.
+--   Now the trigger runs as the CALLER (SECURITY INVOKER) and trusts an insert or trust change only
+--   when it executes as the owner of the reviewed SECURITY DEFINER writers (postgres / supabase_admin)
+--   AND the session's role is an app role (authenticated / service_role / anon), i.e. inside a
+--   postgres-owned definer RPC called through the API. App roles cannot become postgres, so direct
+--   writes from them are always constrained whatever settings they set; plain owner sessions (SQL
+--   editor, migrations) are not treated as trusted writers either. The old set_config(...) calls in
+--   the ingest RPCs become harmless no-ops.
 --   The trigger only uses objects app roles may already use (farm_machinery_assets under RLS,
 --   public.has_permission, extensions.digest).
 --
@@ -31,13 +34,18 @@ set search_path = ''
 as $$
 declare
   v_asset_farm_id    uuid;
-  -- Trusted only inside reviewed SECURITY DEFINER writers owned by postgres. App roles can never
-  -- become postgres, and setting a session variable no longer changes anything.
-  v_trusted_context  boolean := current_user in ('postgres', 'supabase_admin');
+  -- Running as the table/RPC owner (only possible for app roles via a postgres-owned definer RPC).
+  v_owner_context    boolean := current_user in ('postgres', 'supabase_admin');
+  -- Trusted writer: owner privileges reached from an API session role, i.e. inside a reviewed
+  -- SECURITY DEFINER RPC. SECURITY DEFINER changes current_user but not the session 'role' setting.
+  v_trusted_context  boolean := current_user in ('postgres', 'supabase_admin')
+                                and coalesce(current_setting('role', true), 'none')
+                                    in ('authenticated', 'service_role', 'anon');
   v_jwt_sub          text := nullif(current_setting('request.jwt.claim.sub', true), '');
 begin
   if tg_op = 'DELETE' then
-    if not v_trusted_context then
+    -- App roles hold no DELETE grant; owner-level maintenance (and FK cascades) may still delete.
+    if not v_owner_context then
       raise exception 'Machinery telemetry records are immutable and cannot be deleted.'
         using errcode = '42501';
     end if;
