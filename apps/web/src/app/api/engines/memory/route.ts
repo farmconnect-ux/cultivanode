@@ -16,10 +16,21 @@ import {
   retrieveFarmMemories,
   transitionFarmMemory,
 } from "@/lib/memory/farm-memory.service";
+import {
+  isClientAssertableSourceKind,
+  listMemoriesForManagement,
+  memoryActionRequiresConsent,
+} from "@/lib/memory/memory-management";
 import { supabaseEnv } from "@/lib/supabase/env";
 
+/**
+ * Authenticates the bearer token and requires an active account. `ai_intelligence` consent is checked
+ * unless `requireConsent` is false (Batch 03.2I: managing or erasing stored memories must keep working
+ * after consent is withdrawn).
+ */
 async function authenticateBearerUser(
   req: Request,
+  options: { requireConsent?: boolean } = {},
 ): Promise<
   | { ok: true; user: User; client: SupabaseClient<Database> }
   | { ok: false; response: NextResponse }
@@ -41,8 +52,10 @@ async function authenticateBearerUser(
     const active = await verifyActiveAccount(client, data.user.id);
     if (!active.ok) return { ok: false, response: active.response };
 
-    const consent = await verifyAiIntelligenceConsent(client, data.user.id);
-    if (!consent.ok) return { ok: false, response: consent.response };
+    if (options.requireConsent !== false) {
+      const consent = await verifyAiIntelligenceConsent(client, data.user.id);
+      if (!consent.ok) return { ok: false, response: consent.response };
+    }
 
     return { ok: true, user: data.user, client };
   } catch {
@@ -53,6 +66,21 @@ async function authenticateBearerUser(
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const farmId = url.searchParams.get("farmId");
+
+  // Batch 03.2I: `view=manage` lists stored memories so the farmer can reject, withdraw or delete them.
+  // It does not require ai_intelligence consent and is never used to ground AI answers.
+  if (url.searchParams.get("view") === "manage") {
+    const auth = await authenticateBearerUser(req, { requireConsent: false });
+    if (!auth.ok) return auth.response;
+    const manageLimit = url.searchParams.get("limit");
+    const listed = await listMemoriesForManagement(auth.client, {
+      farmId: farmId || null,
+      limit: manageLimit ? Number(manageLimit) : 50,
+    });
+    if (!listed.ok) return NextResponse.json({ error: listed.error, code: listed.code }, { status: listed.status });
+    return NextResponse.json({ memories: listed.memories });
+  }
+
   const includeProfile = url.searchParams.get("includeProfile") !== "false";
   const includeProvisional = url.searchParams.get("includeProvisional") !== "false";
   const queryText = url.searchParams.get("query") ?? undefined;
@@ -90,6 +118,17 @@ export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, CreateMemoryInputSchema);
   if (!parsed.ok) return parsed.response;
 
+  // Batch 03.2I (PR #23 review finding 2): farm_record / deterministic_derived are server-only provenance.
+  if (!isClientAssertableSourceKind(parsed.data.sourceKind)) {
+    return NextResponse.json(
+      {
+        error: "sourceKind must be farmer_explicit or ai_inferred.",
+        code: "source_kind_not_client_assertable",
+      },
+      { status: 400 },
+    );
+  }
+
   let client: SupabaseClient<Database>;
   let farmCaller: VerifiedAiFarmCallerContext | null = null;
 
@@ -113,7 +152,12 @@ export async function PATCH(req: Request) {
   const parsed = await parseJsonBody(req, TransitionMemoryInputSchema);
   if (!parsed.ok) return parsed.response;
 
-  const auth = await authenticateBearerUser(req);
+  // Batch 03.2I (PR #23 review finding 1): reject / withdraw / expire / delete stay available after
+  // ai_intelligence consent is withdrawn. confirm / supersede still require consent (checked here and
+  // again inside transition_farm_memory_item).
+  const requiresConsent = memoryActionRequiresConsent(parsed.data.action);
+
+  const auth = await authenticateBearerUser(req, { requireConsent: requiresConsent });
   if (!auth.ok) return auth.response;
 
   // Determine whether target memory is farm-scoped so we can mint a VerifiedAiFarmCallerContext for audit recording.
@@ -131,7 +175,7 @@ export async function PATCH(req: Request) {
   }
 
   let farmCaller: VerifiedAiFarmCallerContext | null = null;
-  if (existing.memory_scope === "farm" && existing.farm_id) {
+  if (requiresConsent && existing.memory_scope === "farm" && existing.farm_id) {
     const farmAuth = await authorizeAiFarmRequest(req, existing.farm_id);
     if (!farmAuth.authorized) return farmAuth.response;
     farmCaller = farmAuth.caller;
