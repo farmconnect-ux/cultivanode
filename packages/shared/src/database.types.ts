@@ -8665,6 +8665,34 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      compliance_lookup_ai_actor: {
+        Args: { p_actor_subject_id: string; p_purpose: string }
+        Returns: Json
+      }
+      get_active_ai_prompt: {
+        Args: { p_prompt_key: string }
+        Returns: Json
+      }
+      record_ai_feedback: {
+        Args: { p_note?: string; p_outcome: string; p_trace_id: string }
+        Returns: string
+      }
+      write_ai_audit_event: {
+        Args: {
+          p_context_refs: Json
+          p_execution_outcome: string
+          p_farm_id: string
+          p_guardrail_result: Json
+          p_memory_item_ids: string[]
+          p_model_id: string
+          p_profile_id: string
+          p_prompt_version: string
+          p_prompt_version_id?: string | null
+          p_provider: string
+          p_trace_id: string
+        }
+        Returns: string
+      }
       admin_clear_integration_secret: {
         Args: {
           p_field: string
@@ -9460,6 +9488,7 @@ export type Database = {
         | "share_with_buyers"
         | "share_with_investors"
         | "share_with_partners"
+        | "ai_intelligence"
       crop_alert_category:
         | "weather"
         | "pest_outbreak"
@@ -9767,6 +9796,7 @@ export const Constants = {
         "share_with_buyers",
         "share_with_investors",
         "share_with_partners",
+        "ai_intelligence",
       ],
       crop_alert_category: [
         "weather",
