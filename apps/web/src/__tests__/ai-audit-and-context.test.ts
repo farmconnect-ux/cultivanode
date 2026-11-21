@@ -678,7 +678,9 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
     }> = [
       { label: "missing", expectedState: "unverified_provisional", expectedTimestamp: null },
       { label: "malformed", observedAt: "yesterday morning", expectedState: "invalid_rejected", expectedTimestamp: null },
-      { label: "future", observedAt: "2026-11-21T04:10:00Z", expectedState: "invalid_rejected", expectedTimestamp: null },
+      { label: "future", observedAt: "2026-11-21T04:00:01Z", expectedState: "invalid_rejected", expectedTimestamp: null },
+      { label: "invalid calendar date", observedAt: "2026-02-30T03:30:00Z", expectedState: "invalid_rejected", expectedTimestamp: null },
+      { label: "invalid timezone", observedAt: "2026-11-21T03:30:00+15:00", expectedState: "invalid_rejected", expectedTimestamp: null },
       { label: "stale", observedAt: "2026-11-20T15:59:59Z", expectedState: "stale", expectedTimestamp: "2026-11-20T15:59:59Z" },
       { label: "fresh", observedAt: "2026-11-21T03:30:00Z", expectedState: "verified_current", expectedTimestamp: "2026-11-21T03:30:00Z" },
     ];
