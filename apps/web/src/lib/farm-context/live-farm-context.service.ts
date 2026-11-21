@@ -124,7 +124,7 @@ function emptyWeatherData(state: ContextState = "missing", note?: string): Weath
 const WEATHER_OBSERVATION_MAX_AGE_HOURS = 12;
 const WEATHER_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const ISO_TIMESTAMP_WITH_ZONE_RE =
-  /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
 
 function assessWeatherObservationTimestamp(
   value: unknown,
@@ -152,7 +152,7 @@ function assessWeatherObservationTimestamp(
     calendar.getUTCHours() === Number(hour) &&
     calendar.getUTCMinutes() === Number(minute) &&
     calendar.getUTCSeconds() === Number(second);
-  const zoneMatch = zone === "Z" ? null : /[+-](\\d{2}):(\\d{2})$/.exec(zone);
+  const zoneMatch = zone === "Z" ? null : /[+-](\d{2}):(\d{2})$/.exec(zone);
   const zoneValid = !zoneMatch || (Number(zoneMatch[1]) <= 14 && Number(zoneMatch[2]) <= 59 && (Number(zoneMatch[1]) < 14 || Number(zoneMatch[2]) === 0));
   if (!calendarValid || !zoneValid) {
     return { value: null, state: "invalid_rejected", note: "Weather observation timestamp contains an invalid calendar date or timezone." };
