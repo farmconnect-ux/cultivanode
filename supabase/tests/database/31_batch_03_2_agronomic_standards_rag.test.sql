@@ -1,7 +1,7 @@
 -- Batch 03.2 pgTAP tests: Published Agronomic Standards RAG, Ingestion Governance & Audit Whitelist
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 -- Seed a super_admin staff user and a regular farmer user.
 insert into auth.users (id, phone)
@@ -44,7 +44,7 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'public.agronomic_standard_chunks', 'select')
   and not has_function_privilege('anon', 'public.search_published_agronomic_standards(text,text,text,text,text,extensions.vector,integer)', 'execute')
-  and not has_function_privilege('anon', 'public.ingest_agronomic_standard_document(uuid,text,text,text,integer,text,jsonb,text)', 'execute'),
+  and not has_function_privilege('anon', 'public.ingest_agronomic_standard_document(uuid,text,text,text,integer,text,jsonb,text,text,text,text,text)', 'execute'),
   'anon has zero access to agronomic RAG tables and RPCs'
 );
 
@@ -154,6 +154,21 @@ select throws_ok(
   '42501',
   null,
   'cannot ingest documents into an already published standard'
+);
+
+-- 5b. Finding 6: claiming file_hash_verified without original_file_sha256 is rejected.
+select throws_ok(
+  $$
+    select public.ingest_agronomic_standard_document(
+      '32100000-0000-4000-8000-000000000201',
+      'Fake Verified Doc', 'IITA', 'text/plain', 100, repeat('5', 64),
+      jsonb_build_array(jsonb_build_object('chunk_index', 0, 'content', 'x', 'content_sha256', repeat('6', 64))),
+      null, null, null, 'plain_text_file', 'file_hash_verified'
+    )
+  $$,
+  '22023',
+  null,
+  'file_hash_verified provenance rejected when original_file_sha256 is missing'
 );
 
 -- 6. Chunk-to-document standard_id mismatch rejected by trigger.

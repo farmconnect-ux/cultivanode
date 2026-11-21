@@ -1,8 +1,10 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ALLOWED_AGRONOMIC_DOCUMENT_MIMES,
+  DOCUMENT_EXTRACTION_METHODS,
   MAX_AGRONOMIC_DOCUMENT_BYTES,
   UnconfiguredEmbeddingProvider,
   chunkAgronomicDocument,
@@ -13,22 +15,24 @@ import {
   validateAgronomicDocumentMetadata,
   type AuditContextReference,
   type Database,
+  type DocumentExtractionMethod,
+  type DocumentProvenanceStatus,
   type EmbeddingProvider,
   type Json,
   type PublishedStandardPassage,
 } from "@cultivanode/shared";
 
 /**
- * CultivaNode 3.0 — Batch 03.2 Published Agronomic Standards RAG & Controlled Ingestion Service.
+ * CultivaNode 3.0 — Batch 03.2 Published Agronomic Standards RAG & Verified Document Ingestion Service.
  *
- * Security & governance invariants:
+ * Security & provenance invariants (Finding 6):
  * - Server-only.
- * - Ingestion runs strictly under the authenticated staff caller's JWT (`standards.publish` / `crops.manage`),
- *   targeting DRAFT standards ONLY, and NEVER auto-publishes.
- * - Retrieval runs strictly under the authenticated caller's JWT via `search_published_agronomic_standards`,
- *   which enforces `status = 'published'` and effective dates INSIDE PostgreSQL.
- * - Retrieved passages are explicitly marked as untrusted external reference data (`evidenceKind: 'published_agronomic_standard'`)
- *   and sanitised against prompt-injection directives.
+ * - Computes `fileSizeBytes` and SHA-256 hashes server-side from actual uploaded file bytes
+ *   (`sourceFileBase64`) or actual UTF-8 `textContent` — never blindly trusts caller-supplied size.
+ * - Explicitly distinguishes `staff_asserted` text entries from `file_hash_verified` source files.
+ * - Ingestion runs strictly under authenticated staff JWT on DRAFT standards ONLY (never auto-publishes).
+ * - Retrieval runs strictly under authenticated caller JWT via `search_published_agronomic_standards`,
+ *   enforcing `status = 'published'` and effective dates INSIDE PostgreSQL.
  */
 
 export const IngestAgronomicDocumentSchema = z.object({
@@ -36,7 +40,11 @@ export const IngestAgronomicDocumentSchema = z.object({
   documentTitle: z.string().trim().min(1).max(240),
   sourceAuthority: z.string().trim().min(1).max(120),
   mimeType: z.enum(ALLOWED_AGRONOMIC_DOCUMENT_MIMES),
-  fileSizeBytes: z.number().int().min(1).max(MAX_AGRONOMIC_DOCUMENT_BYTES),
+  /** Optional raw source file bytes (base64). When provided, server computes originalFileSha256 and actual byte size. */
+  sourceFileBase64: z.string().max(14_000_000).optional(),
+  /** Optional Supabase Storage path referencing the archived original source file. */
+  storageObjectPath: z.string().trim().min(1).max(500).nullable().optional(),
+  extractionMethod: z.enum(DOCUMENT_EXTRACTION_METHODS).optional(),
   textContent: z.string().min(1).max(2_000_000),
   externalUri: z.string().url().max(500).nullable().optional(),
   maxChunkChars: z.number().int().min(200).max(7500).optional(),
@@ -67,6 +75,10 @@ export async function ingestAgronomicStandardDocument(
       standardStatus: string;
       chunkCount: number;
       embeddingsGenerated: number;
+      computedFileSizeBytes: number;
+      originalFileSha256: string | null;
+      provenanceVerificationStatus: DocumentProvenanceStatus;
+      extractionMethod: DocumentExtractionMethod;
     }
   | { ok: false; status: number; code: string; error: string }
 > {
@@ -81,9 +93,45 @@ export async function ingestAgronomicStandardDocument(
   }
 
   const data = parsed.data;
+
+  // Independently compute byte size and original file hash server-side.
+  let computedFileSizeBytes: number;
+  let originalFileSha256: string | null = null;
+  let provenanceVerificationStatus: DocumentProvenanceStatus = "staff_asserted";
+
+  if (data.sourceFileBase64) {
+    const rawBytes = Buffer.from(data.sourceFileBase64, "base64");
+    if (rawBytes.length === 0 || rawBytes.length > MAX_AGRONOMIC_DOCUMENT_BYTES) {
+      return {
+        ok: false,
+        status: 400,
+        code: "invalid_source_file_size",
+        error: `Source file must be between 1 byte and ${MAX_AGRONOMIC_DOCUMENT_BYTES} bytes.`,
+      };
+    }
+    computedFileSizeBytes = rawBytes.length;
+    originalFileSha256 = createHash("sha256").update(rawBytes).digest("hex");
+    provenanceVerificationStatus = "file_hash_verified";
+  } else {
+    computedFileSizeBytes = Buffer.byteLength(data.textContent, "utf8");
+    provenanceVerificationStatus = "staff_asserted";
+  }
+
+  const extractionMethod: DocumentExtractionMethod =
+    data.extractionMethod ??
+    (data.sourceFileBase64
+      ? data.mimeType === "text/markdown"
+        ? "markdown_file"
+        : data.mimeType === "application/pdf"
+          ? "pdf_text_extractor"
+          : data.mimeType === "application/json"
+            ? "json_structured_file"
+            : "plain_text_file"
+      : "staff_entered_text");
+
   const metaCheck = validateAgronomicDocumentMetadata({
     mimeType: data.mimeType,
-    fileSizeBytes: data.fileSizeBytes,
+    fileSizeBytes: computedFileSizeBytes,
     textContent: data.textContent,
   });
   if (!metaCheck.ok) {
@@ -133,10 +181,14 @@ export async function ingestAgronomicStandardDocument(
     p_document_title: data.documentTitle,
     p_source_authority: data.sourceAuthority,
     p_mime_type: data.mimeType,
-    p_file_size_bytes: data.fileSizeBytes,
+    p_file_size_bytes: computedFileSizeBytes,
     p_content_sha256: contentSha256,
     p_chunks: payloadChunks as unknown as Json,
     p_external_uri: data.externalUri ?? null,
+    p_original_file_sha256: originalFileSha256,
+    p_storage_object_path: data.storageObjectPath ?? null,
+    p_extraction_method: extractionMethod,
+    p_provenance_verification_status: provenanceVerificationStatus,
   });
 
   if (error || !result || typeof result !== "object" || Array.isArray(result)) {
@@ -157,6 +209,10 @@ export async function ingestAgronomicStandardDocument(
     standardStatus: String(obj.standard_status ?? "draft"),
     chunkCount: Number(obj.chunk_count ?? chunks.length),
     embeddingsGenerated,
+    computedFileSizeBytes,
+    originalFileSha256,
+    provenanceVerificationStatus,
+    extractionMethod,
   };
 }
 
@@ -234,6 +290,8 @@ export async function retrievePublishedAgronomicStandards(
     effectiveFrom: row.effective_from,
     effectiveTo: row.effective_to,
     documentTitle: row.document_title,
+    extractionMethod: (row.extraction_method as DocumentExtractionMethod) ?? "staff_entered_text",
+    provenanceVerificationStatus: (row.provenance_verification_status as DocumentProvenanceStatus) ?? "staff_asserted",
     sectionRef: row.section_ref,
     pageNumber: row.page_number,
     paragraphIndex: row.paragraph_index,

@@ -50,6 +50,11 @@
 ## 4. Known Limitations & Deferred Capabilities
 
 1. **Staging migration prerequisites:** Batch 03.1B (`M1`–`M5`), Batch 03.1C (`20261121020000`), and Batch 03.2 (`20261122000000`–`20261122020000`) exist in the repository but have **not** been applied to `CultivaNode-Staging` or `CultivaNode-Production`.
-2. **Profile-scoped memory audit persistence:** `public.ai_audit_events.farm_id` is `NOT NULL` (`20261120020000`); farm-scoped memory writes/transitions are audited in `ai_audit_events`, while profile-only preference writes await a future approved profile-scoped audit schema if required.
+2. **Independent review remediations applied on PR #23:**
+   - **Grounded evidence model wiring:** `buildGroundedPrompt()` and `askGroundedAiAssistant()` accept and serialize `GroundedEvidencePackage` into distinct `<untrusted_evidence>` tiers.
+   - **Atomic single-transaction memory + audit writes:** `create_farm_memory_item` and `transition_farm_memory_item` invoke `private.write_ai_audit_event` (farm scope) or `private.write_profile_memory_audit_event` (profile scope, append-only `public.ai_profile_memory_audit_events`) inside the same PostgreSQL transaction so audit failures roll back the memory mutation completely.
+   - **Explicit retrieval outcomes:** Memory and published-standard retrieval outcomes (`ok_with_results`, `ok_empty`, `failed`, `skipped`) and `degradedGrounding` are explicitly disclosed in both the model prompt and HTTP response.
+   - **Strict untrusted-data boundary:** Memory `title` and recursive `structuredContent` are sanitised, and raw `content` is stripped from model-facing `ModelSafeStandardPassage`. Sanitisation is defense-in-depth alongside system instruction hierarchy and ACLs.
+   - **Server-computed document provenance:** `agronomic_standard_documents` records `original_file_sha256`, `storage_object_path`, `extraction_method`, and `provenance_verification_status` (`staff_asserted` vs `file_hash_verified`), computing byte size and hashes server-side.
 3. **Live embedding provider adapter:** Intentionally deferred until a specific embedding vendor/model and cost budget are approved.
 4. **Proactive FIE triggers, mobile offline outbox unification (ADR-008), and CI golden evaluation suite (ADR-010):** Intentionally deferred to Batches 03.3–03.5.

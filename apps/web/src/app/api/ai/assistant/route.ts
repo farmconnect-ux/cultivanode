@@ -6,6 +6,7 @@ import {
   askGroundedAiAssistant,
   assembleGroundedEvidencePackage,
   type Database,
+  type EvidenceRetrievalOutcome,
   type FarmMemoryItemRecord,
   type FarmerContext,
   type PublishedStandardPassage,
@@ -156,9 +157,12 @@ export async function POST(req: Request) {
     const resolvedCropId = body.context?.cropId ?? activeCycle?.cropId;
     const resolvedZone = body.context?.zone ?? snapshot.farmZone ?? undefined;
 
-    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards.
+    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards
+    // with EXPLICIT retrieval outcomes (Finding 4: never silently equate failure with empty results).
     let retrievedMemories: FarmMemoryItemRecord[] = [];
     let publishedStandards: PublishedStandardPassage[] = [];
+    let persistentMemoryOutcome: EvidenceRetrievalOutcome = { status: "skipped", count: 0 };
+    let publishedStandardsOutcome: EvidenceRetrievalOutcome = { status: "skipped", count: 0 };
 
     if (typeof verifiedFarmCaller.client?.rpc === "function") {
       const [memRes, ragRes] = await Promise.all([
@@ -182,9 +186,31 @@ export async function POST(req: Request) {
           ...memRes.result.provisionalFarmMemories,
           ...memRes.result.profileMemories,
         ];
+        persistentMemoryOutcome = {
+          status: retrievedMemories.length > 0 ? "ok_with_results" : "ok_empty",
+          count: retrievedMemories.length,
+        };
+      } else {
+        persistentMemoryOutcome = {
+          status: "failed",
+          count: 0,
+          errorCode: memRes.code,
+          errorMessage: memRes.error,
+        };
       }
       if (ragRes.ok) {
         publishedStandards = ragRes.passages;
+        publishedStandardsOutcome = {
+          status: publishedStandards.length > 0 ? "ok_with_results" : "ok_empty",
+          count: publishedStandards.length,
+        };
+      } else {
+        publishedStandardsOutcome = {
+          status: "failed",
+          count: 0,
+          errorCode: ragRes.code,
+          errorMessage: ragRes.error,
+        };
       }
     }
 
@@ -194,6 +220,10 @@ export async function POST(req: Request) {
             liveFarmContext: snapshot,
             memories: retrievedMemories,
             publishedStandards,
+            retrievalOutcomes: {
+              persistentMemory: persistentMemoryOutcome,
+              publishedStandards: publishedStandardsOutcome,
+            },
           })
         : null;
     const auditContextRefs = evidencePackage?.auditContextRefs ?? snapshot.auditContextRefs;
@@ -213,6 +243,8 @@ export async function POST(req: Request) {
           stageName: body.context?.stageName ?? activeCycle?.currentStage,
           farmerId: verifiedFarmCaller.user.id,
         } as FarmerContext,
+        // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into the AI model pipeline.
+        groundedEvidence: evidencePackage,
         language: body.language ?? "en",
         imageBase64: body.imageBase64,
         imageMimeType: body.imageMimeType,
@@ -313,6 +345,14 @@ export async function POST(req: Request) {
       ...result,
       traceId,
       auditStatus: "persisted",
+      ...(evidencePackage
+        ? {
+            groundedEvidence: {
+              degradedGrounding: evidencePackage.degradedGrounding,
+              retrievalOutcomes: evidencePackage.retrievalOutcomes,
+            },
+          }
+        : {}),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process AI request.";

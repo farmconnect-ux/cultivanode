@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   assembleGroundedEvidencePackage,
   buildGroundedPrompt,
+  type EvidenceRetrievalOutcome,
   type FarmMemoryItemRecord,
   type FarmerContext,
   type PublishedStandardPassage,
@@ -44,9 +45,12 @@ export async function POST(req: Request) {
       parsed.data.context.zone ??
       (snapshot.farmZone === 'derived_savanna' ? 'derived_savanna' : 'rainforest');
 
-    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards.
+    // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards
+    // with EXPLICIT retrieval outcomes (Finding 4: never silently equate failed retrieval with empty results).
     let retrievedMemories: FarmMemoryItemRecord[] = [];
     let publishedStandards: PublishedStandardPassage[] = [];
+    let persistentMemoryOutcome: EvidenceRetrievalOutcome = { status: 'skipped', count: 0 };
+    let publishedStandardsOutcome: EvidenceRetrievalOutcome = { status: 'skipped', count: 0 };
 
     if (typeof auth.caller.client?.rpc === 'function') {
       const [memRes, ragRes] = await Promise.all([
@@ -64,15 +68,39 @@ export async function POST(req: Request) {
           limit: 5,
         }),
       ]);
+
       if (memRes.ok) {
         retrievedMemories = [
           ...memRes.result.confirmedFarmMemories,
           ...memRes.result.provisionalFarmMemories,
           ...memRes.result.profileMemories,
         ];
+        persistentMemoryOutcome = {
+          status: retrievedMemories.length > 0 ? 'ok_with_results' : 'ok_empty',
+          count: retrievedMemories.length,
+        };
+      } else {
+        persistentMemoryOutcome = {
+          status: 'failed',
+          count: 0,
+          errorCode: memRes.code,
+          errorMessage: memRes.error,
+        };
       }
+
       if (ragRes.ok) {
         publishedStandards = ragRes.passages;
+        publishedStandardsOutcome = {
+          status: publishedStandards.length > 0 ? 'ok_with_results' : 'ok_empty',
+          count: publishedStandards.length,
+        };
+      } else {
+        publishedStandardsOutcome = {
+          status: 'failed',
+          count: 0,
+          errorCode: ragRes.code,
+          errorMessage: ragRes.error,
+        };
       }
     }
 
@@ -80,6 +108,10 @@ export async function POST(req: Request) {
       liveFarmContext: snapshot,
       memories: retrievedMemories,
       publishedStandards,
+      retrievalOutcomes: {
+        persistentMemory: persistentMemoryOutcome,
+        publishedStandards: publishedStandardsOutcome,
+      },
     });
 
     const context: FarmerContext = {
@@ -90,9 +122,10 @@ export async function POST(req: Request) {
       daysAfterPlanting: parsed.data.context.daysAfterPlanting,
     };
 
+    // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into buildGroundedPrompt().
     let prompt: ReturnType<typeof buildGroundedPrompt>;
     try {
-      prompt = buildGroundedPrompt(parsed.data.query, context, parsed.data.language ?? 'en');
+      prompt = buildGroundedPrompt(parsed.data.query, context, parsed.data.language ?? 'en', evidencePackage);
     } catch {
       const failedAudit = await recordAiAuditEvent(auth.caller, {
         traceId,
@@ -126,7 +159,7 @@ export async function POST(req: Request) {
       provider: 'rule-engine',
       modelId: 'grounding-deterministic',
       promptVersion: 'grounding-v1',
-      executionOutcome: 'completed',
+      executionOutcome: evidencePackage.degradedGrounding ? 'fallback' : 'completed',
       guardrailResult: {
         status: 'not_applicable',
         rule_ids: [],
@@ -164,6 +197,8 @@ export async function POST(req: Request) {
         provisionalMemoryCount: evidencePackage.provisionalMemories.length,
         profilePreferenceCount: evidencePackage.profilePreferences.length,
         publishedStandardCount: evidencePackage.publishedAgronomicStandards.length,
+        retrievalOutcomes: evidencePackage.retrievalOutcomes,
+        degradedGrounding: evidencePackage.degradedGrounding,
         reconciliationNotes: evidencePackage.reconciliationNotes,
         untrustedContentSanitized: evidencePackage.untrustedContentSanitized,
       },

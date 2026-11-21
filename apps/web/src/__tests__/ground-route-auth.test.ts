@@ -113,6 +113,7 @@ describe("grounding endpoint farm identity binding, live context and audit", () 
       "How should I manage maize?",
       expect.objectContaining({ farmerId: VERIFIED_USER_ID, cropId: "maize" }),
       "en",
+      expect.objectContaining({ farmId: FARM_ID, untrustedContentSanitized: true }),
     );
     expect(mocks.recordAiAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ farmId: FARM_ID, accountActive: true, aiConsentGranted: true }),

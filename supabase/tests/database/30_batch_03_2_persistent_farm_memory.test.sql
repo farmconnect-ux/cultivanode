@@ -1,7 +1,7 @@
 -- Batch 03.2 pgTAP tests: Persistent Farm Memory, Tenant Isolation, Lifecycle, Vector Search & Account Deletion (ADR-002, ADR-004, ADR-009)
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(26);
 
 -- Seed two users, two farms, and active ai_intelligence consents.
 insert into auth.users (id, phone)
@@ -44,8 +44,8 @@ select ok(
 
 -- 3. RPC grants: PUBLIC and anon revoked; authenticated granted.
 select ok(
-  not has_function_privilege('anon', 'public.create_farm_memory_item(text,uuid,text,text,text,jsonb,text,jsonb,numeric,text,text,timestamptz,extensions.vector,text,text,boolean)', 'execute')
-  and has_function_privilege('authenticated', 'public.create_farm_memory_item(text,uuid,text,text,text,jsonb,text,jsonb,numeric,text,text,timestamptz,extensions.vector,text,text,boolean)', 'execute')
+  not has_function_privilege('anon', 'public.create_farm_memory_item(text,uuid,text,text,text,jsonb,text,jsonb,numeric,text,text,timestamptz,extensions.vector,text,text,boolean,uuid)', 'execute')
+  and has_function_privilege('authenticated', 'public.create_farm_memory_item(text,uuid,text,text,text,jsonb,text,jsonb,numeric,text,text,timestamptz,extensions.vector,text,text,boolean,uuid)', 'execute')
   and not has_function_privilege('anon', 'public.search_farm_memory_items(uuid,boolean,text[],boolean,extensions.vector,integer)', 'execute')
   and has_function_privilege('authenticated', 'public.search_farm_memory_items(uuid,boolean,text[],boolean,extensions.vector,integer)', 'execute'),
   'memory RPCs are revoked from anon and granted to authenticated'
@@ -248,8 +248,52 @@ select throws_ok(
   'withdrawn ai_intelligence consent denies memory retrieval'
 );
 
--- 16. Account deletion (ADR-009): hard-deletes profile memory, preserves farm memory with nulled attribution.
+-- 16. Finding 2 (Atomic rollback): duplicate conflicting p_trace_id rolls back farm memory INSERT completely.
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '32000000-0000-4000-8000-000000000001', true);
+
+select ok(
+  (select id is not null from public.create_farm_memory_item(
+    'farm', '32000000-0000-4000-8000-000000000101', 'semantic', 'atomic_ok',
+    'Atomic ok memory', '{"v":1}'::jsonb, 'farmer_explicit',
+    '[]'::jsonb, 1.0, 'synced', 'idem-atomic-1', null, null, null, null, true,
+    '32000000-0000-4000-8000-000000000777'::uuid
+  )),
+  'farm memory created atomically with explicit trace_id'
+);
+
+select throws_ok(
+  $$
+    select public.create_farm_memory_item(
+      'farm', '32000000-0000-4000-8000-000000000101', 'semantic', 'atomic_aborted',
+      'Should roll back', '{"v":2}'::jsonb, 'farmer_explicit',
+      '[]'::jsonb, 1.0, 'synced', 'idem-atomic-aborted', null, null, null, null, true,
+      '32000000-0000-4000-8000-000000000777'::uuid
+    )
+  $$,
+  '23505',
+  null,
+  'conflicting trace_id raises 23505 during atomic memory + audit write'
+);
+
+select is(
+  (select count(*)::int from public.farm_memory_items where idempotency_key = 'idem-atomic-aborted'),
+  0,
+  'audit failure rolls back farm_memory_items INSERT completely (zero orphaned rows)'
+);
+
+-- 17. Finding 3 (Profile memory audit): profile-scoped memory creation recorded in append-only ai_profile_memory_audit_events.
 reset role;
+select ok(
+  exists (
+    select 1 from public.ai_profile_memory_audit_events
+     where memory_item_id = (select id from public.farm_memory_items where idempotency_key = 'idem-prof-1')
+       and action = 'create'
+  ),
+  'profile-scoped memory creation is atomically audited in ai_profile_memory_audit_events without inventing a farm_id'
+);
+
+-- 18. Account deletion (ADR-009): hard-deletes profile memory, preserves farm memory with nulled attribution.
 select public.execute_account_deletion('32000000-0000-4000-8000-000000000001', 'Batch 03.2 ADR-009 test');
 
 select is(

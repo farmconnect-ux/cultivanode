@@ -1,19 +1,24 @@
 /**
- * Grounded Evidence Package Assembler & Untrusted-Content Sanitizer (Batch 03.2 Section 7).
+ * Grounded Evidence Package Assembler & Untrusted-Content Sanitizer (Batch 03.2 Findings 4 & 5).
  *
  * Non-negotiable invariants:
- * - Retrieved documents, memories, and user text are UNTRUSTED DATA and must NEVER
- *   override system instructions, security policies, consent, or tool permissions.
- * - Verified current farm facts from Live Farm Context ALWAYS take precedence over
- *   older historical memories.
- * - Published agronomic standards are strictly separated from farm-specific measurements.
+ * - Retrieved documents, memories (both titles AND structuredContent), and user text are
+ *   UNTRUSTED DATA. Sanitisation is a defense-in-depth layer paired with strict instruction
+ *   hierarchy and tool-permission controls in the prompt builder.
+ * - Model-facing `publishedAgronomicStandards` strip raw unsanitised `content`, exposing ONLY
+ *   `sanitizedContent`.
+ * - Verified current farm facts from Live Farm Context ALWAYS take precedence over older memories.
+ * - Retrieval outcomes (`ok_with_results`, `ok_empty`, `failed`, `skipped`) are explicitly tracked
+ *   and surfaced via `degradedGrounding` so retrieval failures are NEVER mistaken for empty results.
  */
 
 import { normalizeAuditContextReferences } from '../farm-context/provenance';
 import type { AuditContextReference, LiveFarmContextSnapshot } from '../farm-context/types';
 import type {
+  EvidenceRetrievalOutcome,
   FarmMemoryItemRecord,
   GroundedEvidencePackage,
+  ModelSafeStandardPassage,
   PublishedStandardPassage,
 } from './types';
 
@@ -22,15 +27,15 @@ const PROMPT_INJECTION_PATTERNS: readonly RegExp[] = [
   /disregard\s+(all\s+)?(previous|prior|system)\s+(instructions?|rules?)/gi,
   /override\s+(system|safety|guardrail|consent|security)\s*(instructions?|policy|rules?)?/gi,
   /^\s*(system|assistant|developer|tool)\s*:/gim,
-  /<\s*\/?\s*(system|prompt|instructions?|tool_call)\s*>/gi,
+  /<\s*\/?\s*(system|prompt|instructions?|tool_call|untrusted_evidence)\s*>/gi,
 ];
 
 /**
- * Neutralises prompt-injection directives in untrusted retrieved passages or memory text
- * while preserving legitimate agricultural information.
+ * Neutralises prompt-injection directives and control characters in untrusted retrieved text.
+ * Defense-in-depth only — never a substitute for system instruction hierarchy and ACLs.
  */
 export function sanitizeUntrustedRetrievedText(raw: string, maxLength = 2000): string {
-  let text = raw.replace(/\u0000/g, '').trim();
+  let text = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     text = text.replace(pattern, '[REDACTED_INSTRUCTION_LIKE_TEXT]');
   }
@@ -41,12 +46,47 @@ export function sanitizeUntrustedRetrievedText(raw: string, maxLength = 2000): s
 }
 
 /**
+ * Recursively sanitises all string keys and values inside a memory's `structuredContent`
+ * with bounded recursion depth and key count (Finding 5).
+ */
+export function sanitizeStructuredContent(
+  input: Record<string, unknown>,
+  maxDepth = 4,
+): Record<string, unknown> {
+  const sanitizeValue = (val: unknown, depth: number): unknown => {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') return sanitizeUntrustedRetrievedText(val, 500);
+    if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+    if (typeof val === 'boolean') return val;
+    if (depth >= maxDepth) return '[TRUNCATED]';
+    if (Array.isArray(val)) {
+      return val.slice(0, 25).map((item) => sanitizeValue(item, depth + 1));
+    }
+    if (typeof val === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(val as Record<string, unknown>).slice(0, 30)) {
+        const cleanKey = sanitizeUntrustedRetrievedText(k, 80);
+        out[cleanKey] = sanitizeValue(v, depth + 1);
+      }
+      return out;
+    }
+    return String(val);
+  };
+
+  return sanitizeValue(input, 0) as Record<string, unknown>;
+}
+
+/**
  * Assembles the strict multi-tier GroundedEvidencePackage for the Farm Intelligence Engine.
  */
 export function assembleGroundedEvidencePackage(params: {
   liveFarmContext: LiveFarmContextSnapshot;
   memories: readonly FarmMemoryItemRecord[];
   publishedStandards: readonly PublishedStandardPassage[];
+  retrievalOutcomes?: {
+    persistentMemory: EvidenceRetrievalOutcome;
+    publishedStandards: EvidenceRetrievalOutcome;
+  };
   assembledAt?: string;
 }): GroundedEvidencePackage {
   const assembledAt = params.assembledAt ?? new Date().toISOString();
@@ -62,7 +102,6 @@ export function assembleGroundedEvidencePackage(params: {
       : null;
 
   for (const mem of params.memories) {
-    // Hard guard: never admit rejected, withdrawn, expired, superseded, or deleted memories.
     if (
       mem.lifecycleStatus === 'rejected' ||
       mem.lifecycleStatus === 'withdrawn' ||
@@ -79,6 +118,7 @@ export function assembleGroundedEvidencePackage(params: {
     const sanitizedMem: FarmMemoryItemRecord = {
       ...mem,
       title: sanitizeUntrustedRetrievedText(mem.title, 200),
+      structuredContent: sanitizeStructuredContent(mem.structuredContent ?? {}),
     };
 
     if (sanitizedMem.memoryScope === 'profile') {
@@ -86,12 +126,10 @@ export function assembleGroundedEvidencePackage(params: {
       continue;
     }
 
-    // Tenant defense-in-depth: never admit another farm's memory into this farm's package.
     if (sanitizedMem.farmId !== params.liveFarmContext.farmId) {
       continue;
     }
 
-    // Explicit reconciliation rule: verified current farm record takes precedence over older memory.
     if (
       soilVerifiedAt &&
       sanitizedMem.memoryType.toLowerCase().includes('soil') &&
@@ -109,11 +147,17 @@ export function assembleGroundedEvidencePackage(params: {
     }
   }
 
-  const sanitizedStandards: PublishedStandardPassage[] = params.publishedStandards.map((std) => ({
-    ...std,
-    sanitizedContent: sanitizeUntrustedRetrievedText(std.content),
-    evidenceKind: 'published_agronomic_standard',
-  }));
+  // Strip raw unsanitised `content` so model-facing consumers can ONLY read `sanitizedContent`.
+  const modelSafeStandards: ModelSafeStandardPassage[] = params.publishedStandards.map((std) => {
+    const { content, ...rest } = std;
+    return {
+      ...rest,
+      title: sanitizeUntrustedRetrievedText(rest.title, 200),
+      documentTitle: sanitizeUntrustedRetrievedText(rest.documentTitle, 240),
+      sanitizedContent: sanitizeUntrustedRetrievedText(content),
+      evidenceKind: 'published_agronomic_standard',
+    };
+  });
 
   const memoryItemIds = [
     ...confirmedHistoricalMemories.map((m) => m.id),
@@ -121,9 +165,24 @@ export function assembleGroundedEvidencePackage(params: {
     ...profilePreferences.map((m) => m.id),
   ];
 
+  const retrievalOutcomes = params.retrievalOutcomes ?? {
+    persistentMemory: {
+      status: memoryItemIds.length > 0 ? 'ok_with_results' : 'ok_empty',
+      count: memoryItemIds.length,
+    },
+    publishedStandards: {
+      status: modelSafeStandards.length > 0 ? 'ok_with_results' : 'ok_empty',
+      count: modelSafeStandards.length,
+    },
+  };
+
+  const degradedGrounding =
+    retrievalOutcomes.persistentMemory.status === 'failed' ||
+    retrievalOutcomes.publishedStandards.status === 'failed';
+
   const extraRefs: AuditContextReference[] = [
     ...memoryItemIds.map((id) => ({ source: 'farm_memory_items' as const, record_id: id })),
-    ...sanitizedStandards.map((std) => ({
+    ...modelSafeStandards.map((std) => ({
       source: 'agronomic_standard_chunks' as const,
       record_id: std.chunkId,
       ...(std.publishedAt ? { observed_at: std.publishedAt } : {}),
@@ -131,7 +190,7 @@ export function assembleGroundedEvidencePackage(params: {
   ];
 
   const auditContextRefs = normalizeAuditContextReferences(
-    [...params.liveFarmContext.auditContextRefs, ...extraRefs],
+    [...(params.liveFarmContext.auditContextRefs ?? []), ...extraRefs],
     100,
   );
 
@@ -142,9 +201,11 @@ export function assembleGroundedEvidencePackage(params: {
     confirmedHistoricalMemories,
     provisionalMemories,
     profilePreferences,
-    publishedAgronomicStandards: sanitizedStandards,
-    missingOrUnavailable: params.liveFarmContext.missingInformation,
+    publishedAgronomicStandards: modelSafeStandards,
+    missingOrUnavailable: params.liveFarmContext.missingInformation ?? [],
     reconciliationNotes,
+    retrievalOutcomes,
+    degradedGrounding,
     auditContextRefs,
     memoryItemIds,
     untrustedContentSanitized: true,

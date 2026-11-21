@@ -1,13 +1,309 @@
--- CultivaNode 3.0, Batch 03.2: Persistent Farm Memory Data Model, Lifecycle & Vector Retrieval
--- Authority: ADR-002 (Persistent Memory Data Model), ADR-003 (pgvector), ADR-004 (Tenant Isolation), ADR-008 (Offline Sync).
+-- CultivaNode 3.0, Batch 03.2: Persistent Farm Memory Data Model, Lifecycle, Atomic Audit & Vector Retrieval
+-- Authority: ADR-002 (Persistent Memory Data Model), ADR-003 (pgvector), ADR-004 (Tenant Isolation),
+--            ADR-005 (AI Audit), ADR-008 (Offline Sync), ADR-009 (Retention & Deletion).
 --
 -- Security & governance invariants:
 -- 1. NOT NULL `memory_scope` discriminator ('farm' | 'profile') with strict CHECK separating ownership from attribution.
 -- 2. RLS enabled and forced; authenticated clients get SELECT only on active visible rows (never direct INSERT/UPDATE/DELETE).
--- 3. All mutations pass through authenticated SECURITY DEFINER RPCs enforcing account_active, ai_intelligence consent,
---    farm edit permission (can_edit_farm) or profile self-ownership, immutable creator attribution, and lifecycle rules.
+-- 3. All mutations execute atomically inside SECURITY DEFINER RPCs together with their audit event write:
+--    - `memory_scope = 'farm'` -> calls `private.write_ai_audit_event(...)` into `public.ai_audit_events`.
+--    - `memory_scope = 'profile'` -> writes to append-only `public.ai_profile_memory_audit_events` (using
+--      `private.resolve_or_create_ai_actor(v_uid)` — zero invented farm IDs, zero PII, immutable).
+--    If audit insertion fails (e.g., trace_id conflict 23505), the ENTIRE memory mutation rolls back atomically.
 -- 4. AI-inferred and offline awaiting_sync memories can NEVER be created or auto-promoted as confirmed.
 -- 5. Hybrid vector search RPC enforces tenant, scope, consent, and lifecycle filters INSIDE the database boundary.
+
+-- First, extend `private.write_ai_audit_event` allowed context sources so atomic memory audit writes
+-- can reference `farm_memory_items` (plus Batch 03.2 RAG & Batch 03.1D irrigation sources).
+create or replace function private.write_ai_audit_event(
+  p_profile_id uuid,
+  p_farm_id uuid,
+  p_trace_id uuid,
+  p_provider text,
+  p_model_id text,
+  p_prompt_version text,
+  p_execution_outcome text,
+  p_guardrail_result jsonb,
+  p_context_refs jsonb,
+  p_memory_item_ids uuid[],
+  p_prompt_version_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor_subject_id uuid;
+  v_event_id uuid;
+  v_existing public.ai_audit_events%rowtype;
+  v_ref jsonb;
+  v_source text;
+  v_record_id text;
+  v_observed_at text;
+  v_parsed_ts timestamptz;
+  v_seen_refs text[] := '{}'::text[];
+  c_allowed_sources constant text[] := array[
+    'farms', 'plots', 'crop_cycles', 'crop_cycle_operations',
+    'crop_observations', 'crop_alerts', 'crop_harvests', 'soil_records',
+    'farm_agronomic_standards', 'agronomic_standard_documents', 'agronomic_standard_chunks',
+    'farm_memory_items', 'irrigation_zones', 'irrigation_events',
+    'farm_inventory', 'farm_inventory_transactions',
+    'farm_financial_transactions', 'farm_machinery_assets',
+    'farm_machinery_maintenance', 'farm_machinery_usage_logs',
+    'machinery_telemetry', 'farm_operational_tasks', 'farm_livestock',
+    'farm_livestock_health_events', 'farm_livestock_production_logs',
+    'telemetry_readings', 'telemetry_rollups', 'weather_cache',
+    'marketplace_orders', 'marketplace_journal_entries'
+  ];
+begin
+  if p_profile_id is null or p_farm_id is null or p_trace_id is null then
+    raise exception 'Profile, farm and trace identifiers are required.' using errcode = '22023';
+  end if;
+
+  if not private.account_active(p_profile_id) then
+    raise exception 'Inactive profiles cannot create AI audit events.' using errcode = '42501';
+  end if;
+
+  if not exists (select 1 from public.farms f where f.id = p_farm_id) then
+    raise exception 'Farm not found.' using errcode = 'P0002';
+  end if;
+
+  if not private.profile_can_view_farm(p_profile_id, p_farm_id) then
+    raise exception 'Profile cannot access this farm.' using errcode = '42501';
+  end if;
+
+  if p_provider is null or p_provider not in ('claude', 'gemini', 'openai', 'rule-engine')
+     or p_model_id is null or char_length(p_model_id) not between 1 and 128
+     or p_prompt_version is null or char_length(p_prompt_version) not between 1 and 128
+     or p_execution_outcome is null
+     or p_execution_outcome not in ('completed', 'blocked', 'failed', 'fallback') then
+    raise exception 'Invalid AI audit event attributes.' using errcode = '22023';
+  end if;
+
+  if p_prompt_version_id is not null and not exists (
+    select 1 from private.ai_prompt_versions v
+     where v.id = p_prompt_version_id and v.version = p_prompt_version
+  ) then
+    raise exception 'Prompt version reference does not match a registered prompt version.' using errcode = '22023';
+  end if;
+
+  if p_guardrail_result is null
+     or jsonb_typeof(p_guardrail_result) <> 'object'
+     or pg_column_size(p_guardrail_result) > 8192
+     or p_guardrail_result - array['status', 'rule_ids', 'reason_codes', 'blocked']::text[] <> '{}'::jsonb
+     or (p_guardrail_result ? 'status' and jsonb_typeof(p_guardrail_result -> 'status') <> 'string')
+     or (p_guardrail_result ? 'rule_ids' and jsonb_typeof(p_guardrail_result -> 'rule_ids') <> 'array')
+     or (p_guardrail_result ? 'reason_codes' and jsonb_typeof(p_guardrail_result -> 'reason_codes') <> 'array')
+     or (p_guardrail_result ? 'blocked' and jsonb_typeof(p_guardrail_result -> 'blocked') <> 'boolean') then
+    raise exception 'Invalid or oversized guardrail result.' using errcode = '22023';
+  end if;
+
+  if p_context_refs is null
+     or jsonb_typeof(p_context_refs) <> 'array'
+     or jsonb_array_length(p_context_refs) > 100
+     or pg_column_size(p_context_refs) > 16384 then
+    raise exception 'Invalid or oversized context references.' using errcode = '22023';
+  end if;
+
+  for v_ref in select value from jsonb_array_elements(p_context_refs)
+  loop
+    if jsonb_typeof(v_ref) <> 'object'
+       or v_ref - array['source', 'record_id', 'observed_at']::text[] <> '{}'::jsonb
+       or not (v_ref ? 'source')
+       or not (v_ref ? 'record_id')
+       or jsonb_typeof(v_ref -> 'source') <> 'string'
+       or jsonb_typeof(v_ref -> 'record_id') <> 'string'
+       or (v_ref ? 'observed_at' and jsonb_typeof(v_ref -> 'observed_at') <> 'string') then
+      raise exception 'Context references must contain only source, record_id and optional observed_at.' using errcode = '22023';
+    end if;
+
+    v_source := v_ref ->> 'source';
+    v_record_id := v_ref ->> 'record_id';
+
+    if not (v_source = any(c_allowed_sources)) then
+      raise exception 'Unsupported context reference source.' using errcode = '22023';
+    end if;
+
+    if v_record_id !~ '^[A-Za-z0-9][A-Za-z0-9:_-]{0,63}$' then
+      raise exception 'Invalid context reference record_id format.' using errcode = '22023';
+    end if;
+
+    if (v_source || '|' || v_record_id) = any(v_seen_refs) then
+      raise exception 'Duplicate context references are not permitted.' using errcode = '22023';
+    end if;
+    v_seen_refs := array_append(v_seen_refs, v_source || '|' || v_record_id);
+
+    if v_ref ? 'observed_at' then
+      v_observed_at := v_ref ->> 'observed_at';
+      if v_observed_at !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$' then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
+      begin
+        v_parsed_ts := v_observed_at::timestamptz;
+      exception
+        when invalid_datetime_format or datetime_field_overflow then
+          raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end;
+      if v_parsed_ts is null then
+        raise exception 'Invalid context reference observed_at timestamp.' using errcode = '22023';
+      end if;
+    end if;
+  end loop;
+
+  if coalesce(cardinality(p_memory_item_ids), 0) > 100 then
+    raise exception 'Too many memory references.' using errcode = '22023';
+  end if;
+
+  v_actor_subject_id := private.resolve_or_create_ai_actor(p_profile_id);
+
+  insert into public.ai_audit_events (
+    trace_id, farm_id, actor_subject_id, actor_kind, event_kind,
+    provider, model_id, prompt_version, prompt_version_id, execution_outcome,
+    guardrail_result, context_refs, memory_item_ids
+  )
+  select
+    p_trace_id, p_farm_id, v_actor_subject_id, d.actor_kind, 'ai_execution',
+    p_provider, p_model_id, p_prompt_version, p_prompt_version_id, p_execution_outcome,
+    p_guardrail_result, p_context_refs, coalesce(p_memory_item_ids, '{}'::uuid[])
+  from private.ai_actor_directory d
+  where d.actor_subject_id = v_actor_subject_id
+  on conflict (trace_id) do nothing
+  returning id into v_event_id;
+
+  if v_event_id is not null then
+    return v_event_id;
+  end if;
+
+  select e.*
+    into v_existing
+  from public.ai_audit_events e
+  where e.trace_id = p_trace_id;
+
+  if not found
+     or v_existing.farm_id is distinct from p_farm_id
+     or v_existing.actor_subject_id is distinct from v_actor_subject_id
+     or v_existing.provider is distinct from p_provider
+     or v_existing.model_id is distinct from p_model_id
+     or v_existing.prompt_version is distinct from p_prompt_version
+     or v_existing.prompt_version_id is distinct from p_prompt_version_id
+     or v_existing.execution_outcome is distinct from p_execution_outcome
+     or v_existing.guardrail_result is distinct from p_guardrail_result
+     or v_existing.context_refs is distinct from p_context_refs
+     or v_existing.memory_item_ids is distinct from coalesce(p_memory_item_ids, '{}'::uuid[]) then
+    raise exception 'Trace ID is already associated with a different AI audit event.' using errcode = '23505';
+  end if;
+
+  return v_existing.id;
+end;
+$$;
+
+alter function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid) owner to postgres;
+revoke all on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function private.write_ai_audit_event(uuid, uuid, uuid, text, text, text, text, jsonb, jsonb, uuid[], uuid)
+  to service_role;
+
+-- Append-only profile-scoped memory audit register (Finding 3: avoids inventing farm_ids while
+-- providing full pseudonymised, immutable audit coverage for profile memory operations).
+create table if not exists public.ai_profile_memory_audit_events (
+  id                uuid primary key default gen_random_uuid(),
+  trace_id          uuid not null unique,
+  actor_subject_id  uuid not null references private.ai_actor_directory (actor_subject_id) on delete restrict,
+  memory_item_id    uuid not null,
+  action            text not null check (action in ('create', 'confirm', 'reject', 'withdraw', 'supersede', 'expire', 'delete')),
+  lifecycle_status  text not null,
+  metadata          jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object' and pg_column_size(metadata) <= 4096),
+  created_at        timestamptz not null default clock_timestamp()
+);
+
+create index if not exists ai_profile_mem_audit_actor_idx
+  on public.ai_profile_memory_audit_events (actor_subject_id, created_at desc);
+
+alter table public.ai_profile_memory_audit_events owner to postgres;
+alter table public.ai_profile_memory_audit_events enable row level security;
+alter table public.ai_profile_memory_audit_events force row level security;
+revoke all on table public.ai_profile_memory_audit_events from public, anon, authenticated, service_role;
+grant select (id, trace_id, memory_item_id, action, lifecycle_status, metadata, created_at)
+  on table public.ai_profile_memory_audit_events to authenticated;
+
+drop policy if exists ai_profile_mem_audit_select_staff on public.ai_profile_memory_audit_events;
+create policy ai_profile_mem_audit_select_staff
+  on public.ai_profile_memory_audit_events
+  for select
+  to authenticated
+  using (
+    (select private.account_active((select auth.uid())))
+    and public.has_permission('audit.read')
+  );
+
+drop trigger if exists ai_profile_mem_audit_forbid_update on public.ai_profile_memory_audit_events;
+create trigger ai_profile_mem_audit_forbid_update
+  before update on public.ai_profile_memory_audit_events
+  for each row execute function private.forbid_change();
+
+drop trigger if exists ai_profile_mem_audit_forbid_delete on public.ai_profile_memory_audit_events;
+create trigger ai_profile_mem_audit_forbid_delete
+  before delete on public.ai_profile_memory_audit_events
+  for each row execute function private.forbid_change();
+
+-- Internal-only atomic profile memory audit writer.
+create or replace function private.write_profile_memory_audit_event(
+  p_profile_id uuid,
+  p_trace_id uuid,
+  p_memory_item_id uuid,
+  p_action text,
+  p_lifecycle_status text,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor_subject_id uuid;
+  v_event_id uuid;
+  v_existing public.ai_profile_memory_audit_events%rowtype;
+begin
+  if p_profile_id is null or p_trace_id is null or p_memory_item_id is null then
+    raise exception 'Profile, trace and memory identifiers are required.' using errcode = '22023';
+  end if;
+
+  v_actor_subject_id := private.resolve_or_create_ai_actor(p_profile_id);
+
+  insert into public.ai_profile_memory_audit_events (
+    trace_id, actor_subject_id, memory_item_id, action, lifecycle_status, metadata
+  )
+  values (
+    p_trace_id, v_actor_subject_id, p_memory_item_id, p_action, p_lifecycle_status, coalesce(p_metadata, '{}'::jsonb)
+  )
+  on conflict (trace_id) do nothing
+  returning id into v_event_id;
+
+  if v_event_id is not null then
+    return v_event_id;
+  end if;
+
+  select * into v_existing
+    from public.ai_profile_memory_audit_events
+   where trace_id = p_trace_id;
+
+  if not found
+     or v_existing.actor_subject_id is distinct from v_actor_subject_id
+     or v_existing.memory_item_id is distinct from p_memory_item_id
+     or v_existing.action is distinct from p_action
+     or v_existing.lifecycle_status is distinct from p_lifecycle_status then
+    raise exception 'Trace ID is already associated with a different profile memory audit event.' using errcode = '23505';
+  end if;
+
+  return v_existing.id;
+end;
+$$;
+
+alter function private.write_profile_memory_audit_event(uuid, uuid, uuid, text, text, jsonb) owner to postgres;
+revoke all on function private.write_profile_memory_audit_event(uuid, uuid, uuid, text, text, jsonb)
+  from public, anon, authenticated, service_role;
 
 create table if not exists public.farm_memory_items (
   id                  uuid primary key default gen_random_uuid(),
@@ -53,7 +349,6 @@ create table if not exists public.farm_memory_items (
   created_at          timestamptz not null default clock_timestamp(),
   updated_at          timestamptz not null default clock_timestamp(),
 
-  -- ADR-002: strict scope and ownership discriminator.
   constraint farm_memory_items_scope_ownership_check check (
     (
       memory_scope = 'farm'
@@ -68,8 +363,6 @@ create table if not exists public.farm_memory_items (
       and category = 'preference'
     )
   ),
-
-  -- Bounded JSONB payloads to prevent oversized/unstructured blobs.
   constraint farm_memory_items_structured_content_check check (
     jsonb_typeof(structured_content) = 'object'
     and pg_column_size(structured_content) <= 16384
@@ -79,8 +372,6 @@ create table if not exists public.farm_memory_items (
     and jsonb_array_length(source_refs) <= 50
     and pg_column_size(source_refs) <= 8192
   ),
-
-  -- Lifecycle and confirmation invariants (ADR-002, ADR-007, ADR-008).
   constraint farm_memory_items_confirmation_integrity_check check (
     (lifecycle_status <> 'confirmed')
     or (verification_status = 'confirmed' and confirmed_at is not null and sync_state = 'synced')
@@ -98,7 +389,7 @@ create table if not exists public.farm_memory_items (
 );
 
 comment on table public.farm_memory_items is
-  'Batch 03.2 persistent farm-scoped and profile-scoped memory (ADR-002). Server-mediated writes only; RLS enforced.';
+  'Batch 03.2 persistent farm-scoped and profile-scoped memory (ADR-002). Atomic server-mediated writes & audit; RLS enforced.';
 
 create index if not exists farm_memory_items_farm_active_idx
   on public.farm_memory_items (farm_id, lifecycle_status, updated_at desc)
@@ -143,7 +434,6 @@ create policy farm_memory_items_select_visible
     )
   );
 
--- Helper: verify caller has active ai_intelligence consent.
 create or replace function private.has_ai_intelligence_consent(p_profile_id uuid)
 returns boolean
 language sql
@@ -172,7 +462,7 @@ alter function private.has_ai_intelligence_consent(uuid) owner to postgres;
 revoke all on function private.has_ai_intelligence_consent(uuid)
   from public, anon, authenticated, service_role;
 
--- Server-mediated authenticated memory creation RPC (ADR-002, ADR-004, ADR-008).
+-- Atomic server-mediated authenticated memory creation RPC (Findings 2 & 3: single-transaction mutation + audit).
 create or replace function public.create_farm_memory_item(
   p_memory_scope text,
   p_farm_id uuid,
@@ -189,7 +479,8 @@ create or replace function public.create_farm_memory_item(
   p_embedding extensions.vector(1536) default null,
   p_embedding_model text default null,
   p_embedding_version text default null,
-  p_request_confirm boolean default false
+  p_request_confirm boolean default false,
+  p_trace_id uuid default null
 )
 returns public.farm_memory_items
 language plpgsql
@@ -205,6 +496,8 @@ declare
   v_confirmed_by uuid := null;
   v_confirmed_at timestamptz := null;
   v_profile_id uuid := null;
+  v_trace_id uuid := coalesce(p_trace_id, gen_random_uuid());
+  v_audit_refs jsonb;
 begin
   if v_uid is null then
     raise exception 'Authentication required.' using errcode = '42501';
@@ -218,7 +511,6 @@ begin
     raise exception 'AI intelligence consent is required.' using errcode = '42501';
   end if;
 
-  -- Idempotent retry support for offline sync / network retries (ADR-008).
   if p_idempotency_key is not null and trim(p_idempotency_key) <> '' then
     select * into v_existing
       from public.farm_memory_items
@@ -252,7 +544,6 @@ begin
     raise exception 'Invalid memory_scope.' using errcode = '22023';
   end if;
 
-  -- AI-inferred or offline awaiting_sync memory can NEVER be auto-confirmed on creation.
   if p_sync_state = 'awaiting_sync' then
     v_lifecycle := 'awaiting_confirmation';
     v_verification := 'provisional';
@@ -270,73 +561,69 @@ begin
   end if;
 
   insert into public.farm_memory_items (
-    memory_scope,
-    farm_id,
-    profile_id,
-    category,
-    memory_type,
-    title,
-    structured_content,
-    source_kind,
-    source_refs,
-    lifecycle_status,
-    verification_status,
-    confidence,
-    sync_state,
-    idempotency_key,
-    consent_verified_at,
-    created_by,
-    confirmed_by,
-    confirmed_at,
-    updated_by,
-    expires_at,
-    embedding,
-    embedding_model,
-    embedding_version
+    memory_scope, farm_id, profile_id, category, memory_type, title,
+    structured_content, source_kind, source_refs, lifecycle_status,
+    verification_status, confidence, sync_state, idempotency_key,
+    consent_verified_at, created_by, confirmed_by, confirmed_at, updated_by,
+    expires_at, embedding, embedding_model, embedding_version
   )
   values (
-    p_memory_scope,
-    p_farm_id,
-    v_profile_id,
-    p_category,
-    trim(p_memory_type),
-    trim(p_title),
-    coalesce(p_structured_content, '{}'::jsonb),
-    p_source_kind,
-    coalesce(p_source_refs, '[]'::jsonb),
-    v_lifecycle,
-    v_verification,
-    p_confidence,
-    coalesce(p_sync_state, 'synced'),
-    nullif(trim(p_idempotency_key), ''),
-    clock_timestamp(),
-    v_uid,
-    v_confirmed_by,
-    v_confirmed_at,
-    v_uid,
-    p_expires_at,
-    p_embedding,
-    p_embedding_model,
-    p_embedding_version
+    p_memory_scope, p_farm_id, v_profile_id, p_category, trim(p_memory_type), trim(p_title),
+    coalesce(p_structured_content, '{}'::jsonb), p_source_kind, coalesce(p_source_refs, '[]'::jsonb),
+    v_lifecycle, v_verification, p_confidence, coalesce(p_sync_state, 'synced'),
+    nullif(trim(p_idempotency_key), ''), clock_timestamp(), v_uid, v_confirmed_by, v_confirmed_at, v_uid,
+    p_expires_at, p_embedding, p_embedding_model, p_embedding_version
   )
   returning * into v_row;
+
+  -- Atomic audit write in the SAME transaction: any audit error rolls back the memory INSERT.
+  if p_memory_scope = 'farm' then
+    v_audit_refs := jsonb_build_array(
+      jsonb_build_object(
+        'source', 'farm_memory_items',
+        'record_id', v_row.id::text,
+        'observed_at', to_char(v_row.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      )
+    );
+    perform private.write_ai_audit_event(
+      v_uid,
+      p_farm_id,
+      v_trace_id,
+      'rule-engine',
+      'memory-write-service',
+      'memory-governance-v1',
+      'completed',
+      '{"status":"not_applicable","rule_ids":[],"reason_codes":[],"blocked":false}'::jsonb,
+      v_audit_refs,
+      array[v_row.id],
+      null
+    );
+  else
+    perform private.write_profile_memory_audit_event(
+      v_uid,
+      v_trace_id,
+      v_row.id,
+      'create',
+      v_row.lifecycle_status,
+      jsonb_build_object('category', v_row.category, 'source_kind', v_row.source_kind)
+    );
+  end if;
 
   return v_row;
 end;
 $$;
 
 alter function public.create_farm_memory_item(
-  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean
+  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean, uuid
 ) owner to postgres;
 revoke all on function public.create_farm_memory_item(
-  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean
+  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean, uuid
 ) from public, anon, authenticated, service_role;
 grant execute on function public.create_farm_memory_item(
-  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean
+  text, uuid, text, text, text, jsonb, text, jsonb, numeric, text, text, timestamptz, extensions.vector, text, text, boolean, uuid
 ) to authenticated;
 
--- Explicit lifecycle governance RPC: confirm, reject, withdraw, supersede (correct), expire, delete.
--- Preserves immutable creator attribution (`created_by`) and prevents ordinary users from forging confirmer/editor IDs.
+-- Atomic lifecycle governance RPC: confirm, reject, withdraw, supersede, expire, delete + single-transaction audit.
 create or replace function public.transition_farm_memory_item(
   p_memory_id uuid,
   p_action text,
@@ -345,7 +632,8 @@ create or replace function public.transition_farm_memory_item(
   p_new_source_refs jsonb default null,
   p_new_embedding extensions.vector(1536) default null,
   p_new_embedding_model text default null,
-  p_new_embedding_version text default null
+  p_new_embedding_version text default null,
+  p_trace_id uuid default null
 )
 returns public.farm_memory_items
 language plpgsql
@@ -356,6 +644,8 @@ declare
   v_uid uuid := auth.uid();
   v_current public.farm_memory_items%rowtype;
   v_result public.farm_memory_items%rowtype;
+  v_trace_id uuid := coalesce(p_trace_id, gen_random_uuid());
+  v_audit_refs jsonb;
 begin
   if v_uid is null then
     raise exception 'Authentication required.' using errcode = '42501';
@@ -404,7 +694,6 @@ begin
            updated_at = clock_timestamp()
      where id = p_memory_id
     returning * into v_result;
-    return v_result;
 
   elsif p_action = 'reject' then
     update public.farm_memory_items
@@ -414,7 +703,6 @@ begin
            updated_at = clock_timestamp()
      where id = p_memory_id
     returning * into v_result;
-    return v_result;
 
   elsif p_action = 'withdraw' then
     update public.farm_memory_items
@@ -423,7 +711,6 @@ begin
            updated_at = clock_timestamp()
      where id = p_memory_id
     returning * into v_result;
-    return v_result;
 
   elsif p_action = 'expire' then
     update public.farm_memory_items
@@ -433,7 +720,6 @@ begin
            updated_at = clock_timestamp()
      where id = p_memory_id
     returning * into v_result;
-    return v_result;
 
   elsif p_action = 'delete' then
     update public.farm_memory_items
@@ -443,7 +729,6 @@ begin
            updated_at = clock_timestamp()
      where id = p_memory_id
     returning * into v_result;
-    return v_result;
 
   elsif p_action = 'supersede' then
     if p_new_structured_content is null then
@@ -451,54 +736,18 @@ begin
     end if;
 
     insert into public.farm_memory_items (
-      memory_scope,
-      farm_id,
-      profile_id,
-      category,
-      memory_type,
-      title,
-      structured_content,
-      source_kind,
-      source_refs,
-      lifecycle_status,
-      verification_status,
-      confidence,
-      sync_state,
-      supersedes_id,
-      consent_verified_at,
-      created_by,
-      confirmed_by,
-      confirmed_at,
-      updated_by,
-      expires_at,
-      embedding,
-      embedding_model,
-      embedding_version
+      memory_scope, farm_id, profile_id, category, memory_type, title,
+      structured_content, source_kind, source_refs, lifecycle_status,
+      verification_status, confidence, sync_state, supersedes_id,
+      consent_verified_at, created_by, confirmed_by, confirmed_at, updated_by,
+      expires_at, embedding, embedding_model, embedding_version
     )
     values (
-      v_current.memory_scope,
-      v_current.farm_id,
-      v_current.profile_id,
-      v_current.category,
-      v_current.memory_type,
-      coalesce(nullif(trim(p_new_title), ''), v_current.title),
-      p_new_structured_content,
-      'farmer_explicit',
-      coalesce(p_new_source_refs, v_current.source_refs),
-      'confirmed',
-      'confirmed',
-      1.000,
-      'synced',
-      v_current.id,
-      clock_timestamp(),
-      v_uid,
-      v_uid,
-      clock_timestamp(),
-      v_uid,
-      v_current.expires_at,
-      p_new_embedding,
-      p_new_embedding_model,
-      p_new_embedding_version
+      v_current.memory_scope, v_current.farm_id, v_current.profile_id, v_current.category, v_current.memory_type,
+      coalesce(nullif(trim(p_new_title), ''), v_current.title), p_new_structured_content, 'farmer_explicit',
+      coalesce(p_new_source_refs, v_current.source_refs), 'confirmed', 'confirmed', 1.000, 'synced', v_current.id,
+      clock_timestamp(), v_uid, v_uid, clock_timestamp(), v_uid,
+      v_current.expires_at, p_new_embedding, p_new_embedding_model, p_new_embedding_version
     )
     returning * into v_result;
 
@@ -508,27 +757,58 @@ begin
            updated_by = v_uid,
            updated_at = clock_timestamp()
      where id = v_current.id;
-
-    return v_result;
-
   else
     raise exception 'Unsupported memory transition action: %', p_action using errcode = '22023';
   end if;
+
+  -- Atomic audit write in the SAME transaction: any audit error rolls back the memory transition.
+  if v_result.memory_scope = 'farm' then
+    v_audit_refs := jsonb_build_array(
+      jsonb_build_object(
+        'source', 'farm_memory_items',
+        'record_id', v_result.id::text,
+        'observed_at', to_char(v_result.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      )
+    );
+    perform private.write_ai_audit_event(
+      v_uid,
+      v_result.farm_id,
+      v_trace_id,
+      'rule-engine',
+      'memory-transition-' || p_action,
+      'memory-governance-v1',
+      'completed',
+      '{"status":"not_applicable","rule_ids":[],"reason_codes":[],"blocked":false}'::jsonb,
+      v_audit_refs,
+      array[v_result.id],
+      null
+    );
+  else
+    perform private.write_profile_memory_audit_event(
+      v_uid,
+      v_trace_id,
+      v_result.id,
+      p_action,
+      v_result.lifecycle_status,
+      jsonb_build_object('previous_memory_id', v_current.id)
+    );
+  end if;
+
+  return v_result;
 end;
 $$;
 
 alter function public.transition_farm_memory_item(
-  uuid, text, text, jsonb, jsonb, extensions.vector, text, text
+  uuid, text, text, jsonb, jsonb, extensions.vector, text, text, uuid
 ) owner to postgres;
 revoke all on function public.transition_farm_memory_item(
-  uuid, text, text, jsonb, jsonb, extensions.vector, text, text
+  uuid, text, text, jsonb, jsonb, extensions.vector, text, text, uuid
 ) from public, anon, authenticated, service_role;
 grant execute on function public.transition_farm_memory_item(
-  uuid, text, text, jsonb, jsonb, extensions.vector, text, text
+  uuid, text, text, jsonb, jsonb, extensions.vector, text, text, uuid
 ) to authenticated;
 
 -- Hybrid tenant-isolated memory retrieval RPC (ADR-003, ADR-004).
--- Tenant, consent, scope, lifecycle, and expiry filters are enforced INSIDE the database boundary.
 create or replace function public.search_farm_memory_items(
   p_farm_id uuid default null,
   p_include_profile boolean default true,
@@ -628,7 +908,6 @@ begin
     )
     and (p_categories is null or m.category = any(p_categories))
   order by
-    -- Confirmed memories always rank ahead of provisional memories; similarity never overrides lifecycle.
     case when m.lifecycle_status = 'confirmed' then 0 else 1 end asc,
     case
       when p_query_embedding is not null and m.embedding is not null

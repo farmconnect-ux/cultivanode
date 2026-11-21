@@ -100,6 +100,22 @@ export const ALLOWED_AGRONOMIC_DOCUMENT_MIMES = [
 ] as const;
 export type AllowedAgronomicDocumentMime = (typeof ALLOWED_AGRONOMIC_DOCUMENT_MIMES)[number];
 
+export const DOCUMENT_EXTRACTION_METHODS = [
+  'staff_entered_text',
+  'plain_text_file',
+  'markdown_file',
+  'pdf_text_extractor',
+  'json_structured_file',
+] as const;
+export type DocumentExtractionMethod = (typeof DOCUMENT_EXTRACTION_METHODS)[number];
+
+export const DOCUMENT_PROVENANCE_STATUSES = [
+  'staff_asserted',
+  'file_hash_verified',
+  'authority_verified',
+] as const;
+export type DocumentProvenanceStatus = (typeof DOCUMENT_PROVENANCE_STATUSES)[number];
+
 export interface AgronomicDocumentChunkDraft {
   chunkIndex: number;
   sectionRef: string | null;
@@ -126,14 +142,30 @@ export interface PublishedStandardPassage {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   documentTitle: string;
+  extractionMethod?: DocumentExtractionMethod;
+  provenanceVerificationStatus?: DocumentProvenanceStatus;
   sectionRef: string | null;
   pageNumber: number | null;
   paragraphIndex: number | null;
   content: string;
   sanitizedContent: string;
   similarityScore: number | null;
-  /** Explicitly marks retrieved text as untrusted external reference data, never a farm measurement. */
   evidenceKind: 'published_agronomic_standard';
+}
+
+/**
+ * Model-facing published standard passage: raw unsanitised `content` is intentionally
+ * omitted so prompt builders and LLMs can ONLY consume `sanitizedContent` (Finding 5).
+ */
+export type ModelSafeStandardPassage = Omit<PublishedStandardPassage, 'content'>;
+
+export type EvidenceRetrievalStatus = 'ok_with_results' | 'ok_empty' | 'failed' | 'skipped';
+
+export interface EvidenceRetrievalOutcome {
+  status: EvidenceRetrievalStatus;
+  count: number;
+  errorCode?: string;
+  errorMessage?: string;
 }
 
 export interface EmbeddingSuccess {
@@ -163,7 +195,8 @@ export interface EmbeddingProvider {
 /**
  * Grounded evidence package passed to the Farm Intelligence Engine.
  * Strictly separates verified current farm facts, confirmed historical memories,
- * provisional memories, published agronomic standards, and missing/unavailable data.
+ * provisional memories, profile preferences, published agronomic standards (sanitised only),
+ * retrieval outcomes, and missing/unavailable data.
  */
 export interface GroundedEvidencePackage {
   farmId: string;
@@ -172,9 +205,14 @@ export interface GroundedEvidencePackage {
   confirmedHistoricalMemories: FarmMemoryItemRecord[];
   provisionalMemories: FarmMemoryItemRecord[];
   profilePreferences: FarmMemoryItemRecord[];
-  publishedAgronomicStandards: PublishedStandardPassage[];
+  publishedAgronomicStandards: ModelSafeStandardPassage[];
   missingOrUnavailable: Array<{ domain: string; field: string }>;
   reconciliationNotes: string[];
+  retrievalOutcomes: {
+    persistentMemory: EvidenceRetrievalOutcome;
+    publishedStandards: EvidenceRetrievalOutcome;
+  };
+  degradedGrounding: boolean;
   auditContextRefs: AuditContextReference[];
   memoryItemIds: string[];
   untrustedContentSanitized: true;
