@@ -121,6 +121,53 @@ function emptyWeatherData(state: ContextState = "missing", note?: string): Weath
   };
 }
 
+const WEATHER_OBSERVATION_MAX_AGE_HOURS = 12;
+const WEATHER_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const ISO_TIMESTAMP_WITH_ZONE_RE =
+  /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$/;
+
+function assessWeatherObservationTimestamp(
+  value: unknown,
+  retrievedAt: string,
+): { value: string | null; state: ContextState; note?: string } {
+  if (value === null || value === undefined || value === "") {
+    return { value: null, state: "missing", note: "Weather provider did not supply an observation timestamp." };
+  }
+  if (typeof value !== "string") {
+    return { value: null, state: "invalid_rejected", note: "Weather observation timestamp is not a string." };
+  }
+
+  const match = ISO_TIMESTAMP_WITH_ZONE_RE.exec(value);
+  const parsedMs = Date.parse(value);
+  if (!match || !Number.isFinite(parsedMs)) {
+    return { value: null, state: "invalid_rejected", note: "Weather observation timestamp is not valid ISO 8601 with a timezone." };
+  }
+
+  const [, year, month, day, hour, minute, second, zone] = match;
+  const calendar = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)));
+  const calendarValid =
+    calendar.getUTCFullYear() === Number(year) &&
+    calendar.getUTCMonth() === Number(month) - 1 &&
+    calendar.getUTCDate() === Number(day) &&
+    calendar.getUTCHours() === Number(hour) &&
+    calendar.getUTCMinutes() === Number(minute) &&
+    calendar.getUTCSeconds() === Number(second);
+  const zoneMatch = zone === "Z" ? null : /[+-](\\d{2}):(\\d{2})$/.exec(zone);
+  const zoneValid = !zoneMatch || (Number(zoneMatch[1]) <= 14 && Number(zoneMatch[2]) <= 59 && (Number(zoneMatch[1]) < 14 || Number(zoneMatch[2]) === 0));
+  if (!calendarValid || !zoneValid) {
+    return { value: null, state: "invalid_rejected", note: "Weather observation timestamp contains an invalid calendar date or timezone." };
+  }
+
+  const retrievedMs = Date.parse(retrievedAt);
+  if (!Number.isFinite(retrievedMs) || parsedMs > retrievedMs + WEATHER_FUTURE_CLOCK_SKEW_MS) {
+    return { value: null, state: "invalid_rejected", note: "Weather observation timestamp is in the future or retrieval time is invalid." };
+  }
+  if (retrievedMs - parsedMs > WEATHER_OBSERVATION_MAX_AGE_HOURS * 3_600_000) {
+    return { value, state: "stale", note: "Weather observation is older than the 12-hour current-conditions validity window." };
+  }
+  return { value, state: "verified_current" };
+}
+
 export async function getLiveFarmContextSnapshot(
   caller: VerifiedFarmCallerContext,
   options: { now?: Date } = {},
@@ -756,11 +803,20 @@ async function loadWeatherDomain(
     }
 
     const ageHours = Math.max(0, (new Date(retrievedAt).getTime() - new Date(matchedRow.fetched_at).getTime()) / 3_600_000);
-    const baseState: ContextState =
+    const cacheState: ContextState =
       ageHours > 12 ? "stale" : matchedForecast.matchedBy === "coordinates" ? "verified_current" : "unverified_provisional";
     // `provider` is the weather_cache primary key (one-to-one FK to integration_providers).
     // It identifies the cache row, while fetched_at remains retrieval time, not observation time.
-    const observedTimestamp = matchedForecast.forecast.now?.observedAt ?? null;
+    const observation = assessWeatherObservationTimestamp(matchedForecast.forecast.now?.observedAt, retrievedAt);
+    const currentConditionsState: ContextState =
+      cacheState === "stale" || observation.state === "stale"
+        ? "stale"
+        : observation.state === "invalid_rejected"
+          ? "invalid_rejected"
+          : observation.state === "missing"
+            ? "unverified_provisional"
+            : cacheState;
+    const observedTimestamp = observation.value;
     const prov = {
       source: "weather_cache" as const,
       recordId: matchedRow.provider,
@@ -768,6 +824,10 @@ async function loadWeatherDomain(
       observedAt: observedTimestamp,
       retrievedAt,
     };
+    const currentConditionsNote =
+      currentConditionsState === "verified_current"
+        ? undefined
+        : observation.note ?? (cacheState === "stale" ? "Weather cache retrieval is older than 12 hours." : "Weather location match is provisional.");
 
     const days = matchedForecast.forecast.days ?? [];
     const firstDay = days[0];
@@ -783,11 +843,11 @@ async function loadWeatherDomain(
     const locationLabelValue =
       place?.town && place?.state ? `${place.town}, ${place.state}` : (place?.state ?? farmState);
 
-    const temperatureC = makeNumericFact(matchedForecast.forecast.now?.tempC ?? null, baseState, prov);
-    const humidityPct = makeNumericFact(matchedForecast.forecast.now?.humidity ?? null, baseState, prov);
-    const windSpeedKmh = makeNumericFact(matchedForecast.forecast.now?.windKmh ?? null, baseState, prov);
-    // Daily rainfall is a forecast-period value, not an observed measurement timestamp.
-    const rainfallMm = makeNumericFact(firstDay?.rainMm ?? null, baseState, {
+    const temperatureC = makeNumericFact(matchedForecast.forecast.now?.tempC ?? null, currentConditionsState, prov, currentConditionsNote);
+    const humidityPct = makeNumericFact(matchedForecast.forecast.now?.humidity ?? null, currentConditionsState, prov, currentConditionsNote);
+    const windSpeedKmh = makeNumericFact(matchedForecast.forecast.now?.windKmh ?? null, currentConditionsState, prov, currentConditionsNote);
+    // Daily rainfall is a forecast-period value, not a current observed measurement.
+    const rainfallMm = makeNumericFact(firstDay?.rainMm ?? null, cacheState, {
       ...prov,
       observedAt: null,
     });
@@ -803,16 +863,16 @@ async function loadWeatherDomain(
       status: missingFields.length > 0 ? "partial" : "ok",
       data: {
         locationLabel: locationLabelValue
-          ? { value: locationLabelValue, state: baseState, provenance: prov }
+          ? { value: locationLabelValue, state: cacheState, provenance: prov }
           : emptyFact<string>(),
         matchedBy: matchedForecast.matchedBy,
-        provider: { value: matchedRow.provider, state: baseState, provenance: prov },
-        fetchedAt: { value: matchedRow.fetched_at, state: baseState, provenance: prov },
+        provider: { value: matchedRow.provider, state: cacheState, provenance: prov },
+        fetchedAt: { value: matchedRow.fetched_at, state: cacheState, provenance: prov },
         observedAt: observedTimestamp
-          ? { value: observedTimestamp, state: baseState, provenance: prov }
-          : emptyFact<string>("missing", "Weather cache did not provide an observation timestamp."),
+          ? { value: observedTimestamp, state: observation.state, provenance: prov, ...(observation.note ? { note: observation.note } : {}) }
+          : emptyFact<string>(observation.state, observation.note),
         forecastPeriod: forecastPeriodValue
-          ? { value: forecastPeriodValue, state: baseState, provenance: prov }
+          ? { value: forecastPeriodValue, state: cacheState, provenance: prov }
           : emptyFact<string>(),
         temperatureC,
         rainfallMm,
