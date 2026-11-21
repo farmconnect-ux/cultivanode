@@ -35,19 +35,25 @@ const MODEL_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$/;
 const PROMPT_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 // Guardrail metadata is a controlled code vocabulary, never model/user-authored text.
-const GUARDRAIL_CODE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
-const GuardrailCodeSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(GUARDRAIL_CODE_RE, "Guardrail values must be lowercase snake_case identifiers.")
-  .refine((value) => !SECRET_OR_DATA_URI_RE.test(value), "Secrets are prohibited in guardrail metadata.");
+// Extend these allowlists only when a reviewed application guardrail introduces a new stable code.
+const ALLOWED_GUARDRAIL_RULE_IDS = ["nafdac_chemical_guardrail"] as const;
+const ALLOWED_GUARDRAIL_REASON_CODES = [
+  "provider_execution_failed",
+  "prohibited_chemical",
+  "grounding_execution_failed",
+] as const;
+const GuardrailRuleIdSchema = z
+  .enum(ALLOWED_GUARDRAIL_RULE_IDS)
+  .refine((value) => !SECRET_OR_DATA_URI_RE.test(value), "Secrets are prohibited in guardrail rule identifiers.");
+const GuardrailReasonCodeSchema = z
+  .enum(ALLOWED_GUARDRAIL_REASON_CODES)
+  .refine((value) => !SECRET_OR_DATA_URI_RE.test(value), "Secrets are prohibited in guardrail reason codes.");
 
 const GuardrailResultSchema = z
   .object({
     status: z.enum(["passed", "blocked", "error", "not_applicable"]).optional(),
-    rule_ids: z.array(GuardrailCodeSchema).max(50).optional(),
-    reason_codes: z.array(GuardrailCodeSchema).max(50).optional(),
+    rule_ids: z.array(GuardrailRuleIdSchema).max(50).optional(),
+    reason_codes: z.array(GuardrailReasonCodeSchema).max(50).optional(),
     blocked: z.boolean().optional(),
   })
   .strict();
