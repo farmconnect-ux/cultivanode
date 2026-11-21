@@ -834,7 +834,15 @@ async function loadWeatherDomain(
     const currentConditionsNote =
       currentConditionsState === "verified_current"
         ? undefined
-        : observation.note ?? (cacheState === "stale" ? "Weather cache retrieval is older than 12 hours." : "Weather location match is provisional.");
+        : cacheState === "invalid_rejected"
+          ? "Weather cache retrieval timestamp is invalid or in the future."
+          : observation.state === "invalid_rejected"
+            ? observation.note
+            : cacheState === "stale"
+              ? "Weather cache retrieval is older than 12 hours."
+              : observation.state === "stale" || observation.state === "missing"
+                ? observation.note
+                : "Weather location match is provisional.";
 
     const days = matchedForecast.forecast.days ?? [];
     const firstDay = days[0];
