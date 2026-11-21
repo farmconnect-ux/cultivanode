@@ -20,6 +20,13 @@ export const PROVISIONAL_SOIL_TEST_VALIDITY_DAYS = 365;
 export const PROVISIONAL_SOIL_VALIDITY_NOTE =
   'Provisional 365-day soil-test validity threshold pending qualified agronomist/soil-scientist validation (ADR-007).';
 export const DEFAULT_TELEMETRY_STALE_HOURS = 168; // 7 days
+/**
+ * Batch 03.3 (PR #24 review, Low): a verified device/provider reading only counts as `verified_current`
+ * while it is recent. Older (but not yet stale) verified readings are reported as `unverified_provisional`.
+ */
+export const DEFAULT_VERIFIED_TELEMETRY_MAX_AGE_HOURS = 24;
+/** Tolerated clock skew for observation timestamps ahead of the retrieval time. */
+export const TELEMETRY_FUTURE_SKEW_MINUTES = 5;
 export const MAX_WEATHER_MATCH_DISTANCE_KM = 100;
 
 const ALLOWED_AUDIT_SOURCE_SET = new Set<string>(ALLOWED_AUDIT_CONTEXT_SOURCES);
@@ -407,6 +414,7 @@ export function evaluateMachineryTelemetryConsistency(params: {
   telemetrySamples: readonly MachineryTelemetrySample[];
   retrievedAt?: string;
   staleThresholdHours?: number;
+  verifiedMaxAgeHours?: number;
 }): {
   state: ContextState;
   latestObservedHours: number | null;
@@ -655,12 +663,46 @@ export function evaluateMachineryTelemetryConsistency(params: {
   // carries database-verified `device_authenticated` or `trusted_provider_integration` provenance.
   // Unattributed, provisional, farmer_observation, and staff_observation readings remain `unverified_provisional`.
   const latestValidSample = previousSample;
-  const isVerifiedTrustedTelemetry =
+  const hasVerifiedProvenance =
     latestValidSample !== null &&
     latestValidSample.validationStatus === 'verified' &&
     latestValidSample.trustClassification === 'verified_current' &&
     (latestValidSample.sourceCategory === 'device_authenticated' ||
       latestValidSample.sourceCategory === 'trusted_provider_integration');
+
+  // Batch 03.3 (PR #24 review, Low): verified provenance alone is not enough to be "current".
+  // The reading must have a known age (retrievedAt supplied), not be in the future beyond clock skew,
+  // and be no older than the verified max age. Otherwise it stays `unverified_provisional`.
+  let isRecentEnough = false;
+  if (hasVerifiedProvenance && latestValidObservedAt && params.retrievedAt) {
+    const maxAgeHours = params.verifiedMaxAgeHours ?? DEFAULT_VERIFIED_TELEMETRY_MAX_AGE_HOURS;
+    const ageHours =
+      (new Date(params.retrievedAt).getTime() - new Date(latestValidObservedAt).getTime()) / 3_600_000;
+    if (!Number.isFinite(ageHours)) {
+      isRecentEnough = false;
+    } else if (ageHours < -TELEMETRY_FUTURE_SKEW_MINUTES / 60) {
+      issues.push({
+        domain: 'equipment_and_iot_telemetry',
+        field: 'recorded_at',
+        code: 'future_telemetry_timestamp',
+        message: `Verified telemetry for "${params.machineryName}" is timestamped in the future; not treated as current.`,
+        source: 'machinery_telemetry',
+        recordId: latestValidSampleId ?? undefined,
+      });
+    } else if (ageHours > maxAgeHours) {
+      issues.push({
+        domain: 'equipment_and_iot_telemetry',
+        field: 'recorded_at',
+        code: 'verified_telemetry_not_recent',
+        message: `Verified telemetry for "${params.machineryName}" is ${Math.round(ageHours)}h old (current limit ${maxAgeHours}h); treated as provisional.`,
+        source: 'machinery_telemetry',
+        recordId: latestValidSampleId ?? undefined,
+      });
+    } else {
+      isRecentEnough = true;
+    }
+  }
+  const isVerifiedTrustedTelemetry = hasVerifiedProvenance && isRecentEnough;
 
   return {
     state: isVerifiedTrustedTelemetry ? 'verified_current' : 'unverified_provisional',

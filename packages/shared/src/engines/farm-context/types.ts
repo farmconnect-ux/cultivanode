@@ -141,6 +141,8 @@ export interface ContextValidationIssue {
     | 'implausible_engine_hours'
     | 'duplicate_telemetry_timestamp'
     | 'stale_telemetry'
+    | 'verified_telemetry_not_recent'
+    | 'future_telemetry_timestamp'
     | 'invalid_usage_log'
     | 'machinery_usage_telemetry_mismatch'
     | 'inventory_ledger_cache_divergence'
