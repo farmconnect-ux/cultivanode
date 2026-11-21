@@ -1,5 +1,6 @@
 // Yorùbá copy for the mobile app. Shared strings match the website (yo-account.ts).
 // DRAFT TRANSLATION: a native Yorùbá speaker must review every string before launch.
+// Updated 21 Nov 2026: claims removed to match en.ts (email sign-in, photo diagnosis, payment wording); new phrases need native-speaker review.
 import { brand } from '@cultivanode/shared/brand';
 import type { Dictionary } from './en';
 
@@ -21,15 +22,15 @@ const yo: Dictionary = {
   welcome: {
     title: 'Alábàáṣiṣẹ́pọ̀\noko rẹ.',
     intro: 'Gba òṣìṣẹ́ oko, yá tírákítọ̀, ra ohun èlò oko kí o sì tọ́jú ìwé ìṣirò oko rẹ — ní ibì kan, ní Gẹ̀ẹ́sì tàbí Yorùbá.',
-    chips: ['Òṣìṣẹ́ tí a fọwọ́ sí', 'Iye owó tó ṣe kedere', 'Wọlé pẹ̀lú fóònù'],
+    chips: ['Òṣìṣẹ́ tí a fọwọ́ sí', 'Iye owó tó ṣe kedere', 'Wọlé pẹ̀lú ímeèlì'],
     start: 'Bẹ̀rẹ̀',
     haveAccount: 'Mo ti ní àkọọ́lẹ̀',
   },
   auth: {
     signInTitle: 'Wọlé',
     signUpTitle: 'Ṣí àkọọ́lẹ̀ rẹ',
-    signInIntro: 'Tẹ nọ́ńbà fóònù tàbí àdírẹ́sì ímeèlì rẹ. A ó fi kóòdù ìfìdí-múlẹ̀ ránṣẹ́ sí ọ.',
-    signUpIntro: 'Ọ̀fẹ́ ni. Nọ́ńbà fóònù tàbí àdírẹ́sì ímeèlì nìkan ni o nílò. A ó fi kóòdù ìfìdí-múlẹ̀ ránṣẹ́ láti rí i dájú pé tìrẹ ni.',
+    signInIntro: 'Tẹ àdírẹ́sì ímeèlì rẹ. A ó fi kóòdù ìfìdí-múlẹ̀ ránṣẹ́ sí ọ. Wíwọlé pẹ̀lú fóònù ń bọ̀ láìpẹ́.',
+    signUpIntro: 'Ọ̀fẹ́ ni. Àdírẹ́sì ímeèlì nìkan ni o nílò. A ó fi kóòdù ìfìdí-múlẹ̀ ránṣẹ́ láti rí i dájú pé tìrẹ ni. Wíwọlé pẹ̀lú fóònù ń bọ̀ láìpẹ́.',
     usePhone: 'Nọ́ńbà fóònù',
     useEmailInstead: 'Lo ímeèlì dípò',
     emailOnlyIntro: 'Tẹ àdírẹ́sì ímeèlì rẹ. A ó fi kóòdù oní-nọ́ńbà mẹ́fà ránṣẹ́ láti rí i dájú pé tìrẹ ni.',
@@ -151,7 +152,7 @@ const yo: Dictionary = {
     noRoles: 'Kò sí ipa kankan síbẹ̀.',
     pending: 'Ó ń dúró de àyẹ̀wò',
     comingSoon: 'Ti ṣetán',
-    comingSoonTools: 'Ọjà oko, yíyá ẹ̀rọ, iṣẹ́ oko àti àyẹ̀wò oko ti wà lárọ̀ọ́wọ́tó fún oko rẹ.',
+    comingSoonTools: 'Ọjà oko, yíyá ẹ̀rọ àti iṣẹ́ oko ti wà lárọ̀ọ́wọ́tó fún oko rẹ. Ìdámọ̀ àìsàn láti fọ́tò ń bọ̀ láìpẹ́.',
     quick: ['Gba òṣìṣẹ́', 'Yá tírákítọ̀', 'Ra ohun èlò', 'Ìwé ìṣirò'],
     moreOnWeb: 'Ìfìdímúlẹ̀, àwọn oko, òṣìṣẹ́ ilé-iṣẹ́ àti ìbéèrè ìpamọ́ wà lórí wẹ́ẹ̀bù fún báyìí.',
     openWebsite: 'Ṣí àkọọ́lẹ̀ mi lórí wẹ́ẹ̀bù',
@@ -172,7 +173,7 @@ const yo: Dictionary = {
     pickLanguage: 'Yan èdè rẹ',
     start: 'Bẹ̀rẹ̀',
     haveAccount: 'Mo ti ní àkọọ́lẹ̀',
-    free: 'Ọ̀fẹ́ ni láti darapọ̀. Ó ń ṣiṣẹ́ lórí fóònù Android èyíkéyìí.',
+    free: 'Ọ̀fẹ́ ni láti darapọ̀. Ó ń ṣiṣẹ́ lórí Android 8.0 àti èyí tó jẹ́ tuntun jù bẹ́ẹ̀ lọ.',
   },
   setup: {
     step: 'Ìgbésẹ̀ {n} nínú {total}',
@@ -474,7 +475,7 @@ const yo: Dictionary = {
     place: 'Ra á',
     order: 'Ra èyí',
     directNote: 'O máa sanwó fún olùtajà tààrà nípasẹ̀ báńkì. Olùtajà máa fìdí ìsanwó rẹ múlẹ̀, lẹ́yìn náà ó máa fi ọjà ránṣẹ́. Ìsanwó nípasẹ̀ CultivaNode ń bọ̀ láìpẹ́.',
-    escrowNote: 'O máa sanwó lórí wẹ́ẹ̀bù. A máa pa owó rẹ mọ́ títí o fi fìdí ìfijíṣẹ́ múlẹ̀.',
+    escrowNote: 'O máa sanwó lórí wẹ́ẹ̀bù, pẹ̀lú káàdì, ìfiránṣẹ́ owó láti báńkì tàbí USSD, nípasẹ̀ olùpèsè ìsanwó tí ó ní ìwé-àṣẹ.',
     soldOut: 'Ó ti tán',
     errors: {
       bad_address: 'Tẹ àdírẹ́sì ìfijíṣẹ́, ìpínlẹ̀ àti nọ́ńbà fóònù tí a lè pè.',
@@ -597,7 +598,7 @@ const yo: Dictionary = {
     noJobsBody: 'Fi ohun ọ̀gbìn kún un, a ó sì ṣètò iṣẹ́ rẹ̀ fún ọ.',
     tomorrow: 'Ṣe é lọ́la',
     tools: 'Irinṣẹ́ oko',
-    toolNames: { livestock: 'Ẹran àti ẹja', books: 'Ìwé ìṣirò oko', inventory: 'Ilé ìkẹ́rùsí àti ohun èlò', map: 'Rin yí ààlà oko ká', scouting: 'Ṣàyẹ̀wò ohun ọ̀gbìn' },
+    toolNames: { livestock: 'Ẹran àti ẹja', books: 'Ìwé ìṣirò oko', inventory: 'Ilé ìkẹ́rùsí àti ohun èlò', map: 'Rin yí ààlà oko ká (ń bọ̀ láìpẹ́)', scouting: 'Ṣàyẹ̀wò ohun ọ̀gbìn' },
     addCrop: 'Fi ohun ọ̀gbìn kún un',
     addFarm: 'Fi oko mìíràn kún un',
   },
@@ -751,7 +752,7 @@ const yo: Dictionary = {
   },
   scout: {
     title: 'Ṣàyẹ̀wò ohun ọ̀gbìn',
-    intro: 'Ya àwòrán ìṣòro náà kí o sì sọ ohun tí o rí. AI máa dá ohun tó lè jẹ́ lábàá.',
+    intro: 'Ya àwòrán ìṣòro náà kí o sì sọ ohun tí o rí. Nígbà tí a bá tan àyẹ̀wò fọ́tò, AI máa dá ohun tó lè jẹ́ lábàá.',
     crop: 'Ohun ọ̀gbìn wo?',
     noCrop: 'Kọ́kọ́ fi ohun ọ̀gbìn kún un.',
     photos: 'Àwòrán (títí di mẹ́rin)',
