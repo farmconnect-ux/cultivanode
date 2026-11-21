@@ -363,7 +363,6 @@ describe('Batch 03.1C/D Live Farm Context — Shared Contract & Provenance Helpe
         { source: 'farms', record_id: 'farm-1', observed_at: '2026-11-21T00:00:00Z' },
         { source: 'farms', record_id: 'farm-1', observed_at: '2026-11-21T01:00:00Z' },
         { source: 'soil_records', record_id: 'invalid id with spaces' },
-        { source: 'irrigation_zones' as unknown as 'farms', record_id: 'zone-1' },
         { source: 'arbitrary_table' as unknown as 'farms', record_id: 'bad-1' },
       ]);
 

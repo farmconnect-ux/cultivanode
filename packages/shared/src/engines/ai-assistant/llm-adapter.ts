@@ -1,5 +1,6 @@
 import type { FarmerContext, GroundedPrompt, GuardrailCheckResult, GroundedKnowledgeSnippet } from './types';
 import type { AppLanguage } from '../../roles';
+import type { GroundedEvidencePackage } from '../memory-rag/types';
 import { buildGroundedPrompt } from './prompt-builder';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
 
@@ -10,6 +11,7 @@ export const DEFAULT_CLAUDE_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5'];
 export interface GroundedAiAssistantRequest {
   query: string;
   context: FarmerContext;
+  groundedEvidence?: GroundedEvidencePackage | null;
   language?: AppLanguage | 'pcm';
   imageBase64?: string;
   imageMimeType?: string;
@@ -335,7 +337,7 @@ export async function askGroundedAiAssistant(
   const timeoutMs = params.timeoutMs ?? 20000;
   const mimeType = params.imageMimeType ?? 'image/jpeg';
 
-  const groundedPrompt = buildGroundedPrompt(params.query, params.context, lang);
+  const groundedPrompt = buildGroundedPrompt(params.query, params.context, lang, params.groundedEvidence);
 
   let rawAnswer = '';
   let providerUsed: AiProvider = 'rule-engine';

@@ -2392,6 +2392,231 @@ export type Database = {
           },
         ]
       }
+      agronomic_standard_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          content_sha256: string
+          created_at: string
+          document_id: string
+          embedding: string | null
+          embedding_model: string | null
+          embedding_version: string | null
+          id: string
+          page_number: number | null
+          paragraph_index: number | null
+          section_ref: string | null
+          standard_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          content_sha256: string
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_version?: string | null
+          id?: string
+          page_number?: number | null
+          paragraph_index?: number | null
+          section_ref?: string | null
+          standard_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          content_sha256?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_version?: string | null
+          id?: string
+          page_number?: number | null
+          paragraph_index?: number | null
+          section_ref?: string | null
+          standard_id?: string
+        }
+        Relationships: []
+      }
+      agronomic_standard_documents: {
+        Row: {
+          authority_verified_at: string | null
+          authority_verified_by: string | null
+          content_sha256: string
+          created_at: string
+          document_title: string
+          external_uri: string | null
+          extracted_text_sha256: string | null
+          extraction_method: string
+          extraction_version: string
+          file_hash_verified_at: string | null
+          file_hash_verified_by: string | null
+          file_size_bytes: number
+          id: string
+          ingestion_error: string | null
+          ingestion_status: string
+          mime_type: string
+          original_file_sha256: string | null
+          provenance_verification_status: string
+          source_authority: string
+          standard_id: string
+          storage_bucket_id: string | null
+          storage_object_path: string | null
+          uploaded_by: string | null
+          verification_trace_id: string | null
+        }
+        Insert: {
+          authority_verified_at?: string | null
+          authority_verified_by?: string | null
+          content_sha256: string
+          created_at?: string
+          document_title: string
+          external_uri?: string | null
+          extracted_text_sha256?: string | null
+          extraction_method?: string
+          extraction_version?: string
+          file_hash_verified_at?: string | null
+          file_hash_verified_by?: string | null
+          file_size_bytes: number
+          id?: string
+          ingestion_error?: string | null
+          ingestion_status?: string
+          mime_type: string
+          original_file_sha256?: string | null
+          provenance_verification_status?: string
+          source_authority: string
+          standard_id: string
+          storage_bucket_id?: string | null
+          storage_object_path?: string | null
+          uploaded_by?: string | null
+          verification_trace_id?: string | null
+        }
+        Update: {
+          authority_verified_at?: string | null
+          authority_verified_by?: string | null
+          content_sha256?: string
+          created_at?: string
+          document_title?: string
+          external_uri?: string | null
+          extracted_text_sha256?: string | null
+          extraction_method?: string
+          extraction_version?: string
+          file_hash_verified_at?: string | null
+          file_hash_verified_by?: string | null
+          file_size_bytes?: number
+          id?: string
+          ingestion_error?: string | null
+          ingestion_status?: string
+          mime_type?: string
+          original_file_sha256?: string | null
+          provenance_verification_status?: string
+          source_authority?: string
+          standard_id?: string
+          storage_bucket_id?: string | null
+          storage_object_path?: string | null
+          uploaded_by?: string | null
+          verification_trace_id?: string | null
+        }
+        Relationships: []
+      }
+      farm_memory_items: {
+        Row: {
+          category: string
+          confidence: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          consent_verified_at: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          embedding: string | null
+          embedding_model: string | null
+          embedding_version: string | null
+          expires_at: string | null
+          farm_id: string | null
+          id: string
+          idempotency_key: string | null
+          lifecycle_status: string
+          memory_scope: string
+          memory_type: string
+          profile_id: string | null
+          source_kind: string
+          source_refs: Json
+          structured_content: Json
+          superseded_by_id: string | null
+          supersedes_id: string | null
+          sync_state: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          verification_status: string
+        }
+        Insert: {
+          category: string
+          confidence?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          consent_verified_at?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_version?: string | null
+          expires_at?: string | null
+          farm_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          lifecycle_status?: string
+          memory_scope: string
+          memory_type: string
+          profile_id?: string | null
+          source_kind: string
+          source_refs?: Json
+          structured_content?: Json
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          sync_state?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          consent_verified_at?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          embedding?: string | null
+          embedding_model?: string | null
+          embedding_version?: string | null
+          expires_at?: string | null
+          farm_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          lifecycle_status?: string
+          memory_scope?: string
+          memory_type?: string
+          profile_id?: string | null
+          source_kind?: string
+          source_refs?: Json
+          structured_content?: Json
+          superseded_by_id?: string | null
+          supersedes_id?: string | null
+          sync_state?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: string
+        }
+        Relationships: []
+      }
       farm_agronomic_standards: {
         Row: {
           agro_zone: string
@@ -8682,6 +8907,166 @@ export type Database = {
       record_ai_feedback: {
         Args: { p_note?: string; p_outcome: string; p_trace_id: string }
         Returns: string
+      }
+      create_farm_memory_item: {
+        Args: {
+          p_category: string
+          p_confidence?: number
+          p_embedding?: string | null
+          p_embedding_model?: string | null
+          p_embedding_version?: string | null
+          p_expires_at?: string | null
+          p_farm_id: string | null
+          p_idempotency_key?: string | null
+          p_memory_scope: string
+          p_memory_type: string
+          p_request_confirm?: boolean
+          p_source_kind: string
+          p_source_refs?: Json
+          p_structured_content: Json
+          p_sync_state?: string
+          p_title: string
+          p_trace_id?: string | null
+        }
+        Returns: Database["public"]["Tables"]["farm_memory_items"]["Row"]
+      }
+      complete_verified_agronomic_document_ingestion: {
+        Args: {
+          p_actor_id: string
+          p_chunks: Json
+          p_document_title: string
+          p_external_uri?: string | null
+          p_extracted_text_sha256: string
+          p_extraction_method: string
+          p_extraction_version: string
+          p_file_size_bytes: number
+          p_mime_type: string
+          p_original_file_sha256: string
+          p_source_authority: string
+          p_standard_id: string
+          p_storage_object_path: string
+          p_verification_trace_id: string
+        }
+        Returns: Json
+      }
+      ingest_agronomic_standard_document: {
+        Args: {
+          p_chunks: Json
+          p_content_sha256: string
+          p_document_title: string
+          p_external_uri?: string | null
+          p_extracted_text_sha256?: string | null
+          p_extraction_method?: string
+          p_extraction_version?: string
+          p_file_size_bytes: number
+          p_mime_type: string
+          p_original_file_sha256?: string | null
+          p_provenance_verification_status?: string
+          p_source_authority: string
+          p_standard_id: string
+          p_storage_object_path?: string | null
+        }
+        Returns: Json
+      }
+      record_agronomic_document_ingestion_failure: {
+        Args: {
+          p_content_sha256?: string | null
+          p_document_title: string
+          p_error_message: string
+          p_external_uri?: string | null
+          p_file_size_bytes?: number
+          p_ingestion_status?: string
+          p_mime_type: string
+          p_original_file_sha256?: string | null
+          p_source_authority: string
+          p_standard_id: string
+          p_storage_object_path?: string | null
+        }
+        Returns: Json
+      }
+      search_farm_memory_items: {
+        Args: {
+          p_categories?: string[] | null
+          p_farm_id?: string | null
+          p_include_profile?: boolean
+          p_include_provisional?: boolean
+          p_limit?: number
+          p_query_embedding?: string | null
+        }
+        Returns: Array<{
+          category: string
+          confidence: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          farm_id: string | null
+          id: string
+          lifecycle_status: string
+          memory_scope: string
+          memory_type: string
+          profile_id: string | null
+          similarity_score: number | null
+          source_kind: string
+          source_refs: Json
+          structured_content: Json
+          sync_state: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          verification_status: string
+        }>
+      }
+      search_published_agronomic_standards: {
+        Args: {
+          p_agro_zone?: string | null
+          p_crop_or_livestock_id?: string | null
+          p_limit?: number
+          p_query_embedding?: string | null
+          p_query_text?: string | null
+          p_source_authority?: string | null
+          p_standard_code?: string | null
+        }
+        Returns: Array<{
+          agro_zone: string
+          chunk_id: string
+          content: string
+          crop_or_livestock_id: string
+          document_id: string
+          document_title: string
+          effective_from: string | null
+          effective_to: string | null
+          extraction_method: string
+          extraction_version: string
+          original_file_sha256: string | null
+          page_number: number | null
+          paragraph_index: number | null
+          provenance_verification_status: string
+          published_at: string | null
+          section_ref: string | null
+          similarity_score: number | null
+          source_authority: string
+          standard_code: string
+          standard_id: string
+          storage_object_path: string | null
+          title: string
+          version: string
+        }>
+      }
+      transition_farm_memory_item: {
+        Args: {
+          p_action: string
+          p_memory_id: string
+          p_new_embedding?: string | null
+          p_new_embedding_model?: string | null
+          p_new_embedding_version?: string | null
+          p_new_source_refs?: Json | null
+          p_new_structured_content?: Json | null
+          p_new_title?: string | null
+          p_trace_id?: string | null
+        }
+        Returns: Database["public"]["Tables"]["farm_memory_items"]["Row"]
       }
       write_ai_audit_event: {
         Args: {

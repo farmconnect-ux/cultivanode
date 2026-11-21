@@ -10,3 +10,4 @@ export * from './farm-management';
 export * from './iot';
 export * from './offline-sync';
 export * from './farm-context';
+export * from './memory-rag';
