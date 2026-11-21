@@ -309,7 +309,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
     expect(combinedRejected.ok).toBe(false);
     if (!combinedRejected.ok) {
       expect(combinedRejected.status).toBe(400);
-      expect(combinedRejected.code).toBe("invalid_input");
+      expect(combinedRejected.code).toBe("invalid_document_payload");
     }
 
     // 3. File-backed ingestion: upload -> download -> SHA-256 verify -> extract from archived bytes -> file_hash_verified
@@ -382,7 +382,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
     expect(binaryRejected.ok).toBe(false);
     if (!binaryRejected.ok) {
       expect(binaryRejected.status).toBe(400);
-      expect(binaryRejected.code).toBe("invalid_file_bytes");
+      expect(binaryRejected.code).toBe("invalid_file_signature");
     }
 
     // 6. Storage upload failure fails closed and records durable failure via record_agronomic_document_ingestion_failure
@@ -405,7 +405,7 @@ describe("Batch 03.2 — Atomic Memory Governance & Verified Document Provenance
     expect(uploadFailed.ok).toBe(false);
     if (!uploadFailed.ok) {
       expect(uploadFailed.status).toBe(502);
-      expect(uploadFailed.code).toBe("storage_upload_failed");
+      expect(uploadFailed.code).toBe("storage_archive_failed");
     }
     expect(rpc).toHaveBeenLastCalledWith(
       "record_agronomic_document_ingestion_failure",
