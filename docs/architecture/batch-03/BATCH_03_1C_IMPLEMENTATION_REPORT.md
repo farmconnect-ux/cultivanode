@@ -115,8 +115,8 @@
 - Current temperature, humidity, and wind facts can be `verified_current` only when the cache is not stale, the farm is matched by coordinates, and the provider observation timestamp is valid, timezone-qualified ISO 8601, not in the future, and no older than 12 hours at retrieval.
 - Missing observation timestamps leave current-condition measurements `unverified_provisional`; malformed or future-dated timestamps produce `invalid_rejected`; observations older than 12 hours produce `stale`.
 - State-only location matches remain `unverified_provisional` even when their observation timestamp is valid.
-- Cache `fetched_at` remains separately available as retrieval metadata. Forecast-period rainfall remains distinct from current observed conditions.
-- Added regression coverage for missing, malformed, invalid-calendar, invalid-timezone, future, stale, and fresh observation timestamps, and for state-only location matching.
+- Cache `fetched_at` remains separately available as retrieval metadata, but malformed or future cache timestamps invalidate current-condition verification and stale cache timestamps make current conditions stale. Forecast-period rainfall remains distinct from current observed conditions.
+- Added regression coverage for missing, malformed, invalid-calendar, invalid-timezone, future, stale, and fresh observation timestamps; malformed, future, and stale cache retrieval timestamps; and state-only location matching.
 
 ### 5.3 Verification status
 
