@@ -379,7 +379,7 @@ describe("Batch 03.1C — Central Trusted AI Audit Client (ai-audit.ts)", () => 
       modelId: "claude-sonnet-4-5",
       promptVersion: "assistant-v1",
       executionOutcome: "completed",
-      guardrailResult: { status: "passed", rule_ids: ["nafdac"], reason_codes: [], blocked: false },
+      guardrailResult: { status: "passed", rule_ids: ["nafdac_chemical_guardrail"], reason_codes: [], blocked: false },
       contextRefs: [{ source: "farms", record_id: FARM_ID, observed_at: "2026-11-21T04:00:00Z" }],
       memoryItemIds: [],
     });
