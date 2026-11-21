@@ -105,8 +105,8 @@
 
 ### 5.1 Guardrail audit metadata
 
-- Replaced permissive length-only validation of `guardrail_result.rule_ids` and `guardrail_result.reason_codes` with a strict lowercase `snake_case` identifier schema.
-- Applied the shared secret/data-URI rejection check to every rule ID and reason code. Free-form prose, prompt fragments, bearer/JWT-shaped strings, `sk_live_` / `sk_test_` values, and key/secret/password assignment strings are rejected before creation of the service-role client.
+- Replaced permissive length-only validation of `guardrail_result.rule_ids` and `guardrail_result.reason_codes` with explicit reviewed allowlists for the currently used rule IDs and reason codes.
+- Applied the shared secret/data-URI rejection check to every allowlisted value. Only `nafdac_chemical_guardrail` is currently accepted as a rule ID; `provider_execution_failed`, `prohibited_chemical`, and `grounding_execution_failed` are the accepted reason codes. New codes require a deliberate code change. Free-form prose, prompt fragments, bearer/JWT-shaped strings, `sk_live_` / `sk_test_` values, and key/secret/password assignment strings are rejected before creation of the service-role client.
 - Added regression tests for both arrays covering natural-language prompt fragments, secret-shaped values, bearer/JWT-shaped values, and arbitrary hyphenated text. Tests assert that invalid payloads do not invoke the service-role client or audit RPC.
 
 ### 5.2 Weather observation validity
