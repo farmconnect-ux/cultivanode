@@ -729,7 +729,9 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
     const snapshot = await getLiveFarmContextSnapshot(makeCaller(client), { now: new Date("2026-11-21T04:00:00Z") });
     const weather = snapshot.domains.weather_and_environment.data;
     expect(weather?.temperatureC.state).toBe("unverified_provisional");
-    expect(weather?.observedAt.state).toBe("unverified_provisional");
+    expect(weather?.humidityPct.state).toBe("unverified_provisional");
+    expect(weather?.windSpeedKmh.state).toBe("unverified_provisional");
+    expect(weather?.observedAt.state).toBe("verified_current");
     expect(weather?.fetchedAt.state).toBe("unverified_provisional");
   });
 
