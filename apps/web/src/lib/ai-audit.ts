@@ -30,7 +30,9 @@ import { createServiceClient } from "@/lib/supabase/admin";
 const VALID_RECORD_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,63}$/;
 const VALID_ISO_TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
 const SECRET_OR_DATA_URI_RE =
-  /(bearer\s+[a-z0-9._-]+|sk-[a-z0-9_-]{10,}|eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+|data:image\/[a-z]+;base64,)/i;
+  /(bearer\s+[a-z0-9._-]+|sk[-_](?:live|test)[-_][a-z0-9_-]{6,}|sk-[a-z0-9_-]{10,}|eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+|data:image\/[a-z]+;base64,|(?:api[_-]?key|secret|password)\s*[:=])/i;
+const MODEL_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$/;
+const PROMPT_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 const GuardrailResultSchema = z
   .object({
@@ -60,16 +62,16 @@ export const AiAuditEventInputSchema = z
   .object({
     traceId: z.string().uuid(),
     provider: z.enum(["claude", "gemini", "openai", "rule-engine"]),
+    // Audit metadata is an identifier, never free-form text. This is defence in depth;
+    // call sites must still supply provider/model/version metadata only.
     modelId: z
       .string()
-      .min(1)
-      .max(128)
-      .refine((v) => !SECRET_OR_DATA_URI_RE.test(v), "Invalid model identifier."),
+      .regex(MODEL_ID_RE, "Model identifier must use the documented identifier format.")
+      .refine((v) => !SECRET_OR_DATA_URI_RE.test(v), "Secrets are prohibited in model identifiers."),
     promptVersion: z
       .string()
-      .min(1)
-      .max(128)
-      .refine((v) => !SECRET_OR_DATA_URI_RE.test(v), "Invalid prompt version."),
+      .regex(PROMPT_VERSION_RE, "Prompt version must be a short version identifier.")
+      .refine((v) => !SECRET_OR_DATA_URI_RE.test(v), "Secrets are prohibited in prompt version identifiers."),
     executionOutcome: z.enum(["completed", "blocked", "failed", "fallback"]),
     guardrailResult: GuardrailResultSchema.default({}),
     contextRefs: z
