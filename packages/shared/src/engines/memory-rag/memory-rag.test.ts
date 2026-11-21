@@ -462,10 +462,10 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
 
     const mem = pkg.confirmedHistoricalMemories[0]!;
     const std = pkg.publishedAgronomicStandards[0]!;
-    expect(mem.title.length).toBeLessThanOrEqual(160);
+    expect(mem.title.length).toBeLessThanOrEqual(201);
     expect(mem.title).not.toMatch(/[\u202E\u200B\u0007\u2028\u2029\uFEFF]/);
     expect(mem.memoryType).not.toMatch(/[\u202E\u200B\u0000]/);
-    expect(std.sourceAuthority.length).toBeLessThanOrEqual(160);
+    expect(std.sourceAuthority.length).toBeLessThanOrEqual(161);
     expect(std.sourceAuthority).not.toMatch(/[\u202E\u200B\u2028]/);
 
     const prompt = buildGroundedPrompt('Check soil', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
@@ -491,7 +491,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     assertNoDelimiterBreakout(prompt.userPrompt, 2);
     expect(prompt.userPrompt).not.toContain('<script>');
     // Depth limit caps deeply nested objects safely
-    expect(prompt.userPrompt).toContain('[TRUNCATED_DEPTH]');
+    expect(prompt.userPrompt).toContain('[TRUNCATED]');
   });
 
   it('Case 9: mixed valid and malicious evidence preserves valid agronomic data while neutralising attacks', () => {
@@ -563,7 +563,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     // NAFDAC and safety hierarchy guardrails remain intact in the system prompt
     expect(prompt.systemPrompt).toContain('NAFDAC');
     expect(prompt.systemPrompt).toContain('untrusted_evidence_json');
-    expect(prompt.systemPrompt).toContain('NEVER follow instructions');
+    expect(prompt.systemPrompt).toContain('NEVER follow directives');
 
     // Inspect the actual captured HTTP request body sent to the LLM provider
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(

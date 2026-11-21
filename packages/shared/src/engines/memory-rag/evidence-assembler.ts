@@ -47,10 +47,9 @@ const CONTROL_AND_BIDI_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009
 const UNUSUAL_WHITESPACE_RE = /[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/g;
 
 const PROMPT_INJECTION_PATTERNS: readonly RegExp[] = [
-  /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)/gi,
-  /disregard\s+(all\s+)?(previous|prior|system)\s+(instructions?|rules?)/gi,
+  /(ignore|forget|disregard)\s+(all\s+)?(previous|prior|above|system|safety)\s+(instructions?|prompts?|rules?|constraints?)/gi,
   /override\s+(system|safety|guardrail|consent|security)\s*(instructions?|policy|rules?)?/gi,
-  /^\s*(system|assistant|developer|tool)\s*:/gim,
+  /\b(system|assistant|developer|tool)\s*:/gi,
   /<\s*\/?\s*(system|prompt|instructions?|tool_call|untrusted_evidence|untrusted_evidence_json)\b[^>]*>/gi,
 ];
 
