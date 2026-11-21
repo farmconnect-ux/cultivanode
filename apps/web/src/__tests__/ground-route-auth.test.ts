@@ -21,9 +21,13 @@ vi.mock("@/lib/farm-context/live-farm-context.service", () => ({
 vi.mock("@/lib/ai-audit", () => ({
   recordAiAuditEvent: mocks.recordAiAuditEvent,
 }));
-vi.mock("@cultivanode/shared", () => ({
-  buildGroundedPrompt: mocks.buildGroundedPrompt,
-}));
+vi.mock("@cultivanode/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cultivanode/shared")>();
+  return {
+    ...actual,
+    buildGroundedPrompt: mocks.buildGroundedPrompt,
+  };
+});
 
 import { POST } from "@/app/api/engines/ai/ground/route";
 
