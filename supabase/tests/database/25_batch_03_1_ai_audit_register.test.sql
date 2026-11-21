@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(45);
 
 select ok(
   to_regclass('public.ai_audit_events') is not null,
@@ -38,6 +38,20 @@ select ok(
   exists (select 1 from pg_indexes where schemaname = 'public'
     and indexname = 'ai_audit_events_trace_id_key' and indexdef ilike '%unique%'),
   'trace_id is unique for idempotent audit writes'
+);
+
+select ok(
+  exists (select 1 from pg_indexes where schemaname = 'public'
+    and indexname = 'ai_audit_events_prompt_version_idx'
+    and indexdef ilike '%(prompt_version_id)%' and indexdef ilike '%where (prompt_version_id is not null)%'),
+  'prompt_version_id foreign key has a partial covering index'
+);
+
+select ok(
+  exists (select 1 from pg_indexes where schemaname = 'public'
+    and indexname = 'ai_audit_feedback_actor_subject_idx'
+    and indexdef ilike '%(actor_subject_id)%'),
+  'feedback actor_subject_id foreign key has a covering index'
 );
 
 select ok(
