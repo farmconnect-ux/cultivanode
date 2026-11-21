@@ -53,6 +53,11 @@ export const ALLOWED_AUDIT_CONTEXT_SOURCES = [
   'crop_harvests',
   'soil_records',
   'farm_agronomic_standards',
+  'agronomic_standard_documents',
+  'agronomic_standard_chunks',
+  'farm_memory_items',
+  'irrigation_zones',
+  'irrigation_events',
   'farm_inventory',
   'farm_inventory_transactions',
   'farm_financial_transactions',
@@ -82,8 +87,6 @@ export type AllowedAuditContextSource = (typeof ALLOWED_AUDIT_CONTEXT_SOURCES)[n
  */
 export const FARM_CONTEXT_EVIDENCE_SOURCES = [
   ...ALLOWED_AUDIT_CONTEXT_SOURCES,
-  'irrigation_zones',
-  'irrigation_events',
   'marketplace_order_items',
   'marketplace_produce_provenance',
 ] as const;
