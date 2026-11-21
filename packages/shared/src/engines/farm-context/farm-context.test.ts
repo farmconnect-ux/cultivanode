@@ -369,4 +369,64 @@ describe('Batch 03.1C/D Live Farm Context — Shared Contract & Provenance Helpe
       expect(refs).toEqual([{ source: 'farms', record_id: 'farm-1', observed_at: '2026-11-21T00:00:00Z' }]);
     });
   });
+
+  describe('Batch 03.3 Workstream B4: Machinery telemetry provenance trust classification', () => {
+    it('promotes verified device_authenticated telemetry to verified_current, keeps farmer_observation as unverified_provisional, and excludes rejected telemetry', () => {
+      const deviceVerified = evaluateMachineryTelemetryConsistency({
+        machineryId: 'm-1',
+        machineryName: 'Tractor A',
+        assetEngineHours: 120,
+        retrievedAt: '2026-11-21T12:00:00Z',
+        telemetrySamples: [
+          {
+            id: 't-dev-1',
+            engineHours: 121.5,
+            recordedAt: '2026-11-21T11:55:00Z',
+            sourceCategory: 'device_authenticated',
+            validationStatus: 'verified',
+            trustClassification: 'verified_current',
+          },
+        ],
+      });
+      expect(deviceVerified.state).toBe('verified_current');
+      expect(deviceVerified.latestValidHours).toBe(121.5);
+
+      const farmerObs = evaluateMachineryTelemetryConsistency({
+        machineryId: 'm-1',
+        machineryName: 'Tractor A',
+        assetEngineHours: 120,
+        retrievedAt: '2026-11-21T12:00:00Z',
+        telemetrySamples: [
+          {
+            id: 't-farm-1',
+            engineHours: 121.0,
+            recordedAt: '2026-11-21T11:55:00Z',
+            sourceCategory: 'farmer_observation',
+            validationStatus: 'provisional',
+            trustClassification: 'unverified_provisional',
+          },
+        ],
+      });
+      expect(farmerObs.state).toBe('unverified_provisional');
+
+      const rejected = evaluateMachineryTelemetryConsistency({
+        machineryId: 'm-1',
+        machineryName: 'Tractor A',
+        assetEngineHours: 120,
+        retrievedAt: '2026-11-21T12:00:00Z',
+        telemetrySamples: [
+          {
+            id: 't-rej-1',
+            engineHours: 121.0,
+            recordedAt: '2026-11-21T11:55:00Z',
+            sourceCategory: 'device_authenticated',
+            validationStatus: 'rejected',
+            trustClassification: 'invalid_rejected',
+          },
+        ],
+      });
+      expect(rejected.state).toBe('invalid_rejected');
+      expect(rejected.latestValidHours).toBeNull();
+    });
+  });
 });

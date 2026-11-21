@@ -5581,8 +5581,49 @@ export type Database = {
           },
         ]
       }
+      machinery_device_links: {
+        Row: {
+          created_at: string
+          device_id: string
+          farm_id: string
+          id: string
+          installed_at: string
+          is_active: boolean
+          linked_by: string | null
+          machinery_id: string
+          uninstalled_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          farm_id: string
+          id?: string
+          installed_at?: string
+          is_active?: boolean
+          linked_by?: string | null
+          machinery_id: string
+          uninstalled_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          farm_id?: string
+          id?: string
+          installed_at?: string
+          is_active?: boolean
+          linked_by?: string | null
+          machinery_id?: string
+          uninstalled_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       machinery_telemetry: {
         Row: {
+          actor_id: string | null
+          device_event_id: string | null
           engine_hours: number | null
           engine_rpm: number | null
           engine_temp_c: number | null
@@ -5590,13 +5631,23 @@ export type Database = {
           fuel_pct: number | null
           heading_deg: number | null
           id: string
+          ingested_at: string
           location: unknown
           machinery_id: string
+          payload_sha256: string | null
           recorded_at: string
+          source_category: string
+          source_device_id: string | null
+          source_provider: string | null
           speed_kmh: number | null
           status: string
+          trace_id: string
+          trust_classification: string
+          validation_status: string
         }
         Insert: {
+          actor_id?: string | null
+          device_event_id?: string | null
           engine_hours?: number | null
           engine_rpm?: number | null
           engine_temp_c?: number | null
@@ -5604,13 +5655,23 @@ export type Database = {
           fuel_pct?: number | null
           heading_deg?: number | null
           id?: string
+          ingested_at?: string
           location?: unknown
           machinery_id: string
+          payload_sha256?: string | null
           recorded_at?: string
+          source_category?: string
+          source_device_id?: string | null
+          source_provider?: string | null
           speed_kmh?: number | null
           status?: string
+          trace_id?: string
+          trust_classification?: string
+          validation_status?: string
         }
         Update: {
+          actor_id?: string | null
+          device_event_id?: string | null
           engine_hours?: number | null
           engine_rpm?: number | null
           engine_temp_c?: number | null
@@ -5618,11 +5679,19 @@ export type Database = {
           fuel_pct?: number | null
           heading_deg?: number | null
           id?: string
+          ingested_at?: string
           location?: unknown
           machinery_id?: string
+          payload_sha256?: string | null
           recorded_at?: string
+          source_category?: string
+          source_device_id?: string | null
+          source_provider?: string | null
           speed_kmh?: number | null
           status?: string
+          trace_id?: string
+          trust_classification?: string
+          validation_status?: string
         }
         Relationships: [
           {
@@ -8946,6 +9015,66 @@ export type Database = {
           p_standard_id: string
           p_storage_object_path: string
           p_verification_trace_id: string
+        }
+        Returns: Json
+      }
+      ingest_authenticated_device_telemetry: {
+        Args: {
+          p_device_event_id: string
+          p_device_id: string
+          p_device_token: string
+          p_engine_hours?: number | null
+          p_engine_rpm?: number | null
+          p_engine_temp_c?: number | null
+          p_farm_id: string
+          p_fuel_pct?: number | null
+          p_heading_deg?: number | null
+          p_machinery_id: string
+          p_recorded_at: string
+          p_speed_kmh?: number | null
+          p_status?: string
+          p_trace_id?: string | null
+        }
+        Returns: Json
+      }
+      ingest_provider_machinery_telemetry: {
+        Args: {
+          p_device_event_id: string
+          p_engine_hours?: number | null
+          p_engine_rpm?: number | null
+          p_engine_temp_c?: number | null
+          p_farm_id: string
+          p_fuel_pct?: number | null
+          p_heading_deg?: number | null
+          p_machinery_id: string
+          p_recorded_at: string
+          p_source_provider: string
+          p_speed_kmh?: number | null
+          p_status?: string
+          p_trace_id?: string | null
+        }
+        Returns: Json
+      }
+      record_machinery_observation: {
+        Args: {
+          p_engine_hours?: number | null
+          p_engine_temp_c?: number | null
+          p_farm_id: string
+          p_fuel_pct?: number | null
+          p_machinery_id: string
+          p_recorded_at: string
+          p_status?: string
+          p_trace_id?: string | null
+        }
+        Returns: Json
+      }
+      transition_machinery_telemetry_trust: {
+        Args: {
+          p_new_trust_classification: string
+          p_new_validation_status: string
+          p_reason: string
+          p_telemetry_id: string
+          p_trace_id?: string | null
         }
         Returns: Json
       }

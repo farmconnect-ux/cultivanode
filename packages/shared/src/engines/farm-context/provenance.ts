@@ -384,6 +384,9 @@ export interface MachineryTelemetrySample {
   engineHours: number | null;
   recordedAt: string;
   qualityFlag?: string | null;
+  sourceCategory?: 'device_authenticated' | 'trusted_provider_integration' | 'farmer_observation' | 'staff_observation' | 'unverified_provisional' | string | null;
+  validationStatus?: 'verified' | 'provisional' | 'rejected' | string | null;
+  trustClassification?: 'verified_current' | 'unverified_provisional' | 'invalid_rejected' | string | null;
 }
 
 /**
@@ -448,13 +451,17 @@ export function evaluateMachineryTelemetryConsistency(params: {
   let sawDuplicateConflict = false;
 
   for (const sample of ordered) {
-    if (sample.qualityFlag && sample.qualityFlag !== 'valid') {
+    if (
+      (sample.qualityFlag && sample.qualityFlag !== 'valid') ||
+      sample.validationStatus === 'rejected' ||
+      sample.trustClassification === 'invalid_rejected'
+    ) {
       sawInvalid = true;
       issues.push({
         domain: 'equipment_and_iot_telemetry',
         field: 'engine_hours',
         code: 'faulty_or_quarantined_sensor',
-        message: `Machinery "${params.machineryName}" telemetry sample ${sample.id} excluded due to quality_flag="${sample.qualityFlag}".`,
+        message: `Machinery "${params.machineryName}" telemetry sample ${sample.id} excluded due to rejected/quarantined provenance or quality_flag.`,
         source: 'machinery_telemetry',
         recordId: sample.id,
       });
@@ -633,6 +640,36 @@ export function evaluateMachineryTelemetryConsistency(params: {
   if (isStale) {
     return {
       state: 'stale',
+      latestObservedHours,
+      latestObservedId,
+      latestObservedAt,
+      latestValidHours,
+      latestValidSampleId,
+      latestValidObservedAt,
+      conflicts,
+      issues,
+    };
+  }
+
+  // Batch 03.3 Workstream B4: Unverified/provisional or farmer/staff observation telemetry
+  // must NEVER be promoted to `verified_current` in Farm Context.
+  const latestValidSample = previousSample;
+  const isUnverifiedProvenance =
+    latestValidSample !== null &&
+    ((latestValidSample.validationStatus !== undefined &&
+      latestValidSample.validationStatus !== null &&
+      latestValidSample.validationStatus !== 'verified') ||
+      (latestValidSample.trustClassification !== undefined &&
+        latestValidSample.trustClassification !== null &&
+        latestValidSample.trustClassification !== 'verified_current') ||
+      (latestValidSample.sourceCategory !== undefined &&
+        latestValidSample.sourceCategory !== null &&
+        latestValidSample.sourceCategory !== 'device_authenticated' &&
+        latestValidSample.sourceCategory !== 'trusted_provider_integration'));
+
+  if (isUnverifiedProvenance) {
+    return {
+      state: 'unverified_provisional',
       latestObservedHours,
       latestObservedId,
       latestObservedAt,

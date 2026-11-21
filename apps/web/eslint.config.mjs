@@ -291,10 +291,62 @@ export const noDirectDocumentVerificationWriterRule = {
   },
 };
 
+const TELEMETRY_TRUSTED_WRITER_PATTERN =
+  /(^|[.\s])(ingest_authenticated_device_telemetry|ingest_provider_machinery_telemetry)$/i;
+
+/**
+ * Custom AST rule enforcing the Batch 03.3 Workstream B telemetry ingestion boundary:
+ * Only `apps/web/src/lib/iot/machinery-telemetry-ingestion.service.ts` may statically
+ * reference or invoke the `service_role`-only device/provider telemetry ingestion RPCs.
+ */
+export const noDirectTelemetryTrustedWriterRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Restrict privileged machinery telemetry ingestion RPCs exclusively to apps/web/src/lib/iot/machinery-telemetry-ingestion.service.ts.",
+    },
+    messages: {
+      forbidden:
+        "Direct invocation of ingest_authenticated_device_telemetry / ingest_provider_machinery_telemetry is prohibited outside apps/web/src/lib/iot/machinery-telemetry-ingestion.service.ts.",
+    },
+    schema: [],
+  },
+  create(context) {
+    const filename = (context.filename ?? context.getFilename?.() ?? "").replace(/\\/g, "/");
+    if (
+      filename.endsWith("/src/lib/iot/machinery-telemetry-ingestion.service.ts") ||
+      filename.endsWith("src/lib/iot/machinery-telemetry-ingestion.service.ts") ||
+      filename.includes("/__tests__/") ||
+      filename.endsWith(".test.ts") ||
+      filename.endsWith(".test.tsx")
+    ) {
+      return {};
+    }
+
+    return {
+      Literal(node) {
+        if (typeof node.value === "string" && TELEMETRY_TRUSTED_WRITER_PATTERN.test(node.value.trim())) {
+          context.report({ node, messageId: "forbidden" });
+        }
+      },
+      TemplateLiteral(node) {
+        if (node.expressions.length === 0) {
+          const val = node.quasis[0]?.value?.cooked ?? node.quasis[0]?.value?.raw ?? "";
+          if (TELEMETRY_TRUSTED_WRITER_PATTERN.test(val.trim())) {
+            context.report({ node, messageId: "forbidden" });
+          }
+        }
+      },
+    };
+  },
+};
+
 const cultivanodeSecurityPlugin = {
   rules: {
     "no-direct-ai-audit-writer": noDirectAiAuditWriterRule,
     "no-direct-document-verification-writer": noDirectDocumentVerificationWriterRule,
+    "no-direct-telemetry-trusted-writer": noDirectTelemetryTrustedWriterRule,
   },
 };
 
@@ -309,6 +361,7 @@ const eslintConfig = defineConfig([
     rules: {
       "cultivanode/no-direct-ai-audit-writer": "error",
       "cultivanode/no-direct-document-verification-writer": "error",
+      "cultivanode/no-direct-telemetry-trusted-writer": "error",
     },
   },
   // Override default ignores of eslint-config-next.
