@@ -12,7 +12,7 @@ import { supabaseEnv } from "@/lib/supabase/env";
 
 async function authenticateActiveCaller(
   req: Request,
-): Promise<{ ok: true; client: SupabaseClient<Database> } | { ok: false; response: NextResponse }> {
+): Promise<{ ok: true; client: SupabaseClient<Database>; userId: string } | { ok: false; response: NextResponse }> {
   const token = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (!token) {
     return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -29,7 +29,7 @@ async function authenticateActiveCaller(
     }
     const active = await verifyActiveAccount(client, data.user.id);
     if (!active.ok) return { ok: false, response: active.response };
-    return { ok: true, client };
+    return { ok: true, client, userId: data.user.id };
   } catch {
     return { ok: false, response: NextResponse.json({ error: "Authentication service unavailable." }, { status: 503 }) };
   }
@@ -58,7 +58,9 @@ export async function PUT(req: Request) {
   const parsed = await parseJsonBody(req, IngestAgronomicDocumentSchema);
   if (!parsed.ok) return parsed.response;
 
-  const res = await ingestAgronomicStandardDocument(auth.client, parsed.data);
+  const res = await ingestAgronomicStandardDocument(auth.client, parsed.data, {
+    actorUserId: auth.userId,
+  });
   if (!res.ok) return NextResponse.json({ error: res.error, code: res.code }, { status: res.status });
   return NextResponse.json(res, { status: 201 });
 }

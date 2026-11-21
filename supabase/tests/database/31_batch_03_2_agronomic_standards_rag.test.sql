@@ -156,7 +156,7 @@ select throws_ok(
   'cannot ingest documents into an already published standard'
 );
 
--- 5b. Finding 6: claiming file_hash_verified without original_file_sha256 is rejected.
+-- 5b. Batch 03.2H: authenticated callers cannot directly assign file_hash_verified.
 select throws_ok(
   $$
     select public.ingest_agronomic_standard_document(
@@ -166,9 +166,9 @@ select throws_ok(
       null, null, null, 'plain_text_file', 'file_hash_verified'
     )
   $$,
-  '22023',
+  '42501',
   null,
-  'file_hash_verified provenance rejected when original_file_sha256 is missing'
+  'authenticated caller cannot directly assign file_hash_verified provenance'
 );
 
 -- 6. Chunk-to-document standard_id mismatch rejected by trigger.

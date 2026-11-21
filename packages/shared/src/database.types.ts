@@ -2451,6 +2451,8 @@ export type Database = {
           extracted_text_sha256: string | null
           extraction_method: string
           extraction_version: string
+          file_hash_verified_at: string | null
+          file_hash_verified_by: string | null
           file_size_bytes: number
           id: string
           ingestion_error: string | null
@@ -2463,6 +2465,7 @@ export type Database = {
           storage_bucket_id: string | null
           storage_object_path: string | null
           uploaded_by: string | null
+          verification_trace_id: string | null
         }
         Insert: {
           authority_verified_at?: string | null
@@ -2474,6 +2477,8 @@ export type Database = {
           extracted_text_sha256?: string | null
           extraction_method?: string
           extraction_version?: string
+          file_hash_verified_at?: string | null
+          file_hash_verified_by?: string | null
           file_size_bytes: number
           id?: string
           ingestion_error?: string | null
@@ -2486,6 +2491,7 @@ export type Database = {
           storage_bucket_id?: string | null
           storage_object_path?: string | null
           uploaded_by?: string | null
+          verification_trace_id?: string | null
         }
         Update: {
           authority_verified_at?: string | null
@@ -2497,6 +2503,8 @@ export type Database = {
           extracted_text_sha256?: string | null
           extraction_method?: string
           extraction_version?: string
+          file_hash_verified_at?: string | null
+          file_hash_verified_by?: string | null
           file_size_bytes?: number
           id?: string
           ingestion_error?: string | null
@@ -2509,6 +2517,7 @@ export type Database = {
           storage_bucket_id?: string | null
           storage_object_path?: string | null
           uploaded_by?: string | null
+          verification_trace_id?: string | null
         }
         Relationships: []
       }
@@ -8920,6 +8929,25 @@ export type Database = {
           p_trace_id?: string | null
         }
         Returns: Database["public"]["Tables"]["farm_memory_items"]["Row"]
+      }
+      complete_verified_agronomic_document_ingestion: {
+        Args: {
+          p_actor_id: string
+          p_chunks: Json
+          p_document_title: string
+          p_external_uri?: string | null
+          p_extracted_text_sha256: string
+          p_extraction_method: string
+          p_extraction_version: string
+          p_file_size_bytes: number
+          p_mime_type: string
+          p_original_file_sha256: string
+          p_source_authority: string
+          p_standard_id: string
+          p_storage_object_path: string
+          p_verification_trace_id: string
+        }
+        Returns: Json
       }
       ingest_agronomic_standard_document: {
         Args: {

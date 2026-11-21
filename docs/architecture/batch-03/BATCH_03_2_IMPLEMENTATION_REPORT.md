@@ -42,6 +42,13 @@
    - Enforces database-authoritative provenance status governance in `public.ingest_agronomic_standard_document(...)`: rejects `authority_verified` from ordinary ingestion (`42501`), verifies actual `storage.objects` existence in `agronomic-standard-sources` before granting `file_hash_verified`, and forces `staff_asserted` / `staff_entered_text` when no archived file exists.
    - Adds `public.record_agronomic_document_ingestion_failure(...)` (`SECURITY DEFINER`, `SET search_path = ''`, staff-only) for durable fail-closed failure recording.
    - Updates `public.search_published_agronomic_standards(...)` to enforce `d.ingestion_status = 'indexed'` and return `extraction_version`, `original_file_sha256`, and `storage_object_path`.
+5. `supabase/migrations/20261122040000_batch_03_2h_document_provenance_trust_boundary.sql` (Batch 03.2H forward-only remediation)
+   - Enforces a hard database trust boundary separating staff assertion (`public.ingest_agronomic_standard_document`, `authenticated`, always `staff_asserted`) from trusted file-hash verification (`public.complete_verified_agronomic_document_ingestion`, granted exclusively to `service_role`, delegating to `private.complete_verified_agronomic_document_ingestion`).
+   - Adds `file_hash_verified_by`, `file_hash_verified_at`, and unique `verification_trace_id` columns plus active Storage-path uniqueness index.
+   - Strengthens `private.guard_agronomic_rag_integrity()` trigger so verified source metadata and verified indexed chunks are immutable, documents cannot transition to `indexed` without persisted chunks, and chunks cannot attach to `failed` or `reconciliation_required` documents.
+   - Inside `private.complete_verified_agronomic_document_ingestion`: validates active staff permission (`private.profile_has_permission`), canonical Storage path binding (`<standard_id>/<original_file_sha256>.<ext>`), `storage.objects.owner = p_actor_id` (preventing actor spoofing), and PostgreSQL-side `extensions.digest(content, 'sha256')` verification of every chunk's `content_sha256`.
+   - Paired with `apps/web/src/lib/rag/trusted-document-verifier.ts` (Symbol-branded staff context) and ESLint rule `cultivanode/no-direct-document-verification-writer`.
+   - **Explicit limitation:** PostgreSQL cannot directly read external Supabase Storage bytes; byte-level SHA-256 verification runs inside the restricted Next.js server-side verification boundary while PostgreSQL enforces that ordinary `authenticated` callers cannot self-assert `file_hash_verified` or invoke the verification RPC.
 
 ---
 
@@ -55,7 +62,7 @@
 
 ## 4. Known Limitations & Deferred Capabilities
 
-1. **Staging migration prerequisites:** Batch 03.1B (`M1`–`M5`), Batch 03.1C (`20261121020000`), and Batch 03.2 (`20261122000000`–`20261122030000`) exist in the repository but have **not** been applied to `CultivaNode-Staging` or `CultivaNode-Production`.
+1. **Staging migration prerequisites:** Batch 03.1B (`M1`–`M5`), Batch 03.1C (`20261121020000`), and Batch 03.2 (`20261122000000`–`20261122040000`) exist in the repository but have **not** been applied to `CultivaNode-Staging` or `CultivaNode-Production`.
 2. **Independent review remediations applied on PR #23 (including Batch 03.2G):**
    - **Grounded evidence model wiring:** `buildGroundedPrompt()` and `askGroundedAiAssistant()` accept and serialize `GroundedEvidencePackage` into distinct `<untrusted_evidence_json>` tiers.
    - **Atomic single-transaction memory + audit writes:** `create_farm_memory_item` and `transition_farm_memory_item` invoke `private.write_ai_audit_event` (farm scope) or `private.write_profile_memory_audit_event` (profile scope, append-only `public.ai_profile_memory_audit_events`) inside the same PostgreSQL transaction so audit failures roll back the memory mutation completely.

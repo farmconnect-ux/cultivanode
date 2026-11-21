@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -22,6 +22,11 @@ import {
   type Json,
   type PublishedStandardPassage,
 } from "@cultivanode/shared";
+import {
+  authorizeAgronomicStaffUploader,
+  completeVerifiedAgronomicDocumentIngestion,
+  type VerifiedAgronomicStaffContext,
+} from "@/lib/rag/trusted-document-verifier";
 
 /**
  * CultivaNode 3.0 — Batch 03.2G Verifiable Agronomic Document-to-Passage Provenance Service (Finding 6).
@@ -181,7 +186,13 @@ export function extractTextFromVerifiedSourceBytes(
 export async function ingestAgronomicStandardDocument(
   client: SupabaseClient<Database>,
   input: IngestAgronomicDocumentInput,
-  options: { embeddingProvider?: EmbeddingProvider } = {},
+  options: {
+    embeddingProvider?: EmbeddingProvider;
+    actorUserId?: string;
+    verifiedStaffContext?: VerifiedAgronomicStaffContext;
+    /** Test-only injection passed through to the trusted verification boundary. */
+    serviceClientOverride?: SupabaseClient<Database>;
+  } = {},
 ): Promise<
   | {
       ok: true;
@@ -198,6 +209,7 @@ export async function ingestAgronomicStandardDocument(
       provenanceVerificationStatus: DocumentProvenanceStatus;
       extractionMethod: DocumentExtractionMethod;
       extractionVersion: string;
+      verificationTraceId: string | null;
     }
   | { ok: false; status: number; code: string; error: string }
 > {
@@ -217,10 +229,25 @@ export async function ingestAgronomicStandardDocument(
   let extractedTextSha256: string | null = null;
   let storageObjectPath: string | null = null;
   let extractionMethod: DocumentExtractionMethod = "staff_entered_text";
-  let provenanceVerificationStatus: DocumentProvenanceStatus = "staff_asserted";
   let textToChunk: string;
+  let staffContext: VerifiedAgronomicStaffContext | null = options.verifiedStaffContext ?? null;
 
   if (data.sourceFileBase64) {
+    // Authorize authenticated staff actor BEFORE archiving or invoking the trusted verifier.
+    if (!staffContext) {
+      if (!options.actorUserId) {
+        return {
+          ok: false,
+          status: 401,
+          code: "actor_identity_required",
+          error: "Authenticated staff actor identity is required for file-backed verified ingestion.",
+        };
+      }
+      const authStaff = await authorizeAgronomicStaffUploader(client, options.actorUserId);
+      if (!authStaff.ok) return authStaff;
+      staffContext = authStaff.context;
+    }
+
     const rawBytes = Buffer.from(data.sourceFileBase64, "base64");
     if (rawBytes.length === 0 || rawBytes.length > MAX_AGRONOMIC_DOCUMENT_BYTES) {
       return {
@@ -310,17 +337,28 @@ export async function ingestAgronomicStandardDocument(
 
     // 3. Extract text EXCLUSIVELY from the verified archived bytes.
     const extracted = extractTextFromVerifiedSourceBytes(archivedBytes, data.mimeType);
-    if (!extracted.ok) return extracted;
+    if (!extracted.ok) {
+      await recordIngestionFailureSafe(client, {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType,
+        fileSizeBytes: computedFileSizeBytes,
+        contentSha256: originalFileSha256,
+        ingestionStatus: "reconciliation_required",
+        errorMessage: `Extraction from archived bytes failed: ${extracted.code}`,
+        storageObjectPath,
+      });
+      return extracted;
+    }
 
     textToChunk = extracted.extractedText;
     extractionMethod = extracted.extractionMethod;
     extractedTextSha256 = await sha256Hex(textToChunk);
-    provenanceVerificationStatus = "file_hash_verified";
   } else {
     textToChunk = data.textContent!;
     computedFileSizeBytes = Buffer.byteLength(textToChunk, "utf8");
     extractionMethod = "staff_entered_text";
-    provenanceVerificationStatus = "staff_asserted";
   }
 
   const metaCheck = validateAgronomicDocumentMetadata({
@@ -342,6 +380,17 @@ export async function ingestAgronomicStandardDocument(
   const payloadChunks: Array<Record<string, unknown>> = [];
 
   for (const chunk of chunks) {
+    // Independently verify chunk content hash matches exact chunk content before persistence.
+    const verifiedChunkSha = createHash("sha256").update(chunk.content, "utf8").digest("hex");
+    if (verifiedChunkSha !== chunk.contentSha256) {
+      return {
+        ok: false,
+        status: 500,
+        code: "chunk_hash_integrity_failed",
+        error: "Generated chunk content hash verification failed.",
+      };
+    }
+
     let embedding: string | null = null;
     let embeddingModel: string | null = null;
     let embeddingVersion: string | null = null;
@@ -364,11 +413,69 @@ export async function ingestAgronomicStandardDocument(
       page_number: chunk.pageNumber,
       paragraph_index: chunk.paragraphIndex,
       content: chunk.content,
-      content_sha256: chunk.contentSha256,
+      content_sha256: verifiedChunkSha,
       ...(embedding ? { embedding, embedding_model: embeddingModel, embedding_version: embeddingVersion } : {}),
     });
   }
 
+  // Branch A: File-backed verified ingestion -> narrow `service_role`-only trusted verifier.
+  if (data.sourceFileBase64 && staffContext && originalFileSha256 && extractedTextSha256 && storageObjectPath) {
+    const verificationTraceId = randomUUID();
+    const verifiedRes = await completeVerifiedAgronomicDocumentIngestion(
+      staffContext,
+      {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType as "text/plain" | "text/markdown" | "application/json",
+        fileSizeBytes: computedFileSizeBytes,
+        originalFileSha256,
+        extractedTextSha256,
+        storageObjectPath,
+        extractionMethod: extractionMethod as "plain_text_file" | "markdown_file" | "json_structured_file",
+        extractionVersion: SERVER_EXTRACTION_VERSION,
+        verificationTraceId,
+        externalUri: data.externalUri ?? null,
+        chunks: payloadChunks,
+      },
+      { serviceClientOverride: options.serviceClientOverride },
+    );
+
+    if (!verifiedRes.ok) {
+      await recordIngestionFailureSafe(client, {
+        standardId: data.standardId,
+        documentTitle: data.documentTitle,
+        sourceAuthority: data.sourceAuthority,
+        mimeType: data.mimeType,
+        fileSizeBytes: computedFileSizeBytes,
+        contentSha256: originalFileSha256,
+        ingestionStatus: "reconciliation_required",
+        errorMessage: `Trusted verification persistence failed: ${verifiedRes.code}`,
+        storageObjectPath,
+      });
+      return verifiedRes;
+    }
+
+    return {
+      ok: true,
+      documentId: verifiedRes.documentId,
+      standardId: verifiedRes.standardId,
+      standardStatus: verifiedRes.standardStatus,
+      ingestionStatus: "indexed",
+      chunkCount: verifiedRes.chunkCount,
+      embeddingsGenerated,
+      computedFileSizeBytes,
+      originalFileSha256,
+      extractedTextSha256,
+      storageObjectPath,
+      provenanceVerificationStatus: "file_hash_verified",
+      extractionMethod,
+      extractionVersion: SERVER_EXTRACTION_VERSION,
+      verificationTraceId: verifiedRes.verificationTraceId,
+    };
+  }
+
+  // Branch B: Staff-entered text -> ordinary authenticated staff-assertion RPC (ALWAYS `staff_asserted`).
   const contentSha256 = await sha256Hex(textToChunk);
   const { data: result, error } = await client.rpc("ingest_agronomic_standard_document", {
     p_standard_id: data.standardId,
@@ -379,12 +486,12 @@ export async function ingestAgronomicStandardDocument(
     p_content_sha256: contentSha256,
     p_chunks: payloadChunks as unknown as Json,
     p_external_uri: data.externalUri ?? null,
-    p_original_file_sha256: originalFileSha256,
-    p_storage_object_path: storageObjectPath,
-    p_extraction_method: extractionMethod,
-    p_provenance_verification_status: provenanceVerificationStatus,
+    p_original_file_sha256: null,
+    p_storage_object_path: null,
+    p_extraction_method: "staff_entered_text",
+    p_provenance_verification_status: "staff_asserted",
     p_extraction_version: SERVER_EXTRACTION_VERSION,
-    p_extracted_text_sha256: extractedTextSha256,
+    p_extracted_text_sha256: null,
   });
 
   if (error || !result || typeof result !== "object" || Array.isArray(result)) {
@@ -407,12 +514,13 @@ export async function ingestAgronomicStandardDocument(
     chunkCount: Number(obj.chunk_count ?? chunks.length),
     embeddingsGenerated,
     computedFileSizeBytes,
-    originalFileSha256,
-    extractedTextSha256,
-    storageObjectPath,
-    provenanceVerificationStatus: (obj.provenance_verification_status as DocumentProvenanceStatus) ?? provenanceVerificationStatus,
-    extractionMethod: (obj.extraction_method as DocumentExtractionMethod) ?? extractionMethod,
+    originalFileSha256: null,
+    extractedTextSha256: null,
+    storageObjectPath: null,
+    provenanceVerificationStatus: "staff_asserted",
+    extractionMethod: "staff_entered_text",
     extractionVersion: SERVER_EXTRACTION_VERSION,
+    verificationTraceId: null,
   };
 }
 

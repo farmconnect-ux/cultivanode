@@ -241,9 +241,60 @@ export const noDirectAiAuditWriterRule = {
   },
 };
 
+const DOC_VERIFICATION_WRITER_PATTERN = /(^|[.\s])complete_verified_agronomic_document_ingestion$/i;
+
+/**
+ * Custom AST rule enforcing the Batch 03.2H document verification boundary:
+ * Only `apps/web/src/lib/rag/trusted-document-verifier.ts` may statically reference
+ * or invoke the `service_role`-only `complete_verified_agronomic_document_ingestion` RPC.
+ */
+export const noDirectDocumentVerificationWriterRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Restrict privileged complete_verified_agronomic_document_ingestion RPC invocations exclusively to apps/web/src/lib/rag/trusted-document-verifier.ts.",
+    },
+    messages: {
+      forbidden:
+        "Direct invocation of complete_verified_agronomic_document_ingestion is prohibited outside apps/web/src/lib/rag/trusted-document-verifier.ts. Use completeVerifiedAgronomicDocumentIngestion() instead.",
+    },
+    schema: [],
+  },
+  create(context) {
+    const filename = (context.filename ?? context.getFilename?.() ?? "").replace(/\\/g, "/");
+    if (
+      filename.endsWith("/src/lib/rag/trusted-document-verifier.ts") ||
+      filename.endsWith("src/lib/rag/trusted-document-verifier.ts") ||
+      filename.includes("/__tests__/") ||
+      filename.endsWith(".test.ts") ||
+      filename.endsWith(".test.tsx")
+    ) {
+      return {};
+    }
+
+    return {
+      Literal(node) {
+        if (typeof node.value === "string" && DOC_VERIFICATION_WRITER_PATTERN.test(node.value.trim())) {
+          context.report({ node, messageId: "forbidden" });
+        }
+      },
+      TemplateLiteral(node) {
+        if (node.expressions.length === 0) {
+          const val = node.quasis[0]?.value?.cooked ?? node.quasis[0]?.value?.raw ?? "";
+          if (DOC_VERIFICATION_WRITER_PATTERN.test(val.trim())) {
+            context.report({ node, messageId: "forbidden" });
+          }
+        }
+      },
+    };
+  },
+};
+
 const cultivanodeSecurityPlugin = {
   rules: {
     "no-direct-ai-audit-writer": noDirectAiAuditWriterRule,
+    "no-direct-document-verification-writer": noDirectDocumentVerificationWriterRule,
   },
 };
 
@@ -257,6 +308,7 @@ const eslintConfig = defineConfig([
     },
     rules: {
       "cultivanode/no-direct-ai-audit-writer": "error",
+      "cultivanode/no-direct-document-verification-writer": "error",
     },
   },
   // Override default ignores of eslint-config-next.
