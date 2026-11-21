@@ -49,6 +49,14 @@ begin
       noinherit
       nobypassrls;
   end if;
+
+  -- Allow postgres (role owner/admin) to SET ROLE cultivanode_scheduler for testing and
+  -- cron job assignment without granting cultivanode_scheduler any privilege of postgres.
+  begin
+    execute 'grant cultivanode_scheduler to postgres with inherit false, set true';
+  exception when others then
+    null;
+  end;
 end $$;
 
 -- Grant minimal schema usage on `private` ONLY; revoke everything unnecessary.

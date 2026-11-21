@@ -27,8 +27,8 @@ values
   ('35000000-0000-4000-8000-000000000202', '35000000-0000-4000-8000-000000000102', 'TR-B1', 'Tractor B1', 'tractor', 200.0)
 on conflict (id) do nothing;
 
-insert into public.device_models (id, model_code, manufacturer, display_name, category)
-values ('35000000-0000-4000-8000-000000000301', 'CN-TEL-M1', 'CultivaNode', 'Machinery Tracker M1', 'soil_probe')
+insert into public.device_models (id, model_code, name, vendor, connectivity)
+values ('35000000-0000-4000-8000-000000000301', 'CN-TEL-M1', 'Machinery Tracker M1', 'CultivaNode', 'cellular_2g_4g')
 on conflict (id) do nothing;
 
 insert into public.devices (id, serial_number, model_id, status, auth_token_hash, revoked_at)

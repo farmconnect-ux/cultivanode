@@ -5,6 +5,8 @@ import { verifyActiveAccount } from "@/lib/engines-api-helper";
 import {
   ingestAuthenticatedDeviceTelemetry,
   recordMachineryObservation,
+  type AuthenticatedDeviceTelemetryInput,
+  type FarmerObservationTelemetryInput,
 } from "@/lib/iot/machinery-telemetry-ingestion.service";
 import { supabaseEnv } from "@/lib/supabase/env";
 
@@ -37,10 +39,10 @@ export async function POST(req: Request) {
   const deviceId = req.headers.get("x-device-id")?.trim();
   if (deviceId) {
     const res = await ingestAuthenticatedDeviceTelemetry({
-      ...(body as Record<string, never>),
+      ...body,
       deviceId,
       deviceToken: token,
-    });
+    } as unknown as AuthenticatedDeviceTelemetryInput);
     if (!res.ok) {
       return NextResponse.json({ error: res.error, code: res.code }, { status: res.status });
     }
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
     const active = await verifyActiveAccount(client, data.user.id);
     if (!active.ok) return active.response;
 
-    const res = await recordMachineryObservation(client, body as never);
+    const res = await recordMachineryObservation(client, body as unknown as FarmerObservationTelemetryInput);
     if (!res.ok) {
       return NextResponse.json({ error: res.error, code: res.code }, { status: res.status });
     }
