@@ -1,21 +1,24 @@
-# ADR-012: Document Extraction (PDF)
+# ADR-012: Document Extraction and OCR Quality Governance
 
-**Status:** Proposed (Batch 04.0) | **Date:** 2026-11-22
+**Status:** Proposed — revised for review correction 4 (Batch 04.0) | **Date:** 2026-11-22
 
 ## Context
 File ingestion returns `422` for PDF (Batch 03.2G). Nigerian institute and extension material is mainly PDF, some
-of it scanned.
+scanned. Rates and doses in tables are the highest-risk content.
 
 ## Decision
-Extract server-side, only from the archived and hash-verified file, inside the existing trusted verification
-boundary. Use the text layer first; OCR only when a page has no text layer, and mark those passages
-`extraction_method = 'pdf_ocr'` with a confidence score. Every passage keeps page number and section heading.
-Extraction is versioned (`extraction_version`); re-extraction creates new passages, never edits published ones.
-A staff reviewer compares sampled passages with the original pages before approval.
+- Originals archived once and immutable by SHA-256 (existing `agronomic-standard-sources` bucket); page images
+  stored with their own hashes.
+- `document_page_extractions` records per page and run: method (`text_layer` | `ocr`), engine and version,
+  parameters, input and output hashes, quality metrics.
+- Pages classed `pass` / `review` / `reject` with thresholds set by benchmark (D-T2), not guessed.
+- Numeric-critical pages: 100% human verification, dual-extraction agreement on every number, structured table
+  cells with units; unresolved disagreement blocks publication.
+- Defined rejection criteria at page and document level; partial publication only without numeric-critical
+  exclusions and with a recorded approval.
+- Extraction runs in a sandbox without network access; ingested text stays untrusted input (03.2G boundary).
 
-## Consequences
-- Adds a server dependency for PDF parsing; it must run without network access to third parties.
-- Ingested text is untrusted input: it keeps passing through the model-safe serialisation boundary (03.2G).
+Detail: `06_DOCUMENT_EXTRACTION_AND_OCR_GOVERNANCE.md`.
 
 ## Alternatives
-- Hosted document-AI service: sends source files to a third party and complicates licence terms (rejected for now).
+- Hosted document-AI service: sends source files to a third party and depends on licence A3 terms (rejected for now).

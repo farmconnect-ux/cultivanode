@@ -3,21 +3,18 @@
 **Status:** Proposed (Batch 04.0) | **Date:** 2026-11-22 | **Extends:** ADR-003
 
 ## Context
-`search_published_agronomic_standards` ranks by vector distance only when an embedding is supplied; otherwise it
-filters with `ILIKE '%<whole question>%'` (unescaped). The production embedding provider is unconfigured.
+`public.search_published_agronomic_standards` (`20261122030000`) ranks by vector distance only when an embedding is
+supplied; otherwise it filters with `ILIKE '%<whole question>%'` with unescaped wildcards. The production embedding
+provider is unconfigured.
 
 ## Decision
-One security-definer RPC (same checks as today) combining three ranked lists:
-1. Full-text: a generated `tsvector` per passage, queried with crop and local-name synonyms from the taxonomy.
-2. Vector: pgvector cosine similarity when the passage and query have embeddings of the same model/version.
-3. Taxonomy match: overlap between the farm's tags and the passage's tags.
-Lists are merged by reciprocal rank fusion, then the top candidates are reranked. Evidence selection then scores
-applicability per dimension (crop, stage, zone, soil, season), applies tier precedence, flags conflicts and caps
-passages per document. Retrieval logs keep tags, candidate IDs and scores, not farmer text.
+One security-definer RPC with the existing checks, combining full-text (`tsvector` + taxonomy synonyms), vector
+(per-model embedding table, ADR-014) and taxonomy-overlap lists through reciprocal rank fusion, then reranking and
+evidence selection (ADR-019). Licence activity filters (ADR-011) apply before ranking. Retrieval logs store tags,
+ids and scores, not farmer text. Detail: `09_RETRIEVAL_AND_EVIDENCE_PACKAGE.md`.
 
 ## Consequences
-- Retrieval works on day one without embeddings.
-- One data copy and one RLS model.
+- Retrieval works without embeddings; one data copy and one RLS model.
 
 ## Alternatives
-- External search engine: second copy of the data and a second access model (rejected).
+- External search engine: second copy of the data and access model (rejected).

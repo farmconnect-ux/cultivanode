@@ -48,4 +48,4 @@ Structured claims: `kind` (`cited_evidence`, `farm_fact`, `calculation`, `assump
 2. Every number with a unit of rate, dose or quantity is traced to an `engineResults` entry or a cited passage;
    otherwise blocked (fixes path P6 in `02_FERTILISER_SAFETY_FINDING.md`).
 3. Rates respect `constraints` and published limits.
-4. No T-number is produced for a crop without an approved standard; the answer leads with that fact.
+4. No numeric rate is produced for a crop without an approved standard; the answer leads with that fact.

@@ -1,20 +1,20 @@
-# ADR-014: Embedding Model Selection
+# ADR-014: Embedding and Reranking Model Selection
 
-**Status:** Proposed — owner decision required (Batch 04.0) | **Date:** 2026-11-22
+**Status:** Proposed — revised for review correction 7; owner decision after benchmark (Batch 04.0) | **Date:** 2026-11-22
 
 ## Context
-The `EmbeddingProvider` interface exists; production uses `UnconfiguredEmbeddingProvider`. Columns are
-`vector(1536)` with `embedding_model` and `embedding_version` required on every vector row.
+`agronomic_standard_chunks.embedding` and `farm_memory_items.embedding` are `vector(1536)` with HNSW indexes;
+`formatPgVector` enforces 1,536 (`embedding-provider.ts`); Production uses `UnconfiguredEmbeddingProvider`.
 
 ## Decision
-Approve one hosted embedding model and a monthly budget. Prefer a model that outputs 1536 dimensions to avoid a
-column migration. Embed passages in a background job; store model and version per row; a model change triggers a
-full re-embed into new rows before the old ones are retired. Query embedding failure degrades to full-text +
-taxonomy (ADR-013), never to an empty answer.
-
-## Measurement gate (from ADR-003)
-On Staging, measure embedding cost per document and per question, HNSW storage, and p95 retrieval latency
-separately from model inference before enabling in Production.
+- Select models only through the benchmark in `10_EMBEDDING_AND_RERANKING_EVALUATION.md`: strata for Nigerian
+  English, local crop names and Yoruba/Hausa/Igbo/Pidgin; Recall@k, nDCG@10, MRR, latency split, cost, storage.
+- Store document embeddings in a per-model `passage_embeddings` table keyed by (passage, model, version), each with
+  its own HNSW index. Model change = new rows, evaluation gate, switch, retire old rows.
+- Query-embedding failure degrades to full-text + taxonomy, never to an empty answer.
+- Farm memory embeddings keep `vector(1536)` until a separate decision (D-T5), because re-embedding sends farmer
+  content to a provider again (D-L3).
 
 ## Alternatives
+- In-place column change: possible (dual column, re-embed, switch) but blocks side-by-side evaluation.
 - Self-hosted model: no GPU in the current stack (rejected for now).
