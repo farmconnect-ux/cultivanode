@@ -12,7 +12,7 @@ import {
   k2OToElementalK,
   p2O5ToElementalP,
 } from './index';
-import { EngineClient } from '../api-gateway/client';
+import { CultivaNodeEnginesClient } from '../api-gateway/client';
 
 const LAB_SOIL_VALID = {
   pH: 6.2,
@@ -126,7 +126,7 @@ describe('Batch 04.0-H — Fail-Closed Deterministic Fertiliser Engine & Contrac
         }),
       ).toThrow('crop_not_supported');
 
-      const client = new EngineClient({ mode: 'local' });
+      const client = new CultivaNodeEnginesClient({ mode: 'in_memory' });
       await expect(
         client.calculateFertiliserRecommendation(crop, 5, 1, {
           pH: 6.2,
