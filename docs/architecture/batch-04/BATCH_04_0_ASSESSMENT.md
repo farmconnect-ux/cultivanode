@@ -1,8 +1,8 @@
 # CultivaNode Batch 04.0 — Agricultural Knowledge Infrastructure & RAG Assessment
 
-**Status:** Proposed — revision 3 | **Date:** 2026-11-22
+**Status:** Proposed — revision 4 (ready for independent final review) | **Date:** 2026-11-22
 **Base:** `main` @ `ddad3b0` (after Batch 03.3) | **Scope:** architecture and documentation only. No code,
-migrations, Supabase, provider, secret or deployment changes. Batch 04.1 has not started.
+migrations, Supabase, provider, secret or deployment changes. Batch 04.0-H and Batch 04.1 have not started.
 
 ## 1. Summary
 
@@ -18,7 +18,15 @@ migrations, Supabase, provider, secret or deployment changes. Batch 04.1 has not
 - Lettuce is not in `packages/shared/src/engines/agronomy/catalogue.ts`, has no standard and no licensed Nigerian
   source. The most relevant Nigerian sources are all rights reserved and stay metadata-only until permission.
 
-## 2. Revision 3 changes
+## 2. Revision 4 changes (final pre-sign-off corrections)
+
+| # | Requirement | Where addressed |
+|---|---|---|
+| 1 | Numerical agricultural recommendation authority: a cited passage cannot independently authorise a farm-specific numerical fertiliser prescription; all nine ADR-020 conditions are mandatory; licensed source quotes must be explicitly contextualised as general source information only | `ADR-016`, `ADR-020`, `02_FERTILISER_SAFETY_FINDING.md`, `09_RETRIEVAL_AND_EVIDENCE_PACKAGE.md`, `01_CURRENT_AND_TARGET_ARCHITECTURE.md`, `11_SECURITY_THREAT_ASSESSMENT.md` |
+| 2 | Two-level retrieval & evaluation acceptance framework: initial Staging run never auto-sets baseline; provisional Level A absolute thresholds (including zero unsupported numerical fertiliser prescriptions) + Level B regression gates + formal sign-off requirements (D-P9, D-A8) | `ADR-017`, `10_EMBEDDING_AND_RERANKING_EVALUATION.md`, `13_DECISION_REGISTER.md` |
+| 3 | Explicit phased roadmap & execution gates (`04.0` → `04.0-H` → `04.1` → `04.2` → `04.3` → `04.4` → `04.5`) with full ADR mapping and explicit separation of architecture approval, implementation, Staging verification, and Production promotion | `14_IMPLEMENTATION_ROADMAP.md`, `09_RETRIEVAL_AND_EVIDENCE_PACKAGE.md`, `13_DECISION_REGISTER.md` |
+
+## 3. Revision 3 changes (retained)
 
 | # | Requirement | Where addressed |
 |---|---|---|
@@ -30,7 +38,7 @@ migrations, Supabase, provider, secret or deployment changes. Batch 04.1 has not
 | 7 | Lab soil necessary but not sufficient | ADR-018, ADR-020, `03_GEOGRAPHIC_APPLICABILITY_AND_SOIL_PROVENANCE.md` |
 | 8 | Explicit dependencies; crops awaiting validation; confirmed vs outstanding decisions | `14_IMPLEMENTATION_ROADMAP.md`, `12_PRIORITY_CROPS.md`, `13_DECISION_REGISTER.md` |
 
-## 3. Revision 2 corrections (retained)
+## 4. Revision 2 corrections (retained)
 
 | # | Review requirement | Where addressed | Key evidence |
 |---|---|---|---|
@@ -45,7 +53,7 @@ migrations, Supabase, provider, secret or deployment changes. Batch 04.1 has not
 | 9 | First ten crops incl. lettuce | `12_PRIORITY_CROPS.md` | `catalogue.ts`; Production standards |
 | 10 | Decision register | `13_DECISION_REGISTER.md` | — |
 
-## 4. Deliverables
+## 5. Deliverables
 
 | File | Content |
 |---|---|
@@ -65,7 +73,7 @@ migrations, Supabase, provider, secret or deployment changes. Batch 04.1 has not
 | `14_IMPLEMENTATION_ROADMAP.md` | 04.0-H prerequisite, dependency graph, gates |
 | `adr/ADR-011` … `adr/ADR-021` | Architecture decisions |
 
-## 5. What Batch 03.2 already delivers (reuse, do not rebuild)
+## 6. What Batch 03.2 already delivers (reuse, do not rebuild)
 
 | Capability | Where |
 |---|---|

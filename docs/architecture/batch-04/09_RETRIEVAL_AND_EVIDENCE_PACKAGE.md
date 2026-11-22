@@ -1,8 +1,8 @@
 # Batch 04.0 — Retrieval Design and Evidence Package
 
-**Status:** Proposed | **Date:** 2026-11-22 | **ADRs:** ADR-013, ADR-016, ADR-019, ADR-020
+**Status:** Proposed — revision 4 | **Date:** 2026-11-22 | **ADRs:** ADR-013, ADR-016, ADR-019, ADR-020
 
-## Retrieval (Batch 04.2)
+## Retrieval (Batch 04.4)
 
 One `security definer` RPC replacing the ranking in `public.search_published_agronomic_standards`
 (`supabase/migrations/20261122030000_batch_03_2g_document_provenance_chain.sql`), keeping its existing checks
@@ -39,13 +39,20 @@ field and the model-safe serialisation boundary.
 | `missingFacts` | Facts that would change the answer |
 | `retrievalDiagnostics` | Which retrievers ran, counts, degraded flags |
 
-## Answer contract (ADR-016)
+## Answer contract (ADR-016, ADR-020)
 
-Structured claims: `kind` (`cited_evidence`, `farm_fact`, `calculation`, `assumption`, `general_guidance`),
+Structured claims: `kind` (`cited_source_information`, `farm_fact`, `calculation`, `assumption`, `general_guidance`),
 `citations`, `applicability`, `confidence` with reason, `conflicts`, `missing`. Server checks before display:
 
-1. Every citation id exists in the package; otherwise the claim is dropped and the answer marked degraded.
-2. Every number with a unit of rate, dose or quantity is traced to an `engineResults` entry or a cited passage;
-   otherwise blocked (fixes path P6 in `02_FERTILISER_SAFETY_FINDING.md`).
-3. Rates respect `constraints` and published limits.
-4. No numeric rate is produced for a crop without an approved standard; the answer leads with that fact.
+1. Every citation ID exists in the package; otherwise the claim is dropped and the answer marked degraded.
+2. **Farm-specific numerical fertiliser prescriptions** must trace to a validated `engineResults` entry satisfying all
+   nine ADR-020 conditions (approved crop-specific protocol/coefficients, calibrated lab soil provenance, units,
+   applicability, and legal/safety constraints). A cited passage **cannot** independently authorise a farm-specific
+   numerical fertiliser prescription (fixes path P6 in `02_FERTILISER_SAFETY_FINDING.md`).
+3. **General published source information:** a numerical value quoted from a cited passage may be displayed only as
+   `cited_source_information` where `may_quote = true` (licence permits), the source's context and applicability are
+   explicitly disclosed, and it cannot be mistaken for a prescription for the user's farm.
+4. Rates respect `constraints` and published limits (`max_nitrogen_kg_ha`).
+5. When any mandatory condition is absent, inconsistent, expired, or unverified (including crops without an approved
+   standard), no numerical fertiliser prescription is produced; the answer leads with what is missing and offers
+   non-numerical guidance.

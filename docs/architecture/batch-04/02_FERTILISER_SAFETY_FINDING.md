@@ -55,26 +55,38 @@ non-fertiliser questions in Yoruba can receive the fertiliser template.
 
 ## Required correction: phase 04.0-H (mandatory before 04.1; not implemented in PR #25)
 
-See ADR-020. 04.0-H must block unsupported crop fertiliser rates, unapproved coefficients, missing crop
-identification, unverified soil inputs and untraceable numerical recommendations:
+See ADR-020 and ADR-016. A cited passage **must not** independently authorise a numerical fertiliser prescription.
+A farm-specific numerical fertiliser prescription requires all nine conditions in ADR-020 (identified supported crop,
+approved versioned crop-specific protocol/coefficients, documented source/approval/scope/version, suitable soil
+provenance/units/depth/method/date, calibrated soil-test method, assessed geographic/climatic/crop-stage/production
+applicability, applied legal and safety constraints, deterministic engine validation, and disclosed citations,
+assumptions, and missing facts). When any mandatory condition is absent, inconsistent, expired, or unverified, the
+system must fail closed without substituting another crop's coefficients, inferring from a loosely related document,
+or silently converting uncertain units, and must explain what is missing while offering non-numerical guidance.
+
+04.0-H must enforce:
 
 1. `calculateFertiliserRecommendation` returns a result union (`crop_not_supported`, `coefficients_unapproved`,
    `crop_not_identified`, soil-input codes) and never applies a default coefficient. Coefficients move to an approved,
-   versioned store linked to a published standard and cited passages.
+   versioned store linked to a published standard, cited passages, and the assumed soil-test calibration.
 2. `EngineClient` local mode applies the same validation as the HTTP route; both import one shared schema.
-3. `generateAgronomicAdvisorAnswer` never returns numeric rates. Its fertiliser branch returns "no approved rate is
-   available for this crop; contact an extension agent", unless the deterministic engine returned an approved result
-   for that crop, in which case it quotes the engine output with its citation.
+3. `generateAgronomicAdvisorAnswer` never returns numeric rates. Its fertiliser branch returns non-numerical guidance
+   ("no approved rate is available for this crop; contact an extension agent or obtain a soil test"), unless the
+   deterministic engine returned an approved result for that crop, in which case it quotes the engine output with its
+   citation.
 4. All AI entry points (P4, P5) go through one audited path; P5's `cropId || "maize"` default is removed. With no
    resolved crop, numbers are refused.
-5. A server-side numeric validator blocks any rate, dose or quantity in an LLM answer that is not traceable to an
-   engine result or a cited passage, and any rate above the published `max_nitrogen_kg_ha`.
-6. Soil inputs must be lab-confirmed **and** carry extraction method, sampling depth, test date, units and nutrient
+5. A server-side numeric validator blocks any farm-specific numerical fertiliser prescription in an LLM answer that does
+   not trace to an approved deterministic engine result satisfying ADR-020, and blocks any rate above the published
+   `max_nitrogen_kg_ha`. A numerical value quoted from a licensed source passage may appear only as explicitly labelled
+   general published source information with full context disclosed — never as a farm-specific prescription (ADR-016).
+6. Soil inputs must be lab-confirmed **and** carry extraction method, sampling depth, test date, units, and nutrient
    basis (ADR-018). Units become explicit types: `SoilPotassium = { value, unit: 'cmol_kg' | 'mg_kg' }`, with one
-   conversion (× 391). Oxide/elemental basis is declared per coefficient.
+   conversion (× 391). Oxide/elemental basis is declared per coefficient; uncertain units fail closed.
 7. `forbid_published_standard_mutation` is extended to every agronomic field.
 
 **Tests required in 04.0-H:** unknown crop → `crop_not_supported` (engine, client, route); rule-engine fertiliser
 query for `lettuce` contains no digits followed by `kg`; `cropId` absent → `crop_not_identified`; farmer-reported or
-modelled soil → refused; lab soil without method or depth → refused; LLM output with an untraceable rate → blocked;
-`0.25 cmol/kg` → `97.75 mg/kg`; published standard `max_nitrogen_kg_ha` update → `42501`.
+modelled soil → refused; lab soil without method or depth → refused; LLM output attempting a farm-specific rate from a
+cited passage without an approved engine result → blocked; `0.25 cmol/kg` → `97.75 mg/kg`; published standard
+`max_nitrogen_kg_ha` update → `42501`.

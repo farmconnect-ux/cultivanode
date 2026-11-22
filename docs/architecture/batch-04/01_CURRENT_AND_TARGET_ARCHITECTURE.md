@@ -1,6 +1,6 @@
 # Batch 04.0 — Current and Target Architecture
 
-**Status:** Proposed | **Date:** 2026-11-22
+**Status:** Proposed — revision 4 | **Date:** 2026-11-22
 
 ## Current state (`main` @ `ddad3b0`, Production checked 2026-11-22)
 
@@ -51,4 +51,7 @@ flowchart TD
 ```
 
 The 02 fertiliser finding (rule-engine numbers, server-action bypass) is removed in the target: there is one AI
-entry point, no default coefficients, and no number reaches a farmer without an engine result or a cited passage.
+entry point, no default coefficients, and no farm-specific numerical fertiliser prescription reaches a farmer unless
+produced by the deterministic engine under all nine ADR-020 conditions (a cited passage alone cannot authorise a
+prescription; licensed source numbers may appear only as explicitly contextualised general source information under
+ADR-016).

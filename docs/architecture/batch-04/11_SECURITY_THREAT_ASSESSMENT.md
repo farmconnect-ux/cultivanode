@@ -1,6 +1,6 @@
 # Batch 04.0 — Security Threat Assessment
 
-**Status:** Revision 3 | **Date:** 2026-11-22
+**Status:** Revision 4 | **Date:** 2026-11-22
 
 | # | Threat | Vector | Existing control (evidence) | Gap | Batch 04 control |
 |---|---|---|---|---|---|
@@ -8,7 +8,7 @@
 | S2 | Source poisoning | Fabricated "institute" PDF uploaded as authoritative | `authority_verified` denied to ordinary ingestion (`20261122030000`) | No source register; authority is free text | ADR-011 register; authority verified only via provider-confirmed channel; second review for high-risk |
 | S3 | Malicious files | PDF exploits, decompression bombs, oversized files | 10 MB limit, MIME/magic checks, private bucket (03.2G) | PDF parsing not yet implemented | Sandboxed extraction without network, page and time limits |
 | S4 | Licence breach | Ingesting or showing restricted text | None | No licence model | Proposed A1–A13 policy enforced in RPCs (`05_LICENSING_CONTROLS.md`), subject to legal review |
-| S5 | Unsafe numbers | Model or fallback emits rates | Banned-pesticide name check only (`chemical-guardrail.ts`) | Fallback gives rates for any crop (02) | 04.0-H prerequisite; ADR-020; ADR-016 numeric validator |
+| S5 | Unsafe numbers | Model, cited passage, or fallback emits unapproved farm-specific rates | Banned-pesticide name check only (`chemical-guardrail.ts`) | Fallback gives rates for any crop (02); cited passages could bypass engine/calibration checks | 04.0-H prerequisite; ADR-020 (all 9 conditions required for farm-specific prescriptions); ADR-016 numeric validator separating engine prescriptions from contextualised general source quotes |
 | S6 | Citation spoofing | Model invents passage ids or pages | None | — | Server-side citation validation |
 | S7 | Review bypass | Super admin publishes own standard | Four-eyes with super-admin override (`20261103120000:237-240`) | Silent override | ADR-021: no bypass; recorded, time-limited emergency path |
 | S8 | Post-publication tampering | Editing limits after publish | `forbid_published_standard_mutation` (`20261103120000:58`) | `max_nitrogen_kg_ha`, zone, dates, authority not frozen | Extend trigger to every agronomic field |

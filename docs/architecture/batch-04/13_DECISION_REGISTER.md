@@ -1,6 +1,6 @@
 # Batch 04.0 — Decision Register
 
-**Status:** Revision 3 | **Date:** 2026-11-22
+**Status:** Revision 4 | **Date:** 2026-11-22
 
 ## Confirmed by the product owner
 
@@ -14,11 +14,12 @@
 
 | ID | Decision | Needed before |
 |---|---|---|
-| D-P1 | Embedding and reranking vendors and monthly budget, after benchmark D-T1 | 04.2 |
+| D-P1 | Embedding and reranking vendors and monthly budget, after benchmark D-T1 | 04.4 |
 | D-P4 | Reviewer qualification standard and budget for external reviewers | 04.1 |
 | D-P5 | Launch with metadata-only sources where permission is pending | 04.1 |
 | D-P7 | Emergency publication policy (who, time limit, ratification) | 04.1 |
-| D-P8 | Retention window for a retired embedding model kept for rollback (ADR-014) | 04.2 |
+| D-P8 | Retention window for a retired embedding model kept for rollback (ADR-014) | 04.4 |
+| D-P9 | Formal approval of provisional Level A absolute evaluation thresholds and Level B regression tolerances (ADR-017, `10_EMBEDDING_AND_RERANKING_EVALUATION.md`) | 04.5 (before first Production release) |
 
 ## Outstanding — legal counsel
 
@@ -43,6 +44,7 @@
 | D-A5 | Coefficient sources and calibration per crop; review of uncited factors in `packages/shared/src/engines/inputs/fertiliser.ts` (`× 0.6`, `× 0.48`, `OM × 15`) |
 | D-A6 | Interim answer wording for crops without standards (e.g. lettuce) |
 | D-A7 | Final validation of the ten priority crops |
+| D-A8 | Agronomic sign-off on provisional Level A absolute evaluation thresholds (citation validity, unsupported claim rate, no-answer precision, multilingual floors, unit & applicability accuracy) and Level B regression tolerances (ADR-017) |
 
 ## Outstanding — institutional providers
 
