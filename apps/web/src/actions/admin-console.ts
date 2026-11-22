@@ -335,8 +335,8 @@ export async function adminCreateStandardDraft(_prev: AdminResult | null, form: 
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
 
   const { error } = await rpc("agronomy_create_standard_draft", {
-    p_code: code,
-    p_crop_id: cropId,
+    p_standard_code: code,
+    p_crop_or_livestock_id: cropId,
     p_agro_zone: agroZone,
     p_version: version,
     p_title: title,
