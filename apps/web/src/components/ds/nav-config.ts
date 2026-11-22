@@ -223,7 +223,7 @@ export const adminNav: AdminNavGroup[] = [
     id: "config",
     label: "Configuration",
     items: [
-      { href: "/admin/content", label: "Content & Knowledge", icon: "library_books", perm: ["site_content.manage"] },
+      { href: "/admin/content", label: "Content & Knowledge", icon: "library_books", perm: ["site_content.manage", "crops.manage", "standards.publish", "knowledge.manage"] },
       { href: "/admin/agronomy", label: "Agronomy Standards", icon: "eco" },
       { href: "/admin/features", label: "Feature switches", icon: "tune", perm: ["settings.manage"] },
       { href: "/admin/integrations", label: "Integrations & APIs", icon: "api", perm: ["integrations.manage"] },

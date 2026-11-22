@@ -4,13 +4,14 @@ import { deleteHeroSlide, moveHeroSlide, saveHeroSlide, setHeroSlidePublished } 
 import { AdminForm } from "@/components/admin/admin-form";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon } from "@/components/ds/icon";
-import { LiveStrip } from "@/components/ds/live-strip";
-import { ContentAdmin } from "@/components/screens/content-admin";
+import { KnowledgeWorkbench } from "@/components/admin/knowledge-workbench";
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
 import { Alert, Field, Input } from "@/components/ui";
 import { can, requireStaff } from "@/lib/admin/staff";
+import type { AgrochemicalRow, StandardRow, TranslationRow } from "@/lib/admin/knowledge";
 import { siteMediaUrl } from "@/lib/site-content";
+import { CROP_CATALOGUE } from "@cultivanode/shared";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Content & knowledge" };
@@ -34,15 +35,37 @@ const ACCEPT = "image/jpeg,image/png,image/webp";
 export default async function ContentPage() {
   const staff = await requireStaff();
   if (!staff) return null;
-  if (!can(staff, "site_content.manage")) return <Alert tone="danger">You need the site_content.manage permission.</Alert>;
+  const canSite = can(staff, "site_content.manage");
+  const perms = {
+    edit: can(staff, "crops.manage") || can(staff, "standards.publish"),
+    review: can(staff, "standards.publish"),
+    translate: can(staff, "knowledge.manage"),
+  };
+  if (!canSite && !perms.edit && !perms.translate) {
+    return <Alert tone="danger">You need site_content.manage, crops.manage, standards.publish or knowledge.manage.</Alert>;
+  }
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("hero_slides")
-    .select("id, image_path, title_en, title_yo, caption_en, caption_yo, alt_en, alt_yo, link_url, published, updated_at")
-    .order("position")
-    .order("id");
-  const slides = (data ?? []) as Slide[];
+  const untyped = supabase as unknown as {
+    from: (t: string) => { select: (c: string) => { order: (c: string, o?: { ascending?: boolean }) => PromiseLike<{ data: unknown }> } };
+  };
+  const [slideRes, stdRes, chemRes, trRes, docCount, chunkCount] = await Promise.all([
+    canSite
+      ? supabase
+          .from("hero_slides")
+          .select("id, image_path, title_en, title_yo, caption_en, caption_yo, alt_en, alt_yo, link_url, published, updated_at")
+          .order("position")
+          .order("id")
+      : Promise.resolve({ data: [] }),
+    supabase.from("farm_agronomic_standards").select("*").order("created_at", { ascending: false }),
+    perms.edit ? untyped.from("agrochemical_products").select("*").order("updated_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    perms.edit || perms.translate
+      ? untyped.from("content_translations").select("*").order("updated_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    supabase.from("agronomic_standard_documents").select("id", { count: "exact", head: true }),
+    supabase.from("agronomic_standard_chunks").select("id", { count: "exact", head: true }),
+  ]);
+  const slides = (slideRes.data ?? []) as Slide[];
   const live = slides.filter((s) => s.published).length;
 
   const manager = (
@@ -176,13 +199,18 @@ export default async function ContentPage() {
 
   return (
     <>
-      {manager}
-      <LiveStrip tone="preview">
-        <span className="text-on-surface-variant">
-          The knowledge base, advisories and translation queue below show sample data until the content module is connected.
-        </span>
-      </LiveStrip>
-      <ContentAdmin lang="en" />
+      {canSite && manager}
+      {(perms.edit || perms.translate) && (
+        <KnowledgeWorkbench
+          standards={(stdRes.data ?? []) as unknown as StandardRow[]}
+          agrochemicals={(chemRes.data ?? []) as AgrochemicalRow[]}
+          translations={(trRes.data ?? []) as TranslationRow[]}
+          counts={{ documents: docCount.count ?? 0, passages: chunkCount.count ?? 0, catalogueCrops: CROP_CATALOGUE.length }}
+          crops={CROP_CATALOGUE.map((c) => ({ id: c.id, name: c.commonName }))}
+          perms={perms}
+          userId={staff.userId}
+        />
+      )}
     </>
   );
 }
