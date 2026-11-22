@@ -15,10 +15,15 @@ const TRUSTED_SOURCE_QUOTE_BRAND = Symbol('cultivanode.trusted_source_quotation'
  * Refuses to execute outside test runtime and is NOT exported from `@cultivanode/shared`.
  * @internal
  */
+function isTestRuntime(): boolean {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  return env?.VITEST === 'true' || env?.NODE_ENV === 'test';
+}
+
 export function __mintTestVerifiedSourceQuote(
   quote: VerifiedSourceQuotationContext,
 ): VerifiedSourceQuotationContext {
-  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+  if (!isTestRuntime()) {
     throw new Error('Test source-quotation helper is strictly forbidden outside test runtime.');
   }
   const branded = { ...quote };

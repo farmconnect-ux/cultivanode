@@ -193,11 +193,16 @@ export function evaluateFertiliserRecommendation(
  * exported from `@cultivanode/shared` or `packages/shared/src/engines/inputs/index.ts`.
  * @internal
  */
+function isTestRuntime(): boolean {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  return env?.VITEST === 'true' || env?.NODE_ENV === 'test';
+}
+
 export function __evaluateFertiliserWithTestProtocolFixture(
   request: FertiliserCalculationRequest,
   testProtocolPatch: Partial<FertiliserProtocolMetadata>,
 ): FertiliserRecommendationResult {
-  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+  if (!isTestRuntime()) {
     throw new Error('Test protocol fixture harness is strictly forbidden outside test runtime.');
   }
   return evaluateFertiliserCore(request, testProtocolPatch);
