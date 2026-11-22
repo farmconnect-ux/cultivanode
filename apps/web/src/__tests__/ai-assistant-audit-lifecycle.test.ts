@@ -206,4 +206,27 @@ describe("Finding 09: /api/ai/assistant Explicit Audit Coverage Lifecycle", () =
       expect.objectContaining({ executionOutcome: "blocked" }),
     );
   });
+
+  it("records fertiliser_numeric_guardrail and unsupported_numerical_prescription when numeric guardrail blocks response", async () => {
+    mocks.askGroundedAiAssistant.mockResolvedValueOnce({
+      answer: "No approved CultivaNode fertiliser protocol is available for lettuce.",
+      providerUsed: "claude",
+      modelUsed: "claude-sonnet-4-5",
+      passedSafetyGuardrail: false,
+      providerErrors: [],
+      recommendationStatus: "unsupported_crop",
+      numericGuardrailBlocked: true,
+      numericGuardrailReasonCode: "unsupported_numerical_prescription",
+    });
+    const res = await POST(makeReq({ traceId: TRACE_ID, query: "How much NPK for lettuce?", context: { farmId: FARM_ID } }));
+    expect(res.status).toBe(200);
+    expect(mocks.recordAiAuditEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        executionOutcome: "blocked",
+        guardrailRuleIds: expect.arrayContaining(["fertiliser_numeric_guardrail"]),
+        guardrailReasonCodes: expect.arrayContaining(["unsupported_numerical_prescription"]),
+      }),
+    );
+  });
 });

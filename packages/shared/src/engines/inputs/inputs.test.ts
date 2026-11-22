@@ -29,7 +29,7 @@ describe('Fertiliser Engine', () => {
   });
 
   it('recommends lime and warns on acidic soil (pH < 5.5)', () => {
-    const acidSoil = { pH: 4.8, phosphorusPpm: 6, potassiumPpm: 80 };
+    const acidSoil = { pH: 4.8, phosphorusPpm: 6, potassiumPpm: 80, organicMatterPercent: 1.5 };
     const rec = calculateFertiliserRecommendation('maize', 4.0, 1.0, acidSoil);
 
     expect(rec.limeRecommendationKgPerHa).toBeGreaterThan(0);

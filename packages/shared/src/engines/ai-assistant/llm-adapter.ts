@@ -1,8 +1,15 @@
 import type { FarmerContext, GroundedPrompt, GuardrailCheckResult, GroundedKnowledgeSnippet } from './types';
 import type { AppLanguage } from '../../roles';
 import type { GroundedEvidencePackage } from '../memory-rag/types';
+import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
 import { buildGroundedPrompt } from './prompt-builder';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
+import {
+  buildAmbiguousQueryClarification,
+  buildSafeNonNumericalFertiliserGuidance,
+  detectFertiliserIntent,
+  validateAssistantNumericalOutput,
+} from './fertiliser-safety';
 
 export type AiProvider = 'claude' | 'gemini' | 'openai' | 'rule-engine';
 
@@ -24,6 +31,8 @@ export interface GroundedAiAssistantRequest {
   primaryModel?: string;
   fallbackModel?: string;
   timeoutMs?: number;
+  /** Validated deterministic engine calculation, if one was run for this request (Batch 04.0-H). */
+  approvedFertiliserCalculation?: FertiliserRecommendation | null;
 }
 
 export interface GroundedAiAssistantResponse {
@@ -39,6 +48,11 @@ export interface GroundedAiAssistantResponse {
   approvedChemicalsDetected: string[];
   safetyAppendices: string[];
   sources: GroundedKnowledgeSnippet[];
+  /** Batch 04.0-H recommendation contract status. */
+  recommendationStatus: AgriculturalRecommendationStatus;
+  /** True when server-side numeric validator blocked an unsupported numerical fertiliser prescription. */
+  numericGuardrailBlocked: boolean;
+  numericGuardrailReasonCode: string | null;
 }
 
 /**
@@ -80,24 +94,18 @@ export function generateAgronomicAdvisorAnswer(
 4. Safety & Intervals: Pre-Harvest Interval (PHI) is 7 days. Restricted-Entry Interval (REI) is 12 hours. Always wear full personal protective equipment (PPE).`;
   }
 
-  // 3. Fertiliser questions
-  if (q.includes('fertiliser') || q.includes('fertilizer') || q.includes('npk') || q.includes('urea') || q.includes('ajile') || q.includes('iye')) {
-    if (lang === 'yo') {
-      return `Eto Ajilẹ ti o peye fun ${context.cropId ?? 'oko rẹ'} ni South-West Nigeria:
-1. Ajilẹ Ibẹrẹ (Basal): Lo NPK 15:15:15 (báàgì mẹrin si mẹfa fun hektari kan) lakoko gbigbin tabi ọsẹ meji lẹhin gbigbin.
-2. Ajilẹ Ekeji (Top-dressing): Lo Urea (46% N) báàgì meji si mẹta fun hektari kan ni ọsẹ mẹrin si mẹfa (4-6 weeks) nigbati ohun ọgbin ba n ga de ekun.
-3. Rii daju pe ilẹ tutu ṣaaju ki o to fi ajilẹ si, ki o si bo o pẹlu iye erupẹ diẹ lati dẹkun pipadanu nitrogen.`;
-    }
-    if (lang === 'pcm') {
-      return `Correct Fertiliser guide for your ${context.cropId ?? 'farm'} for South-West Nigeria:
-1. First Fertiliser (Basal): Put NPK 15:15:15 (around 4 to 6 bags per hectare) during planting or 2 weeks after planting. Put am 5cm away from the crop stem.
-2. Second Fertiliser (Top-dressing): Put Urea (46% Nitrogen) 2 to 3 bags per hectare at 4 to 6 weeks when the plant reach knee height.
-3. Make sure the soil get small water before you put fertilizer, and cover am small with sand make sun no blow the nitrogen go.`;
-    }
-    return `Scientifically grounded fertiliser protocol for ${context.cropId ?? 'crops'} in South-West Nigeria:
-1. Basal Application: Apply NPK 15:15:15 at 200–300 kg/ha (4–6 bags of 50kg per hectare) at planting or 10–14 days after emergence. Place fertiliser 5cm away from seed/stem in a ring or band.
-2. Top-Dressing: Side-dress Urea (46% N) at 100–150 kg/ha (2–3 bags/ha) at vegetative knee-high stage (4–6 weeks after planting).
-3. Moisture Requirement: Apply fertiliser only on moist soil and lightly incorporate into topsoil to prevent volatile nitrogen losses.`;
+  // 3. Fertiliser questions & ambiguous multilingual quantity queries (Batch 04.0-H: ADR-020)
+  // NEVER emit hardcoded NPK/urea numerical rates, and NEVER false-trigger on Yoruba `iye`.
+  const intent = detectFertiliserIntent(query);
+  if (intent.intent === 'fertiliser') {
+    return buildSafeNonNumericalFertiliserGuidance({
+      cropId: context.cropId,
+      language: lang,
+      reasonCode: context.cropId ? 'deterministic_calculation_required' : 'crop_not_identified',
+    });
+  }
+  if (intent.intent === 'ambiguous_quantity') {
+    return buildAmbiguousQueryClarification(lang);
   }
 
   // 4. Weeding and Herbicide
@@ -410,16 +418,29 @@ export async function askGroundedAiAssistant(
   // 5. Pass output through mandatory NAFDAC chemical safety guardrails
   const guardrailResult: GuardrailCheckResult = checkChemicalSafetyGuardrails(rawAnswer);
 
+  // 6. Pass output through server-side numerical fertiliser prescription validator (Batch 04.0-H, ADR-016/ADR-020)
+  const numericValidation = validateAssistantNumericalOutput(guardrailResult.sanitizedResponseText, {
+    cropId: params.context.cropId,
+    language: lang,
+    approvedCalculation: params.approvedFertiliserCalculation ?? null,
+  });
+
+  const finalPassed = guardrailResult.passed && numericValidation.passed;
+  const finalAnswer = guardrailResult.passed ? numericValidation.sanitizedText : guardrailResult.sanitizedResponseText;
+
   return {
-    answer: guardrailResult.sanitizedResponseText,
+    answer: finalAnswer,
     language: lang,
     providerUsed,
     modelUsed,
     providerErrors,
-    passedSafetyGuardrail: guardrailResult.passed,
+    passedSafetyGuardrail: finalPassed,
     bannedChemicalsDetected: guardrailResult.bannedChemicalsDetected,
     approvedChemicalsDetected: guardrailResult.approvedChemicalsDetected,
     safetyAppendices: guardrailResult.safetyAppendices,
     sources: groundedPrompt.contextSources,
+    recommendationStatus: numericValidation.recommendationStatus,
+    numericGuardrailBlocked: !numericValidation.passed,
+    numericGuardrailReasonCode: numericValidation.reasonCode,
   };
 }

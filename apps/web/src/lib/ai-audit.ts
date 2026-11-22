@@ -36,11 +36,12 @@ const PROMPT_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 // Guardrail metadata is a controlled code vocabulary, never model/user-authored text.
 // Extend these allowlists only when a reviewed application guardrail introduces a new stable code.
-const ALLOWED_GUARDRAIL_RULE_IDS = ["nafdac_chemical_guardrail"] as const;
+const ALLOWED_GUARDRAIL_RULE_IDS = ["nafdac_chemical_guardrail", "fertiliser_numeric_guardrail"] as const;
 const ALLOWED_GUARDRAIL_REASON_CODES = [
   "provider_execution_failed",
   "prohibited_chemical",
   "grounding_execution_failed",
+  "unsupported_numerical_prescription",
 ] as const;
 const GuardrailRuleIdSchema = z
   .enum(ALLOWED_GUARDRAIL_RULE_IDS)

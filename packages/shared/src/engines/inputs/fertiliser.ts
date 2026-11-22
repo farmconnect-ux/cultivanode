@@ -1,97 +1,547 @@
-import type { SoilNutrientProfile, FertiliserRecommendation } from './types';
+import {
+  convertSoilPotassium,
+  type SoilExtractionMethod,
+} from './nutrient-units';
+import type {
+  FertiliserCalculationRequest,
+  FertiliserProtocolMetadata,
+  FertiliserRecommendation,
+  FertiliserRecommendationResult,
+  SoilNutrientProfile,
+} from './types';
 
-// Nutrient removal per tonne of harvested product (kg N, P2O5, K2O)
-const CROP_NUTRIENT_UPTAKE: Record<string, { nPerTonne: number; pPerTonne: number; kPerTonne: number }> = {
-  maize: { nPerTonne: 20, pPerTonne: 8, kPerTonne: 16 },
-  tomato: { nPerTonne: 3.0, pPerTonne: 1.0, kPerTonne: 4.5 },
-  cassava: { nPerTonne: 5.0, pPerTonne: 1.5, kPerTonne: 6.0 },
-  yam: { nPerTonne: 4.5, pPerTonne: 1.2, kPerTonne: 5.5 },
-  rice: { nPerTonne: 18, pPerTonne: 7, kPerTonne: 22 },
-};
+export const SUPPORTED_FERTILISER_CROP_IDS = ['maize', 'tomato', 'cassava', 'yam', 'rice'] as const;
+export type SupportedFertiliserCropId = (typeof SUPPORTED_FERTILISER_CROP_IDS)[number];
+
+interface CropProtocolEntry extends FertiliserProtocolMetadata {
+  uptakePerTonne: { nPerTonne: number; pPerTonne: number; kPerTonne: number };
+  supportedExtractionMethods: readonly SoilExtractionMethod[];
+}
+
+const DEFAULT_NG_ZONES = [
+  'rainforest',
+  'derived_savanna',
+  'southern_guinea_savanna',
+  'northern_guinea_savanna',
+  'sudan_savanna',
+  'sahel_savanna',
+  'mangrove_swamp',
+  'mid_altitude',
+] as const;
+
+const DEFAULT_EXTRACTION_METHODS: readonly SoilExtractionMethod[] = [
+  'bray_1',
+  'olsen',
+  'mehlich_3',
+  'ammonium_acetate_1M',
+];
 
 /**
- * Deterministically calculates soil nutrient deficits and exact fertiliser applications
- * using standard agronomic extraction formulas for Nigerian agricultural systems.
+ * Versioned crop-specific fertiliser protocols (Batch 04.0-H).
+ *
+ * IMPORTANT: `approvalStatus: 'provisional_software_validated'` explicitly records that these
+ * legacy uptake coefficients passed software validation only and still await formal agronomic
+ * sign-off under Decision D-A5 (see `02_FERTILISER_SAFETY_FINDING.md`).
+ */
+export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliserCropId, CropProtocolEntry>> = {
+  maize: {
+    cropId: 'maize',
+    protocolVersion: 'prov-ng-maize-v1.0',
+    approvalStatus: 'provisional_software_validated',
+    sourceCitation: 'CultivaNode Provisional NG Maize Uptake Table (pending D-A5 agronomic sign-off)',
+    maxNitrogenKgPerHa: 180,
+    supportedZones: DEFAULT_NG_ZONES,
+    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
+    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+    uptakePerTonne: { nPerTonne: 20, pPerTonne: 8, kPerTonne: 16 },
+  },
+  tomato: {
+    cropId: 'tomato',
+    protocolVersion: 'prov-ng-tomato-v1.0',
+    approvalStatus: 'provisional_software_validated',
+    sourceCitation: 'CultivaNode Provisional NG Tomato Uptake Table (pending D-A5 agronomic sign-off)',
+    maxNitrogenKgPerHa: 150,
+    supportedZones: DEFAULT_NG_ZONES,
+    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
+    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+    uptakePerTonne: { nPerTonne: 3.0, pPerTonne: 1.0, kPerTonne: 4.5 },
+  },
+  cassava: {
+    cropId: 'cassava',
+    protocolVersion: 'prov-ng-cassava-v1.0',
+    approvalStatus: 'provisional_software_validated',
+    sourceCitation: 'CultivaNode Provisional NG Cassava Uptake Table (pending D-A5 agronomic sign-off)',
+    maxNitrogenKgPerHa: 120,
+    supportedZones: DEFAULT_NG_ZONES,
+    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
+    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+    uptakePerTonne: { nPerTonne: 5.0, pPerTonne: 1.5, kPerTonne: 6.0 },
+  },
+  yam: {
+    cropId: 'yam',
+    protocolVersion: 'prov-ng-yam-v1.0',
+    approvalStatus: 'provisional_software_validated',
+    sourceCitation: 'CultivaNode Provisional NG Yam Uptake Table (pending D-A5 agronomic sign-off)',
+    maxNitrogenKgPerHa: 120,
+    supportedZones: DEFAULT_NG_ZONES,
+    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
+    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+    uptakePerTonne: { nPerTonne: 4.5, pPerTonne: 1.2, kPerTonne: 5.5 },
+  },
+  rice: {
+    cropId: 'rice',
+    protocolVersion: 'prov-ng-rice-v1.0',
+    approvalStatus: 'provisional_software_validated',
+    sourceCitation: 'CultivaNode Provisional NG Rice Uptake Table (pending D-A5 agronomic sign-off)',
+    maxNitrogenKgPerHa: 150,
+    supportedZones: DEFAULT_NG_ZONES,
+    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
+    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+    uptakePerTonne: { nPerTonne: 18, pPerTonne: 7, kPerTonne: 22 },
+  },
+};
+
+export function isSupportedFertiliserCrop(cropId: string | null | undefined): cropId is SupportedFertiliserCropId {
+  if (!cropId || typeof cropId !== 'string') return false;
+  return (SUPPORTED_FERTILISER_CROP_IDS as readonly string[]).includes(cropId.trim().toLowerCase());
+}
+
+const SOIL_TEST_MAX_AGE_DAYS = 365;
+
+/**
+ * Fail-closed deterministic fertiliser recommendation evaluator (Batch 04.0-H, ADR-020).
+ *
+ * Enforces:
+ * - No silent default coefficients for unknown/unsupported crops (e.g. lettuce).
+ * - No silent defaulting of missing crop identity or missing organic matter.
+ * - Explicit typed potassium unit handling (cmol(+)/kg, meq/100g, mg/kg, ppm; elemental K vs K2O).
+ * - Soil provenance, extraction method, sampling depth, expiry, zone, and growth-stage checks.
+ * - Maximum nitrogen safety ceiling enforcement.
+ */
+export function evaluateFertiliserRecommendation(
+  request: FertiliserCalculationRequest,
+): FertiliserRecommendationResult {
+  const rawCropId = typeof request.cropId === 'string' ? request.cropId.trim().toLowerCase() : '';
+  if (!rawCropId) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'crop_not_identified',
+      message: 'Crop identity is required before a fertiliser calculation can be performed.',
+      missingRequirements: ['cropId'],
+      guidance: 'Specify the exact crop grown on this plot. CultivaNode will not assume a default crop.',
+    };
+  }
+
+  if (!isSupportedFertiliserCrop(rawCropId)) {
+    return {
+      ok: false,
+      status: 'unsupported_crop',
+      reasonCode: 'crop_not_supported',
+      message: `No approved CultivaNode fertiliser protocol is available for "${rawCropId}".`,
+      missingRequirements: [`approved_crop_protocol:${rawCropId}`],
+      guidance:
+        `CultivaNode does not substitute maize or generic NPK/urea rates for ${rawCropId}. ` +
+        'Obtain a laboratory soil test and consult a qualified agronomist or extension agent for a crop-specific plan.',
+    };
+  }
+
+  const baseProtocol = SUPPORTED_FERTILISER_PROTOCOLS[rawCropId];
+  const protocol: CropProtocolEntry = request.protocolOverride
+    ? { ...baseProtocol, ...request.protocolOverride }
+    : baseProtocol;
+
+  if (!protocol.protocolVersion || !protocol.protocolVersion.trim() || !protocol.approvalStatus) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'coefficients_unapproved',
+      message: `Crop protocol for "${rawCropId}" is missing a valid version or approval status.`,
+      missingRequirements: ['protocolVersion', 'approvalStatus'],
+      guidance: 'A versioned, approved crop protocol is required before generating a numerical fertiliser prescription.',
+    };
+  }
+
+  if (
+    typeof request.targetYieldTonnesPerHa !== 'number' ||
+    !Number.isFinite(request.targetYieldTonnesPerHa) ||
+    request.targetYieldTonnesPerHa <= 0 ||
+    request.targetYieldTonnesPerHa > 100
+  ) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'invalid_target_yield',
+      message: 'targetYieldTonnesPerHa must be a finite number between 0 and 100.',
+      missingRequirements: ['targetYieldTonnesPerHa'],
+      guidance: 'Provide a realistic positive target yield in tonnes per hectare.',
+    };
+  }
+
+  if (
+    typeof request.farmAreaHectares !== 'number' ||
+    !Number.isFinite(request.farmAreaHectares) ||
+    request.farmAreaHectares <= 0 ||
+    request.farmAreaHectares > 100_000
+  ) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'invalid_farm_area',
+      message: 'farmAreaHectares must be a finite number between 0 and 100,000.',
+      missingRequirements: ['farmAreaHectares'],
+      guidance: 'Provide a valid positive farm or plot area in hectares.',
+    };
+  }
+
+  // Geographic applicability check when zone is supplied
+  if (request.zone !== undefined && request.zone !== null) {
+    const normalizedZone = request.zone.trim().toLowerCase();
+    if (!normalizedZone || !protocol.supportedZones.includes(normalizedZone)) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'geographic_mismatch',
+        message: `Agro-ecological zone "${request.zone}" is outside the validated applicability scope for "${rawCropId}".`,
+        missingRequirements: ['applicable_agro_ecological_zone'],
+        guidance: 'Confirm your farm agro-ecological zone or consult a local extension officer for zone-specific rates.',
+      };
+    }
+  }
+
+  const soil = request.soil;
+  if (!soil) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_test_missing',
+      message: 'A soil test profile is required to calculate a farm-specific fertiliser recommendation.',
+      missingRequirements: ['soil_test'],
+      guidance: 'Submit a laboratory soil test (pH, organic matter %, available phosphorus, exchangeable potassium).',
+    };
+  }
+
+  // Soil provenance checks: always reject non-lab provenance if explicitly supplied;
+  // when requireStrictSoilProvenance is true, also require provenance, extractionMethod, samplingDepthCm, testDate, and growthStage.
+  if (soil.provenance === 'modelled_estimate') {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_modelled_not_allowed',
+      message: 'Modelled soil estimates cannot be used as laboratory measurements for a numerical fertiliser prescription.',
+      missingRequirements: ['lab_confirmed_soil_test'],
+      guidance: 'Conduct a laboratory soil analysis before applying a numerical fertiliser prescription.',
+    };
+  }
+
+  if (soil.provenance && soil.provenance !== 'lab_confirmed') {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_not_lab_confirmed',
+      message: `Soil provenance "${soil.provenance}" is not laboratory-confirmed and cannot authorise a numerical prescription.`,
+      missingRequirements: ['lab_confirmed_soil_test'],
+      guidance: 'Submit laboratory-confirmed soil test results for a farm-specific numerical fertiliser calculation.',
+    };
+  }
+
+  if (request.requireStrictSoilProvenance) {
+    if (!soil.provenance) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'soil_not_lab_confirmed',
+        message: 'Laboratory-confirmed soil provenance is required for a numerical fertiliser prescription.',
+        missingRequirements: ['soil.provenance=lab_confirmed'],
+        guidance: 'Provide laboratory-confirmed soil test metadata (provenance, extraction method, sampling depth, test date).',
+      };
+    }
+    if (!soil.extractionMethod || !soil.extractionMethod.trim()) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'soil_method_missing',
+        message: 'Soil extraction method (e.g. bray_1, olsen, mehlich_3) is required to interpret soil nutrient values.',
+        missingRequirements: ['soil.extractionMethod'],
+        guidance: 'Include the laboratory extraction method from your soil analysis report.',
+      };
+    }
+    if (
+      typeof soil.samplingDepthCm !== 'number' ||
+      !Number.isFinite(soil.samplingDepthCm) ||
+      soil.samplingDepthCm <= 0 ||
+      soil.samplingDepthCm > 100
+    ) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'soil_depth_missing',
+        message: 'Valid soil sampling depth in cm (e.g. 15 or 20 cm) is required.',
+        missingRequirements: ['soil.samplingDepthCm'],
+        guidance: 'Record the topsoil sampling depth (typically 0–15 cm or 0–20 cm) from your soil test.',
+      };
+    }
+    if (!soil.testDate || Number.isNaN(new Date(soil.testDate).getTime())) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'soil_test_date_missing',
+        message: 'A valid soil test date is required to verify that soil results are current.',
+        missingRequirements: ['soil.testDate'],
+        guidance: 'Provide the date when the laboratory soil sample was analysed.',
+      };
+    }
+    if (!request.growthStage || !request.growthStage.trim()) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'growth_stage_missing',
+        message: 'Current crop growth stage is required to validate fertiliser application timing.',
+        missingRequirements: ['growthStage'],
+        guidance: 'Specify the crop growth stage (e.g. pre-planting, basal, vegetative) before requesting a fertiliser plan.',
+      };
+    }
+  }
+
+  // Expiry check whenever testDate is provided
+  if (soil.testDate) {
+    const testTs = new Date(soil.testDate).getTime();
+    const refTs = request.referenceDate ? new Date(request.referenceDate).getTime() : Date.now();
+    if (Number.isNaN(testTs)) {
+      return {
+        ok: false,
+        status: 'invalid_input',
+        reasonCode: 'soil_test_date_invalid',
+        message: 'Soil test date is not a valid ISO date.',
+        missingRequirements: ['soil.testDate'],
+        guidance: 'Provide a valid ISO date (YYYY-MM-DD) for the soil test.',
+      };
+    }
+    const ageDays = (refTs - testTs) / 86_400_000;
+    if (ageDays > SOIL_TEST_MAX_AGE_DAYS) {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'soil_test_expired',
+        message: `Soil test is ${Math.round(ageDays)} days old, exceeding the ${SOIL_TEST_MAX_AGE_DAYS}-day validity limit.`,
+        missingRequirements: ['current_lab_soil_test'],
+        guidance: 'Obtain a fresh laboratory soil test before calculating a new fertiliser prescription.',
+      };
+    }
+    if (ageDays < -1) {
+      return {
+        ok: false,
+        status: 'invalid_input',
+        reasonCode: 'soil_test_future_date',
+        message: 'Soil test date cannot be in the future.',
+        missingRequirements: ['valid_soil_test_date'],
+        guidance: 'Verify the analysis date printed on your laboratory report.',
+      };
+    }
+  }
+
+  // Validate required scalar soil readings (never silently default missing organicMatterPercent!)
+  if (typeof soil.pH !== 'number' || !Number.isFinite(soil.pH) || soil.pH < 0 || soil.pH > 14) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'invalid_soil_ph',
+      message: 'Soil pH must be a finite number between 0 and 14.',
+      missingRequirements: ['soil.pH'],
+      guidance: 'Provide a valid laboratory soil pH value.',
+    };
+  }
+  if (
+    typeof soil.phosphorusPpm !== 'number' ||
+    !Number.isFinite(soil.phosphorusPpm) ||
+    soil.phosphorusPpm < 0 ||
+    soil.phosphorusPpm > 10_000
+  ) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'invalid_soil_phosphorus',
+      message: 'Soil phosphorus (ppm) must be a finite non-negative number.',
+      missingRequirements: ['soil.phosphorusPpm'],
+      guidance: 'Provide a valid available soil phosphorus reading in mg/kg (ppm).',
+    };
+  }
+  if (
+    soil.organicMatterPercent === undefined ||
+    typeof soil.organicMatterPercent !== 'number' ||
+    !Number.isFinite(soil.organicMatterPercent) ||
+    soil.organicMatterPercent < 0 ||
+    soil.organicMatterPercent > 100
+  ) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_organic_matter_missing',
+      message: 'Soil organic matter (%) is required; CultivaNode does not substitute an assumed average.',
+      missingRequirements: ['soil.organicMatterPercent'],
+      guidance: 'Provide the measured soil organic matter percentage from your laboratory report.',
+    };
+  }
+
+  // Explicit typed potassium unit conversion
+  const potassiumInput = soil.potassium ?? (
+    typeof soil.potassiumPpm === 'number'
+      ? { value: soil.potassiumPpm, unit: 'ppm' as const, basis: 'elemental_K' as const }
+      : null
+  );
+
+  if (!potassiumInput) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_potassium_missing',
+      message: 'Soil potassium reading with explicit units is required.',
+      missingRequirements: ['soil.potassium'],
+      guidance: 'Provide laboratory exchangeable potassium with explicit units (cmol_kg, meq_100g, or mg_kg/ppm).',
+    };
+  }
+
+  const kConv = convertSoilPotassium(potassiumInput);
+  if (!kConv.ok) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: kConv.code,
+      message: kConv.message,
+      missingRequirements: ['valid_typed_soil_potassium'],
+      guidance: 'Verify the potassium unit and nutrient basis (elemental K vs K2O) on your laboratory report.',
+    };
+  }
+
+  // Deterministic calculation using the versioned crop protocol
+  const { uptakePerTonne } = protocol;
+  const totalNNeeded = uptakePerTonne.nPerTonne * request.targetYieldTonnesPerHa;
+  const totalPNeeded = uptakePerTonne.pPerTonne * request.targetYieldTonnesPerHa;
+  const totalKNeeded = uptakePerTonne.kPerTonne * request.targetYieldTonnesPerHa;
+
+  const soilNCredit = soil.organicMatterPercent * 15;
+  const soilPCredit = soil.phosphorusPpm * 0.6;
+  const soilKCredit = kConv.derivedElementalMgKg * 0.48;
+
+  const nDeficitKgPerHa = Math.max(0, Math.round(totalNNeeded - soilNCredit));
+  const pDeficitKgPerHa = Math.max(0, Math.round(totalPNeeded - soilPCredit));
+  const kDeficitKgPerHa = Math.max(0, Math.round(totalKNeeded - soilKCredit));
+
+  // Do NOT apply artificial minimum NPK/Urea rates when the calculated nutrient deficit is 0.
+  const npkNeededKgPerHa = pDeficitKgPerHa > 0 ? Math.round(pDeficitKgPerHa / 0.15) : 0;
+  const npkAppliedKgPerHa = Math.min(400, npkNeededKgPerHa);
+
+  const nFromNpk = npkAppliedKgPerHa * 0.15;
+  const remainingN = Math.max(0, nDeficitKgPerHa - nFromNpk);
+  let ureaAppliedKgPerHa = remainingN > 0 ? Math.round(remainingN / 0.46) : 0;
+
+  // Enforce protocol maxNitrogenKgPerHa safety cap
+  const totalAppliedN = nFromNpk + ureaAppliedKgPerHa * 0.46;
+  let cappedWarning: string | undefined;
+  if (totalAppliedN > protocol.maxNitrogenKgPerHa) {
+    const allowedUreaN = Math.max(0, protocol.maxNitrogenKgPerHa - nFromNpk);
+    ureaAppliedKgPerHa = Math.floor(allowedUreaN / 0.46);
+    cappedWarning = `Total nitrogen capped at protocol safety limit (${protocol.maxNitrogenKgPerHa} kg N/ha).`;
+  }
+
+  let limeKgPerHa = 0;
+  if (soil.pH < 5.0) {
+    limeKgPerHa = 1500;
+  } else if (soil.pH < 5.5) {
+    limeKgPerHa = 800;
+  }
+
+  const npkTotalKg = Math.round(npkAppliedKgPerHa * request.farmAreaHectares);
+  const ureaTotalKg = Math.round(ureaAppliedKgPerHa * request.farmAreaHectares);
+
+  const productApplications: FertiliserRecommendation['productApplications'] = [];
+  if (npkAppliedKgPerHa > 0) {
+    productApplications.push({
+      productName: 'NPK 15:15:15',
+      kgPerHa: npkAppliedKgPerHa,
+      totalKg: npkTotalKg,
+      fiftyKgBags: Math.ceil(npkTotalKg / 50),
+      timing: 'basal_planting',
+    });
+  }
+  if (ureaAppliedKgPerHa > 0) {
+    productApplications.push({
+      productName: 'Urea (46% N)',
+      kgPerHa: ureaAppliedKgPerHa,
+      totalKg: ureaTotalKg,
+      fiftyKgBags: Math.ceil(ureaTotalKg / 50),
+      timing: 'top_dress_vegetative',
+    });
+  }
+
+  const phWarning =
+    soil.pH < 5.5
+      ? `Soil pH (${soil.pH}) is acidic. Apply agricultural limestone 2-4 weeks before planting to unlock fertiliser efficiency.`
+      : undefined;
+
+  const warning = [phWarning, cappedWarning].filter(Boolean).join(' ') || undefined;
+
+  return {
+    ok: true,
+    status: 'approved_calculation',
+    protocol: {
+      cropId: protocol.cropId,
+      protocolVersion: protocol.protocolVersion,
+      approvalStatus: protocol.approvalStatus,
+      sourceCitation: protocol.sourceCitation,
+      maxNitrogenKgPerHa: protocol.maxNitrogenKgPerHa,
+      supportedZones: protocol.supportedZones,
+      nutrientBasis: protocol.nutrientBasis,
+    },
+    recommendation: {
+      cropId: rawCropId,
+      targetYieldTonnesPerHa: request.targetYieldTonnesPerHa,
+      farmAreaHectares: request.farmAreaHectares,
+      protocolVersion: protocol.protocolVersion,
+      protocolApprovalStatus: protocol.approvalStatus,
+      potassiumConversion: kConv,
+      deficitKgPerHa: {
+        nitrogenKg: nDeficitKgPerHa,
+        phosphorusKg: pDeficitKgPerHa,
+        potassiumKg: kDeficitKgPerHa,
+      },
+      productApplications,
+      limeRecommendationKgPerHa: limeKgPerHa,
+      warning,
+    },
+    assumptions: [
+      `Protocol ${protocol.protocolVersion} (${protocol.approvalStatus}; pending formal D-A5 agronomic sign-off).`,
+      kConv.conversionNote,
+      'Fertiliser formulations assume NPK 15:15:15 (15% N, 15% P2O5, 15% K2O) and Urea (46% N).',
+    ],
+    missingInformation: [
+      ...(soil.provenance ? [] : ['Soil provenance not declared (lab_confirmed required for production prescriptions).']),
+      ...(soil.extractionMethod ? [] : ['Soil extraction method not declared.']),
+    ],
+  };
+}
+
+/**
+ * Legacy-compatible deterministic entrypoint hardened to fail closed (Batch 04.0-H).
+ * Throws an explicit error on unsupported crops (e.g. lettuce), missing organicMatterPercent,
+ * or invalid inputs instead of substituting default coefficients.
  */
 export function calculateFertiliserRecommendation(
   cropId: string,
   targetYieldTonnesPerHa: number,
   farmAreaHectares: number,
-  soil: SoilNutrientProfile
+  soil: SoilNutrientProfile,
 ): FertiliserRecommendation {
-  const cropReq = CROP_NUTRIENT_UPTAKE[cropId] ?? { nPerTonne: 15, pPerTonne: 6, kPerTonne: 15 };
-
-  // 1. Total nutrient target for desired yield
-  const totalNNeeded = cropReq.nPerTonne * targetYieldTonnesPerHa;
-  const totalPNeeded = cropReq.pPerTonne * targetYieldTonnesPerHa;
-  const totalKNeeded = cropReq.kPerTonne * targetYieldTonnesPerHa;
-
-  // 2. Available soil nutrient credits based on soil testing
-  // Soil N credit from organic matter (rough baseline 20 kg/ha if moderate)
-  const soilNCredit = (soil.organicMatterPercent ?? 1.5) * 15;
-  // Soil P (Bray-1 ppm to kg/ha conversion: roughly ppm * 2 * availability factor 0.3)
-  const soilPCredit = soil.phosphorusPpm * 0.6;
-  // Soil K (exchangeable ppm to kg/ha: ppm * 1.2 * availability factor 0.4)
-  const soilKCredit = soil.potassiumPpm * 0.48;
-
-  // 3. Deficit calculation (clamped to non-negative)
-  const nDeficitKgPerHa = Math.max(0, Math.round(totalNNeeded - soilNCredit));
-  const pDeficitKgPerHa = Math.max(0, Math.round(totalPNeeded - soilPCredit));
-  const kDeficitKgPerHa = Math.max(0, Math.round(totalKNeeded - soilKCredit));
-
-  // 4. Commercial fertilizer formulation for Nigeria:
-  // Base recommendation: NPK 15:15:15 to satisfy Phosphorus & Potassium needs
-  // NPK 15:15:15 provides 0.15 kg P2O5 per 1 kg of product
-  const npkNeededKgPerHa = pDeficitKgPerHa > 0 ? Math.round(pDeficitKgPerHa / 0.15) : 0;
-  // Capped at reasonable agronomic maximum (e.g. 400 kg/ha = 8 bags/ha)
-  const npkAppliedKgPerHa = Math.min(400, Math.max(npkNeededKgPerHa, 100));
-
-  // N provided by NPK 15:15:15
-  const nFromNpk = npkAppliedKgPerHa * 0.15;
-  // Remaining N to be supplied by top-dressed Urea (46% N)
-  const remainingN = Math.max(0, nDeficitKgPerHa - nFromNpk);
-  const ureaAppliedKgPerHa = remainingN > 0 ? Math.round(remainingN / 0.46) : 50;
-
-  // 5. Lime recommendation for acidic soils
-  let limeKgPerHa = 0;
-  if (soil.pH < 5.0) {
-    limeKgPerHa = 1500; // Strong acidity
-  } else if (soil.pH < 5.5) {
-    limeKgPerHa = 800; // Moderate acidity
-  }
-
-  const npkTotalKg = Math.round(npkAppliedKgPerHa * farmAreaHectares);
-  const ureaTotalKg = Math.round(ureaAppliedKgPerHa * farmAreaHectares);
-
-  return {
+  const result = evaluateFertiliserRecommendation({
     cropId,
     targetYieldTonnesPerHa,
     farmAreaHectares,
-    deficitKgPerHa: {
-      nitrogenKg: nDeficitKgPerHa,
-      phosphorusKg: pDeficitKgPerHa,
-      potassiumKg: kDeficitKgPerHa,
-    },
-    productApplications: [
-      {
-        productName: 'NPK 15:15:15',
-        kgPerHa: npkAppliedKgPerHa,
-        totalKg: npkTotalKg,
-        fiftyKgBags: Math.ceil(npkTotalKg / 50),
-        timing: 'basal_planting',
-      },
-      {
-        productName: 'Urea (46% N)',
-        kgPerHa: ureaAppliedKgPerHa,
-        totalKg: ureaTotalKg,
-        fiftyKgBags: Math.ceil(ureaTotalKg / 50),
-        timing: 'top_dress_vegetative',
-      },
-    ],
-    limeRecommendationKgPerHa: limeKgPerHa,
-    warning:
-      soil.pH < 5.5
-        ? `Soil pH (${soil.pH}) is acidic. Apply agricultural limestone 2-4 weeks before planting to unlock fertiliser efficiency.`
-        : undefined,
-  };
+    soil,
+    requireStrictSoilProvenance: false,
+  });
+
+  if (!result.ok) {
+    throw new Error(`[${result.reasonCode}] ${result.message}`);
+  }
+  return result.recommendation;
 }

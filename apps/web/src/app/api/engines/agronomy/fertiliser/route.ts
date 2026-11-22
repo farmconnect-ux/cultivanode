@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
-
-import { calculateFertiliserRecommendation, type SoilNutrientProfile } from '@cultivanode/shared';
-import { authorizeRequest, parseJsonBody } from '@/lib/engines-api-helper';
-import { FertiliserSchema } from '@/lib/fertiliser-schema';
+import { NextResponse } from "next/server";
+import { evaluateFertiliserRecommendation, type SoilNutrientProfile } from "@cultivanode/shared";
+import { authorizeRequest, parseJsonBody } from "@/lib/engines-api-helper";
+import { FertiliserSchema } from "@/lib/fertiliser-schema";
 
 export async function POST(req: Request) {
   const auth = await authorizeRequest(req);
@@ -11,16 +10,35 @@ export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, FertiliserSchema);
   if (!parsed.ok) return parsed.response;
 
-  try {
-    const recommendation = calculateFertiliserRecommendation(
-      parsed.data.cropId,
-      parsed.data.targetYieldTonnesPerHa,
-      parsed.data.farmAreaHectares,
-      parsed.data.soil as SoilNutrientProfile,
+  const result = evaluateFertiliserRecommendation({
+    cropId: parsed.data.cropId,
+    targetYieldTonnesPerHa: parsed.data.targetYieldTonnesPerHa,
+    farmAreaHectares: parsed.data.farmAreaHectares,
+    soil: parsed.data.soil as SoilNutrientProfile,
+    zone: parsed.data.zone,
+    growthStage: parsed.data.growthStage,
+    requireStrictSoilProvenance: parsed.data.requireStrictSoilProvenance ?? false,
+  });
+
+  if (!result.ok) {
+    const httpStatus = result.status === "invalid_input" ? 400 : 422;
+    return NextResponse.json(
+      {
+        status: result.status,
+        reasonCode: result.reasonCode,
+        error: result.message,
+        missingRequirements: result.missingRequirements,
+        guidance: result.guidance,
+      },
+      { status: httpStatus },
     );
-    return NextResponse.json(recommendation);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Invalid request';
-    return NextResponse.json({ error: message }, { status: 400 });
   }
+
+  return NextResponse.json({
+    ...result.recommendation,
+    recommendationStatus: result.status,
+    protocol: result.protocol,
+    assumptions: result.assumptions,
+    missingInformation: result.missingInformation,
+  });
 }

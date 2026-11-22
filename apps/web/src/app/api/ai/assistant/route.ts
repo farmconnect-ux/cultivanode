@@ -309,8 +309,15 @@ export async function POST(req: Request) {
       executionOutcome,
       guardrailResult: {
         status: result.passedSafetyGuardrail ? "passed" : "blocked",
-        rule_ids: ["nafdac_chemical_guardrail"],
-        reason_codes: result.passedSafetyGuardrail ? [] : ["prohibited_chemical"],
+        rule_ids: result.numericGuardrailBlocked
+          ? ["nafdac_chemical_guardrail", "fertiliser_numeric_guardrail"]
+          : ["nafdac_chemical_guardrail"],
+        reason_codes: result.passedSafetyGuardrail
+          ? []
+          : [
+              ...(result.bannedChemicalsDetected.length > 0 ? (["prohibited_chemical"] as const) : []),
+              ...(result.numericGuardrailBlocked ? (["unsupported_numerical_prescription"] as const) : []),
+            ],
         blocked: !result.passedSafetyGuardrail,
       },
       contextRefs: auditContextRefs,

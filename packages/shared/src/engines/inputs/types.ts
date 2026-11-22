@@ -1,15 +1,62 @@
+import type {
+  ConvertedPotassiumValue,
+  NutrientBasis,
+  SoilExtractionMethod,
+  TypedSoilPotassiumInput,
+} from './nutrient-units';
+
+export type SoilEvidenceClass =
+  | 'lab_confirmed'
+  | 'field_kit'
+  | 'farmer_reported'
+  | 'modelled_estimate';
+
+export type AgriculturalRecommendationStatus =
+  | 'approved_calculation'
+  | 'source_information'
+  | 'general_guidance'
+  | 'insufficient_evidence'
+  | 'unsupported_crop'
+  | 'invalid_input'
+  | 'calculation_failure';
+
 export interface SoilNutrientProfile {
   pH: number;
   nitrogenPercent?: number; // Organic matter / total N % (e.g. 0.15%)
   phosphorusPpm: number; // Available P (Bray-1, e.g. 8 ppm)
-  potassiumPpm: number; // Exchangeable K (e.g. 120 ppm)
+  potassiumPpm?: number; // Legacy elemental K in mg/kg (ppm)
+  /** Preferred explicit typed potassium input preserving original lab value, unit, and basis. */
+  potassium?: TypedSoilPotassiumInput;
   organicMatterPercent?: number;
+  /** Optional provenance metadata enforced when strict validation is enabled (ADR-018, ADR-020). */
+  provenance?: SoilEvidenceClass;
+  extractionMethod?: SoilExtractionMethod | string;
+  samplingDepthCm?: number;
+  testDate?: string; // ISO date string
+}
+
+export interface FertiliserProtocolMetadata {
+  cropId: string;
+  protocolVersion: string;
+  /** Software validation does NOT constitute independent agronomic certification (Batch 04.0-H). */
+  approvalStatus: 'provisional_software_validated' | 'agronomist_approved';
+  sourceCitation: string;
+  maxNitrogenKgPerHa: number;
+  supportedZones: readonly string[];
+  nutrientBasis: {
+    nitrogen: NutrientBasis;
+    phosphorus: NutrientBasis;
+    potassium: NutrientBasis;
+  };
 }
 
 export interface FertiliserRecommendation {
   cropId: string;
   targetYieldTonnesPerHa: number;
   farmAreaHectares: number;
+  protocolVersion?: string;
+  protocolApprovalStatus?: FertiliserProtocolMetadata['approvalStatus'];
+  potassiumConversion?: ConvertedPotassiumValue;
   deficitKgPerHa: {
     nitrogenKg: number;
     phosphorusKg: number;
@@ -25,6 +72,38 @@ export interface FertiliserRecommendation {
   limeRecommendationKgPerHa: number;
   warning?: string;
 }
+
+export interface FertiliserCalculationRequest {
+  cropId?: string | null;
+  targetYieldTonnesPerHa: number;
+  farmAreaHectares: number;
+  soil?: SoilNutrientProfile | null;
+  zone?: string | null;
+  growthStage?: string | null;
+  referenceDate?: string;
+  /** When true (default in Batch 04.0-H API/assistant), requires lab-confirmed soil provenance, extraction method, depth, and non-expired test date. */
+  requireStrictSoilProvenance?: boolean;
+  /** Optional explicit protocol override for testing missing/unapproved protocol scenarios. */
+  protocolOverride?: Partial<FertiliserProtocolMetadata> | null;
+}
+
+export type FertiliserRecommendationResult =
+  | {
+      ok: true;
+      status: 'approved_calculation';
+      recommendation: FertiliserRecommendation;
+      protocol: FertiliserProtocolMetadata;
+      assumptions: string[];
+      missingInformation: string[];
+    }
+  | {
+      ok: false;
+      status: Exclude<AgriculturalRecommendationStatus, 'approved_calculation'>;
+      reasonCode: string;
+      message: string;
+      missingRequirements: string[];
+      guidance: string;
+    };
 
 export interface ApprovedAgrochemical {
   id: string;

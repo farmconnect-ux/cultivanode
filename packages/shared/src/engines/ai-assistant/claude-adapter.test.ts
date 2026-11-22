@@ -37,7 +37,8 @@ describe('Claude as the farm assistant', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 500 })));
     const rules = await askGroundedAiAssistant({ query: 'Fertiliser for maize?', context, anthropicApiKey: 'k' });
     expect(rules.providerUsed).toBe('rule-engine');
-    expect(rules.answer).toContain('NPK');
+    expect(rules.answer).not.toMatch(/\d+\s*kg\/ha/i);
+    expect(rules.answer.toLowerCase()).toContain('soil');
   });
 
   it('still runs the NAFDAC guardrail on Claude answers', async () => {
