@@ -35,7 +35,7 @@ function makeReq(body: unknown) {
 
 const VALID_LAB_SOIL = {
   pH: 6.2,
-  phosphorusPpm: 12,
+  phosphorus: { value: 12, unit: "ppm", basis: "elemental_P" },
   potassium: { value: 0.25, unit: "cmol_kg", basis: "elemental_K" },
   organicMatterPercent: 1.8,
   provenance: "lab_confirmed",

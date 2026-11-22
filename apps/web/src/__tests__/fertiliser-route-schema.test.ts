@@ -11,7 +11,11 @@ import { FertiliserSchema, SoilSchema } from "@/lib/fertiliser-schema";
 const validSoil = {
   pH: 6.2,
   organicMatterPercent: 2.1,
-  phosphorusPpm: 12,
+  phosphorus: {
+    value: 12,
+    unit: "ppm" as const,
+    basis: "elemental_P" as const,
+  },
   potassium: {
     value: 140,
     unit: "ppm" as const,
@@ -45,7 +49,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
     const parsed = SoilSchema.safeParse({
       ph: 6.2,
       organicMatterPct: 2.1,
-      phosphorusPpm: 12,
+      phosphorus: { value: 12, unit: "ppm", basis: "elemental_P" },
       potassium: { value: 140, unit: "ppm", basis: "elemental_K" },
       provenance: "lab_confirmed",
       extractionMethod: "bray_1",
@@ -58,16 +62,28 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
     }
   });
 
-  it("rejects legacy untyped potassiumPpm and ppm/mg_kg missing explicit nutrient basis", () => {
+  it("rejects legacy untyped potassiumPpm/phosphorusPpm and ppm/mg_kg missing explicit nutrient basis", () => {
     const { potassium: _k, ...withoutPotassium } = validSoil;
     expect(
       SoilSchema.safeParse({ ...withoutPotassium, potassiumPpm: 140 }).success,
+    ).toBe(false);
+
+    const { phosphorus: _p, ...withoutPhosphorus } = validSoil;
+    expect(
+      SoilSchema.safeParse({ ...withoutPhosphorus, phosphorusPpm: 12 }).success,
     ).toBe(false);
 
     expect(
       SoilSchema.safeParse({
         ...validSoil,
         potassium: { value: 140, unit: "ppm" }, // missing basis
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SoilSchema.safeParse({
+        ...validSoil,
+        phosphorus: { value: 12, unit: "ppm" }, // missing basis
       }).success,
     ).toBe(false);
 
@@ -82,7 +98,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
   it.each([
     ["pH", { ...validSoil, pH: undefined }],
     ["organic matter", { ...validSoil, organicMatterPercent: undefined }],
-    ["phosphorus", { ...validSoil, phosphorusPpm: undefined }],
+    ["phosphorus", { ...validSoil, phosphorus: undefined }],
     ["potassium", { ...validSoil, potassium: undefined }],
     ["provenance", { ...validSoil, provenance: undefined }],
     ["extractionMethod", { ...validSoil, extractionMethod: undefined }],
@@ -95,7 +111,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
   it.each([
     ["pH", { ...validSoil, pH: 15 }],
     ["negative organic matter", { ...validSoil, organicMatterPercent: -0.1 }],
-    ["malformed phosphorus", { ...validSoil, phosphorusPpm: Number.NaN }],
+    ["malformed phosphorus", { ...validSoil, phosphorus: { value: Number.NaN, unit: "ppm", basis: "elemental_P" } }],
     ["infinite potassium", { ...validSoil, potassium: { value: Number.POSITIVE_INFINITY, unit: "ppm", basis: "elemental_K" } }],
   ])("rejects invalid %s values", (_field, soil) => {
     expect(SoilSchema.safeParse(soil).success).toBe(false);

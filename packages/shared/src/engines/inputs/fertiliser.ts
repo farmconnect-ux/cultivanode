@@ -1,4 +1,5 @@
 import {
+  convertSoilPhosphorus,
   convertSoilPotassium,
   type SoilExtractionMethod,
 } from './nutrient-units';
@@ -191,6 +192,31 @@ export function evaluateFertiliserRecommendation(
   if (!approvalRecord) {
     missingApprovalFields.push('approvalRecord');
   } else {
+    if (approvalRecord.status && approvalRecord.status !== 'active') {
+      return {
+        ok: false,
+        status: 'insufficient_evidence',
+        reasonCode: 'approval_record_not_active',
+        message: `Agronomic approval record for "${protocol.protocolVersion}" has status "${approvalRecord.status}" and is not active.`,
+        missingRequirements: ['active_agronomic_approval_record'],
+        guidance: 'Withdrawn or superseded agronomic approvals cannot authorise numerical fertiliser prescriptions.',
+      };
+    }
+    if (approvalRecord.expiresAt !== undefined) {
+      const expTs = new Date(approvalRecord.expiresAt).getTime();
+      if (Number.isNaN(expTs)) {
+        missingApprovalFields.push('approvalRecord.expiresAt(valid ISO date)');
+      } else if (expTs < effectiveRefTs) {
+        return {
+          ok: false,
+          status: 'insufficient_evidence',
+          reasonCode: 'approval_record_expired',
+          message: `Agronomic approval record for "${protocol.protocolVersion}" expired on ${approvalRecord.expiresAt}.`,
+          missingRequirements: ['current_agronomic_approval_record'],
+          guidance: 'Renew independent agronomic approval before generating numerical fertiliser prescriptions.',
+        };
+      }
+    }
     if (!approvalRecord.reviewerName?.trim()) missingApprovalFields.push('approvalRecord.reviewerName');
     if (!approvalRecord.reviewerCredentials?.trim()) missingApprovalFields.push('approvalRecord.reviewerCredentials');
     if (!approvalRecord.competenceScope?.trim()) missingApprovalFields.push('approvalRecord.competenceScope');
@@ -414,6 +440,29 @@ export function evaluateFertiliserRecommendation(
       guidance: 'Specify the crop growth stage (e.g. pre-planting, basal, vegetative) before requesting a fertiliser plan.',
     };
   }
+  const normalizedGrowthStage = request.growthStage.trim().toLowerCase();
+
+  // Farm/plot soil association check: prevent cross-farm or cross-plot soil report reuse
+  if (soil.farmId?.trim() && request.farmId?.trim() && soil.farmId.trim() !== request.farmId.trim()) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'soil_context_mismatch',
+      message: 'Soil test report farmId does not match the requested farm.',
+      missingRequirements: ['matching_farm_soil_test'],
+      guidance: 'Use a laboratory soil test belonging to the target farm.',
+    };
+  }
+  if (soil.plotId?.trim() && request.plotId?.trim() && soil.plotId.trim() !== request.plotId.trim()) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'soil_context_mismatch',
+      message: 'Soil test report plotId does not match the requested plot.',
+      missingRequirements: ['matching_plot_soil_test'],
+      guidance: 'Use a laboratory soil test belonging to the target plot.',
+    };
+  }
 
   // Validate required scalar soil readings (never silently default missing organicMatterPercent!)
   if (typeof soil.pH !== 'number' || !Number.isFinite(soil.pH) || soil.pH < 0 || soil.pH > 14) {
@@ -424,21 +473,6 @@ export function evaluateFertiliserRecommendation(
       message: 'Soil pH must be a finite number between 0 and 14.',
       missingRequirements: ['soil.pH'],
       guidance: 'Provide a valid laboratory soil pH value.',
-    };
-  }
-  if (
-    typeof soil.phosphorusPpm !== 'number' ||
-    !Number.isFinite(soil.phosphorusPpm) ||
-    soil.phosphorusPpm < 0 ||
-    soil.phosphorusPpm > 10_000
-  ) {
-    return {
-      ok: false,
-      status: 'invalid_input',
-      reasonCode: 'invalid_soil_phosphorus',
-      message: 'Soil phosphorus (ppm) must be a finite non-negative number.',
-      missingRequirements: ['soil.phosphorusPpm'],
-      guidance: 'Provide a valid available soil phosphorus reading in mg/kg (ppm).',
     };
   }
   if (
@@ -455,6 +489,45 @@ export function evaluateFertiliserRecommendation(
       message: 'Soil organic matter (%) is required; CultivaNode does not substitute an assumed average.',
       missingRequirements: ['soil.organicMatterPercent'],
       guidance: 'Provide the measured soil organic matter percentage from your laboratory report.',
+    };
+  }
+
+  // Finding 5: Require explicit typed phosphorus (elemental_P vs P2O5) — NEVER silently assume basis on legacy phosphorusPpm.
+  if (!soil.phosphorus) {
+    if (typeof soil.phosphorusPpm === 'number') {
+      return {
+        ok: false,
+        status: 'invalid_input',
+        reasonCode: 'soil_basis_unknown',
+        message:
+          'Legacy untyped phosphorusPpm cannot be used because its nutrient basis (elemental_P vs P2O5) is ambiguous. Submit typed soil.phosphorus with explicit unit and basis.',
+        missingRequirements: ['soil.phosphorus.unit', 'soil.phosphorus.basis'],
+        guidance: 'Confirm on your laboratory report whether available phosphorus is reported as elemental P or P2O5 and supply typed soil.phosphorus.',
+      };
+    }
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_phosphorus_missing',
+      message: 'Soil phosphorus reading with explicit unit and nutrient basis is required.',
+      missingRequirements: ['soil.phosphorus'],
+      guidance: 'Provide laboratory available phosphorus with explicit unit (mg_kg or ppm) and basis (elemental_P or P2O5).',
+    };
+  }
+
+  const pConv = convertSoilPhosphorus({
+    ...soil.phosphorus,
+    extractionMethod: soil.phosphorus.extractionMethod ?? soil.extractionMethod,
+    provenance: soil.phosphorus.provenance ?? soil.provenance,
+  });
+  if (!pConv.ok) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: pConv.code,
+      message: pConv.message,
+      missingRequirements: ['valid_typed_soil_phosphorus'],
+      guidance: 'Verify the phosphorus unit and nutrient basis (elemental P vs P2O5) on your laboratory report.',
     };
   }
 
@@ -505,7 +578,7 @@ export function evaluateFertiliserRecommendation(
   const totalKNeeded = uptakePerTonne.kPerTonne * request.targetYieldTonnesPerHa;
 
   const soilNCredit = soil.organicMatterPercent * 15;
-  const soilPCredit = soil.phosphorusPpm * 0.6;
+  const soilPCredit = pConv.derivedElementalMgKg * 0.6;
   const soilKCredit = kConv.derivedElementalMgKg * 0.48;
 
   const nDeficitKgPerHa = Math.max(0, Math.round(totalNNeeded - soilNCredit));
@@ -573,6 +646,7 @@ export function evaluateFertiliserRecommendation(
     ...(request.plotId?.trim() ? { plotId: request.plotId.trim() } : {}),
     ...(request.requestId?.trim() ? { requestId: request.requestId.trim() } : {}),
     zone: normalizedZone,
+    growthStage: normalizedGrowthStage,
     protocolVersion: protocol.protocolVersion,
     protocolApprovalStatus: 'agronomist_approved' as const,
     calculatedAt,
@@ -598,6 +672,7 @@ export function evaluateFertiliserRecommendation(
       protocolVersion: protocol.protocolVersion,
       protocolApprovalStatus: protocol.approvalStatus,
       binding,
+      phosphorusConversion: pConv,
       potassiumConversion: kConv,
       deficitKgPerHa: {
         nitrogenKg: nDeficitKgPerHa,
@@ -610,6 +685,7 @@ export function evaluateFertiliserRecommendation(
     },
     assumptions: [
       `Approved protocol ${protocol.protocolVersion} (approved by ${approvalRecord!.reviewerName}, ${approvalRecord!.reviewerCredentials} on ${approvalRecord!.approvalDate}).`,
+      pConv.conversionNote,
       kConv.conversionNote,
       'Fertiliser formulations assume NPK 15:15:15 (15% N, 15% P2O5, 15% K2O) and Urea (46% N).',
       'Soil provenance limitation: laboratory provenance ("lab_confirmed") is caller-declared; independent accredited laboratory certificate verification is not yet implemented.',

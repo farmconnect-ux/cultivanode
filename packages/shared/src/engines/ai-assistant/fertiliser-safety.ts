@@ -39,6 +39,11 @@ export interface VerifiedSourceQuotationContext {
   passageRef: string;
   licenceIdentifier: string;
   licencePermitsQuotation: true;
+  approvedForCommercialAiUse: true;
+  publicationDate: string; // ISO date
+  effectiveDate: string; // ISO date
+  expiresAt?: string; // ISO date
+  supportsSpecificClaim: true;
   applicableCropId: string;
   applicableRegion: string;
   attribution: string;
@@ -124,6 +129,25 @@ const APPLICATION_RATE_PATTERNS: ReadonlyArray<{
   {
     re: /\b(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*(?:kg\s*\/\s*(?:ha|hectare)|kg\s+per\s+(?:ha|hectare)|kilograms?\s+per\s+(?:ha|hectare)|kg\s*\.?\s*ha(?:\s*-1|⁻¹))\b/gi,
     unitKind: 'kg_per_ha',
+  },
+  // Nutrient-annotated rates (e.g. "120 kg N/ha", "60 kg P2O5 per hectare", "40 kg K2O/ha")
+  {
+    re: /\b(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*kg\s+(?:n|p|k|p2o5|p₂o₅|k2o|k₂o|npk|urea|nitrogen|phosphorus|potassium|lime)\s*(?:\/\s*(?:ha|hectare|acre)|per\s+(?:ha|hectare|acre))\b/gi,
+    unitKind: 'other_application_unit',
+  },
+  // Natural-language written-number rates and household measure prescriptions
+  {
+    re: /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|half(?:\s+a)?|quarter(?:\s+a)?|fifty|hundred|two\s+hundred|three\s+hundred)\s+(?:kg|kilograms?|bags?|litres?|liters?|bottle\s*caps?|milk\s*tins?|match\s*boxes?|teaspoons?|tablespoons?)\s+(?:per|\/|for\s+(?:one|each|every))\s+(?:ha|hectare|acre|plot|plant|stand|hole|hill)\b/gi,
+    unitKind: 'other_application_unit',
+  },
+  {
+    re: /\b(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*(?:bottle\s*caps?|milk\s*tins?|match\s*boxes?|teaspoons?|tablespoons?)\s+(?:per|\/)\s*(?:plant|stand|hole|hill)\b/gi,
+    unitKind: 'other_application_unit',
+  },
+  // Application interval & frequency prescriptions (e.g. "apply every 7 days", "repeat every 2 weeks", "apply at 10-14 DAP")
+  {
+    re: /\b(?:apply|applying|repeat|repeating|re-apply|spray|spraying|fertigate|top[- ]?dress|side[- ]?dress|dose)\s+(?:every\s+(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*(?:days?|weeks?|months?)|at\s+(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*(?:dap|wap|days?\s+after\s+planting|weeks?\s+after\s+planting))\b/gi,
+    unitKind: 'other_application_unit',
   },
   // Other per-area / per-plant / volume / concentration units (never produced directly by standard NPK/Urea kg/ha engine)
   {
@@ -266,16 +290,29 @@ function extractApplicationRateSnippets(rawAnswer: string): ParsedRateSnippet[] 
 export function isValidVerifiedSourceQuote(
   quote: VerifiedSourceQuotationContext | null | undefined,
   cropId?: string | null,
+  referenceDate?: string,
 ): quote is VerifiedSourceQuotationContext {
   if (!quote) return false;
   if (quote.verified !== true) return false;
   if (quote.licencePermitsQuotation !== true) return false;
+  if (quote.approvedForCommercialAiUse !== true) return false;
+  if (quote.supportsSpecificClaim !== true) return false;
   if (quote.explicitNonPrescriptionSeparation !== true) return false;
   if (!quote.sourceId?.trim() || !quote.documentTitle?.trim()) return false;
   if (!quote.passageRef?.trim()) return false;
   if (!quote.licenceIdentifier?.trim()) return false;
   if (!quote.applicableCropId?.trim() || !quote.applicableRegion?.trim()) return false;
   if (!quote.attribution?.trim()) return false;
+
+  const refTs = referenceDate ? new Date(referenceDate).getTime() : Date.now();
+  const pubTs = new Date(quote.publicationDate).getTime();
+  const effTs = new Date(quote.effectiveDate).getTime();
+  if (Number.isNaN(pubTs) || Number.isNaN(effTs) || Number.isNaN(refTs)) return false;
+  if (effTs > refTs + 86_400_000) return false;
+  if (quote.expiresAt !== undefined) {
+    const expTs = new Date(quote.expiresAt).getTime();
+    if (Number.isNaN(expTs) || expTs < refTs) return false;
+  }
 
   const reqCrop = cropId?.trim().toLowerCase();
   const quoteCrop = quote.applicableCropId.trim().toLowerCase();
@@ -333,6 +370,7 @@ function validateCalculationBindingAndValues(
     plotId?: string | null;
     requestId?: string | null;
     zone?: string | null;
+    growthStage?: string | null;
     referenceDate?: string;
   },
 ): { ok: true } | { ok: false; reasonCode: string } {
@@ -379,6 +417,12 @@ function validateCalculationBindingAndValues(
   const reqZone = options.zone?.trim().toLowerCase() ?? '';
   if (!boundZone || (reqZone && reqZone !== boundZone)) {
     return { ok: false, reasonCode: 'calculation_zone_mismatch' };
+  }
+
+  const boundStage = binding.growthStage?.trim().toLowerCase() ?? '';
+  const reqStage = options.growthStage?.trim().toLowerCase() ?? '';
+  if (!boundStage || (reqStage && reqStage !== boundStage)) {
+    return { ok: false, reasonCode: 'calculation_growth_stage_mismatch' };
   }
 
   // 4. Freshness check (reject stale or future-dated calculation objects)
@@ -598,6 +642,7 @@ export function validateAssistantNumericalOutput(
     plotId?: string | null;
     requestId?: string | null;
     zone?: string | null;
+    growthStage?: string | null;
     language: AppLanguage | 'pcm';
     approvedCalculation?: FertiliserRecommendation | null;
     verifiedSourceQuote?: VerifiedSourceQuotationContext | null;
@@ -649,8 +694,8 @@ export function validateAssistantNumericalOutput(
     };
   }
 
-  // Case 2: Verified, licensed, attributed published source quotation (disabled unless ALL Section 8 metadata is verified)
-  if (isValidVerifiedSourceQuote(options.verifiedSourceQuote, options.cropId)) {
+  // Case 2: Verified, licensed, attributed published source quotation (disabled unless ALL Section 2 metadata is verified)
+  if (isValidVerifiedSourceQuote(options.verifiedSourceQuote, options.cropId, options.referenceDate)) {
     return {
       passed: true,
       recommendationStatus: 'source_information',

@@ -6,6 +6,7 @@ import {
   SUPPORTED_FERTILISER_CROP_IDS,
   SUPPORTED_FERTILISER_PROTOCOLS,
   calculateFertiliserRecommendation,
+  convertSoilPhosphorus,
   convertSoilPotassium,
   elementalKToK2O,
   elementalPToP2O5,
@@ -17,7 +18,12 @@ import { CultivaNodeEnginesClient } from '../api-gateway/client';
 
 const LAB_SOIL_VALID = {
   pH: 6.2,
-  phosphorusPpm: 12,
+  phosphorus: {
+    value: 12,
+    unit: 'ppm' as const,
+    basis: 'elemental_P' as const,
+    extractionMethod: 'bray_1' as const,
+  },
   potassium: {
     value: 0.25,
     unit: 'cmol_kg' as const,
@@ -40,6 +46,8 @@ function makeApprovedProtocolFixture(cropId: (typeof SUPPORTED_FERTILISER_CROP_I
       reviewerCredentials: 'Registered Agronomist / PhD Soil Fertility (Test Fixture)',
       competenceScope: `${cropId} nutrient calibration — Nigeria savanna & rainforest`,
       approvalDate: '2026-09-15',
+      status: 'active' as const,
+      expiresAt: '2027-09-15',
       sourceEvidence: 'Test fixture citation — NOT a production agronomic approval',
       protocolVersion: base.protocolVersion,
       applicableCropId: cropId,
@@ -118,14 +126,14 @@ describe('Batch 04.0-H Revision 2 — Finding 5: Typed Nutrient Unit & Basis Val
     expect(neg.ok).toBe(false);
     if (!neg.ok) expect(neg.code).toBe('soil_value_invalid');
 
-    // Legacy untyped potassiumPpm MUST fail closed in evaluateFertiliserRecommendation
-    const legacyRes = evaluateFertiliserRecommendation({
+    // Legacy untyped potassiumPpm and phosphorusPpm MUST fail closed in evaluateFertiliserRecommendation
+    const legacyKRes = evaluateFertiliserRecommendation({
       cropId: 'maize',
       targetYieldTonnesPerHa: 5,
       farmAreaHectares: 1,
       soil: {
         pH: 6.2,
-        phosphorusPpm: 12,
+        phosphorus: { value: 12, unit: 'ppm', basis: 'elemental_P' },
         potassiumPpm: 140,
         organicMatterPercent: 1.8,
         provenance: 'lab_confirmed',
@@ -138,11 +146,48 @@ describe('Batch 04.0-H Revision 2 — Finding 5: Typed Nutrient Unit & Basis Val
       referenceDate: '2026-11-22',
       protocolOverride: makeApprovedProtocolFixture('maize'),
     });
-    expect(legacyRes.ok).toBe(false);
-    if (!legacyRes.ok) {
-      expect(legacyRes.status).toBe('invalid_input');
-      expect(legacyRes.reasonCode).toBe('soil_basis_unknown');
+    expect(legacyKRes.ok).toBe(false);
+    if (!legacyKRes.ok) {
+      expect(legacyKRes.status).toBe('invalid_input');
+      expect(legacyKRes.reasonCode).toBe('soil_basis_unknown');
     }
+
+    // Missing phosphorus basis & legacy untyped phosphorusPpm MUST fail closed
+    const missingPBasis = convertSoilPhosphorus({ value: 12, unit: 'ppm' });
+    expect(missingPBasis.ok).toBe(false);
+    if (!missingPBasis.ok) expect(missingPBasis.code).toBe('soil_basis_unknown');
+
+    const p2o5Res = convertSoilPhosphorus({ value: 22.914, unit: 'mg_kg', basis: 'P2O5' });
+    expect(p2o5Res.ok).toBe(true);
+    if (p2o5Res.ok) {
+      expect(p2o5Res.derivedElementalMgKg).toBe(10);
+      expect(p2o5Res.agronomicInterpretationApplied).toBe(false);
+    }
+
+    const legacyPRes = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      soil: {
+        pH: 6.2,
+        phosphorusPpm: 12,
+        potassium: { value: 0.25, unit: 'cmol_kg', basis: 'elemental_K' },
+        organicMatterPercent: 1.8,
+        provenance: 'lab_confirmed',
+        extractionMethod: 'bray_1',
+        samplingDepthCm: 15,
+        testDate: '2026-10-01',
+      },
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: makeApprovedProtocolFixture('maize'),
+    });
+    expect(legacyPRes.ok).toBe(false);
+    if (!legacyPRes.ok) expect(legacyPRes.reasonCode).toBe('soil_basis_unknown');
+
+    expect(() => elementalKToK2O(-1)).toThrow(RangeError);
+    expect(() => elementalPToP2O5(Number.NaN)).toThrow(RangeError);
   });
 });
 
@@ -226,6 +271,70 @@ describe('Batch 04.0-H Revision 2 — Finding 1: Provisional Protocols Must Fail
     });
     expect(badCropRecord.ok).toBe(false);
     if (!badCropRecord.ok) expect(badCropRecord.reasonCode).toBe('approval_record_incomplete');
+
+    // Withdrawn, expired, and administrative approvals MUST fail closed
+    const withdrawn = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      soil: LAB_SOIL_VALID,
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: {
+        ...makeApprovedProtocolFixture('maize'),
+        approvalRecord: { ...makeApprovedProtocolFixture('maize').approvalRecord, status: 'withdrawn' },
+      },
+    });
+    expect(withdrawn.ok).toBe(false);
+    if (!withdrawn.ok) expect(withdrawn.reasonCode).toBe('approval_record_not_active');
+
+    const expired = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      soil: LAB_SOIL_VALID,
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: {
+        ...makeApprovedProtocolFixture('maize'),
+        approvalRecord: { ...makeApprovedProtocolFixture('maize').approvalRecord, expiresAt: '2026-01-01' },
+      },
+    });
+    expect(expired.ok).toBe(false);
+    if (!expired.ok) expect(expired.reasonCode).toBe('approval_record_expired');
+
+    const adminApproved = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      soil: LAB_SOIL_VALID,
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: {
+        ...makeApprovedProtocolFixture('maize'),
+        approvalStatus: 'administrative_approved',
+      },
+    });
+    expect(adminApproved.ok).toBe(false);
+    if (!adminApproved.ok) expect(adminApproved.reasonCode).toBe('protocol_provisional_not_approved');
+
+    // Cross-farm soil report reuse MUST fail closed
+    const crossFarmSoil = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      farmId: 'farm-alpha',
+      soil: { ...LAB_SOIL_VALID, farmId: 'farm-beta' },
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: makeApprovedProtocolFixture('maize'),
+    });
+    expect(crossFarmSoil.ok).toBe(false);
+    if (!crossFarmSoil.ok) expect(crossFarmSoil.reasonCode).toBe('soil_context_mismatch');
   });
 
   it('preserves unsupported-crop rejection across evaluator, calculateFertiliserRecommendation, and CultivaNodeEnginesClient', async () => {

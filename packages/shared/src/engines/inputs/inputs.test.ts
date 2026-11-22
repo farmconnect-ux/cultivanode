@@ -13,6 +13,7 @@ describe('Fertiliser Engine', () => {
       reviewerCredentials: 'PhD Soil Science (Internal Unit Test Fixture Only)',
       competenceScope: 'Maize nutrient math unit tests',
       approvalDate: '2026-10-01',
+      status: 'active' as const,
       sourceEvidence: 'Internal deterministic unit test fixture',
       protocolVersion: 'prov-ng-maize-v1.0',
       applicableCropId: 'maize',
@@ -23,7 +24,7 @@ describe('Fertiliser Engine', () => {
   it('fails closed on provisional built-in maize protocol without an independent agronomic approval record', () => {
     const soil = {
       pH: 6.2,
-      phosphorusPpm: 12,
+      phosphorus: { value: 12, unit: 'ppm' as const, basis: 'elemental_P' as const },
       potassium: { value: 140, unit: 'ppm' as const, basis: 'elemental_K' as const },
       organicMatterPercent: 1.8,
       provenance: 'lab_confirmed' as const,
@@ -44,7 +45,7 @@ describe('Fertiliser Engine', () => {
   it('calculates NPK and Urea for 5 t/ha maize on moderate soil when backed by a complete approved protocol fixture', () => {
     const soil = {
       pH: 6.2,
-      phosphorusPpm: 12,
+      phosphorus: { value: 12, unit: 'ppm' as const, basis: 'elemental_P' as const },
       potassium: { value: 140, unit: 'ppm' as const, basis: 'elemental_K' as const },
       organicMatterPercent: 1.8,
       provenance: 'lab_confirmed' as const,
@@ -75,7 +76,7 @@ describe('Fertiliser Engine', () => {
   it('recommends lime and warns on acidic soil (pH < 5.5) with an approved protocol fixture', () => {
     const acidSoil = {
       pH: 4.8,
-      phosphorusPpm: 6,
+      phosphorus: { value: 6, unit: 'ppm' as const, basis: 'elemental_P' as const },
       potassium: { value: 80, unit: 'ppm' as const, basis: 'elemental_K' as const },
       organicMatterPercent: 1.5,
       provenance: 'lab_confirmed' as const,

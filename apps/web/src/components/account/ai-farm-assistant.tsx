@@ -78,12 +78,13 @@ export function AiFarmAssistant({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedFarm = farms.find((f) => f.id === selectedFarmId) ?? farms[0];
-  const farmZone: FarmZone =
+  // Never invent an agro-ecological zone when the farm record has no verified zone (Batch 04.0-H Rev 2).
+  const farmZone: FarmZone | undefined =
     selectedFarm?.zone === "rainforest" ||
     selectedFarm?.zone === "derived_savanna" ||
     selectedFarm?.zone === "southern_guinea"
       ? (selectedFarm.zone as FarmZone)
-      : "rainforest";
+      : undefined;
 
   const [messages, setMessages] = useState<MessageItem[]>([
     {
@@ -177,9 +178,9 @@ export function AiFarmAssistant({
           query: text || "Please examine this crop image and identify potential disease or nutrient issues with verified treatments.",
           context: {
             farmerId: selectedFarm?.id ?? "farmer-1",
+            farmId: selectedFarm?.id,
             cropId: selectedCropId,
             zone: farmZone,
-            stageName: "Vegetative",
           },
           language: assistantLang,
           imageBase64: currentImg?.base64,

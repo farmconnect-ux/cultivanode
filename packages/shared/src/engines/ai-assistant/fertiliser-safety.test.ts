@@ -23,7 +23,7 @@ function makeApprovedMaizeCalc(overrides?: {
     farmAreaHectares: 2,
     soil: {
       pH: 6.2,
-      phosphorusPpm: 12,
+      phosphorus: { value: 12, unit: 'ppm', basis: 'elemental_P' },
       potassium: { value: 0.25, unit: 'cmol_kg', basis: 'elemental_K' },
       organicMatterPercent: 1.8,
       provenance: 'lab_confirmed',
@@ -96,12 +96,28 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
     });
     expect(res.passed).toBe(true);
     expect(res.recommendationStatus).toBe('approved_calculation');
+
+    // Cross-growth-stage reuse MUST fail closed
+    const wrongStage = validateAssistantNumericalOutput(deterministicText, {
+      cropId: 'maize',
+      farmId: 'farm-alpha',
+      plotId: 'plot-01',
+      requestId: 'req-001',
+      zone: 'derived_savanna',
+      growthStage: 'flowering',
+      language: 'en',
+      approvedCalculation: calc,
+      referenceDate: '2026-11-22T12:30:00Z',
+    });
+    expect(wrongStage.passed).toBe(false);
+    expect(wrongStage.reasonCode).toBe('calculation_growth_stage_mismatch');
   });
 
   it('rejects LLM attempts to inflate, deflate, range, swap product, swap unit, or alter timing of a calculated rate', () => {
@@ -269,6 +285,12 @@ describe('Batch 04.0-H Revision 2 — Finding 6: Keyword-Independent & Multiling
     ['Igbo bags without keyword', 'Tinye akpa anọ n’ubi gị.', 'en'],
     ['Igbo kilo per hectare', "Wụsa 150 kilo n'otu hekta.", 'en'],
     ['Pidgin bags for one hectare', 'Just put 4 bags for one hectare.', 'pcm'],
+    ['Nutrient-annotated N rate', 'Provide 120 kg N/ha across the plot.', 'en'],
+    ['Nutrient-annotated P2O5 rate', 'Supply 60 kg P2O5 per hectare at planting.', 'en'],
+    ['Natural-language written number', 'Spread four bags per hectare before rain.', 'en'],
+    ['Household bottle-cap measure', 'Place 2 bottle caps per plant beside each stand.', 'en'],
+    ['Application interval days', 'Apply every 7 days during vegetative growth.', 'en'],
+    ['Application DAP timing interval', 'Top-dress at 10-14 DAP along the rows.', 'en'],
   ])('blocks adversarial numerical application quantity: %s', (_label, text, lang) => {
     const res = validateAssistantNumericalOutput(text, {
       cropId: 'maize',
@@ -341,6 +363,11 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
       passageRef: 'Section 4.2, p. 18',
       licenceIdentifier: 'CC-BY-4.0',
       licencePermitsQuotation: true,
+      approvedForCommercialAiUse: true,
+      publicationDate: '2024-05-01',
+      effectiveDate: '2024-06-01',
+      expiresAt: '2028-06-01',
+      supportsSpecificClaim: true,
       applicableCropId: 'maize',
       applicableRegion: 'derived_savanna',
       attribution: 'IITA (2024), CC-BY-4.0',
@@ -349,10 +376,22 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
 
     const ok = validateAssistantNumericalOutput(
       'General published source information (not a farm-specific prescription): IITA (2024) p. 18 cites 200 kg/ha.',
-      { cropId: 'maize', language: 'en', verifiedSourceQuote: validQuote },
+      { cropId: 'maize', language: 'en', verifiedSourceQuote: validQuote, referenceDate: '2026-11-22' },
     );
     expect(ok.passed).toBe(true);
     expect(ok.recommendationStatus).toBe('source_information');
+
+    // Expired source quote -> rejected
+    const expiredQuote = validateAssistantNumericalOutput(
+      'General published source information: 200 kg/ha.',
+      {
+        cropId: 'maize',
+        language: 'en',
+        verifiedSourceQuote: { ...validQuote, expiresAt: '2025-01-01' },
+        referenceDate: '2026-11-22',
+      },
+    );
+    expect(expiredQuote.passed).toBe(false);
 
     // Missing licenceIdentifier -> rejected
     const missingLicence = validateAssistantNumericalOutput(

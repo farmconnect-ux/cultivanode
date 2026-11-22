@@ -20,6 +20,7 @@ export const K_TO_K2O_FACTOR = 1.2046;
 export const P_TO_P2O5_FACTOR = 2.2914;
 
 export type SoilPotassiumUnit = 'mg_kg' | 'ppm' | 'cmol_kg' | 'meq_100g';
+export type SoilPhosphorusUnit = 'mg_kg' | 'ppm';
 export type NutrientBasis = 'elemental_K' | 'K2O' | 'elemental_P' | 'P2O5' | 'elemental_N';
 export type SoilExtractionMethod =
   | 'bray_1'
@@ -28,6 +29,37 @@ export type SoilExtractionMethod =
   | 'ammonium_acetate_1M'
   | 'kjeldahl'
   | 'walkley_black';
+
+export interface TypedSoilPhosphorusInput {
+  value: number;
+  unit: SoilPhosphorusUnit | string;
+  basis?: 'elemental_P' | 'P2O5' | string;
+  extractionMethod?: SoilExtractionMethod | string;
+  provenance?: string;
+}
+
+export interface ConvertedPhosphorusValue {
+  ok: true;
+  originalValue: number;
+  originalUnit: SoilPhosphorusUnit;
+  originalBasis: 'elemental_P' | 'P2O5';
+  originalExtractionMethod?: string;
+  originalProvenance?: string;
+  derivedElementalMgKg: number;
+  derivedP2o5MgKg: number;
+  conversionApplied: boolean;
+  conversionFactor: number;
+  conversionNote: string;
+  agronomicInterpretationApplied: false;
+}
+
+export interface PhosphorusConversionError {
+  ok: false;
+  code: 'soil_value_invalid' | 'soil_unit_incompatible' | 'soil_basis_unknown';
+  message: string;
+}
+
+export type PhosphorusConversionResult = ConvertedPhosphorusValue | PhosphorusConversionError;
 
 export interface TypedSoilPotassiumInput {
   value: number;
@@ -156,18 +188,96 @@ export function convertSoilPotassium(input: TypedSoilPotassiumInput): PotassiumC
   };
 }
 
+/**
+ * Converts a typed laboratory soil phosphorus reading into elemental P (mg/kg) and P2O5 (mg/kg)
+ * while preserving original laboratory values, units, and provenance. Fails closed on missing
+ * or ambiguous nutrient basis — NEVER silently assumes elemental_P.
+ */
+export function convertSoilPhosphorus(input: TypedSoilPhosphorusInput): PhosphorusConversionResult {
+  if (typeof input.value !== 'number' || !Number.isFinite(input.value) || input.value < 0 || input.value > 10_000) {
+    return {
+      ok: false,
+      code: 'soil_value_invalid',
+      message: 'Soil phosphorus value must be a finite non-negative number within physical bounds (0–10,000 mg/kg).',
+    };
+  }
+
+  const unit = input.unit;
+  if (unit !== 'mg_kg' && unit !== 'ppm') {
+    return {
+      ok: false,
+      code: 'soil_unit_incompatible',
+      message: `Unsupported or ambiguous soil phosphorus unit "${String(unit)}". Expected mg_kg or ppm.`,
+    };
+  }
+
+  if (!input.basis || (input.basis !== 'elemental_P' && input.basis !== 'P2O5')) {
+    return {
+      ok: false,
+      code: 'soil_basis_unknown',
+      message: `Explicit phosphorus nutrient basis ("elemental_P" or "P2O5") is required for "${unit}" readings; CultivaNode does not silently assume elemental P (received: ${String(input.basis ?? 'undefined')}).`,
+    };
+  }
+
+  if (input.basis === 'P2O5') {
+    const derivedElementalMgKg = Number((input.value / P_TO_P2O5_FACTOR).toFixed(2));
+    const derivedP2o5MgKg = Number(input.value.toFixed(2));
+    return {
+      ok: true,
+      originalValue: input.value,
+      originalUnit: unit,
+      originalBasis: 'P2O5',
+      ...(input.extractionMethod ? { originalExtractionMethod: input.extractionMethod } : {}),
+      ...(input.provenance ? { originalProvenance: input.provenance } : {}),
+      derivedElementalMgKg,
+      derivedP2o5MgKg,
+      conversionApplied: true,
+      conversionFactor: Number((1 / P_TO_P2O5_FACTOR).toFixed(6)),
+      conversionNote: `Converted ${input.value} ${unit} P2O5 to ${derivedElementalMgKg} mg/kg elemental P (÷ ${P_TO_P2O5_FACTOR}; unit conversion only; not agronomic sufficiency calibration).`,
+      agronomicInterpretationApplied: false,
+    };
+  }
+
+  const derivedElementalMgKg = Number(input.value.toFixed(2));
+  const derivedP2o5MgKg = Number((input.value * P_TO_P2O5_FACTOR).toFixed(2));
+  return {
+    ok: true,
+    originalValue: input.value,
+    originalUnit: unit,
+    originalBasis: 'elemental_P',
+    ...(input.extractionMethod ? { originalExtractionMethod: input.extractionMethod } : {}),
+    ...(input.provenance ? { originalProvenance: input.provenance } : {}),
+    derivedElementalMgKg,
+    derivedP2o5MgKg,
+    conversionApplied: false,
+    conversionFactor: 1,
+    conversionNote: `Preserved ${input.value} ${unit} elemental P (${derivedP2o5MgKg} mg/kg P2O5 equivalent; unit conversion only; not agronomic sufficiency calibration).`,
+    agronomicInterpretationApplied: false,
+  };
+}
+
+function assertNonNegativeFinite(value: number, label: string): void {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${label} must be a finite non-negative number.`);
+  }
+}
+
 export function elementalKToK2O(elementalK: number): number {
+  assertNonNegativeFinite(elementalK, 'elementalK');
   return Number((elementalK * K_TO_K2O_FACTOR).toFixed(2));
 }
 
 export function k2OToElementalK(k2o: number): number {
+  assertNonNegativeFinite(k2o, 'k2o');
   return Number((k2o / K_TO_K2O_FACTOR).toFixed(2));
 }
 
 export function elementalPToP2O5(elementalP: number): number {
+  assertNonNegativeFinite(elementalP, 'elementalP');
   return Number((elementalP * P_TO_P2O5_FACTOR).toFixed(2));
 }
 
 export function p2O5ToElementalP(p2o5: number): number {
+  assertNonNegativeFinite(p2o5, 'p2o5');
   return Number((p2o5 / P_TO_P2O5_FACTOR).toFixed(2));
 }

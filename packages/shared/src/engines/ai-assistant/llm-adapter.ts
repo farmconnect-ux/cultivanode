@@ -431,6 +431,7 @@ export async function askGroundedAiAssistant(
     plotId: params.context.plotId ?? null,
     requestId: params.context.requestId ?? null,
     zone: params.context.zone ?? params.groundedEvidence?.verifiedCurrentFarmFacts?.farmZone ?? null,
+    growthStage: params.context.stageName ?? null,
     language: lang,
     approvedCalculation: params.approvedFertiliserCalculation ?? null,
     verifiedSourceQuote: null,

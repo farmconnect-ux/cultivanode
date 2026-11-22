@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { SUPPORTED_FERTILISER_CROP_IDS } from "@cultivanode/shared";
 
+const TypedPhosphorusSchema = z
+  .object({
+    value: z.number().finite().min(0).max(10_000),
+    unit: z.enum(["mg_kg", "ppm"]),
+    basis: z.enum(["elemental_P", "P2O5"]),
+    extractionMethod: z.string().trim().min(1).max(64).optional(),
+  })
+  .strict();
+
 const TypedPotassiumSchema = z
   .object({
     value: z.number().finite().min(0).max(50_000),
@@ -28,8 +37,9 @@ const TypedPotassiumSchema = z
 
 /**
  * Mandatory laboratory soil input schema (Batch 04.0-H Revision 2).
- * - Rejects legacy untyped `potassiumPpm` without explicit typed `potassium` (unit + basis).
+ * - Rejects legacy untyped `phosphorusPpm` and `potassiumPpm` without explicit typed nutrient unit and basis.
  * - Requires explicit soil provenance, extractionMethod, samplingDepthCm, and testDate.
+ * - Optional farmId/plotId on soil records are cross-checked against request farmId/plotId in the engine.
  * - Note: caller-supplied `provenance: "lab_confirmed"` is not yet independently verified
  *   against an accredited laboratory certificate; this limitation is disclosed by the engine.
  */
@@ -38,7 +48,7 @@ export const SoilSchema = z
     pH: z.number().finite().min(0).max(14).optional(),
     ph: z.number().finite().min(0).max(14).optional(),
     nitrogenPpm: z.number().finite().min(0).optional(),
-    phosphorusPpm: z.number().finite().min(0).max(10_000),
+    phosphorus: TypedPhosphorusSchema,
     potassium: TypedPotassiumSchema,
     organicMatterPercent: z.number().finite().min(0).max(100).optional(),
     organicMatterPct: z.number().finite().min(0).max(100).optional(),
@@ -46,6 +56,8 @@ export const SoilSchema = z
     extractionMethod: z.string().trim().min(1).max(64),
     samplingDepthCm: z.number().finite().positive().max(100),
     testDate: z.string().trim().min(1).max(40),
+    farmId: z.string().trim().min(1).max(64).optional(),
+    plotId: z.string().trim().min(1).max(64).optional(),
   })
   .strict()
   .refine((soil) => soil.pH !== undefined || soil.ph !== undefined, {
@@ -56,13 +68,15 @@ export const SoilSchema = z
   })
   .transform((soil) => ({
     pH: soil.pH ?? soil.ph!,
-    phosphorusPpm: soil.phosphorusPpm,
+    phosphorus: soil.phosphorus,
     potassium: soil.potassium,
     organicMatterPercent: soil.organicMatterPercent ?? soil.organicMatterPct!,
     provenance: soil.provenance,
     extractionMethod: soil.extractionMethod,
     samplingDepthCm: soil.samplingDepthCm,
     testDate: soil.testDate,
+    ...(soil.farmId !== undefined ? { farmId: soil.farmId } : {}),
+    ...(soil.plotId !== undefined ? { plotId: soil.plotId } : {}),
   }));
 
 /**

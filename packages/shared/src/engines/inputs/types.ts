@@ -1,7 +1,9 @@
 import type {
+  ConvertedPhosphorusValue,
   ConvertedPotassiumValue,
   NutrientBasis,
   SoilExtractionMethod,
+  TypedSoilPhosphorusInput,
   TypedSoilPotassiumInput,
 } from './nutrient-units';
 
@@ -23,16 +25,23 @@ export type AgriculturalRecommendationStatus =
 export interface SoilNutrientProfile {
   pH: number;
   nitrogenPercent?: number; // Organic matter / total N % (e.g. 0.15%)
-  phosphorusPpm: number; // Available P (Bray-1, e.g. 8 ppm)
-  potassiumPpm?: number; // Legacy elemental K in mg/kg (ppm)
+  /** Legacy untyped phosphorus ppm — rejected fail-closed because basis (elemental_P vs P2O5) is ambiguous. */
+  phosphorusPpm?: number;
+  /** Preferred explicit typed phosphorus input preserving original lab value, unit, and basis. */
+  phosphorus?: TypedSoilPhosphorusInput;
+  /** Legacy untyped potassium ppm — rejected fail-closed because basis (elemental_K vs K2O) is ambiguous. */
+  potassiumPpm?: number;
   /** Preferred explicit typed potassium input preserving original lab value, unit, and basis. */
   potassium?: TypedSoilPotassiumInput;
   organicMatterPercent?: number;
-  /** Optional provenance metadata enforced when strict validation is enabled (ADR-018, ADR-020). */
+  /** Mandatory provenance metadata enforced unconditionally server-side (ADR-018, ADR-020). */
   provenance?: SoilEvidenceClass;
   extractionMethod?: SoilExtractionMethod | string;
   samplingDepthCm?: number;
   testDate?: string; // ISO date string
+  /** Optional farm/plot association on the soil report; must match request farmId/plotId when present. */
+  farmId?: string;
+  plotId?: string;
 }
 
 export interface AgronomicApprovalRecord {
@@ -40,6 +49,10 @@ export interface AgronomicApprovalRecord {
   reviewerCredentials: string;
   competenceScope: string;
   approvalDate: string; // ISO date string
+  /** Explicit approval lifecycle status; only 'active' may authorise prescriptions. */
+  status?: 'active' | 'withdrawn' | 'superseded' | string;
+  /** Optional expiry date (ISO); expired approvals fail closed. */
+  expiresAt?: string;
   sourceEvidence: string;
   protocolVersion: string;
   applicableCropId: string;
@@ -50,10 +63,11 @@ export interface FertiliserProtocolMetadata {
   cropId: string;
   protocolVersion: string;
   /**
-   * Software validation (`provisional_software_validated`) NEVER authorises a public numerical
-   * fertiliser prescription. Only `agronomist_approved` with a complete `approvalRecord` may do so.
+   * Software validation (`provisional_software_validated`), document publication, or
+   * administrative approval NEVER authorises a public numerical fertiliser prescription.
+   * Only `agronomist_approved` with an active, non-expired `approvalRecord` may do so.
    */
-  approvalStatus: 'provisional_software_validated' | 'agronomist_approved';
+  approvalStatus: 'provisional_software_validated' | 'agronomist_approved' | string;
   approvalRecord?: AgronomicApprovalRecord | null;
   sourceCitation: string;
   maxNitrogenKgPerHa: number;
@@ -71,6 +85,7 @@ export interface FertiliserCalculationBinding {
   plotId?: string;
   requestId?: string;
   zone: string;
+  growthStage: string;
   protocolVersion: string;
   protocolApprovalStatus: 'agronomist_approved';
   calculatedAt: string; // ISO timestamp
@@ -83,6 +98,7 @@ export interface FertiliserRecommendation {
   protocolVersion?: string;
   protocolApprovalStatus?: FertiliserProtocolMetadata['approvalStatus'];
   binding?: FertiliserCalculationBinding;
+  phosphorusConversion?: ConvertedPhosphorusValue;
   potassiumConversion?: ConvertedPotassiumValue;
   deficitKgPerHa: {
     nitrogenKg: number;
