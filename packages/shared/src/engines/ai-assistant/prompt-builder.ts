@@ -167,8 +167,8 @@ Clearly distinguish verified facts from general advice. If confidence is low, re
   const evidenceBlock = groundedEvidence ? `\n\n${formatGroundedEvidenceSections(groundedEvidence)}` : '';
 
   const userPrompt = `Farmer Context:
-- Crop: ${sanitizeMetadataField(context.cropId, 80)}
-- Zone: ${sanitizeMetadataField(context.zone, 40)}
+- Crop: ${sanitizeMetadataField(context.cropId || 'unverified (not provided)', 80)}
+- Zone: ${sanitizeMetadataField(context.zone ?? 'unverified (not provided)', 40)}
 - Current Stage: ${sanitizeMetadataField(context.stageName ?? 'General', 80)}
 - Days after planting: ${context.daysAfterPlanting ?? 'N/A'}${evidenceBlock}
 

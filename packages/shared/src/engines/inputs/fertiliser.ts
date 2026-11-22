@@ -48,6 +48,7 @@ export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliser
     cropId: 'maize',
     protocolVersion: 'prov-ng-maize-v1.0',
     approvalStatus: 'provisional_software_validated',
+    approvalRecord: null,
     sourceCitation: 'CultivaNode Provisional NG Maize Uptake Table (pending D-A5 agronomic sign-off)',
     maxNitrogenKgPerHa: 180,
     supportedZones: DEFAULT_NG_ZONES,
@@ -59,6 +60,7 @@ export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliser
     cropId: 'tomato',
     protocolVersion: 'prov-ng-tomato-v1.0',
     approvalStatus: 'provisional_software_validated',
+    approvalRecord: null,
     sourceCitation: 'CultivaNode Provisional NG Tomato Uptake Table (pending D-A5 agronomic sign-off)',
     maxNitrogenKgPerHa: 150,
     supportedZones: DEFAULT_NG_ZONES,
@@ -70,6 +72,7 @@ export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliser
     cropId: 'cassava',
     protocolVersion: 'prov-ng-cassava-v1.0',
     approvalStatus: 'provisional_software_validated',
+    approvalRecord: null,
     sourceCitation: 'CultivaNode Provisional NG Cassava Uptake Table (pending D-A5 agronomic sign-off)',
     maxNitrogenKgPerHa: 120,
     supportedZones: DEFAULT_NG_ZONES,
@@ -81,6 +84,7 @@ export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliser
     cropId: 'yam',
     protocolVersion: 'prov-ng-yam-v1.0',
     approvalStatus: 'provisional_software_validated',
+    approvalRecord: null,
     sourceCitation: 'CultivaNode Provisional NG Yam Uptake Table (pending D-A5 agronomic sign-off)',
     maxNitrogenKgPerHa: 120,
     supportedZones: DEFAULT_NG_ZONES,
@@ -92,6 +96,7 @@ export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliser
     cropId: 'rice',
     protocolVersion: 'prov-ng-rice-v1.0',
     approvalStatus: 'provisional_software_validated',
+    approvalRecord: null,
     sourceCitation: 'CultivaNode Provisional NG Rice Uptake Table (pending D-A5 agronomic sign-off)',
     maxNitrogenKgPerHa: 150,
     supportedZones: DEFAULT_NG_ZONES,
@@ -151,6 +156,12 @@ export function evaluateFertiliserRecommendation(
     ? { ...baseProtocol, ...request.protocolOverride }
     : baseProtocol;
 
+  const refTs = request.referenceDate ? new Date(request.referenceDate).getTime() : Date.now();
+  const effectiveRefTs = Number.isNaN(refTs) ? Date.now() : refTs;
+
+  // Finding 1: Software validation (`provisional_software_validated`) NEVER authorises a public
+  // numerical prescription. Only an independently recorded `agronomist_approved` protocol with a
+  // complete approval record may authorise a farm-specific numerical prescription.
   if (!protocol.protocolVersion || !protocol.protocolVersion.trim() || !protocol.approvalStatus) {
     return {
       ok: false,
@@ -158,7 +169,56 @@ export function evaluateFertiliserRecommendation(
       reasonCode: 'coefficients_unapproved',
       message: `Crop protocol for "${rawCropId}" is missing a valid version or approval status.`,
       missingRequirements: ['protocolVersion', 'approvalStatus'],
-      guidance: 'A versioned, approved crop protocol is required before generating a numerical fertiliser prescription.',
+      guidance: 'A versioned, independently agronomist-approved crop protocol is required before generating a numerical fertiliser prescription.',
+    };
+  }
+
+  if (protocol.approvalStatus !== 'agronomist_approved') {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'protocol_provisional_not_approved',
+      message: `Crop protocol "${protocol.protocolVersion}" for "${rawCropId}" is marked "${protocol.approvalStatus}" (software-validated only) and has not received independent agronomic approval.`,
+      missingRequirements: [`agronomist_approved_protocol:${rawCropId}`, 'agronomic_approval_record'],
+      guidance:
+        `CultivaNode does not issue farm-specific numerical fertiliser prescriptions from provisional coefficients for ${rawCropId}. ` +
+        'Obtain a laboratory soil test and consult a qualified agronomist or extension officer until an independently approved protocol is recorded.',
+    };
+  }
+
+  const approvalRecord = protocol.approvalRecord;
+  const missingApprovalFields: string[] = [];
+  if (!approvalRecord) {
+    missingApprovalFields.push('approvalRecord');
+  } else {
+    if (!approvalRecord.reviewerName?.trim()) missingApprovalFields.push('approvalRecord.reviewerName');
+    if (!approvalRecord.reviewerCredentials?.trim()) missingApprovalFields.push('approvalRecord.reviewerCredentials');
+    if (!approvalRecord.competenceScope?.trim()) missingApprovalFields.push('approvalRecord.competenceScope');
+    if (!approvalRecord.sourceEvidence?.trim()) missingApprovalFields.push('approvalRecord.sourceEvidence');
+    if (!approvalRecord.approvalDate?.trim() || Number.isNaN(new Date(approvalRecord.approvalDate).getTime())) {
+      missingApprovalFields.push('approvalRecord.approvalDate');
+    } else if (new Date(approvalRecord.approvalDate).getTime() > effectiveRefTs + 86_400_000) {
+      missingApprovalFields.push('approvalRecord.approvalDate(non-future)');
+    }
+    if (approvalRecord.protocolVersion !== protocol.protocolVersion) {
+      missingApprovalFields.push('approvalRecord.protocolVersion(match)');
+    }
+    if (approvalRecord.applicableCropId?.trim().toLowerCase() !== rawCropId) {
+      missingApprovalFields.push('approvalRecord.applicableCropId(match)');
+    }
+    if (!Array.isArray(approvalRecord.applicableZones) || approvalRecord.applicableZones.length === 0) {
+      missingApprovalFields.push('approvalRecord.applicableZones');
+    }
+  }
+
+  if (missingApprovalFields.length > 0) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_record_incomplete',
+      message: `Protocol "${protocol.protocolVersion}" for "${rawCropId}" lacks a complete independent agronomic approval record.`,
+      missingRequirements: missingApprovalFields,
+      guidance: 'An independently recorded agronomic approval (reviewer identity, credentials, competence scope, approval date, source evidence, version, and crop/geographic scope) is required.',
     };
   }
 
@@ -194,19 +254,31 @@ export function evaluateFertiliserRecommendation(
     };
   }
 
-  // Geographic applicability check when zone is supplied
-  if (request.zone !== undefined && request.zone !== null) {
-    const normalizedZone = request.zone.trim().toLowerCase();
-    if (!normalizedZone || !protocol.supportedZones.includes(normalizedZone)) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'geographic_mismatch',
-        message: `Agro-ecological zone "${request.zone}" is outside the validated applicability scope for "${rawCropId}".`,
-        missingRequirements: ['applicable_agro_ecological_zone'],
-        guidance: 'Confirm your farm agro-ecological zone or consult a local extension officer for zone-specific rates.',
-      };
-    }
+  // Finding 4: Geographic applicability is MANDATORY and never invented.
+  const normalizedZone = typeof request.zone === 'string' ? request.zone.trim().toLowerCase() : '';
+  if (!normalizedZone) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'zone_missing',
+      message: 'Agro-ecological zone is required before a numerical fertiliser prescription can be issued.',
+      missingRequirements: ['zone'],
+      guidance: 'Confirm your farm agro-ecological zone. CultivaNode will not invent a default geographic zone.',
+    };
+  }
+
+  if (
+    !protocol.supportedZones.includes(normalizedZone) ||
+    !approvalRecord!.applicableZones.map((z) => z.trim().toLowerCase()).includes(normalizedZone)
+  ) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'geographic_mismatch',
+      message: `Agro-ecological zone "${request.zone}" is outside the approved applicability scope for "${rawCropId}".`,
+      missingRequirements: ['applicable_agro_ecological_zone'],
+      guidance: 'Confirm your farm agro-ecological zone or consult a local extension officer for zone-specific rates.',
+    };
   }
 
   const soil = request.soil;
@@ -215,14 +287,15 @@ export function evaluateFertiliserRecommendation(
       ok: false,
       status: 'insufficient_evidence',
       reasonCode: 'soil_test_missing',
-      message: 'A soil test profile is required to calculate a farm-specific fertiliser recommendation.',
+      message: 'A laboratory soil test profile is required to calculate a farm-specific fertiliser recommendation.',
       missingRequirements: ['soil_test'],
-      guidance: 'Submit a laboratory soil test (pH, organic matter %, available phosphorus, exchangeable potassium).',
+      guidance: 'Submit a laboratory soil test (pH, organic matter %, available phosphorus, exchangeable potassium with explicit units and nutrient basis).',
     };
   }
 
-  // Soil provenance checks: always reject non-lab provenance if explicitly supplied;
-  // when requireStrictSoilProvenance is true, also require provenance, extractionMethod, samplingDepthCm, testDate, and growthStage.
+  // Finding 3: Strict soil provenance is UNCONDITIONALLY mandatory server-side (no caller bypass flag).
+  // Limitation: Caller-declared `lab_confirmed` provenance is not yet independently verified against an
+  // accredited laboratory certificate; this limitation is disclosed in calculation assumptions.
   if (soil.provenance === 'modelled_estimate') {
     return {
       ok: false,
@@ -234,110 +307,112 @@ export function evaluateFertiliserRecommendation(
     };
   }
 
-  if (soil.provenance && soil.provenance !== 'lab_confirmed') {
+  if (soil.provenance !== 'lab_confirmed') {
     return {
       ok: false,
       status: 'insufficient_evidence',
       reasonCode: 'soil_not_lab_confirmed',
-      message: `Soil provenance "${soil.provenance}" is not laboratory-confirmed and cannot authorise a numerical prescription.`,
-      missingRequirements: ['lab_confirmed_soil_test'],
-      guidance: 'Submit laboratory-confirmed soil test results for a farm-specific numerical fertiliser calculation.',
+      message: soil.provenance
+        ? `Soil provenance "${soil.provenance}" is not laboratory-confirmed and cannot authorise a numerical prescription.`
+        : 'Laboratory-confirmed soil provenance is mandatory for a numerical fertiliser prescription.',
+      missingRequirements: ['soil.provenance=lab_confirmed'],
+      guidance: 'Submit laboratory-confirmed soil test results (provenance, extraction method, sampling depth, test date).',
     };
   }
 
-  if (request.requireStrictSoilProvenance) {
-    if (!soil.provenance) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'soil_not_lab_confirmed',
-        message: 'Laboratory-confirmed soil provenance is required for a numerical fertiliser prescription.',
-        missingRequirements: ['soil.provenance=lab_confirmed'],
-        guidance: 'Provide laboratory-confirmed soil test metadata (provenance, extraction method, sampling depth, test date).',
-      };
-    }
-    if (!soil.extractionMethod || !soil.extractionMethod.trim()) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'soil_method_missing',
-        message: 'Soil extraction method (e.g. bray_1, olsen, mehlich_3) is required to interpret soil nutrient values.',
-        missingRequirements: ['soil.extractionMethod'],
-        guidance: 'Include the laboratory extraction method from your soil analysis report.',
-      };
-    }
-    if (
-      typeof soil.samplingDepthCm !== 'number' ||
-      !Number.isFinite(soil.samplingDepthCm) ||
-      soil.samplingDepthCm <= 0 ||
-      soil.samplingDepthCm > 100
-    ) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'soil_depth_missing',
-        message: 'Valid soil sampling depth in cm (e.g. 15 or 20 cm) is required.',
-        missingRequirements: ['soil.samplingDepthCm'],
-        guidance: 'Record the topsoil sampling depth (typically 0–15 cm or 0–20 cm) from your soil test.',
-      };
-    }
-    if (!soil.testDate || Number.isNaN(new Date(soil.testDate).getTime())) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'soil_test_date_missing',
-        message: 'A valid soil test date is required to verify that soil results are current.',
-        missingRequirements: ['soil.testDate'],
-        guidance: 'Provide the date when the laboratory soil sample was analysed.',
-      };
-    }
-    if (!request.growthStage || !request.growthStage.trim()) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'growth_stage_missing',
-        message: 'Current crop growth stage is required to validate fertiliser application timing.',
-        missingRequirements: ['growthStage'],
-        guidance: 'Specify the crop growth stage (e.g. pre-planting, basal, vegetative) before requesting a fertiliser plan.',
-      };
-    }
+  if (!soil.extractionMethod || !soil.extractionMethod.trim()) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_method_missing',
+      message: 'Soil extraction method (e.g. bray_1, olsen, mehlich_3) is required to interpret soil nutrient values.',
+      missingRequirements: ['soil.extractionMethod'],
+      guidance: 'Include the laboratory extraction method from your soil analysis report.',
+    };
   }
 
-  // Expiry check whenever testDate is provided
-  if (soil.testDate) {
-    const testTs = new Date(soil.testDate).getTime();
-    const refTs = request.referenceDate ? new Date(request.referenceDate).getTime() : Date.now();
-    if (Number.isNaN(testTs)) {
-      return {
-        ok: false,
-        status: 'invalid_input',
-        reasonCode: 'soil_test_date_invalid',
-        message: 'Soil test date is not a valid ISO date.',
-        missingRequirements: ['soil.testDate'],
-        guidance: 'Provide a valid ISO date (YYYY-MM-DD) for the soil test.',
-      };
-    }
-    const ageDays = (refTs - testTs) / 86_400_000;
-    if (ageDays > SOIL_TEST_MAX_AGE_DAYS) {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'soil_test_expired',
-        message: `Soil test is ${Math.round(ageDays)} days old, exceeding the ${SOIL_TEST_MAX_AGE_DAYS}-day validity limit.`,
-        missingRequirements: ['current_lab_soil_test'],
-        guidance: 'Obtain a fresh laboratory soil test before calculating a new fertiliser prescription.',
-      };
-    }
-    if (ageDays < -1) {
-      return {
-        ok: false,
-        status: 'invalid_input',
-        reasonCode: 'soil_test_future_date',
-        message: 'Soil test date cannot be in the future.',
-        missingRequirements: ['valid_soil_test_date'],
-        guidance: 'Verify the analysis date printed on your laboratory report.',
-      };
-    }
+  const normalizedExtraction = soil.extractionMethod.trim();
+  if (!(protocol.supportedExtractionMethods as readonly string[]).includes(normalizedExtraction)) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_method_unsupported',
+      message: `Soil extraction method "${soil.extractionMethod}" is not calibrated to protocol "${protocol.protocolVersion}".`,
+      missingRequirements: ['calibrated_soil_extraction_method'],
+      guidance: 'Use a soil extraction method calibrated to the crop protocol or consult a qualified agronomist.',
+    };
+  }
+
+  if (
+    typeof soil.samplingDepthCm !== 'number' ||
+    !Number.isFinite(soil.samplingDepthCm) ||
+    soil.samplingDepthCm <= 0 ||
+    soil.samplingDepthCm > 100
+  ) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_depth_missing',
+      message: 'Valid soil sampling depth in cm (e.g. 15 or 20 cm) is required.',
+      missingRequirements: ['soil.samplingDepthCm'],
+      guidance: 'Record the topsoil sampling depth (typically 0–15 cm or 0–20 cm) from your soil test.',
+    };
+  }
+
+  if (!soil.testDate || !soil.testDate.trim()) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_test_date_missing',
+      message: 'A valid soil test date is required to verify that soil results are current.',
+      missingRequirements: ['soil.testDate'],
+      guidance: 'Provide the date when the laboratory soil sample was analysed.',
+    };
+  }
+
+  const testTs = new Date(soil.testDate).getTime();
+  if (Number.isNaN(testTs)) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'soil_test_date_invalid',
+      message: 'Soil test date is not a valid ISO date.',
+      missingRequirements: ['soil.testDate'],
+      guidance: 'Provide a valid ISO date (YYYY-MM-DD) for the soil test.',
+    };
+  }
+
+  const ageDays = (effectiveRefTs - testTs) / 86_400_000;
+  if (ageDays > SOIL_TEST_MAX_AGE_DAYS) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_test_expired',
+      message: `Soil test is ${Math.round(ageDays)} days old, exceeding the ${SOIL_TEST_MAX_AGE_DAYS}-day validity limit.`,
+      missingRequirements: ['current_lab_soil_test'],
+      guidance: 'Obtain a fresh laboratory soil test before calculating a new fertiliser prescription.',
+    };
+  }
+  if (ageDays < -1) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'soil_test_future_date',
+      message: 'Soil test date cannot be in the future.',
+      missingRequirements: ['valid_soil_test_date'],
+      guidance: 'Verify the analysis date printed on your laboratory report.',
+    };
+  }
+
+  if (!request.growthStage || !request.growthStage.trim()) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'growth_stage_missing',
+      message: 'Current crop growth stage is required to validate fertiliser application timing.',
+      missingRequirements: ['growthStage'],
+      guidance: 'Specify the crop growth stage (e.g. pre-planting, basal, vegetative) before requesting a fertiliser plan.',
+    };
   }
 
   // Validate required scalar soil readings (never silently default missing organicMatterPercent!)
@@ -383,25 +458,35 @@ export function evaluateFertiliserRecommendation(
     };
   }
 
-  // Explicit typed potassium unit conversion
-  const potassiumInput = soil.potassium ?? (
-    typeof soil.potassiumPpm === 'number'
-      ? { value: soil.potassiumPpm, unit: 'ppm' as const, basis: 'elemental_K' as const }
-      : null
-  );
-
-  if (!potassiumInput) {
+  // Finding 5: NEVER silently assume legacy `potassiumPpm` represents elemental_K.
+  // Require explicit typed `soil.potassium` with unit and basis metadata.
+  if (!soil.potassium) {
+    if (typeof soil.potassiumPpm === 'number') {
+      return {
+        ok: false,
+        status: 'invalid_input',
+        reasonCode: 'soil_basis_unknown',
+        message:
+          'Legacy untyped potassiumPpm cannot be used because its nutrient basis (elemental_K vs K2O) is ambiguous. Submit typed soil.potassium with explicit unit and basis.',
+        missingRequirements: ['soil.potassium.unit', 'soil.potassium.basis'],
+        guidance: 'Confirm on your laboratory report whether potassium is reported as elemental K or K2O and supply typed soil.potassium.',
+      };
+    }
     return {
       ok: false,
       status: 'insufficient_evidence',
       reasonCode: 'soil_potassium_missing',
-      message: 'Soil potassium reading with explicit units is required.',
+      message: 'Soil potassium reading with explicit unit and nutrient basis is required.',
       missingRequirements: ['soil.potassium'],
-      guidance: 'Provide laboratory exchangeable potassium with explicit units (cmol_kg, meq_100g, or mg_kg/ppm).',
+      guidance: 'Provide laboratory exchangeable potassium with explicit unit (cmol_kg, meq_100g, mg_kg, or ppm) and basis (elemental_K or K2O).',
     };
   }
 
-  const kConv = convertSoilPotassium(potassiumInput);
+  const kConv = convertSoilPotassium({
+    ...soil.potassium,
+    extractionMethod: soil.potassium.extractionMethod ?? soil.extractionMethod,
+    provenance: soil.potassium.provenance ?? soil.provenance,
+  });
   if (!kConv.ok) {
     return {
       ok: false,
@@ -481,6 +566,18 @@ export function evaluateFertiliserRecommendation(
 
   const warning = [phWarning, cappedWarning].filter(Boolean).join(' ') || undefined;
 
+  const calculatedAt = new Date(effectiveRefTs).toISOString();
+  const binding = {
+    cropId: rawCropId,
+    ...(request.farmId?.trim() ? { farmId: request.farmId.trim() } : {}),
+    ...(request.plotId?.trim() ? { plotId: request.plotId.trim() } : {}),
+    ...(request.requestId?.trim() ? { requestId: request.requestId.trim() } : {}),
+    zone: normalizedZone,
+    protocolVersion: protocol.protocolVersion,
+    protocolApprovalStatus: 'agronomist_approved' as const,
+    calculatedAt,
+  };
+
   return {
     ok: true,
     status: 'approved_calculation',
@@ -488,6 +585,7 @@ export function evaluateFertiliserRecommendation(
       cropId: protocol.cropId,
       protocolVersion: protocol.protocolVersion,
       approvalStatus: protocol.approvalStatus,
+      approvalRecord: approvalRecord!,
       sourceCitation: protocol.sourceCitation,
       maxNitrogenKgPerHa: protocol.maxNitrogenKgPerHa,
       supportedZones: protocol.supportedZones,
@@ -499,6 +597,7 @@ export function evaluateFertiliserRecommendation(
       farmAreaHectares: request.farmAreaHectares,
       protocolVersion: protocol.protocolVersion,
       protocolApprovalStatus: protocol.approvalStatus,
+      binding,
       potassiumConversion: kConv,
       deficitKgPerHa: {
         nitrogenKg: nDeficitKgPerHa,
@@ -510,34 +609,47 @@ export function evaluateFertiliserRecommendation(
       warning,
     },
     assumptions: [
-      `Protocol ${protocol.protocolVersion} (${protocol.approvalStatus}; pending formal D-A5 agronomic sign-off).`,
+      `Approved protocol ${protocol.protocolVersion} (approved by ${approvalRecord!.reviewerName}, ${approvalRecord!.reviewerCredentials} on ${approvalRecord!.approvalDate}).`,
       kConv.conversionNote,
       'Fertiliser formulations assume NPK 15:15:15 (15% N, 15% P2O5, 15% K2O) and Urea (46% N).',
+      'Soil provenance limitation: laboratory provenance ("lab_confirmed") is caller-declared; independent accredited laboratory certificate verification is not yet implemented.',
     ],
-    missingInformation: [
-      ...(soil.provenance ? [] : ['Soil provenance not declared (lab_confirmed required for production prescriptions).']),
-      ...(soil.extractionMethod ? [] : ['Soil extraction method not declared.']),
-    ],
+    missingInformation: [],
   };
 }
 
 /**
- * Legacy-compatible deterministic entrypoint hardened to fail closed (Batch 04.0-H).
- * Throws an explicit error on unsupported crops (e.g. lettuce), missing organicMatterPercent,
- * or invalid inputs instead of substituting default coefficients.
+ * Legacy-compatible deterministic entrypoint hardened to fail closed (Batch 04.0-H Revision 2).
+ * Enforces the exact same mandatory approval, geographic, provenance, and nutrient-basis controls
+ * as `evaluateFertiliserRecommendation` with no bypass flag.
  */
 export function calculateFertiliserRecommendation(
   cropId: string,
   targetYieldTonnesPerHa: number,
   farmAreaHectares: number,
   soil: SoilNutrientProfile,
+  options?: {
+    zone?: string | null;
+    growthStage?: string | null;
+    farmId?: string | null;
+    plotId?: string | null;
+    requestId?: string | null;
+    referenceDate?: string;
+    protocolOverride?: Partial<FertiliserProtocolMetadata> | null;
+  },
 ): FertiliserRecommendation {
   const result = evaluateFertiliserRecommendation({
     cropId,
     targetYieldTonnesPerHa,
     farmAreaHectares,
     soil,
-    requireStrictSoilProvenance: false,
+    zone: options?.zone,
+    growthStage: options?.growthStage,
+    farmId: options?.farmId,
+    plotId: options?.plotId,
+    requestId: options?.requestId,
+    referenceDate: options?.referenceDate,
+    protocolOverride: options?.protocolOverride,
   });
 
   if (!result.ok) {

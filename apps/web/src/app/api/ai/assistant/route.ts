@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient as createSupabaseJs, type SupabaseClient, type User } from "@supabase/supabase-js";
 import {
+  FARM_ZONES,
   askGroundedAiAssistant,
   assembleGroundedEvidencePackage,
   type Database,
   type EvidenceRetrievalOutcome,
   type FarmMemoryItemRecord,
+  type FarmZone,
   type FarmerContext,
   type PublishedStandardPassage,
 } from "@cultivanode/shared";
@@ -155,7 +157,39 @@ export async function POST(req: Request) {
     const snapshot = await getLiveFarmContextSnapshot(verifiedFarmCaller);
     const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
     const resolvedCropId = body.context?.cropId ?? activeCycle?.cropId;
-    const resolvedZone = body.context?.zone ?? snapshot.farmZone ?? undefined;
+
+    // Finding 4: Authoritative farm zone comes ONLY from the verified RLS-scoped farm snapshot.
+    // A client cannot fabricate or override the farm's agro-ecological zone.
+    const verifiedSnapshotZone =
+      typeof snapshot.farmZone === "string" &&
+      (FARM_ZONES as readonly string[]).includes(snapshot.farmZone.trim().toLowerCase())
+        ? (snapshot.farmZone.trim().toLowerCase() as FarmZone)
+        : undefined;
+
+    if (body.context?.zone !== undefined && body.context.zone.trim() !== "") {
+      const clientZone = body.context.zone.trim().toLowerCase();
+      if (!(FARM_ZONES as readonly string[]).includes(clientZone)) {
+        return NextResponse.json(
+          {
+            error: `Invalid agro-ecological zone "${body.context.zone}".`,
+            code: "INVALID_AGRO_ZONE",
+            traceId,
+          },
+          { status: 400 },
+        );
+      }
+      if (!verifiedSnapshotZone || clientZone !== verifiedSnapshotZone) {
+        return NextResponse.json(
+          {
+            error: "Client-supplied agro-ecological zone does not match the verified farm record.",
+            code: "ZONE_MISMATCH",
+            traceId,
+          },
+          { status: 422 },
+        );
+      }
+    }
+    const resolvedZone = verifiedSnapshotZone;
 
     // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards
     // with EXPLICIT retrieval outcomes (Finding 4: never silently equate failure with empty results).
@@ -238,10 +272,12 @@ export async function POST(req: Request) {
         // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
         context: {
           ...(body.context ?? {}),
-          cropId: resolvedCropId,
+          cropId: resolvedCropId ?? "",
           zone: resolvedZone,
           stageName: body.context?.stageName ?? activeCycle?.currentStage,
           farmerId: verifiedFarmCaller.user.id,
+          farmId: verifiedFarmCaller.farmId,
+          requestId: traceId,
         } as FarmerContext,
         // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into the AI model pipeline.
         groundedEvidence: evidencePackage,

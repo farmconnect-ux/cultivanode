@@ -34,6 +34,7 @@ export interface TypedSoilPotassiumInput {
   unit: SoilPotassiumUnit | string;
   basis?: 'elemental_K' | 'K2O' | string;
   extractionMethod?: SoilExtractionMethod | string;
+  provenance?: string;
 }
 
 export interface ConvertedPotassiumValue {
@@ -41,11 +42,15 @@ export interface ConvertedPotassiumValue {
   originalValue: number;
   originalUnit: SoilPotassiumUnit;
   originalBasis: 'elemental_K' | 'K2O';
+  originalExtractionMethod?: string;
+  originalProvenance?: string;
   derivedElementalMgKg: number;
   derivedK2oMgKg: number;
   conversionApplied: boolean;
   conversionFactor: number;
   conversionNote: string;
+  /** Explicit separation: mathematical unit conversion is NOT agronomic sufficiency calibration. */
+  agronomicInterpretationApplied: false;
 }
 
 export interface PotassiumConversionError {
@@ -94,25 +99,27 @@ export function convertSoilPotassium(input: TypedSoilPotassiumInput): PotassiumC
       originalValue: input.value,
       originalUnit: unit,
       originalBasis: 'elemental_K',
+      ...(input.extractionMethod ? { originalExtractionMethod: input.extractionMethod } : {}),
+      ...(input.provenance ? { originalProvenance: input.provenance } : {}),
       derivedElementalMgKg,
       derivedK2oMgKg,
       conversionApplied: true,
       conversionFactor: CMOL_KG_TO_MG_KG_K,
-      conversionNote: `Converted ${input.value} ${unit} exchangeable K+ to ${derivedElementalMgKg} mg/kg elemental K (× ${CMOL_KG_TO_MG_KG_K}) and ${derivedK2oMgKg} mg/kg K2O equivalent.`,
+      conversionNote: `Converted ${input.value} ${unit} exchangeable K+ to ${derivedElementalMgKg} mg/kg elemental K (× ${CMOL_KG_TO_MG_KG_K}) and ${derivedK2oMgKg} mg/kg K2O equivalent (unit conversion only; not agronomic sufficiency calibration).`,
+      agronomicInterpretationApplied: false,
     };
   }
 
-  // mg_kg or ppm: require explicit elemental_K or K2O basis (default to elemental_K ONLY if explicitly omitted for legacy ppm).
-  const basis = input.basis ?? 'elemental_K';
-  if (basis !== 'elemental_K' && basis !== 'K2O') {
+  // mg_kg or ppm: NEVER silently assume elemental_K when basis is omitted (Finding 5).
+  if (!input.basis || (input.basis !== 'elemental_K' && input.basis !== 'K2O')) {
     return {
       ok: false,
       code: 'soil_basis_unknown',
-      message: `Ambiguous or unsupported potassium nutrient basis "${String(basis)}". Expected elemental_K or K2O.`,
+      message: `Explicit potassium nutrient basis ("elemental_K" or "K2O") is required for "${unit}" readings; CultivaNode does not silently assume elemental K (received: ${String(input.basis ?? 'undefined')}).`,
     };
   }
 
-  if (basis === 'K2O') {
+  if (input.basis === 'K2O') {
     const derivedElementalMgKg = Number((input.value / K_TO_K2O_FACTOR).toFixed(2));
     const derivedK2oMgKg = Number(input.value.toFixed(2));
     return {
@@ -120,11 +127,14 @@ export function convertSoilPotassium(input: TypedSoilPotassiumInput): PotassiumC
       originalValue: input.value,
       originalUnit: unit,
       originalBasis: 'K2O',
+      ...(input.extractionMethod ? { originalExtractionMethod: input.extractionMethod } : {}),
+      ...(input.provenance ? { originalProvenance: input.provenance } : {}),
       derivedElementalMgKg,
       derivedK2oMgKg,
       conversionApplied: true,
       conversionFactor: Number((1 / K_TO_K2O_FACTOR).toFixed(6)),
-      conversionNote: `Converted ${input.value} ${unit} K2O to ${derivedElementalMgKg} mg/kg elemental K (÷ ${K_TO_K2O_FACTOR}).`,
+      conversionNote: `Converted ${input.value} ${unit} K2O to ${derivedElementalMgKg} mg/kg elemental K (÷ ${K_TO_K2O_FACTOR}; unit conversion only; not agronomic sufficiency calibration).`,
+      agronomicInterpretationApplied: false,
     };
   }
 
@@ -135,11 +145,14 @@ export function convertSoilPotassium(input: TypedSoilPotassiumInput): PotassiumC
     originalValue: input.value,
     originalUnit: unit,
     originalBasis: 'elemental_K',
+    ...(input.extractionMethod ? { originalExtractionMethod: input.extractionMethod } : {}),
+    ...(input.provenance ? { originalProvenance: input.provenance } : {}),
     derivedElementalMgKg,
     derivedK2oMgKg,
     conversionApplied: false,
     conversionFactor: 1,
-    conversionNote: `Preserved ${input.value} ${unit} elemental K (${derivedK2oMgKg} mg/kg K2O equivalent).`,
+    conversionNote: `Preserved ${input.value} ${unit} elemental K (${derivedK2oMgKg} mg/kg K2O equivalent; unit conversion only; not agronomic sufficiency calibration).`,
+    agronomicInterpretationApplied: false,
   };
 }
 

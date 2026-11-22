@@ -234,4 +234,29 @@ describe("Finding 09: /api/ai/assistant Explicit Audit Coverage Lifecycle", () =
       }),
     );
   });
+
+  it("rejects client-supplied invalid zone (400) and mismatched zone (422) to prevent farm-context spoofing", async () => {
+    const invalidZoneRes = await POST(
+      makeReq({
+        traceId: TRACE_ID,
+        query: "Advise on maize",
+        context: { farmId: FARM_ID, zone: "arctic_tundra" },
+      }),
+    );
+    expect(invalidZoneRes.status).toBe(400);
+    expect((await invalidZoneRes.json()).code).toBe("INVALID_AGRO_ZONE");
+    expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
+
+    // Snapshot farmZone is "derived_savanna"; client attempts to spoof "rainforest"
+    const mismatchRes = await POST(
+      makeReq({
+        traceId: TRACE_ID,
+        query: "Advise on maize",
+        context: { farmId: FARM_ID, zone: "rainforest" },
+      }),
+    );
+    expect(mismatchRes.status).toBe(422);
+    expect((await mismatchRes.json()).code).toBe("ZONE_MISMATCH");
+    expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
+  });
 });

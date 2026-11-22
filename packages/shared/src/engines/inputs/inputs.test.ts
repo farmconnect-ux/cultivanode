@@ -6,15 +6,59 @@ import { FarmInventoryLedger } from './inventory';
 import { computeFarmGrossMargin } from './farm-books';
 
 describe('Fertiliser Engine', () => {
-  it('calculates NPK and Urea for 5 t/ha maize on moderate soil', () => {
+  const TEST_APPROVED_MAIZE_PROTOCOL = {
+    approvalStatus: 'agronomist_approved' as const,
+    approvalRecord: {
+      reviewerName: 'Test Agronomist Fixture',
+      reviewerCredentials: 'PhD Soil Science (Internal Unit Test Fixture Only)',
+      competenceScope: 'Maize nutrient math unit tests',
+      approvalDate: '2026-10-01',
+      sourceEvidence: 'Internal deterministic unit test fixture',
+      protocolVersion: 'prov-ng-maize-v1.0',
+      applicableCropId: 'maize',
+      applicableZones: ['rainforest', 'derived_savanna'],
+    },
+  };
+
+  it('fails closed on provisional built-in maize protocol without an independent agronomic approval record', () => {
     const soil = {
       pH: 6.2,
       phosphorusPpm: 12,
-      potassiumPpm: 140,
+      potassium: { value: 140, unit: 'ppm' as const, basis: 'elemental_K' as const },
       organicMatterPercent: 1.8,
+      provenance: 'lab_confirmed' as const,
+      extractionMethod: 'bray_1' as const,
+      samplingDepthCm: 15,
+      testDate: '2026-10-01',
     };
 
-    const rec = calculateFertiliserRecommendation('maize', 5.0, 2.0, soil);
+    expect(() =>
+      calculateFertiliserRecommendation('maize', 5.0, 2.0, soil, {
+        zone: 'derived_savanna',
+        growthStage: 'basal',
+        referenceDate: '2026-11-22',
+      }),
+    ).toThrow('protocol_provisional_not_approved');
+  });
+
+  it('calculates NPK and Urea for 5 t/ha maize on moderate soil when backed by a complete approved protocol fixture', () => {
+    const soil = {
+      pH: 6.2,
+      phosphorusPpm: 12,
+      potassium: { value: 140, unit: 'ppm' as const, basis: 'elemental_K' as const },
+      organicMatterPercent: 1.8,
+      provenance: 'lab_confirmed' as const,
+      extractionMethod: 'bray_1' as const,
+      samplingDepthCm: 15,
+      testDate: '2026-10-01',
+    };
+
+    const rec = calculateFertiliserRecommendation('maize', 5.0, 2.0, soil, {
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+      protocolOverride: TEST_APPROVED_MAIZE_PROTOCOL,
+    });
     expect(rec.cropId).toBe('maize');
     expect(rec.productApplications.length).toBe(2);
 
@@ -28,9 +72,23 @@ describe('Fertiliser Engine', () => {
     expect(rec.limeRecommendationKgPerHa).toBe(0);
   });
 
-  it('recommends lime and warns on acidic soil (pH < 5.5)', () => {
-    const acidSoil = { pH: 4.8, phosphorusPpm: 6, potassiumPpm: 80, organicMatterPercent: 1.5 };
-    const rec = calculateFertiliserRecommendation('maize', 4.0, 1.0, acidSoil);
+  it('recommends lime and warns on acidic soil (pH < 5.5) with an approved protocol fixture', () => {
+    const acidSoil = {
+      pH: 4.8,
+      phosphorusPpm: 6,
+      potassium: { value: 80, unit: 'ppm' as const, basis: 'elemental_K' as const },
+      organicMatterPercent: 1.5,
+      provenance: 'lab_confirmed' as const,
+      extractionMethod: 'bray_1' as const,
+      samplingDepthCm: 15,
+      testDate: '2026-10-01',
+    };
+    const rec = calculateFertiliserRecommendation('maize', 4.0, 1.0, acidSoil, {
+      zone: 'rainforest',
+      growthStage: 'pre_planting',
+      referenceDate: '2026-11-22',
+      protocolOverride: TEST_APPROVED_MAIZE_PROTOCOL,
+    });
 
     expect(rec.limeRecommendationKgPerHa).toBeGreaterThan(0);
     expect(rec.warning).toContain('acidic');

@@ -35,11 +35,26 @@ export interface SoilNutrientProfile {
   testDate?: string; // ISO date string
 }
 
+export interface AgronomicApprovalRecord {
+  reviewerName: string;
+  reviewerCredentials: string;
+  competenceScope: string;
+  approvalDate: string; // ISO date string
+  sourceEvidence: string;
+  protocolVersion: string;
+  applicableCropId: string;
+  applicableZones: readonly string[];
+}
+
 export interface FertiliserProtocolMetadata {
   cropId: string;
   protocolVersion: string;
-  /** Software validation does NOT constitute independent agronomic certification (Batch 04.0-H). */
+  /**
+   * Software validation (`provisional_software_validated`) NEVER authorises a public numerical
+   * fertiliser prescription. Only `agronomist_approved` with a complete `approvalRecord` may do so.
+   */
   approvalStatus: 'provisional_software_validated' | 'agronomist_approved';
+  approvalRecord?: AgronomicApprovalRecord | null;
   sourceCitation: string;
   maxNitrogenKgPerHa: number;
   supportedZones: readonly string[];
@@ -50,12 +65,24 @@ export interface FertiliserProtocolMetadata {
   };
 }
 
+export interface FertiliserCalculationBinding {
+  cropId: string;
+  farmId?: string;
+  plotId?: string;
+  requestId?: string;
+  zone: string;
+  protocolVersion: string;
+  protocolApprovalStatus: 'agronomist_approved';
+  calculatedAt: string; // ISO timestamp
+}
+
 export interface FertiliserRecommendation {
   cropId: string;
   targetYieldTonnesPerHa: number;
   farmAreaHectares: number;
   protocolVersion?: string;
   protocolApprovalStatus?: FertiliserProtocolMetadata['approvalStatus'];
+  binding?: FertiliserCalculationBinding;
   potassiumConversion?: ConvertedPotassiumValue;
   deficitKgPerHa: {
     nitrogenKg: number;
@@ -80,10 +107,11 @@ export interface FertiliserCalculationRequest {
   soil?: SoilNutrientProfile | null;
   zone?: string | null;
   growthStage?: string | null;
+  farmId?: string | null;
+  plotId?: string | null;
+  requestId?: string | null;
   referenceDate?: string;
-  /** When true (default in Batch 04.0-H API/assistant), requires lab-confirmed soil provenance, extraction method, depth, and non-expired test date. */
-  requireStrictSoilProvenance?: boolean;
-  /** Optional explicit protocol override for testing missing/unapproved protocol scenarios. */
+  /** Optional explicit protocol override for internal tests of approved/unapproved protocol fixtures. */
   protocolOverride?: Partial<FertiliserProtocolMetadata> | null;
 }
 
