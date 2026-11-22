@@ -78,7 +78,7 @@ function makeLiveSnapshot(overrides?: {
     conflicts: [],
     missingInformation: [],
     validationIssues: [],
-    memoryExtension: { available: false, reason: 'test', farmScopeItems: [], profileScopeItems: [] },
+    memoryExtension: { available: false, reason: 'batch_03_2_pending', farmScopeItems: [], profileScopeItems: [] },
   };
 }
 
