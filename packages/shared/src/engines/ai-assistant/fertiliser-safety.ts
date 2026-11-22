@@ -150,32 +150,32 @@ const APPLICATION_RATE_PATTERNS: ReadonlyArray<{
     re: /\b(?:apply|applying|use|using|put|putting|spread|broadcast|top[- ]?dress|side[- ]?dress|total(?:\s+of)?|give|add|npk\s*\d{1,2}[:\-]\d{1,2}[:\-]\d{1,2}|urea(?:\s*\(46%\s*n\))?|dap|ssp|mop|limestone|lime)\s*(?:at|@|:|-|of)?\s*(\d+(?:\.\d+)?)(?:\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?))?\s*kg\b(?!\s*(?:\/|\bper\b|\bbags?\b))/gi,
     unitKind: 'total_kg',
   },
-  // Multilingual bag/kg/litre application expressions:
+  // Multilingual bag/kg/litre application expressions (Unicode-safe boundaries for diacritics):
   // Yoruba (báàgì / baagi / kilo ... fun hektari / lita ... fun hektari)
   {
-    re: /\b(?:báàgì|baagi)\s+(?:(\d+(?:\.\d+)?)|kan|meji|mẹta|meta|mẹrin|merin|marun|mẹfa|mefa|meje|mẹjọ|mejo|mẹsan|mesan|mẹwa|mewa)\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(?:báàgì|baagi)\s+(?:(\d+(?:\.\d+)?)|kan|meji|mẹta|meta|mẹrin|merin|marun|mẹfa|mefa|meje|mẹjọ|mejo|mẹsan|mesan|mẹwa|mewa)(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'bags',
   },
   {
-    re: /\b(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita|litres?)\s+(?:fun|ni)\s+(?:hektari|eka|oko)\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita|litres?)\s+(?:fun|ni)\s+(?:hektari|eka|oko)(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'other_application_unit',
   },
   // Hausa (buhu / buhuna / kilo ... a hekta / lita ... a hekta)
   {
-    re: /\b(?:buhu|buhuna)\s+(?:(\d+(?:\.\d+)?)|daya|biyu|uku|hudu|biyar|shida|bakwai|takwas|tara|goma)\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(?:buhu|buhuna)\s+(?:(\d+(?:\.\d+)?)|daya|biyu|uku|hudu|biyar|shida|bakwai|takwas|tara|goma)(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'bags',
   },
   {
-    re: /\b(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita)\s+(?:a\s+(?:kowace\s+)?(?:hekta|eka))\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita)\s+(?:a\s+(?:kowace\s+)?(?:hekta|eka))(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'other_application_unit',
   },
   // Igbo (akpa / kilo ... n'otu hekta / lita ... n'otu hekta)
   {
-    re: /\b(?:akpa)\s+(?:(\d+(?:\.\d+)?)|otu|abụọ|abuo|atọ|ato|anọ|ano|ise|isii|asaa|asatọ|asato|itoolu|iri)\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(?:akpa)\s+(?:(\d+(?:\.\d+)?)|otu|abụọ|abuo|atọ|ato|anọ|ano|ise|isii|asaa|asatọ|asato|itoolu|iri)(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'bags',
   },
   {
-    re: /\b(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita)\s+(?:n['’]otu\s+(?:hekta|eka))\b/gi,
+    re: /(?:^|[\s,.;:!?("'/-])(\d+(?:\.\d+)?)\s*(?:kilo(?:gram)?|kg|lita)\s+(?:n['’]otu\s+(?:hekta|eka))(?=$|[\s,.;:!?)"'/-])/gi,
     unitKind: 'other_application_unit',
   },
   // Concentration ppm in application context
