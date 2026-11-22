@@ -415,7 +415,9 @@ describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safet
       context: { cropId: "maize", zone: "derived_savanna", stageName: "basal" },
       language: "en",
     });
-    expect(capturedBody).not.toContain("derived_savanna");
+    expect(capturedBody).toContain("- Zone: unverified (not provided)");
+    expect(capturedBody).not.toContain("- Zone: derived_savanna");
+    expect(capturedBody).not.toContain("- Current Stage: basal");
     expect(noFarmRes.numericGuardrailBlocked).toBe(true);
     expect(noFarmRes.answer).not.toContain("200 kg/ha");
   });
