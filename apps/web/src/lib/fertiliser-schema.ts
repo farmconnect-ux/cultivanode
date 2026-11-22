@@ -56,8 +56,8 @@ export const SoilSchema = z
     extractionMethod: z.string().trim().min(1).max(64),
     samplingDepthCm: z.number().finite().positive().max(100),
     testDate: z.string().trim().min(1).max(40),
-    farmId: z.string().trim().min(1).max(64),
-    plotId: z.string().trim().min(1).max(64).optional(),
+    farmId: z.string().uuid("soil.farmId must be a valid UUID."),
+    plotId: z.string().uuid("soil.plotId must be a valid UUID.").optional(),
     soilReportId: z.string().trim().min(1).max(64).optional(),
   })
   .strict()
@@ -82,9 +82,10 @@ export const SoilSchema = z
   }));
 
 /**
- * Public Fertiliser API request schema (Batch 04.0-H Revision 3).
+ * Public Fertiliser API request schema (Batch 04.0-H Revision 4).
  * `.strict()` guarantees callers cannot pass `requireStrictSoilProvenance`, `protocolOverride`,
- * `approvalStatus`, or `approvalRecord`. `farmId` is mandatory on both request and soil report.
+ * `approvalStatus`, `approvalRecord`, or `verifiedLabReport`.
+ * `farmId` (UUID) is mandatory on both request and soil report and verified via `authorizeFarmRequest`.
  */
 export const FertiliserSchema = z
   .object({
@@ -94,8 +95,8 @@ export const FertiliserSchema = z
     soil: SoilSchema,
     zone: z.string().trim().min(1).max(64),
     growthStage: z.string().trim().min(1).max(64),
-    farmId: z.string().trim().min(1).max(64),
-    plotId: z.string().trim().min(1).max(64).optional(),
+    farmId: z.string().uuid("farmId must be a valid UUID."),
+    plotId: z.string().uuid("plotId must be a valid UUID.").optional(),
     requestId: z.string().trim().min(1).max(64).optional(),
   })
   .strict();

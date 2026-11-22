@@ -3,6 +3,7 @@ import { calculateFertiliserRecommendation } from './fertiliser';
 import {
   evaluateWithTestApprovedProtocol,
   makeTestApprovedProtocolFixture,
+  makeTestVerifiedLabReport,
 } from './__testing__/approved-protocol-test-harness';
 import { generateSprayPlan } from './spray-planner';
 import { evaluateCropWeatherHazards } from './weather-alerts';
@@ -44,6 +45,7 @@ describe('Fertiliser Engine', () => {
       samplingDepthCm: 15,
       testDate: '2026-10-01',
       farmId: 'farm-unit-1',
+      verifiedLabReport: makeTestVerifiedLabReport({ farmId: 'farm-unit-1', plotId: undefined }),
     };
 
     const res = evaluateWithTestApprovedProtocol(
@@ -86,6 +88,7 @@ describe('Fertiliser Engine', () => {
       samplingDepthCm: 15,
       testDate: '2026-10-01',
       farmId: 'farm-unit-1',
+      verifiedLabReport: makeTestVerifiedLabReport({ farmId: 'farm-unit-1', plotId: undefined }),
     };
     const res = evaluateWithTestApprovedProtocol(
       {

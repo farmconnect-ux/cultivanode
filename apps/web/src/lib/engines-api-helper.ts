@@ -122,6 +122,44 @@ export async function authorizeFarmRequest(
 }
 
 /**
+ * Verify that a plot belongs to the already-verified farm and is accessible under the
+ * caller's RLS-scoped Supabase client. Never uses service-role credentials.
+ */
+export async function verifyFarmPlotAccess(
+  client: SupabaseClient<Database>,
+  verifiedFarmId: string,
+  plotId: string,
+) {
+  try {
+    const { data: plot, error } = await client
+      .from('plots')
+      .select('id, farm_id')
+      .eq('id', plotId)
+      .eq('farm_id', verifiedFarmId)
+      .maybeSingle();
+
+    if (error) {
+      return {
+        ok: false as const,
+        response: NextResponse.json({ error: 'Unable to verify plot access.' }, { status: 500 }),
+      };
+    }
+    if (!plot || plot.farm_id !== verifiedFarmId) {
+      return {
+        ok: false as const,
+        response: NextResponse.json({ error: 'Plot not found or access denied.' }, { status: 404 }),
+      };
+    }
+    return { ok: true as const, plotId: plot.id, farmId: plot.farm_id };
+  } catch {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: 'Unable to verify plot access.' }, { status: 500 }),
+    };
+  }
+}
+
+/**
  * Full Batch 03.1C gate for farm-scoped AI intelligence routes:
  * Bearer JWT -> active account -> farm RLS visibility -> active `ai_intelligence` consent.
  * Returns a branded `VerifiedAiFarmCallerContext` required by `recordAiAuditEvent`.

@@ -9,23 +9,68 @@ import type {
   FertiliserRecommendation,
   FertiliserRecommendationResult,
   SoilNutrientProfile,
+  VerifiedLaboratoryReportRecord,
 } from './types';
 
-export const SUPPORTED_FERTILISER_CROP_IDS = ['maize', 'tomato', 'cassava', 'yam', 'rice'] as const;
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== 'object') return value;
+  const obj = value as unknown as object;
+  if (seen.has(obj)) return value;
+  seen.add(obj);
+  for (const prop of Reflect.ownKeys(obj)) {
+    const child = (obj as Record<PropertyKey, unknown>)[prop];
+    if (child !== null && typeof child === 'object') {
+      deepFreeze(child, seen);
+    }
+  }
+  return Object.freeze(value);
+}
+
+export const SUPPORTED_FERTILISER_CROP_IDS = Object.freeze([
+  'maize',
+  'tomato',
+  'cassava',
+  'yam',
+  'rice',
+] as const);
 export type SupportedFertiliserCropId = (typeof SUPPORTED_FERTILISER_CROP_IDS)[number];
 
 /**
- * Module-private unforgeable brand symbol minted ONLY by the deterministic fertiliser engine
- * when an independently agronomist-approved calculation succeeds. Prevents callers or LLM
- * wrappers from hand-crafting a fake FertiliserRecommendation / binding object.
+ * Module-private unforgeable identity registry & brand symbol for trusted calculation results
+ * (Batch 04.0-H Revision 4, Finding 4). Every trusted calculation is deep-frozen before being
+ * registered so neither top-level properties, nested objects, nor arrays can be mutated.
  */
 const TRUSTED_CALCULATION_BRAND = Symbol('cultivanode.trusted_fertiliser_calculation');
+const TRUSTED_CALCULATION_REGISTRY = new WeakSet<FertiliserRecommendation>();
 
 export function isTrustedFertiliserCalculation(value: unknown): value is FertiliserRecommendation {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as FertiliserRecommendation;
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as Record<symbol, unknown>)[TRUSTED_CALCULATION_BRAND] === true
+    TRUSTED_CALCULATION_REGISTRY.has(candidate) &&
+    (value as Record<symbol, unknown>)[TRUSTED_CALCULATION_BRAND] === true &&
+    Object.isFrozen(candidate) &&
+    Object.isFrozen(candidate.productApplications) &&
+    Boolean(candidate.binding && Object.isFrozen(candidate.binding))
+  );
+}
+
+/**
+ * Module-private unforgeable identity registry & brand symbol for server-verified laboratory
+ * reports (Batch 04.0-H Revision 4, Finding 2). No production factory currently mints entries
+ * into this registry because accredited laboratory report verification is not yet implemented;
+ * caller-declared `provenance: 'lab_confirmed'` therefore always fails closed.
+ */
+const TRUSTED_LAB_REPORT_BRAND = Symbol('cultivanode.trusted_lab_report');
+const TRUSTED_LAB_REPORTS = new WeakSet<VerifiedLaboratoryReportRecord>();
+
+export function isTrustedLaboratoryReport(value: unknown): value is VerifiedLaboratoryReportRecord {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as VerifiedLaboratoryReportRecord;
+  return (
+    TRUSTED_LAB_REPORTS.has(candidate) &&
+    (value as Record<symbol, unknown>)[TRUSTED_LAB_REPORT_BRAND] === true &&
+    Object.isFrozen(candidate)
   );
 }
 
@@ -78,74 +123,112 @@ const DEFAULT_EXTRACTION_METHODS: readonly SoilExtractionMethod[] = [
 ];
 
 /**
- * Versioned crop-specific fertiliser protocols (Batch 04.0-H).
+ * Private authoritative crop-specific fertiliser protocol registry (Batch 04.0-H Revision 4).
  *
- * IMPORTANT: `approvalStatus: 'provisional_software_validated'` explicitly records that these
- * legacy uptake coefficients passed software validation only and still await formal agronomic
- * sign-off under Decision D-A5 (see `02_FERTILISER_SAFETY_FINDING.md`).
+ * - Kept private to this module and recursively deep-frozen at load time so no consumer
+ *   can obtain a mutable reference or alter approval metadata, zones, or uptake coefficients.
+ * - All five built-in protocols remain `provisional_software_validated` with `approvalRecord: null`
+ *   and therefore fail closed for public numerical prescriptions.
  */
-export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliserCropId, CropProtocolEntry>> = {
-  maize: {
-    cropId: 'maize',
-    protocolVersion: 'prov-ng-maize-v1.0',
-    approvalStatus: 'provisional_software_validated',
-    approvalRecord: null,
-    sourceCitation: 'CultivaNode Provisional NG Maize Uptake Table (pending D-A5 agronomic sign-off)',
-    maxNitrogenKgPerHa: 180,
-    supportedZones: DEFAULT_NG_ZONES,
-    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
-    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
-    uptakePerTonne: { nPerTonne: 20, pPerTonne: 8, kPerTonne: 16 },
-  },
-  tomato: {
-    cropId: 'tomato',
-    protocolVersion: 'prov-ng-tomato-v1.0',
-    approvalStatus: 'provisional_software_validated',
-    approvalRecord: null,
-    sourceCitation: 'CultivaNode Provisional NG Tomato Uptake Table (pending D-A5 agronomic sign-off)',
-    maxNitrogenKgPerHa: 150,
-    supportedZones: DEFAULT_NG_ZONES,
-    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
-    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
-    uptakePerTonne: { nPerTonne: 3.0, pPerTonne: 1.0, kPerTonne: 4.5 },
-  },
-  cassava: {
-    cropId: 'cassava',
-    protocolVersion: 'prov-ng-cassava-v1.0',
-    approvalStatus: 'provisional_software_validated',
-    approvalRecord: null,
-    sourceCitation: 'CultivaNode Provisional NG Cassava Uptake Table (pending D-A5 agronomic sign-off)',
-    maxNitrogenKgPerHa: 120,
-    supportedZones: DEFAULT_NG_ZONES,
-    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
-    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
-    uptakePerTonne: { nPerTonne: 5.0, pPerTonne: 1.5, kPerTonne: 6.0 },
-  },
-  yam: {
-    cropId: 'yam',
-    protocolVersion: 'prov-ng-yam-v1.0',
-    approvalStatus: 'provisional_software_validated',
-    approvalRecord: null,
-    sourceCitation: 'CultivaNode Provisional NG Yam Uptake Table (pending D-A5 agronomic sign-off)',
-    maxNitrogenKgPerHa: 120,
-    supportedZones: DEFAULT_NG_ZONES,
-    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
-    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
-    uptakePerTonne: { nPerTonne: 4.5, pPerTonne: 1.2, kPerTonne: 5.5 },
-  },
-  rice: {
-    cropId: 'rice',
-    protocolVersion: 'prov-ng-rice-v1.0',
-    approvalStatus: 'provisional_software_validated',
-    approvalRecord: null,
-    sourceCitation: 'CultivaNode Provisional NG Rice Uptake Table (pending D-A5 agronomic sign-off)',
-    maxNitrogenKgPerHa: 150,
-    supportedZones: DEFAULT_NG_ZONES,
-    supportedExtractionMethods: DEFAULT_EXTRACTION_METHODS,
-    nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
-    uptakePerTonne: { nPerTonne: 18, pPerTonne: 7, kPerTonne: 22 },
-  },
-};
+const AUTHORITATIVE_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliserCropId, CropProtocolEntry>> =
+  deepFreeze({
+    maize: {
+      cropId: 'maize',
+      protocolVersion: 'prov-ng-maize-v1.0',
+      approvalStatus: 'provisional_software_validated',
+      approvalRecord: null,
+      sourceCitation: 'CultivaNode Provisional NG Maize Uptake Table (pending D-A5 agronomic sign-off)',
+      maxNitrogenKgPerHa: 180,
+      supportedZones: [...DEFAULT_NG_ZONES],
+      supportedExtractionMethods: [...DEFAULT_EXTRACTION_METHODS],
+      nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+      uptakePerTonne: { nPerTonne: 20, pPerTonne: 8, kPerTonne: 16 },
+    },
+    tomato: {
+      cropId: 'tomato',
+      protocolVersion: 'prov-ng-tomato-v1.0',
+      approvalStatus: 'provisional_software_validated',
+      approvalRecord: null,
+      sourceCitation: 'CultivaNode Provisional NG Tomato Uptake Table (pending D-A5 agronomic sign-off)',
+      maxNitrogenKgPerHa: 150,
+      supportedZones: [...DEFAULT_NG_ZONES],
+      supportedExtractionMethods: [...DEFAULT_EXTRACTION_METHODS],
+      nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+      uptakePerTonne: { nPerTonne: 3.0, pPerTonne: 1.0, kPerTonne: 4.5 },
+    },
+    cassava: {
+      cropId: 'cassava',
+      protocolVersion: 'prov-ng-cassava-v1.0',
+      approvalStatus: 'provisional_software_validated',
+      approvalRecord: null,
+      sourceCitation: 'CultivaNode Provisional NG Cassava Uptake Table (pending D-A5 agronomic sign-off)',
+      maxNitrogenKgPerHa: 120,
+      supportedZones: [...DEFAULT_NG_ZONES],
+      supportedExtractionMethods: [...DEFAULT_EXTRACTION_METHODS],
+      nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+      uptakePerTonne: { nPerTonne: 5.0, pPerTonne: 1.5, kPerTonne: 6.0 },
+    },
+    yam: {
+      cropId: 'yam',
+      protocolVersion: 'prov-ng-yam-v1.0',
+      approvalStatus: 'provisional_software_validated',
+      approvalRecord: null,
+      sourceCitation: 'CultivaNode Provisional NG Yam Uptake Table (pending D-A5 agronomic sign-off)',
+      maxNitrogenKgPerHa: 120,
+      supportedZones: [...DEFAULT_NG_ZONES],
+      supportedExtractionMethods: [...DEFAULT_EXTRACTION_METHODS],
+      nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+      uptakePerTonne: { nPerTonne: 4.5, pPerTonne: 1.2, kPerTonne: 5.5 },
+    },
+    rice: {
+      cropId: 'rice',
+      protocolVersion: 'prov-ng-rice-v1.0',
+      approvalStatus: 'provisional_software_validated',
+      approvalRecord: null,
+      sourceCitation: 'CultivaNode Provisional NG Rice Uptake Table (pending D-A5 agronomic sign-off)',
+      maxNitrogenKgPerHa: 150,
+      supportedZones: [...DEFAULT_NG_ZONES],
+      supportedExtractionMethods: [...DEFAULT_EXTRACTION_METHODS],
+      nutrientBasis: { nitrogen: 'elemental_N', phosphorus: 'P2O5', potassium: 'K2O' },
+      uptakePerTonne: { nPerTonne: 18, pPerTonne: 7, kPerTonne: 22 },
+    },
+  });
+
+function cloneProtocolMetadataSnapshot(entry: CropProtocolEntry): FertiliserProtocolMetadata {
+  return deepFreeze({
+    cropId: entry.cropId,
+    protocolVersion: entry.protocolVersion,
+    approvalStatus: entry.approvalStatus,
+    approvalRecord: entry.approvalRecord ? { ...entry.approvalRecord, applicableZones: [...entry.approvalRecord.applicableZones] } : null,
+    sourceCitation: entry.sourceCitation,
+    maxNitrogenKgPerHa: entry.maxNitrogenKgPerHa,
+    supportedZones: [...entry.supportedZones],
+    nutrientBasis: { ...entry.nutrientBasis },
+  });
+}
+
+/**
+ * Immutable read-only public snapshot of supported crop protocol metadata.
+ * Detached from the private `AUTHORITATIVE_FERTILISER_PROTOCOLS` consumed by the engine.
+ */
+export const SUPPORTED_FERTILISER_PROTOCOLS: Readonly<Record<SupportedFertiliserCropId, FertiliserProtocolMetadata>> =
+  deepFreeze({
+    maize: cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS.maize),
+    tomato: cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS.tomato),
+    cassava: cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS.cassava),
+    yam: cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS.yam),
+    rice: cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS.rice),
+  });
+
+/**
+ * Safe immutable accessor returning a fresh deep-frozen snapshot of protocol metadata.
+ */
+export function getFertiliserProtocolSnapshot(
+  cropId: string | null | undefined,
+): Readonly<FertiliserProtocolMetadata> | null {
+  if (!isSupportedFertiliserCrop(cropId)) return null;
+  return cloneProtocolMetadataSnapshot(AUTHORITATIVE_FERTILISER_PROTOCOLS[cropId.trim().toLowerCase() as SupportedFertiliserCropId]);
+}
 
 export function isSupportedFertiliserCrop(cropId: string | null | undefined): cropId is SupportedFertiliserCropId {
   if (!cropId || typeof cropId !== 'string') return false;
@@ -208,6 +291,29 @@ export function __evaluateFertiliserWithTestProtocolFixture(
   return evaluateFertiliserCore(request, testProtocolPatch);
 }
 
+/**
+ * Internal test-only helper for minting a trusted, deep-frozen VerifiedLaboratoryReportRecord.
+ * Refuses to execute outside test runtime and is NOT exported from `@cultivanode/shared`.
+ * @internal
+ */
+export function __mintTestVerifiedLabReport(
+  record: VerifiedLaboratoryReportRecord,
+): VerifiedLaboratoryReportRecord {
+  if (!isTestRuntime()) {
+    throw new Error('Test laboratory verification helper is strictly forbidden outside test runtime.');
+  }
+  const cloned: VerifiedLaboratoryReportRecord = { ...record };
+  Object.defineProperty(cloned, TRUSTED_LAB_REPORT_BRAND, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  deepFreeze(cloned);
+  TRUSTED_LAB_REPORTS.add(cloned);
+  return cloned;
+}
+
 function evaluateFertiliserCore(
   request: FertiliserCalculationRequest,
   internalTestProtocolPatch: Partial<FertiliserProtocolMetadata> | null,
@@ -237,7 +343,7 @@ function evaluateFertiliserCore(
     };
   }
 
-  const baseProtocol = SUPPORTED_FERTILISER_PROTOCOLS[rawCropId];
+  const baseProtocol = AUTHORITATIVE_FERTILISER_PROTOCOLS[rawCropId];
   const protocol: CropProtocolEntry = internalTestProtocolPatch
     ? { ...baseProtocol, ...internalTestProtocolPatch }
     : baseProtocol;
@@ -651,6 +757,95 @@ function evaluateFertiliserCore(
     };
   }
 
+  // Revision 4 Finding 2: Caller-declared `provenance: 'lab_confirmed'` is NOT verified provenance.
+  // Require a server-trusted, deep-frozen `VerifiedLaboratoryReportRecord` registered in
+  // `TRUSTED_LAB_REPORTS` with full laboratory identity, report ID, farm/plot association,
+  // strict ISO dates, expiry, method, and depth verification.
+  const labReport = soil.verifiedLabReport;
+  if (!labReport || !isTrustedLaboratoryReport(labReport)) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_provenance_unverified',
+      message:
+        'Caller-declared laboratory soil provenance cannot authorise a numerical fertiliser prescription. An independently verified server-side laboratory report record is required.',
+      missingRequirements: ['verified_laboratory_report_record'],
+      guidance:
+        'Submit soil analysis through a verified laboratory integration or consult a qualified agronomist; CultivaNode does not treat self-declared laboratory claims as verified evidence.',
+    };
+  }
+
+  const missingLabFields: string[] = [];
+  if (!labReport.laboratoryName?.trim()) missingLabFields.push('verifiedLabReport.laboratoryName');
+  if (!labReport.laboratoryId?.trim()) missingLabFields.push('verifiedLabReport.laboratoryId');
+  if (!labReport.reportId?.trim()) missingLabFields.push('verifiedLabReport.reportId');
+  if (!labReport.provenanceRecordId?.trim()) missingLabFields.push('verifiedLabReport.provenanceRecordId');
+  if (labReport.verificationStatus !== 'verified') missingLabFields.push('verifiedLabReport.verificationStatus=verified');
+  if (missingLabFields.length > 0) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_provenance_incomplete',
+      message: 'Verified laboratory report record is missing mandatory laboratory identity or verification fields.',
+      missingRequirements: missingLabFields,
+      guidance: 'Provide a complete verified laboratory report (laboratory identity, report ID, provenance record, and verification status).',
+    };
+  }
+
+  if (labReport.farmId?.trim() !== reqFarmId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_farm_mismatch',
+      message: 'Verified laboratory report belongs to a different farm and cannot be used for this calculation.',
+      missingRequirements: ['matching_verified_farm_lab_report'],
+      guidance: 'Use a verified laboratory report associated with the target farm.',
+    };
+  }
+  if (reqPlotId && labReport.plotId?.trim() !== reqPlotId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_plot_mismatch',
+      message: 'Verified laboratory report does not match the requested plot.',
+      missingRequirements: ['matching_verified_plot_lab_report'],
+      guidance: 'Use a verified laboratory report associated with the target plot.',
+    };
+  }
+  const labSampleTs = parseStrictIsoDate(labReport.sampleCollectionDate);
+  const labAnalysisTs = parseStrictIsoDate(labReport.analysisDate);
+  const labExpiresTs = parseStrictIsoDate(labReport.expiresAt);
+  if (labSampleTs === null || labAnalysisTs === null || labExpiresTs === null || labExpiresTs <= labAnalysisTs) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_dates_invalid',
+      message: 'Verified laboratory report contains missing or invalid strict ISO sample, analysis, or expiry dates.',
+      missingRequirements: ['verifiedLabReport.dates(strict ISO)'],
+      guidance: 'Verify sample collection, analysis, and validity dates on the laboratory report.',
+    };
+  }
+  if (labExpiresTs < effectiveRefTs) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_report_expired',
+      message: `Verified laboratory report "${labReport.reportId}" expired on ${labReport.expiresAt}.`,
+      missingRequirements: ['current_verified_lab_report'],
+      guidance: 'Obtain a fresh verified laboratory soil analysis before generating a numerical prescription.',
+    };
+  }
+  if (labReport.extractionMethod?.trim() !== normalizedExtraction || labReport.samplingDepthCm !== soil.samplingDepthCm) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_lab_metadata_mismatch',
+      message: 'Soil extraction method or sampling depth does not match the verified laboratory report record.',
+      missingRequirements: ['consistent_verified_lab_metadata'],
+      guidance: 'Ensure analytical method and sampling depth match the verified laboratory report.',
+    };
+  }
+
   // Validate required scalar soil readings (never silently default missing organicMatterPercent!)
   if (typeof soil.pH !== 'number' || !Number.isFinite(soil.pH) || soil.pH < 0 || soil.pH > 14) {
     return {
@@ -871,30 +1066,24 @@ function evaluateFertiliserCore(
     configurable: false,
     writable: false,
   });
+  // Finding 4: Deep-freeze the complete calculation result and register its identity in the private WeakSet.
+  deepFreeze(recommendation);
+  TRUSTED_CALCULATION_REGISTRY.add(recommendation);
 
-  return {
+  return deepFreeze({
     ok: true,
     status: 'approved_calculation',
-    protocol: {
-      cropId: protocol.cropId,
-      protocolVersion: protocol.protocolVersion,
-      approvalStatus: protocol.approvalStatus,
-      approvalRecord: approvalRecord!,
-      sourceCitation: protocol.sourceCitation,
-      maxNitrogenKgPerHa: protocol.maxNitrogenKgPerHa,
-      supportedZones: protocol.supportedZones,
-      nutrientBasis: protocol.nutrientBasis,
-    },
+    protocol: cloneProtocolMetadataSnapshot(protocol),
     recommendation,
     assumptions: [
       `Approved protocol ${protocol.protocolVersion} (approved by ${approvalRecord!.reviewerName}, ${approvalRecord!.reviewerCredentials} on ${approvalRecord!.approvalDate}, expires ${approvalRecord!.expiresAt}).`,
+      `Verified laboratory report ${labReport.reportId} (${labReport.laboratoryName}, ID: ${labReport.laboratoryId}, provenance: ${labReport.provenanceRecordId}).`,
       pConv.conversionNote,
       kConv.conversionNote,
       'Fertiliser formulations assume NPK 15:15:15 (15% N, 15% P2O5, 15% K2O) and Urea (46% N).',
-      'Soil provenance limitation: laboratory provenance ("lab_confirmed") is caller-declared; independent accredited laboratory certificate verification is not yet implemented.',
     ],
     missingInformation: [],
-  };
+  });
 }
 
 /**

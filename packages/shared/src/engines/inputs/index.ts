@@ -3,8 +3,10 @@ export * from './nutrient-units';
 export {
   SUPPORTED_FERTILISER_CROP_IDS,
   SUPPORTED_FERTILISER_PROTOCOLS,
+  getFertiliserProtocolSnapshot,
   isSupportedFertiliserCrop,
   isTrustedFertiliserCalculation,
+  isTrustedLaboratoryReport,
   evaluateFertiliserRecommendation,
   calculateFertiliserRecommendation,
   type SupportedFertiliserCropId,

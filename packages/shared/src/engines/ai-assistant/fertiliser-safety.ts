@@ -1,6 +1,36 @@
-import type { AppLanguage } from '../../roles';
+import { FARM_ZONES, type AppLanguage } from '../../roles';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
 import { isSupportedFertiliserCrop, isTrustedFertiliserCalculation } from '../inputs/fertiliser';
+
+const VALID_AGRO_ZONES = new Set<string>([
+  ...FARM_ZONES,
+  'southern_guinea_savanna',
+  'northern_guinea_savanna',
+  'sudan_savanna',
+  'sahel_savanna',
+  'mangrove_swamp',
+  'mid_altitude',
+]);
+
+const VALID_GROWTH_STAGES = new Set<string>([
+  'pre_planting',
+  'pre-planting',
+  'planting',
+  'basal',
+  'emergence',
+  'seedling',
+  'vegetative',
+  'tillering',
+  'flowering',
+  'fruiting',
+  'pod_filling',
+  'tuber_initiation',
+  'bulking',
+  'maturation',
+  'harvest',
+  'top_dress',
+  'split',
+]);
 
 /**
  * Module-private unforgeable brand symbol for trusted source quotations.
@@ -460,15 +490,29 @@ function validateCalculationBindingAndValues(
     return { ok: false, reasonCode: 'calculation_request_mismatch' };
   }
 
+  // Finding 5 (Revision 4): Current request geographic zone and crop growth stage are
+  // UNCONDITIONALLY mandatory for numerical-output validation (never silently skipped when omitted).
   const boundZone = binding.zone?.trim().toLowerCase() ?? '';
   const reqZone = options.zone?.trim().toLowerCase() ?? '';
-  if (!boundZone || (reqZone && reqZone !== boundZone)) {
+  if (!reqZone) {
+    return { ok: false, reasonCode: 'request_zone_missing' };
+  }
+  if (!VALID_AGRO_ZONES.has(reqZone)) {
+    return { ok: false, reasonCode: 'request_zone_invalid' };
+  }
+  if (!boundZone || reqZone !== boundZone) {
     return { ok: false, reasonCode: 'calculation_zone_mismatch' };
   }
 
   const boundStage = binding.growthStage?.trim().toLowerCase() ?? '';
   const reqStage = options.growthStage?.trim().toLowerCase() ?? '';
-  if (!boundStage || (reqStage && reqStage !== boundStage)) {
+  if (!reqStage) {
+    return { ok: false, reasonCode: 'request_growth_stage_missing' };
+  }
+  if (!VALID_GROWTH_STAGES.has(reqStage)) {
+    return { ok: false, reasonCode: 'request_growth_stage_invalid' };
+  }
+  if (!boundStage || reqStage !== boundStage) {
     return { ok: false, reasonCode: 'calculation_growth_stage_mismatch' };
   }
 

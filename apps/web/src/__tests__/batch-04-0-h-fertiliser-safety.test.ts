@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
 import { SUPPORTED_FERTILISER_CROP_IDS } from "@cultivanode/shared";
 
 const mocks = vi.hoisted(() => ({
-  authorizeRequest: vi.fn(),
+  authorizeFarmRequest: vi.fn(),
+  verifyFarmPlotAccess: vi.fn(),
   requireAccount: vi.fn(),
   aiConfig: vi.fn(),
 }));
@@ -12,7 +14,8 @@ vi.mock("@/lib/engines-api-helper", async () => {
   const actual = await vi.importActual<typeof import("@/lib/engines-api-helper")>("@/lib/engines-api-helper");
   return {
     ...actual,
-    authorizeRequest: mocks.authorizeRequest,
+    authorizeFarmRequest: mocks.authorizeFarmRequest,
+    verifyFarmPlotAccess: mocks.verifyFarmPlotAccess,
   };
 });
 vi.mock("@/lib/account/session", () => ({
@@ -25,10 +28,19 @@ vi.mock("@/lib/ai-config", () => ({
 import { POST as fertiliserPost } from "@/app/api/engines/agronomy/fertiliser/route";
 import { askFarmAssistantAction } from "@/actions/ai-assistant";
 
-function makeReq(body: unknown) {
+const FARM_OWNED = "11111111-1111-4111-8111-111111111111";
+const FARM_OTHER = "22222222-2222-4222-8222-222222222222";
+const PLOT_OWNED = "33333333-3333-4333-8333-333333333333";
+const PLOT_OTHER = "44444444-4444-4444-8444-444444444444";
+
+const fakeRlsClient = { __isCallerRlsClient: true };
+
+function makeReq(body: unknown, authHeader: string | null = "Bearer valid-user-jwt") {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (authHeader) headers.Authorization = authHeader;
   return new Request("http://localhost/api/engines/agronomy/fertiliser", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
 }
@@ -42,13 +54,24 @@ const VALID_LAB_SOIL = {
   extractionMethod: "bray_1",
   samplingDepthCm: 15,
   testDate: "2026-10-01",
-  farmId: "farm-123",
+  farmId: FARM_OWNED,
 };
 
-describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enforcement", () => {
+describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safety Enforcement", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.authorizeRequest.mockResolvedValue({ authorized: true, userId: "user-1" });
+    mocks.authorizeFarmRequest.mockResolvedValue({
+      authorized: true,
+      user: { id: "user-1" },
+      farmId: FARM_OWNED,
+      client: fakeRlsClient,
+      verifiedAt: "2026-11-22T22:00:00Z",
+    });
+    mocks.verifyFarmPlotAccess.mockResolvedValue({
+      ok: true,
+      plotId: PLOT_OWNED,
+      farmId: FARM_OWNED,
+    });
     mocks.requireAccount.mockResolvedValue({ userId: "user-1", role: "farmer" });
     mocks.aiConfig.mockReturnValue({
       anthropicApiKey: "test-key",
@@ -65,17 +88,113 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     vi.unstubAllGlobals();
   });
 
-  it("fails closed (422 protocol_provisional_not_approved) for ALL FIVE built-in provisional crops on /api/engines/agronomy/fertiliser", async () => {
+  it("enforces caller-scoped farm ownership, active account, and plot-to-farm ownership without service-role bypass", async () => {
+    // 1. Missing Bearer token -> 401 before touching DB
+    const unauth = await fertiliserPost(
+      makeReq(
+        {
+          cropId: "maize",
+          targetYieldTonnesPerHa: 5,
+          farmAreaHectares: 1,
+          farmId: FARM_OWNED,
+          zone: "derived_savanna",
+          growthStage: "basal",
+          soil: VALID_LAB_SOIL,
+        },
+        null,
+      ),
+    );
+    expect(unauth.status).toBe(401);
+    expect(mocks.authorizeFarmRequest).not.toHaveBeenCalled();
+
+    // 2. Inactive account -> 403 rejected by authorizeFarmRequest
+    mocks.authorizeFarmRequest.mockResolvedValueOnce({
+      authorized: false,
+      response: NextResponse.json({ error: "Account is not active." }, { status: 403 }),
+    });
+    const inactive = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: FARM_OWNED,
+        zone: "derived_savanna",
+        growthStage: "basal",
+        soil: VALID_LAB_SOIL,
+      }),
+    );
+    expect(inactive.status).toBe(403);
+
+    // 3. Cross-tenant attack: caller submits matching farmId & soil.farmId for ANOTHER user's farm -> 404
+    mocks.authorizeFarmRequest.mockResolvedValueOnce({
+      authorized: false,
+      response: NextResponse.json({ error: "Farm not found or access denied." }, { status: 404 }),
+    });
+    const crossTenant = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: FARM_OTHER,
+        zone: "derived_savanna",
+        growthStage: "basal",
+        soil: { ...VALID_LAB_SOIL, farmId: FARM_OTHER },
+      }),
+    );
+    expect(crossTenant.status).toBe(404);
+    expect(mocks.authorizeFarmRequest).toHaveBeenCalledWith(expect.any(Request), FARM_OTHER, {
+      requireActiveAccount: true,
+    });
+
+    // 4. Cross-farm plot attack: caller owns FARM_OWNED but submits PLOT_OTHER belonging to another farm -> 404
+    mocks.verifyFarmPlotAccess.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ error: "Plot not found or access denied." }, { status: 404 }),
+    });
+    const crossPlot = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: FARM_OWNED,
+        plotId: PLOT_OTHER,
+        zone: "derived_savanna",
+        growthStage: "basal",
+        soil: { ...VALID_LAB_SOIL, plotId: PLOT_OTHER },
+      }),
+    );
+    expect(crossPlot.status).toBe(404);
+    expect(mocks.verifyFarmPlotAccess).toHaveBeenCalledWith(fakeRlsClient, FARM_OWNED, PLOT_OTHER);
+
+    // 5. Missing soil.plotId when plotId is supplied -> 422 fail closed
+    const missingSoilPlot = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: FARM_OWNED,
+        plotId: PLOT_OWNED,
+        zone: "derived_savanna",
+        growthStage: "basal",
+        soil: VALID_LAB_SOIL, // no plotId
+      }),
+    );
+    expect(missingSoilPlot.status).toBe(422);
+    expect((await missingSoilPlot.json()).reasonCode).toBe("soil_plot_association_missing");
+  });
+
+  it("authorised farm + plot reaches engine via caller RLS and fails closed (422) for ALL FIVE built-in provisional crops", async () => {
     for (const cropId of SUPPORTED_FERTILISER_CROP_IDS) {
       const res = await fertiliserPost(
         makeReq({
           cropId,
           targetYieldTonnesPerHa: 5,
           farmAreaHectares: 1,
-          farmId: "farm-123",
+          farmId: FARM_OWNED,
+          plotId: PLOT_OWNED,
           zone: "derived_savanna",
           growthStage: "basal",
-          soil: VALID_LAB_SOIL,
+          soil: { ...VALID_LAB_SOIL, plotId: PLOT_OWNED },
         }),
       );
       expect(res.status).toBe(422);
@@ -83,10 +202,13 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
       expect(json.status).toBe("insufficient_evidence");
       expect(json.reasonCode).toBe("protocol_provisional_not_approved");
     }
+    expect(mocks.authorizeFarmRequest).toHaveBeenCalledWith(expect.any(Request), FARM_OWNED, {
+      requireActiveAccount: true,
+    });
+    expect(mocks.verifyFarmPlotAccess).toHaveBeenCalledWith(fakeRlsClient, FARM_OWNED, PLOT_OWNED);
   });
 
-  it("rejects provenance bypasses, caller protocol overrides, missing farm/plot soil association, and unsupported crops", async () => {
-    // Omission of provenance/method/depth/date/zone/stage/farmId -> 400
+  it("rejects provenance bypasses, caller protocol overrides, caller-supplied verifiedLabReport, and unsupported crops", async () => {
     const missingRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
@@ -97,13 +219,12 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     );
     expect(missingRes.status).toBe(400);
 
-    // Deliberate submission of requireStrictSoilProvenance: false -> 400
     const bypassRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
-        farmId: "farm-123",
+        farmId: FARM_OWNED,
         zone: "derived_savanna",
         growthStage: "basal",
         requireStrictSoilProvenance: false,
@@ -112,13 +233,12 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     );
     expect(bypassRes.status).toBe(400);
 
-    // Deliberate submission of protocolOverride / approvalRecord -> 400
     const overrideRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
-        farmId: "farm-123",
+        farmId: FARM_OWNED,
         zone: "derived_savanna",
         growthStage: "basal",
         protocolOverride: { approvalStatus: "agronomist_approved" },
@@ -127,28 +247,25 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     );
     expect(overrideRes.status).toBe(400);
 
-    // Missing soil.farmId -> 400
-    const { farmId: _omit, ...soilNoFarm } = VALID_LAB_SOIL;
-    const noSoilFarmRes = await fertiliserPost(
+    const forgedLabRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
-        farmId: "farm-123",
+        farmId: FARM_OWNED,
         zone: "derived_savanna",
         growthStage: "basal",
-        soil: soilNoFarm,
+        soil: { ...VALID_LAB_SOIL, verifiedLabReport: { verificationStatus: "verified" } },
       }),
     );
-    expect(noSoilFarmRes.status).toBe(400);
+    expect(forgedLabRes.status).toBe(400);
 
-    // Unsupported crop -> 400
     const lettuceRes = await fertiliserPost(
       makeReq({
         cropId: "lettuce",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
-        farmId: "farm-123",
+        farmId: FARM_OWNED,
         zone: "derived_savanna",
         growthStage: "vegetative",
         soil: VALID_LAB_SOIL,
@@ -172,7 +289,6 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
       }),
     );
 
-    // Missing cropId & missing zone must NOT default to maize or derived_savanna
     const missingCtxRes = await askFarmAssistantAction({
       query: "How much should I apply?",
       language: "en",
@@ -183,7 +299,6 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     expect(missingCtxRes.numericGuardrailBlocked).toBe(true);
     expect(missingCtxRes.answer).not.toContain("200 kg/ha");
 
-    // Invalid zone must throw fail-closed error
     await expect(
       askFarmAssistantAction({
         query: "Advise on maize",

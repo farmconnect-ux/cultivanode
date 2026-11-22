@@ -11,6 +11,7 @@ import { askGroundedAiAssistant, generateAgronomicAdvisorAnswer } from './llm-ad
 import {
   evaluateWithTestApprovedProtocol,
   makeTestApprovedProtocolFixture,
+  makeTestVerifiedLabReport,
 } from '../inputs/__testing__/approved-protocol-test-harness';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -40,6 +41,7 @@ function makeApprovedMaizeCalc(overrides?: {
         testDate: '2026-10-01',
         farmId,
         plotId,
+        verifiedLabReport: makeTestVerifiedLabReport({ farmId, plotId }),
       },
       zone: overrides?.zone ?? 'derived_savanna',
       growthStage: 'basal',
@@ -129,6 +131,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
       language: 'en' as const,
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -239,6 +242,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-25T12:30:00Z', // > 24h stale
@@ -261,6 +265,95 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     });
     expect(forgedRes.passed).toBe(false);
     expect(forgedRes.reasonCode).toBe('calculation_untrusted_origin');
+
+    // Shallow clone MUST also fail closed (not in WeakSet registry)
+    const shallowRes = validateAssistantNumericalOutput(deterministicText, {
+      cropId: 'maize',
+      farmId: 'farm-alpha',
+      plotId: 'plot-01',
+      requestId: 'req-001',
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      language: 'en',
+      approvedCalculation: { ...calc },
+      referenceDate: '2026-11-22T12:30:00Z',
+    });
+    expect(shallowRes.passed).toBe(false);
+    expect(shallowRes.reasonCode).toBe('calculation_untrusted_origin');
+  });
+
+  it('Finding 5: unconditionally requires valid matching request zone and growthStage (omission cannot bypass)', () => {
+    const calc = makeApprovedMaizeCalc();
+    const deterministicText = formatApprovedFertiliserCalculation(calc, 'en');
+    const baseOpts = {
+      cropId: 'maize',
+      farmId: 'farm-alpha',
+      plotId: 'plot-01',
+      requestId: 'req-001',
+      language: 'en' as const,
+      approvedCalculation: calc,
+      referenceDate: '2026-11-22T12:30:00Z',
+    };
+
+    // Missing request zone -> fails closed
+    const missingZone = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      growthStage: 'basal',
+    });
+    expect(missingZone.passed).toBe(false);
+    expect(missingZone.reasonCode).toBe('request_zone_missing');
+
+    // Missing request growthStage -> fails closed
+    const missingStage = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      zone: 'derived_savanna',
+    });
+    expect(missingStage.passed).toBe(false);
+    expect(missingStage.reasonCode).toBe('request_growth_stage_missing');
+
+    // Invalid request zone -> fails closed
+    const invalidZone = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      zone: 'arctic_tundra',
+      growthStage: 'basal',
+    });
+    expect(invalidZone.passed).toBe(false);
+    expect(invalidZone.reasonCode).toBe('request_zone_invalid');
+
+    // Invalid request growthStage -> fails closed
+    const invalidStage = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      zone: 'derived_savanna',
+      growthStage: 'invalid_stage_999',
+    });
+    expect(invalidStage.passed).toBe(false);
+    expect(invalidStage.reasonCode).toBe('request_growth_stage_invalid');
+
+    // Zone mismatch -> fails closed
+    const mismatchZone = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      zone: 'rainforest',
+      growthStage: 'basal',
+    });
+    expect(mismatchZone.passed).toBe(false);
+    expect(mismatchZone.reasonCode).toBe('calculation_zone_mismatch');
+
+    // Growth-stage mismatch -> fails closed
+    const mismatchStage = validateAssistantNumericalOutput(deterministicText, {
+      ...baseOpts,
+      zone: 'derived_savanna',
+      growthStage: 'flowering',
+    });
+    expect(mismatchStage.passed).toBe(false);
+    expect(mismatchStage.reasonCode).toBe('calculation_growth_stage_mismatch');
+
+    // Non-numerical response without zone/growthStage continues to pass safely as general_guidance
+    const nonNumeric = validateAssistantNumericalOutput(
+      'Scout your maize whorls early in the morning and obtain a laboratory soil test.',
+      { cropId: 'maize', language: 'en' },
+    );
+    expect(nonNumeric.passed).toBe(true);
+    expect(nonNumeric.recommendationStatus).toBe('general_guidance');
   });
 });
 

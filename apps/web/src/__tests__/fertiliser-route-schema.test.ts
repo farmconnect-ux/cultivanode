@@ -8,6 +8,8 @@ vi.mock("@/lib/engines-api-helper", () => ({
 
 import { FertiliserSchema, SoilSchema } from "@/lib/fertiliser-schema";
 
+const FARM_ID = "11111111-1111-4111-8111-111111111111";
+
 const validSoil = {
   pH: 6.2,
   organicMatterPercent: 2.1,
@@ -25,7 +27,7 @@ const validSoil = {
   extractionMethod: "bray_1",
   samplingDepthCm: 15,
   testDate: "2026-10-01",
-  farmId: "farm-123",
+  farmId: FARM_ID,
 };
 
 const validRequest = {
@@ -34,7 +36,7 @@ const validRequest = {
   farmAreaHectares: 2,
   zone: "derived_savanna",
   growthStage: "basal",
-  farmId: "farm-123",
+  farmId: FARM_ID,
   soil: validSoil,
 };
 
@@ -57,7 +59,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
       extractionMethod: "bray_1",
       samplingDepthCm: 15,
       testDate: "2026-10-01",
-      farmId: "farm-123",
+      farmId: FARM_ID,
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
@@ -137,6 +139,15 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
     ).toBe(false);
     expect(
       FertiliserSchema.safeParse({ ...validRequest, farmId: undefined }).success,
+    ).toBe(false);
+    expect(
+      FertiliserSchema.safeParse({ ...validRequest, farmId: "not-a-uuid" }).success,
+    ).toBe(false);
+    expect(
+      FertiliserSchema.safeParse({
+        ...validRequest,
+        soil: { ...validSoil, verifiedLabReport: { verificationStatus: "verified" } },
+      }).success,
     ).toBe(false);
   });
 

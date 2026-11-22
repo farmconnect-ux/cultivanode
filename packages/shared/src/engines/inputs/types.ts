@@ -22,6 +22,27 @@ export type AgriculturalRecommendationStatus =
   | 'invalid_input'
   | 'calculation_failure';
 
+/**
+ * Trusted server-verified laboratory report record (Batch 04.0-H Revision 4).
+ * Caller-supplied plain objects claiming `verificationStatus: 'verified'` are NEVER trusted;
+ * only server-verified records registered in the engine's private trust registry may authorise
+ * numerical fertiliser prescriptions.
+ */
+export interface VerifiedLaboratoryReportRecord {
+  laboratoryName: string;
+  laboratoryId: string;
+  reportId: string;
+  farmId: string;
+  plotId?: string;
+  sampleCollectionDate: string; // strict ISO date
+  analysisDate: string; // strict ISO date
+  expiresAt: string; // strict ISO date
+  extractionMethod: SoilExtractionMethod | string;
+  samplingDepthCm: number;
+  verificationStatus: 'verified';
+  provenanceRecordId: string;
+}
+
 export interface SoilNutrientProfile {
   pH: number;
   nitrogenPercent?: number; // Organic matter / total N % (e.g. 0.15%)
@@ -34,7 +55,7 @@ export interface SoilNutrientProfile {
   /** Preferred explicit typed potassium input preserving original lab value, unit, and basis. */
   potassium?: TypedSoilPotassiumInput;
   organicMatterPercent?: number;
-  /** Mandatory provenance metadata enforced unconditionally server-side (ADR-018, ADR-020). */
+  /** Caller-declared soil evidence class; alone this NEVER proves laboratory authenticity. */
   provenance?: SoilEvidenceClass;
   extractionMethod?: SoilExtractionMethod | string;
   samplingDepthCm?: number;
@@ -45,6 +66,11 @@ export interface SoilNutrientProfile {
   plotId?: string;
   /** Optional laboratory report identifier preserved in the calculation binding for traceability. */
   soilReportId?: string;
+  /**
+   * Server-verified laboratory report record (required for numerical prescriptions).
+   * Plain caller-supplied objects are rejected fail-closed.
+   */
+  verifiedLabReport?: VerifiedLaboratoryReportRecord | null;
 }
 
 export interface AgronomicApprovalRecord {

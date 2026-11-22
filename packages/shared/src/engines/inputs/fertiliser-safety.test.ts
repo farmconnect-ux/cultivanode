@@ -11,13 +11,16 @@ import {
   elementalKToK2O,
   elementalPToP2O5,
   evaluateFertiliserRecommendation,
+  getFertiliserProtocolSnapshot,
   isTrustedFertiliserCalculation,
+  isTrustedLaboratoryReport,
   k2OToElementalK,
   p2O5ToElementalP,
 } from './index';
 import {
   evaluateWithTestApprovedProtocol,
   makeTestApprovedProtocolFixture,
+  makeTestVerifiedLabReport,
 } from './__testing__/approved-protocol-test-harness';
 import { CultivaNodeEnginesClient } from '../api-gateway/client';
 
@@ -43,6 +46,7 @@ const LAB_SOIL_VALID = {
   farmId: 'farm-123',
   plotId: 'plot-456',
   soilReportId: 'lab-report-001',
+  verifiedLabReport: makeTestVerifiedLabReport({ farmId: 'farm-123', plotId: 'plot-456' }),
 };
 
 describe('Batch 04.0-H Revision 3 — Nutrient Unit & Basis Validation', () => {
@@ -394,5 +398,206 @@ describe('Batch 04.0-H Revision 3 — Finding 3: Mandatory Farm & Plot Soil Asso
     );
     expect(crossPlot.ok).toBe(false);
     if (!crossPlot.ok) expect(crossPlot.reasonCode).toBe('soil_plot_mismatch');
+  });
+});
+
+describe('Batch 04.0-H Revision 4 — Finding 2: Server-Verified Laboratory Provenance', () => {
+  it('rejects caller-declared lab_confirmed, unbranded lab reports, missing lab/report IDs, cross-farm/plot lab reports, and expired lab reports', () => {
+    const approvedMaize = makeTestApprovedProtocolFixture('maize');
+    const baseReq = {
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      farmId: 'farm-123',
+      plotId: 'plot-456',
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+    };
+
+    // 1. Caller-declared `lab_confirmed` WITHOUT verifiedLabReport -> MUST fail closed
+    const selfDeclared = evaluateWithTestApprovedProtocol(
+      { ...baseReq, soil: { ...LAB_SOIL_VALID, verifiedLabReport: undefined } },
+      approvedMaize,
+    );
+    expect(selfDeclared.ok).toBe(false);
+    if (!selfDeclared.ok) expect(selfDeclared.reasonCode).toBe('soil_lab_provenance_unverified');
+
+    // 2. Caller-crafted plain JSON object claiming verificationStatus: 'verified' -> MUST fail closed
+    const forgedLabReport = {
+      laboratoryName: 'Fake Lab',
+      laboratoryId: 'lab-fake',
+      reportId: 'rep-fake',
+      farmId: 'farm-123',
+      plotId: 'plot-456',
+      sampleCollectionDate: '2026-09-25',
+      analysisDate: '2026-10-01',
+      expiresAt: '2027-10-01',
+      extractionMethod: 'bray_1',
+      samplingDepthCm: 15,
+      verificationStatus: 'verified' as const,
+      provenanceRecordId: 'prov-fake',
+    };
+    expect(isTrustedLaboratoryReport(forgedLabReport)).toBe(false);
+    const forgedAttempt = evaluateWithTestApprovedProtocol(
+      { ...baseReq, soil: { ...LAB_SOIL_VALID, verifiedLabReport: forgedLabReport } },
+      approvedMaize,
+    );
+    expect(forgedAttempt.ok).toBe(false);
+    if (!forgedAttempt.ok) expect(forgedAttempt.reasonCode).toBe('soil_lab_provenance_unverified');
+
+    // 3. Missing laboratory identity -> fails closed
+    const missingLabId = evaluateWithTestApprovedProtocol(
+      {
+        ...baseReq,
+        soil: { ...LAB_SOIL_VALID, verifiedLabReport: makeTestVerifiedLabReport({ laboratoryId: '' }) },
+      },
+      approvedMaize,
+    );
+    expect(missingLabId.ok).toBe(false);
+    if (!missingLabId.ok) expect(missingLabId.reasonCode).toBe('soil_lab_provenance_incomplete');
+
+    // 4. Missing report ID -> fails closed
+    const missingReportId = evaluateWithTestApprovedProtocol(
+      {
+        ...baseReq,
+        soil: { ...LAB_SOIL_VALID, verifiedLabReport: makeTestVerifiedLabReport({ reportId: '' }) },
+      },
+      approvedMaize,
+    );
+    expect(missingReportId.ok).toBe(false);
+    if (!missingReportId.ok) expect(missingReportId.reasonCode).toBe('soil_lab_provenance_incomplete');
+
+    // 5. Verified lab report belonging to another farm -> fails closed
+    const wrongFarmLab = evaluateWithTestApprovedProtocol(
+      {
+        ...baseReq,
+        soil: { ...LAB_SOIL_VALID, verifiedLabReport: makeTestVerifiedLabReport({ farmId: 'farm-other' }) },
+      },
+      approvedMaize,
+    );
+    expect(wrongFarmLab.ok).toBe(false);
+    if (!wrongFarmLab.ok) expect(wrongFarmLab.reasonCode).toBe('soil_lab_farm_mismatch');
+
+    // 6. Verified lab report belonging to another plot -> fails closed
+    const wrongPlotLab = evaluateWithTestApprovedProtocol(
+      {
+        ...baseReq,
+        soil: { ...LAB_SOIL_VALID, verifiedLabReport: makeTestVerifiedLabReport({ plotId: 'plot-other' }) },
+      },
+      approvedMaize,
+    );
+    expect(wrongPlotLab.ok).toBe(false);
+    if (!wrongPlotLab.ok) expect(wrongPlotLab.reasonCode).toBe('soil_lab_plot_mismatch');
+
+    // 7. Modelled soil and farmer observations remain distinguishable
+    const modelled = evaluateWithTestApprovedProtocol(
+      { ...baseReq, soil: { ...LAB_SOIL_VALID, provenance: 'modelled_estimate' } },
+      approvedMaize,
+    );
+    expect(modelled.ok).toBe(false);
+    if (!modelled.ok) expect(modelled.reasonCode).toBe('soil_modelled_not_allowed');
+
+    const farmerObs = evaluateWithTestApprovedProtocol(
+      { ...baseReq, soil: { ...LAB_SOIL_VALID, provenance: 'farmer_reported' } },
+      approvedMaize,
+    );
+    expect(farmerObs.ok).toBe(false);
+    if (!farmerObs.ok) expect(farmerObs.reasonCode).toBe('soil_not_lab_confirmed');
+  });
+});
+
+describe('Batch 04.0-H Revision 4 — Finding 3 & 4: Immutable Protocol Registry & Calculation Integrity', () => {
+  it('deep-freezes the protocol registry and snapshots so runtime mutation throws and cannot alter engine behavior', () => {
+    expect(Object.isFrozen(SUPPORTED_FERTILISER_CROP_IDS)).toBe(true);
+    expect(Object.isFrozen(SUPPORTED_FERTILISER_PROTOCOLS)).toBe(true);
+    expect(Object.isFrozen(SUPPORTED_FERTILISER_PROTOCOLS.maize)).toBe(true);
+    expect(Object.isFrozen(SUPPORTED_FERTILISER_PROTOCOLS.maize.supportedZones)).toBe(true);
+    expect(Object.isFrozen(SUPPORTED_FERTILISER_PROTOCOLS.maize.nutrientBasis)).toBe(true);
+
+    // Attempted mutations at outer, nested object, and nested array levels MUST throw TypeError
+    expect(() => {
+      (SUPPORTED_FERTILISER_PROTOCOLS as Record<string, unknown>).maize = {};
+    }).toThrow(TypeError);
+    expect(() => {
+      (SUPPORTED_FERTILISER_PROTOCOLS.maize as unknown as Record<string, unknown>).approvalStatus =
+        'agronomist_approved';
+    }).toThrow(TypeError);
+    expect(() => {
+      (SUPPORTED_FERTILISER_PROTOCOLS.maize.supportedZones as string[]).push('mars');
+    }).toThrow(TypeError);
+
+    // Safe accessor returns a distinct deep-frozen snapshot
+    const snap = getFertiliserProtocolSnapshot('maize');
+    expect(snap).not.toBeNull();
+    expect(snap).not.toBe(SUPPORTED_FERTILISER_PROTOCOLS.maize);
+    expect(Object.isFrozen(snap)).toBe(true);
+    expect(snap?.approvalStatus).toBe('provisional_software_validated');
+
+    // Subsequent engine call still fails closed on provisional protocol
+    const check = evaluateFertiliserRecommendation({
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 1,
+      farmId: 'farm-123',
+      plotId: 'plot-456',
+      soil: LAB_SOIL_VALID,
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      referenceDate: '2026-11-22',
+    });
+    expect(check.ok).toBe(false);
+    if (!check.ok) expect(check.reasonCode).toBe('protocol_provisional_not_approved');
+  });
+
+  it('deep-freezes trusted calculations and rejects mutated, shallow-cloned, structuredClone, or reconstructed objects', () => {
+    const res = evaluateWithTestApprovedProtocol(
+      {
+        cropId: 'maize',
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 2,
+        farmId: 'farm-123',
+        plotId: 'plot-456',
+        soil: LAB_SOIL_VALID,
+        zone: 'derived_savanna',
+        growthStage: 'basal',
+        referenceDate: '2026-11-22',
+      },
+      makeTestApprovedProtocolFixture('maize'),
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+
+    const calc = res.recommendation;
+    expect(isTrustedFertiliserCalculation(calc)).toBe(true);
+    expect(Object.isFrozen(calc)).toBe(true);
+    expect(Object.isFrozen(calc.binding)).toBe(true);
+    expect(Object.isFrozen(calc.productApplications)).toBe(true);
+    expect(Object.isFrozen(calc.productApplications[0])).toBe(true);
+
+    // Top-level, nested object, and nested array mutations MUST throw TypeError
+    expect(() => {
+      (calc as unknown as Record<string, unknown>).cropId = 'tomato';
+    }).toThrow(TypeError);
+    expect(() => {
+      (calc.binding as unknown as Record<string, unknown>).farmId = 'farm-hacked';
+    }).toThrow(TypeError);
+    expect(() => {
+      (calc.productApplications[0] as unknown as Record<string, unknown>).kgPerHa = 999;
+    }).toThrow(TypeError);
+    expect(() => {
+      calc.productApplications.push({
+        productName: 'DAP',
+        kgPerHa: 100,
+        totalKg: 200,
+        fiftyKgBags: 4,
+        timing: 'basal_planting',
+      });
+    }).toThrow(TypeError);
+
+    // Cloned, reconstructed, and JSON-copied objects MUST NOT be trusted
+    expect(isTrustedFertiliserCalculation({ ...calc })).toBe(false);
+    expect(isTrustedFertiliserCalculation(structuredClone(calc))).toBe(false);
+    expect(isTrustedFertiliserCalculation(JSON.parse(JSON.stringify(calc)))).toBe(false);
   });
 });
