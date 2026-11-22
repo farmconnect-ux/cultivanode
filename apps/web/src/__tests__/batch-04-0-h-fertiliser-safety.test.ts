@@ -42,6 +42,7 @@ const VALID_LAB_SOIL = {
   extractionMethod: "bray_1",
   samplingDepthCm: 15,
   testDate: "2026-10-01",
+  farmId: "farm-123",
 };
 
 describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enforcement", () => {
@@ -71,6 +72,7 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
           cropId,
           targetYieldTonnesPerHa: 5,
           farmAreaHectares: 1,
+          farmId: "farm-123",
           zone: "derived_savanna",
           growthStage: "basal",
           soil: VALID_LAB_SOIL,
@@ -83,8 +85,8 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     }
   });
 
-  it("rejects omission of strict provenance fields AND rejects explicit requireStrictSoilProvenance=false bypass attempt", async () => {
-    // Omission of provenance/method/depth/date/zone/stage -> 400
+  it("rejects provenance bypasses, caller protocol overrides, missing farm/plot soil association, and unsupported crops", async () => {
+    // Omission of provenance/method/depth/date/zone/stage/farmId -> 400
     const missingRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
@@ -95,12 +97,13 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     );
     expect(missingRes.status).toBe(400);
 
-    // Deliberate submission of requireStrictSoilProvenance: false -> 400 (cannot bypass!)
+    // Deliberate submission of requireStrictSoilProvenance: false -> 400
     const bypassRes = await fertiliserPost(
       makeReq({
         cropId: "maize",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
+        farmId: "farm-123",
         zone: "derived_savanna",
         growthStage: "basal",
         requireStrictSoilProvenance: false,
@@ -109,12 +112,43 @@ describe("Batch 04.0-H Revision 2 — Server Action & Fertiliser API Safety Enfo
     );
     expect(bypassRes.status).toBe(400);
 
+    // Deliberate submission of protocolOverride / approvalRecord -> 400
+    const overrideRes = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: "farm-123",
+        zone: "derived_savanna",
+        growthStage: "basal",
+        protocolOverride: { approvalStatus: "agronomist_approved" },
+        soil: VALID_LAB_SOIL,
+      }),
+    );
+    expect(overrideRes.status).toBe(400);
+
+    // Missing soil.farmId -> 400
+    const { farmId: _omit, ...soilNoFarm } = VALID_LAB_SOIL;
+    const noSoilFarmRes = await fertiliserPost(
+      makeReq({
+        cropId: "maize",
+        targetYieldTonnesPerHa: 5,
+        farmAreaHectares: 1,
+        farmId: "farm-123",
+        zone: "derived_savanna",
+        growthStage: "basal",
+        soil: soilNoFarm,
+      }),
+    );
+    expect(noSoilFarmRes.status).toBe(400);
+
     // Unsupported crop -> 400
     const lettuceRes = await fertiliserPost(
       makeReq({
         cropId: "lettuce",
         targetYieldTonnesPerHa: 5,
         farmAreaHectares: 1,
+        farmId: "farm-123",
         zone: "derived_savanna",
         growthStage: "vegetative",
         soil: VALID_LAB_SOIL,

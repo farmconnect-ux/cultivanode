@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  __mintTestVerifiedSourceQuote,
   detectFertiliserIntent,
   formatApprovedFertiliserCalculation,
+  isValidVerifiedSourceQuote,
   validateAssistantNumericalOutput,
   type VerifiedSourceQuotationContext,
 } from './fertiliser-safety';
 import { askGroundedAiAssistant, generateAgronomicAdvisorAnswer } from './llm-adapter';
-import { evaluateFertiliserRecommendation, SUPPORTED_FERTILISER_PROTOCOLS } from '../inputs/fertiliser';
+import {
+  evaluateWithTestApprovedProtocol,
+  makeTestApprovedProtocolFixture,
+} from '../inputs/__testing__/approved-protocol-test-harness';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -17,40 +22,34 @@ function makeApprovedMaizeCalc(overrides?: {
   zone?: string;
   referenceDate?: string;
 }) {
-  const res = evaluateFertiliserRecommendation({
-    cropId: 'maize',
-    targetYieldTonnesPerHa: 5,
-    farmAreaHectares: 2,
-    soil: {
-      pH: 6.2,
-      phosphorus: { value: 12, unit: 'ppm', basis: 'elemental_P' },
-      potassium: { value: 0.25, unit: 'cmol_kg', basis: 'elemental_K' },
-      organicMatterPercent: 1.8,
-      provenance: 'lab_confirmed',
-      extractionMethod: 'bray_1',
-      samplingDepthCm: 15,
-      testDate: '2026-10-01',
-    },
-    zone: overrides?.zone ?? 'derived_savanna',
-    growthStage: 'basal',
-    farmId: overrides?.farmId ?? 'farm-alpha',
-    plotId: overrides?.plotId ?? 'plot-01',
-    requestId: overrides?.requestId ?? 'req-001',
-    referenceDate: overrides?.referenceDate ?? '2026-11-22T12:00:00Z',
-    protocolOverride: {
-      approvalStatus: 'agronomist_approved',
-      approvalRecord: {
-        reviewerName: 'Dr. Test Agronomist',
-        reviewerCredentials: 'PhD Soil Science (Test Fixture)',
-        competenceScope: 'Maize savanna nutrient calibration',
-        approvalDate: '2026-09-15',
-        sourceEvidence: 'Test fixture evidence',
-        protocolVersion: SUPPORTED_FERTILISER_PROTOCOLS.maize.protocolVersion,
-        applicableCropId: 'maize',
-        applicableZones: ['derived_savanna', 'rainforest'],
+  const farmId = overrides?.farmId ?? 'farm-alpha';
+  const plotId = overrides?.plotId ?? 'plot-01';
+  const res = evaluateWithTestApprovedProtocol(
+    {
+      cropId: 'maize',
+      targetYieldTonnesPerHa: 5,
+      farmAreaHectares: 2,
+      soil: {
+        pH: 6.2,
+        phosphorus: { value: 12, unit: 'ppm', basis: 'elemental_P' },
+        potassium: { value: 0.25, unit: 'cmol_kg', basis: 'elemental_K' },
+        organicMatterPercent: 1.8,
+        provenance: 'lab_confirmed',
+        extractionMethod: 'bray_1',
+        samplingDepthCm: 15,
+        testDate: '2026-10-01',
+        farmId,
+        plotId,
       },
+      zone: overrides?.zone ?? 'derived_savanna',
+      growthStage: 'basal',
+      farmId,
+      plotId,
+      requestId: overrides?.requestId ?? 'req-001',
+      referenceDate: overrides?.referenceDate ?? '2026-11-22T12:00:00Z',
     },
-  });
+    makeTestApprovedProtocolFixture('maize'),
+  );
   if (!res.ok) throw new Error(`Expected approved test fixture calc, got ${res.reasonCode}`);
   return res.recommendation;
 }
@@ -247,22 +246,21 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(stale.passed).toBe(false);
     expect(stale.reasonCode).toBe('calculation_stale_or_invalid');
 
-    const provisionalCalc = {
-      ...calc,
-      protocolApprovalStatus: 'provisional_software_validated' as const,
-    };
-    const provisionalRes = validateAssistantNumericalOutput(deterministicText, {
+    // Hand-crafted (cloned / JSON-forged) calculation without unforgeable engine brand MUST fail closed!
+    const forgedCalc = JSON.parse(JSON.stringify(calc));
+    const forgedRes = validateAssistantNumericalOutput(deterministicText, {
       cropId: 'maize',
       farmId: 'farm-alpha',
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
       language: 'en',
-      approvedCalculation: provisionalCalc,
+      approvedCalculation: forgedCalc,
       referenceDate: '2026-11-22T12:30:00Z',
     });
-    expect(provisionalRes.passed).toBe(false);
-    expect(provisionalRes.reasonCode).toBe('calculation_not_agronomist_approved');
+    expect(forgedRes.passed).toBe(false);
+    expect(forgedRes.reasonCode).toBe('calculation_untrusted_origin');
   });
 });
 
@@ -355,8 +353,8 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
     expect(res.passed).toBe(false);
   });
 
-  it('rejects incomplete source quotation metadata and accepts ONLY fully verified licensed quotes', () => {
-    const validQuote: VerifiedSourceQuotationContext = {
+  it('rejects arbitrary caller-supplied source quotation objects (unbranded) and accepts ONLY server-trusted branded quotes', () => {
+    const plainUnbrandedQuote: VerifiedSourceQuotationContext = {
       verified: true,
       sourceId: 'src-iita-2024-01',
       documentTitle: 'IITA Maize Production Guide (Open Access)',
@@ -374,20 +372,30 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
       explicitNonPrescriptionSeparation: true,
     };
 
+    // Unbranded plain object MUST fail closed even when all Booleans & strings look valid!
+    expect(isValidVerifiedSourceQuote(plainUnbrandedQuote, 'maize', '2026-11-22')).toBe(false);
+    const unbrandedAttempt = validateAssistantNumericalOutput(
+      'General published source information (not a farm-specific prescription): IITA (2024) p. 18 cites 200 kg/ha.',
+      { cropId: 'maize', language: 'en', verifiedSourceQuote: plainUnbrandedQuote, referenceDate: '2026-11-22' },
+    );
+    expect(unbrandedAttempt.passed).toBe(false);
+
+    // Branded test quote with complete metadata passes
+    const brandedValidQuote = __mintTestVerifiedSourceQuote(plainUnbrandedQuote);
     const ok = validateAssistantNumericalOutput(
       'General published source information (not a farm-specific prescription): IITA (2024) p. 18 cites 200 kg/ha.',
-      { cropId: 'maize', language: 'en', verifiedSourceQuote: validQuote, referenceDate: '2026-11-22' },
+      { cropId: 'maize', language: 'en', verifiedSourceQuote: brandedValidQuote, referenceDate: '2026-11-22' },
     );
     expect(ok.passed).toBe(true);
     expect(ok.recommendationStatus).toBe('source_information');
 
-    // Expired source quote -> rejected
+    // Expired branded quote -> rejected
     const expiredQuote = validateAssistantNumericalOutput(
       'General published source information: 200 kg/ha.',
       {
         cropId: 'maize',
         language: 'en',
-        verifiedSourceQuote: { ...validQuote, expiresAt: '2025-01-01' },
+        verifiedSourceQuote: __mintTestVerifiedSourceQuote({ ...plainUnbrandedQuote, expiresAt: '2025-01-01' }),
         referenceDate: '2026-11-22',
       },
     );
@@ -399,7 +407,8 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
       {
         cropId: 'maize',
         language: 'en',
-        verifiedSourceQuote: { ...validQuote, licenceIdentifier: '' },
+        verifiedSourceQuote: __mintTestVerifiedSourceQuote({ ...plainUnbrandedQuote, licenceIdentifier: '' }),
+        referenceDate: '2026-11-22',
       },
     );
     expect(missingLicence.passed).toBe(false);
@@ -410,7 +419,8 @@ describe('Batch 04.0-H Revision 2 — Section 8: Source Information Safeguard', 
       {
         cropId: 'tomato',
         language: 'en',
-        verifiedSourceQuote: validQuote,
+        verifiedSourceQuote: brandedValidQuote,
+        referenceDate: '2026-11-22',
       },
     );
     expect(wrongCrop.passed).toBe(false);

@@ -1,26 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { calculateFertiliserRecommendation } from './fertiliser';
+import {
+  evaluateWithTestApprovedProtocol,
+  makeTestApprovedProtocolFixture,
+} from './__testing__/approved-protocol-test-harness';
 import { generateSprayPlan } from './spray-planner';
 import { evaluateCropWeatherHazards } from './weather-alerts';
 import { FarmInventoryLedger } from './inventory';
 import { computeFarmGrossMargin } from './farm-books';
 
 describe('Fertiliser Engine', () => {
-  const TEST_APPROVED_MAIZE_PROTOCOL = {
-    approvalStatus: 'agronomist_approved' as const,
-    approvalRecord: {
-      reviewerName: 'Test Agronomist Fixture',
-      reviewerCredentials: 'PhD Soil Science (Internal Unit Test Fixture Only)',
-      competenceScope: 'Maize nutrient math unit tests',
-      approvalDate: '2026-10-01',
-      status: 'active' as const,
-      sourceEvidence: 'Internal deterministic unit test fixture',
-      protocolVersion: 'prov-ng-maize-v1.0',
-      applicableCropId: 'maize',
-      applicableZones: ['rainforest', 'derived_savanna'],
-    },
-  };
-
   it('fails closed on provisional built-in maize protocol without an independent agronomic approval record', () => {
     const soil = {
       pH: 6.2,
@@ -31,18 +20,20 @@ describe('Fertiliser Engine', () => {
       extractionMethod: 'bray_1' as const,
       samplingDepthCm: 15,
       testDate: '2026-10-01',
+      farmId: 'farm-unit-1',
     };
 
     expect(() =>
       calculateFertiliserRecommendation('maize', 5.0, 2.0, soil, {
         zone: 'derived_savanna',
         growthStage: 'basal',
+        farmId: 'farm-unit-1',
         referenceDate: '2026-11-22',
       }),
     ).toThrow('protocol_provisional_not_approved');
   });
 
-  it('calculates NPK and Urea for 5 t/ha maize on moderate soil when backed by a complete approved protocol fixture', () => {
+  it('calculates NPK and Urea for 5 t/ha maize on moderate soil when backed by internal test-only approved fixture', () => {
     const soil = {
       pH: 6.2,
       phosphorus: { value: 12, unit: 'ppm' as const, basis: 'elemental_P' as const },
@@ -52,14 +43,25 @@ describe('Fertiliser Engine', () => {
       extractionMethod: 'bray_1' as const,
       samplingDepthCm: 15,
       testDate: '2026-10-01',
+      farmId: 'farm-unit-1',
     };
 
-    const rec = calculateFertiliserRecommendation('maize', 5.0, 2.0, soil, {
-      zone: 'derived_savanna',
-      growthStage: 'basal',
-      referenceDate: '2026-11-22',
-      protocolOverride: TEST_APPROVED_MAIZE_PROTOCOL,
-    });
+    const res = evaluateWithTestApprovedProtocol(
+      {
+        cropId: 'maize',
+        targetYieldTonnesPerHa: 5.0,
+        farmAreaHectares: 2.0,
+        soil,
+        zone: 'derived_savanna',
+        growthStage: 'basal',
+        farmId: 'farm-unit-1',
+        referenceDate: '2026-11-22',
+      },
+      makeTestApprovedProtocolFixture('maize'),
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const rec = res.recommendation;
     expect(rec.cropId).toBe('maize');
     expect(rec.productApplications.length).toBe(2);
 
@@ -73,7 +75,7 @@ describe('Fertiliser Engine', () => {
     expect(rec.limeRecommendationKgPerHa).toBe(0);
   });
 
-  it('recommends lime and warns on acidic soil (pH < 5.5) with an approved protocol fixture', () => {
+  it('recommends lime and warns on acidic soil (pH < 5.5) with internal test-only approved fixture', () => {
     const acidSoil = {
       pH: 4.8,
       phosphorus: { value: 6, unit: 'ppm' as const, basis: 'elemental_P' as const },
@@ -83,16 +85,26 @@ describe('Fertiliser Engine', () => {
       extractionMethod: 'bray_1' as const,
       samplingDepthCm: 15,
       testDate: '2026-10-01',
+      farmId: 'farm-unit-1',
     };
-    const rec = calculateFertiliserRecommendation('maize', 4.0, 1.0, acidSoil, {
-      zone: 'rainforest',
-      growthStage: 'pre_planting',
-      referenceDate: '2026-11-22',
-      protocolOverride: TEST_APPROVED_MAIZE_PROTOCOL,
-    });
+    const res = evaluateWithTestApprovedProtocol(
+      {
+        cropId: 'maize',
+        targetYieldTonnesPerHa: 4.0,
+        farmAreaHectares: 1.0,
+        soil: acidSoil,
+        zone: 'rainforest',
+        growthStage: 'pre_planting',
+        farmId: 'farm-unit-1',
+        referenceDate: '2026-11-22',
+      },
+      makeTestApprovedProtocolFixture('maize'),
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(rec.limeRecommendationKgPerHa).toBeGreaterThan(0);
-    expect(rec.warning).toContain('acidic');
+    expect(res.recommendation.limeRecommendationKgPerHa).toBeGreaterThan(0);
+    expect(res.recommendation.warning).toContain('acidic');
   });
 });
 

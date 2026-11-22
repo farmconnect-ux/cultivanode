@@ -25,6 +25,7 @@ const validSoil = {
   extractionMethod: "bray_1",
   samplingDepthCm: 15,
   testDate: "2026-10-01",
+  farmId: "farm-123",
 };
 
 const validRequest = {
@@ -33,6 +34,7 @@ const validRequest = {
   farmAreaHectares: 2,
   zone: "derived_savanna",
   growthStage: "basal",
+  farmId: "farm-123",
   soil: validSoil,
 };
 
@@ -55,6 +57,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
       extractionMethod: "bray_1",
       samplingDepthCm: 15,
       testDate: "2026-10-01",
+      farmId: "farm-123",
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
@@ -104,6 +107,7 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
     ["extractionMethod", { ...validSoil, extractionMethod: undefined }],
     ["samplingDepthCm", { ...validSoil, samplingDepthCm: undefined }],
     ["testDate", { ...validSoil, testDate: undefined }],
+    ["soil farmId", { ...validSoil, farmId: undefined }],
   ])("rejects missing %s rather than supplying a default", (_field, soil) => {
     expect(SoilSchema.safeParse(soil).success).toBe(false);
   });
@@ -117,13 +121,22 @@ describe("fertiliser route input validation (Batch 04.0-H Revision 2)", () => {
     expect(SoilSchema.safeParse(soil).success).toBe(false);
   });
 
-  it("accepts a complete fertiliser request and rejects caller bypass flags like requireStrictSoilProvenance=false", () => {
+  it("accepts a complete fertiliser request and rejects caller bypass flags and protocol overrides", () => {
     expect(FertiliserSchema.safeParse(validRequest).success).toBe(true);
+    expect(
+      FertiliserSchema.safeParse({ ...validRequest, requireStrictSoilProvenance: false }).success,
+    ).toBe(false);
     expect(
       FertiliserSchema.safeParse({
         ...validRequest,
-        requireStrictSoilProvenance: false,
+        protocolOverride: { approvalStatus: "agronomist_approved" },
       }).success,
+    ).toBe(false);
+    expect(
+      FertiliserSchema.safeParse({ ...validRequest, approvalStatus: "agronomist_approved" }).success,
+    ).toBe(false);
+    expect(
+      FertiliserSchema.safeParse({ ...validRequest, farmId: undefined }).success,
     ).toBe(false);
   });
 

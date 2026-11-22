@@ -56,8 +56,9 @@ export const SoilSchema = z
     extractionMethod: z.string().trim().min(1).max(64),
     samplingDepthCm: z.number().finite().positive().max(100),
     testDate: z.string().trim().min(1).max(40),
-    farmId: z.string().trim().min(1).max(64).optional(),
+    farmId: z.string().trim().min(1).max(64),
     plotId: z.string().trim().min(1).max(64).optional(),
+    soilReportId: z.string().trim().min(1).max(64).optional(),
   })
   .strict()
   .refine((soil) => soil.pH !== undefined || soil.ph !== undefined, {
@@ -75,13 +76,15 @@ export const SoilSchema = z
     extractionMethod: soil.extractionMethod,
     samplingDepthCm: soil.samplingDepthCm,
     testDate: soil.testDate,
-    ...(soil.farmId !== undefined ? { farmId: soil.farmId } : {}),
+    farmId: soil.farmId,
     ...(soil.plotId !== undefined ? { plotId: soil.plotId } : {}),
+    ...(soil.soilReportId !== undefined ? { soilReportId: soil.soilReportId } : {}),
   }));
 
 /**
- * Public Fertiliser API request schema (Batch 04.0-H Revision 2).
- * `.strict()` guarantees callers cannot pass `requireStrictSoilProvenance: false` or any other bypass flag.
+ * Public Fertiliser API request schema (Batch 04.0-H Revision 3).
+ * `.strict()` guarantees callers cannot pass `requireStrictSoilProvenance`, `protocolOverride`,
+ * `approvalStatus`, or `approvalRecord`. `farmId` is mandatory on both request and soil report.
  */
 export const FertiliserSchema = z
   .object({
@@ -91,7 +94,7 @@ export const FertiliserSchema = z
     soil: SoilSchema,
     zone: z.string().trim().min(1).max(64),
     growthStage: z.string().trim().min(1).max(64),
-    farmId: z.string().trim().min(1).max(64).optional(),
+    farmId: z.string().trim().min(1).max(64),
     plotId: z.string().trim().min(1).max(64).optional(),
     requestId: z.string().trim().min(1).max(64).optional(),
   })

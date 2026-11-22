@@ -1,6 +1,35 @@
 import type { AppLanguage } from '../../roles';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
-import { isSupportedFertiliserCrop } from '../inputs/fertiliser';
+import { isSupportedFertiliserCrop, isTrustedFertiliserCalculation } from '../inputs/fertiliser';
+
+/**
+ * Module-private unforgeable brand symbol for trusted source quotations.
+ * No production factory currently mints this symbol because Batch 04.1 source
+ * registry verification is not yet implemented. Consequently, NO caller-supplied
+ * plain object can activate the numerical source-quotation pathway in production.
+ */
+const TRUSTED_SOURCE_QUOTE_BRAND = Symbol('cultivanode.trusted_source_quotation');
+
+/**
+ * Test-only helper for unit testing Section 2 metadata checks on branded source quotes.
+ * Refuses to execute outside test runtime and is NOT exported from `@cultivanode/shared`.
+ * @internal
+ */
+export function __mintTestVerifiedSourceQuote(
+  quote: VerifiedSourceQuotationContext,
+): VerifiedSourceQuotationContext {
+  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+    throw new Error('Test source-quotation helper is strictly forbidden outside test runtime.');
+  }
+  const branded = { ...quote };
+  Object.defineProperty(branded, TRUSTED_SOURCE_QUOTE_BRAND, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return branded;
+}
 
 /**
  * CultivaNode Batch 04.0-H (Revision 2) — Multilingual Fertiliser Intent Detection,
@@ -292,7 +321,11 @@ export function isValidVerifiedSourceQuote(
   cropId?: string | null,
   referenceDate?: string,
 ): quote is VerifiedSourceQuotationContext {
-  if (!quote) return false;
+  if (!quote || typeof quote !== 'object') return false;
+  // Unforgeable server-trust brand check: arbitrary caller-supplied objects ALWAYS fail closed.
+  if ((quote as unknown as Record<symbol, unknown>)[TRUSTED_SOURCE_QUOTE_BRAND] !== true) {
+    return false;
+  }
   if (quote.verified !== true) return false;
   if (quote.licencePermitsQuotation !== true) return false;
   if (quote.approvedForCommercialAiUse !== true) return false;
@@ -374,14 +407,23 @@ function validateCalculationBindingAndValues(
     referenceDate?: string;
   },
 ): { ok: true } | { ok: false; reasonCode: string } {
-  // 1. Approval & binding integrity checks (Finding 1 + Finding 2)
+  // 0. Unforgeable engine-origin brand check: callers cannot manufacture a fake calculation binding.
+  if (!isTrustedFertiliserCalculation(calculation)) {
+    return { ok: false, reasonCode: 'calculation_untrusted_origin' };
+  }
+
+  // 1. Approval & binding integrity checks (Finding 1 + Finding 2 + Revision 3)
   const binding = calculation.binding;
   if (
     calculation.protocolApprovalStatus !== 'agronomist_approved' ||
     !binding ||
     binding.protocolApprovalStatus !== 'agronomist_approved' ||
     !calculation.protocolVersion?.trim() ||
-    binding.protocolVersion !== calculation.protocolVersion
+    binding.protocolVersion !== calculation.protocolVersion ||
+    !binding.farmId?.trim() ||
+    !binding.soilAssociation?.farmId?.trim() ||
+    binding.soilAssociation.farmId !== binding.farmId ||
+    (binding.plotId && binding.soilAssociation.plotId !== binding.plotId)
   ) {
     return { ok: false, reasonCode: 'calculation_not_agronomist_approved' };
   }

@@ -39,20 +39,24 @@ export interface SoilNutrientProfile {
   extractionMethod?: SoilExtractionMethod | string;
   samplingDepthCm?: number;
   testDate?: string; // ISO date string
-  /** Optional farm/plot association on the soil report; must match request farmId/plotId when present. */
+  /** Mandatory farm association on the soil report; must match request farmId. */
   farmId?: string;
+  /** Mandatory plot association when recommendation or soil report is plot-specific. */
   plotId?: string;
+  /** Optional laboratory report identifier preserved in the calculation binding for traceability. */
+  soilReportId?: string;
 }
 
 export interface AgronomicApprovalRecord {
   reviewerName: string;
   reviewerCredentials: string;
   competenceScope: string;
-  approvalDate: string; // ISO date string
-  /** Explicit approval lifecycle status; only 'active' may authorise prescriptions. */
-  status?: 'active' | 'withdrawn' | 'superseded' | string;
-  /** Optional expiry date (ISO); expired approvals fail closed. */
-  expiresAt?: string;
+  /** Strict ISO date string (YYYY-MM-DD or full ISO-8601). */
+  approvalDate: string;
+  /** Mandatory approval lifecycle status; only 'active' may authorise prescriptions. */
+  status: 'active' | 'withdrawn' | 'superseded' | 'revoked' | 'suspended';
+  /** Mandatory strict ISO expiry date; indefinite validity is never inferred. */
+  expiresAt: string;
   sourceEvidence: string;
   protocolVersion: string;
   applicableCropId: string;
@@ -67,7 +71,7 @@ export interface FertiliserProtocolMetadata {
    * administrative approval NEVER authorises a public numerical fertiliser prescription.
    * Only `agronomist_approved` with an active, non-expired `approvalRecord` may do so.
    */
-  approvalStatus: 'provisional_software_validated' | 'agronomist_approved' | string;
+  approvalStatus: 'provisional_software_validated' | 'agronomist_approved';
   approvalRecord?: AgronomicApprovalRecord | null;
   sourceCitation: string;
   maxNitrogenKgPerHa: number;
@@ -81,7 +85,7 @@ export interface FertiliserProtocolMetadata {
 
 export interface FertiliserCalculationBinding {
   cropId: string;
-  farmId?: string;
+  farmId: string;
   plotId?: string;
   requestId?: string;
   zone: string;
@@ -89,6 +93,14 @@ export interface FertiliserCalculationBinding {
   protocolVersion: string;
   protocolApprovalStatus: 'agronomist_approved';
   calculatedAt: string; // ISO timestamp
+  soilAssociation: {
+    farmId: string;
+    plotId?: string;
+    soilReportId?: string;
+    provenance: 'lab_confirmed';
+    extractionMethod: string;
+    testDate: string;
+  };
 }
 
 export interface FertiliserRecommendation {
@@ -127,8 +139,6 @@ export interface FertiliserCalculationRequest {
   plotId?: string | null;
   requestId?: string | null;
   referenceDate?: string;
-  /** Optional explicit protocol override for internal tests of approved/unapproved protocol fixtures. */
-  protocolOverride?: Partial<FertiliserProtocolMetadata> | null;
 }
 
 export type FertiliserRecommendationResult =

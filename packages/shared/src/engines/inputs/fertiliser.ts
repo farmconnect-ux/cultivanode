@@ -14,6 +14,46 @@ import type {
 export const SUPPORTED_FERTILISER_CROP_IDS = ['maize', 'tomato', 'cassava', 'yam', 'rice'] as const;
 export type SupportedFertiliserCropId = (typeof SUPPORTED_FERTILISER_CROP_IDS)[number];
 
+/**
+ * Module-private unforgeable brand symbol minted ONLY by the deterministic fertiliser engine
+ * when an independently agronomist-approved calculation succeeds. Prevents callers or LLM
+ * wrappers from hand-crafting a fake FertiliserRecommendation / binding object.
+ */
+const TRUSTED_CALCULATION_BRAND = Symbol('cultivanode.trusted_fertiliser_calculation');
+
+export function isTrustedFertiliserCalculation(value: unknown): value is FertiliserRecommendation {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as Record<symbol, unknown>)[TRUSTED_CALCULATION_BRAND] === true
+  );
+}
+
+const STRICT_ISO_DATE_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2}))?$/;
+
+function parseStrictIsoDate(raw: unknown): number | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  const match = trimmed.match(STRICT_ISO_DATE_RE);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const ts = Date.parse(trimmed);
+  if (Number.isNaN(ts)) return null;
+  // Verify calendar round-trip (rejects e.g. 2026-02-31)
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return ts;
+}
+
 interface CropProtocolEntry extends FertiliserProtocolMetadata {
   uptakePerTonne: { nPerTonne: number; pPerTonne: number; kPerTonne: number };
   supportedExtractionMethods: readonly SoilExtractionMethod[];
@@ -115,17 +155,57 @@ export function isSupportedFertiliserCrop(cropId: string | null | undefined): cr
 const SOIL_TEST_MAX_AGE_DAYS = 365;
 
 /**
- * Fail-closed deterministic fertiliser recommendation evaluator (Batch 04.0-H, ADR-020).
+ * Fail-closed deterministic fertiliser recommendation evaluator (Batch 04.0-H Revision 3).
  *
- * Enforces:
- * - No silent default coefficients for unknown/unsupported crops (e.g. lettuce).
- * - No silent defaulting of missing crop identity or missing organic matter.
- * - Explicit typed potassium unit handling (cmol(+)/kg, meq/100g, mg/kg, ppm; elemental K vs K2O).
- * - Soil provenance, extraction method, sampling depth, expiry, zone, and growth-stage checks.
- * - Maximum nitrogen safety ceiling enforcement.
+ * Trust-boundary invariants:
+ * - Resolves protocols ONLY from built-in server-controlled `SUPPORTED_FERTILISER_PROTOCOLS`.
+ * - Rejects any caller-supplied `protocolOverride` property at runtime.
+ * - Requires `agronomist_approved` status with mandatory `status: 'active'`, strict ISO
+ *   `approvalDate`, and mandatory non-expired strict ISO `expiresAt`.
+ * - Enforces mandatory farm association (`farmId` + `soil.farmId`), plot association when
+ *   plot-scoped (`plotId` + `soil.plotId`), strict laboratory soil provenance, geographic
+ *   applicability, and explicit phosphorus & potassium nutrient basis unconditionally.
  */
 export function evaluateFertiliserRecommendation(
   request: FertiliserCalculationRequest,
+): FertiliserRecommendationResult {
+  if (
+    request &&
+    typeof request === 'object' &&
+    'protocolOverride' in (request as unknown as Record<string, unknown>) &&
+    (request as unknown as Record<string, unknown>).protocolOverride !== undefined
+  ) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      reasonCode: 'caller_protocol_override_forbidden',
+      message: 'Caller-supplied protocol overrides or approval records are strictly forbidden.',
+      missingRequirements: ['server_controlled_agronomic_protocol'],
+      guidance: 'Agronomic protocol approval can only come from a protected server-controlled registry, never from caller input.',
+    };
+  }
+
+  return evaluateFertiliserCore(request, null);
+}
+
+/**
+ * Internal test-only harness entrypoint. Refuses to execute outside test runtime and is NOT
+ * exported from `@cultivanode/shared` or `packages/shared/src/engines/inputs/index.ts`.
+ * @internal
+ */
+export function __evaluateFertiliserWithTestProtocolFixture(
+  request: FertiliserCalculationRequest,
+  testProtocolPatch: Partial<FertiliserProtocolMetadata>,
+): FertiliserRecommendationResult {
+  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+    throw new Error('Test protocol fixture harness is strictly forbidden outside test runtime.');
+  }
+  return evaluateFertiliserCore(request, testProtocolPatch);
+}
+
+function evaluateFertiliserCore(
+  request: FertiliserCalculationRequest,
+  internalTestProtocolPatch: Partial<FertiliserProtocolMetadata> | null,
 ): FertiliserRecommendationResult {
   const rawCropId = typeof request.cropId === 'string' ? request.cropId.trim().toLowerCase() : '';
   if (!rawCropId) {
@@ -153,16 +233,14 @@ export function evaluateFertiliserRecommendation(
   }
 
   const baseProtocol = SUPPORTED_FERTILISER_PROTOCOLS[rawCropId];
-  const protocol: CropProtocolEntry = request.protocolOverride
-    ? { ...baseProtocol, ...request.protocolOverride }
+  const protocol: CropProtocolEntry = internalTestProtocolPatch
+    ? { ...baseProtocol, ...internalTestProtocolPatch }
     : baseProtocol;
 
   const refTs = request.referenceDate ? new Date(request.referenceDate).getTime() : Date.now();
   const effectiveRefTs = Number.isNaN(refTs) ? Date.now() : refTs;
 
-  // Finding 1: Software validation (`provisional_software_validated`) NEVER authorises a public
-  // numerical prescription. Only an independently recorded `agronomist_approved` protocol with a
-  // complete approval record may authorise a farm-specific numerical prescription.
+  // Finding 1 (Revision 3): Mandatory approval lifecycle validation.
   if (!protocol.protocolVersion || !protocol.protocolVersion.trim() || !protocol.approvalStatus) {
     return {
       ok: false,
@@ -179,62 +257,119 @@ export function evaluateFertiliserRecommendation(
       ok: false,
       status: 'insufficient_evidence',
       reasonCode: 'protocol_provisional_not_approved',
-      message: `Crop protocol "${protocol.protocolVersion}" for "${rawCropId}" is marked "${protocol.approvalStatus}" (software-validated only) and has not received independent agronomic approval.`,
+      message: `Crop protocol "${protocol.protocolVersion}" for "${rawCropId}" is marked "${protocol.approvalStatus}" and has not received independent agronomic approval.`,
       missingRequirements: [`agronomist_approved_protocol:${rawCropId}`, 'agronomic_approval_record'],
       guidance:
-        `CultivaNode does not issue farm-specific numerical fertiliser prescriptions from provisional coefficients for ${rawCropId}. ` +
+        `CultivaNode does not issue farm-specific numerical fertiliser prescriptions from provisional or non-agronomic protocols for ${rawCropId}. ` +
         'Obtain a laboratory soil test and consult a qualified agronomist or extension officer until an independently approved protocol is recorded.',
     };
   }
 
   const approvalRecord = protocol.approvalRecord;
+  if (!approvalRecord || typeof approvalRecord !== 'object') {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_record_incomplete',
+      message: `Protocol "${protocol.protocolVersion}" for "${rawCropId}" lacks an independent agronomic approval record.`,
+      missingRequirements: ['approvalRecord'],
+      guidance: 'An independently recorded agronomic approval is required before generating a numerical fertiliser prescription.',
+    };
+  }
+
+  // Mandatory explicit active lifecycle status (missing, null, empty, withdrawn, superseded, revoked, suspended, unknown -> fail closed)
+  const rawApprovalStatus = (approvalRecord as unknown as Record<string, unknown>).status;
+  if (typeof rawApprovalStatus !== 'string' || !rawApprovalStatus.trim()) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_status_missing',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" is missing a mandatory lifecycle status.`,
+      missingRequirements: ['approvalRecord.status=active'],
+      guidance: 'Only an approval record with an explicit active lifecycle status may authorise numerical prescriptions.',
+    };
+  }
+  if (rawApprovalStatus !== 'active') {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_record_not_active',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" has status "${rawApprovalStatus}" and is not active.`,
+      missingRequirements: ['approvalRecord.status=active'],
+      guidance: 'Withdrawn, superseded, revoked, suspended, or unknown approval statuses cannot authorise numerical prescriptions.',
+    };
+  }
+
+  // Strict ISO approvalDate validation (reject non-ISO, invalid, or future-dated approvals)
+  const approvalDateTs = parseStrictIsoDate(approvalRecord.approvalDate);
+  if (approvalDateTs === null) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_record_incomplete',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" has a missing or non-ISO approvalDate.`,
+      missingRequirements: ['approvalRecord.approvalDate(strict ISO)'],
+      guidance: 'A valid strict ISO approval date is required on the agronomic approval record.',
+    };
+  }
+  if (approvalDateTs > effectiveRefTs + 86_400_000) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_date_future',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" is future-dated (${approvalRecord.approvalDate}).`,
+      missingRequirements: ['approvalRecord.approvalDate(non-future)'],
+      guidance: 'Future-dated agronomic approvals cannot authorise numerical fertiliser prescriptions.',
+    };
+  }
+
+  // Mandatory strict ISO expiresAt validation (never infer indefinite validity!)
+  const rawExpiresAt = (approvalRecord as unknown as Record<string, unknown>).expiresAt;
+  if (typeof rawExpiresAt !== 'string' || !rawExpiresAt.trim()) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_expiry_missing',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" is missing a mandatory expiry date.`,
+      missingRequirements: ['approvalRecord.expiresAt'],
+      guidance: 'Agronomic approvals must declare an explicit expiry date; indefinite validity is not inferred.',
+    };
+  }
+  const expiresAtTs = parseStrictIsoDate(rawExpiresAt);
+  if (expiresAtTs === null || expiresAtTs <= approvalDateTs) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_expiry_invalid',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" has an invalid expiry date ("${rawExpiresAt}").`,
+      missingRequirements: ['approvalRecord.expiresAt(valid strict ISO after approvalDate)'],
+      guidance: 'Provide a valid strict ISO expiry date after the approval date.',
+    };
+  }
+  if (expiresAtTs < effectiveRefTs) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'approval_record_expired',
+      message: `Agronomic approval record for "${protocol.protocolVersion}" expired on ${rawExpiresAt}.`,
+      missingRequirements: ['current_agronomic_approval_record'],
+      guidance: 'Renew independent agronomic approval before generating numerical fertiliser prescriptions.',
+    };
+  }
+
   const missingApprovalFields: string[] = [];
-  if (!approvalRecord) {
-    missingApprovalFields.push('approvalRecord');
-  } else {
-    if (approvalRecord.status && approvalRecord.status !== 'active') {
-      return {
-        ok: false,
-        status: 'insufficient_evidence',
-        reasonCode: 'approval_record_not_active',
-        message: `Agronomic approval record for "${protocol.protocolVersion}" has status "${approvalRecord.status}" and is not active.`,
-        missingRequirements: ['active_agronomic_approval_record'],
-        guidance: 'Withdrawn or superseded agronomic approvals cannot authorise numerical fertiliser prescriptions.',
-      };
-    }
-    if (approvalRecord.expiresAt !== undefined) {
-      const expTs = new Date(approvalRecord.expiresAt).getTime();
-      if (Number.isNaN(expTs)) {
-        missingApprovalFields.push('approvalRecord.expiresAt(valid ISO date)');
-      } else if (expTs < effectiveRefTs) {
-        return {
-          ok: false,
-          status: 'insufficient_evidence',
-          reasonCode: 'approval_record_expired',
-          message: `Agronomic approval record for "${protocol.protocolVersion}" expired on ${approvalRecord.expiresAt}.`,
-          missingRequirements: ['current_agronomic_approval_record'],
-          guidance: 'Renew independent agronomic approval before generating numerical fertiliser prescriptions.',
-        };
-      }
-    }
-    if (!approvalRecord.reviewerName?.trim()) missingApprovalFields.push('approvalRecord.reviewerName');
-    if (!approvalRecord.reviewerCredentials?.trim()) missingApprovalFields.push('approvalRecord.reviewerCredentials');
-    if (!approvalRecord.competenceScope?.trim()) missingApprovalFields.push('approvalRecord.competenceScope');
-    if (!approvalRecord.sourceEvidence?.trim()) missingApprovalFields.push('approvalRecord.sourceEvidence');
-    if (!approvalRecord.approvalDate?.trim() || Number.isNaN(new Date(approvalRecord.approvalDate).getTime())) {
-      missingApprovalFields.push('approvalRecord.approvalDate');
-    } else if (new Date(approvalRecord.approvalDate).getTime() > effectiveRefTs + 86_400_000) {
-      missingApprovalFields.push('approvalRecord.approvalDate(non-future)');
-    }
-    if (approvalRecord.protocolVersion !== protocol.protocolVersion) {
-      missingApprovalFields.push('approvalRecord.protocolVersion(match)');
-    }
-    if (approvalRecord.applicableCropId?.trim().toLowerCase() !== rawCropId) {
-      missingApprovalFields.push('approvalRecord.applicableCropId(match)');
-    }
-    if (!Array.isArray(approvalRecord.applicableZones) || approvalRecord.applicableZones.length === 0) {
-      missingApprovalFields.push('approvalRecord.applicableZones');
-    }
+  if (!approvalRecord.reviewerName?.trim()) missingApprovalFields.push('approvalRecord.reviewerName');
+  if (!approvalRecord.reviewerCredentials?.trim()) missingApprovalFields.push('approvalRecord.reviewerCredentials');
+  if (!approvalRecord.competenceScope?.trim()) missingApprovalFields.push('approvalRecord.competenceScope');
+  if (!approvalRecord.sourceEvidence?.trim()) missingApprovalFields.push('approvalRecord.sourceEvidence');
+  if (approvalRecord.protocolVersion !== protocol.protocolVersion) {
+    missingApprovalFields.push('approvalRecord.protocolVersion(match)');
+  }
+  if (approvalRecord.applicableCropId?.trim().toLowerCase() !== rawCropId) {
+    missingApprovalFields.push('approvalRecord.applicableCropId(match)');
+  }
+  if (!Array.isArray(approvalRecord.applicableZones) || approvalRecord.applicableZones.length === 0) {
+    missingApprovalFields.push('approvalRecord.applicableZones');
   }
 
   if (missingApprovalFields.length > 0) {
@@ -244,7 +379,7 @@ export function evaluateFertiliserRecommendation(
       reasonCode: 'approval_record_incomplete',
       message: `Protocol "${protocol.protocolVersion}" for "${rawCropId}" lacks a complete independent agronomic approval record.`,
       missingRequirements: missingApprovalFields,
-      guidance: 'An independently recorded agronomic approval (reviewer identity, credentials, competence scope, approval date, source evidence, version, and crop/geographic scope) is required.',
+      guidance: 'An independently recorded agronomic approval (reviewer identity, credentials, competence scope, approval date, expiry date, source evidence, version, and crop/geographic scope) is required.',
     };
   }
 
@@ -442,25 +577,72 @@ export function evaluateFertiliserRecommendation(
   }
   const normalizedGrowthStage = request.growthStage.trim().toLowerCase();
 
-  // Farm/plot soil association check: prevent cross-farm or cross-plot soil report reuse
-  if (soil.farmId?.trim() && request.farmId?.trim() && soil.farmId.trim() !== request.farmId.trim()) {
+  // Revision 3: Mandatory farm & plot soil report association (never silently skip missing associations)
+  const reqFarmId = typeof request.farmId === 'string' ? request.farmId.trim() : '';
+  if (!reqFarmId) {
     return {
       ok: false,
-      status: 'invalid_input',
-      reasonCode: 'soil_context_mismatch',
-      message: 'Soil test report farmId does not match the requested farm.',
-      missingRequirements: ['matching_farm_soil_test'],
-      guidance: 'Use a laboratory soil test belonging to the target farm.',
+      status: 'insufficient_evidence',
+      reasonCode: 'farm_id_missing',
+      message: 'A verified farm identifier (farmId) is mandatory for a farm-specific fertiliser recommendation.',
+      missingRequirements: ['farmId'],
+      guidance: 'Associate this calculation with a verified farm before requesting a farm-specific prescription.',
     };
   }
-  if (soil.plotId?.trim() && request.plotId?.trim() && soil.plotId.trim() !== request.plotId.trim()) {
+
+  const soilFarmId = typeof soil.farmId === 'string' ? soil.farmId.trim() : '';
+  if (!soilFarmId) {
     return {
       ok: false,
-      status: 'invalid_input',
-      reasonCode: 'soil_context_mismatch',
-      message: 'Soil test report plotId does not match the requested plot.',
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_farm_association_missing',
+      message: 'The soil test report must carry a farm association (soil.farmId) matching the target farm.',
+      missingRequirements: ['soil.farmId'],
+      guidance: 'Link the laboratory soil report to the target farm before generating a farm-specific prescription.',
+    };
+  }
+
+  if (soilFarmId !== reqFarmId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_farm_mismatch',
+      message: 'Soil test report farm association does not match the requested farm; soil reports cannot be reused across farms.',
+      missingRequirements: ['matching_farm_soil_test'],
+      guidance: 'Submit a laboratory soil test sampled from this specific farm.',
+    };
+  }
+
+  const reqPlotId = typeof request.plotId === 'string' ? request.plotId.trim() : '';
+  const soilPlotId = typeof soil.plotId === 'string' ? soil.plotId.trim() : '';
+  if (reqPlotId && !soilPlotId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_plot_association_missing',
+      message: 'Plot-specific recommendations require the soil test report to carry a matching plot association (soil.plotId).',
+      missingRequirements: ['soil.plotId'],
+      guidance: 'Submit a laboratory soil test associated with the target plot.',
+    };
+  }
+  if (!reqPlotId && soilPlotId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'plot_id_missing',
+      message: 'A plot-scoped soil report requires the matching target plotId on the calculation request.',
+      missingRequirements: ['plotId'],
+      guidance: 'Specify the target plotId corresponding to this plot soil report.',
+    };
+  }
+  if (reqPlotId && soilPlotId && soilPlotId !== reqPlotId) {
+    return {
+      ok: false,
+      status: 'insufficient_evidence',
+      reasonCode: 'soil_plot_mismatch',
+      message: 'Soil test report plot association does not match the requested plot; soil reports cannot be reused across plots.',
       missingRequirements: ['matching_plot_soil_test'],
-      guidance: 'Use a laboratory soil test belonging to the target plot.',
+      guidance: 'Submit a laboratory soil test sampled from this specific plot.',
     };
   }
 
@@ -642,15 +824,48 @@ export function evaluateFertiliserRecommendation(
   const calculatedAt = new Date(effectiveRefTs).toISOString();
   const binding = {
     cropId: rawCropId,
-    ...(request.farmId?.trim() ? { farmId: request.farmId.trim() } : {}),
-    ...(request.plotId?.trim() ? { plotId: request.plotId.trim() } : {}),
+    farmId: reqFarmId,
+    ...(reqPlotId ? { plotId: reqPlotId } : {}),
     ...(request.requestId?.trim() ? { requestId: request.requestId.trim() } : {}),
     zone: normalizedZone,
     growthStage: normalizedGrowthStage,
     protocolVersion: protocol.protocolVersion,
     protocolApprovalStatus: 'agronomist_approved' as const,
     calculatedAt,
+    soilAssociation: {
+      farmId: soilFarmId,
+      ...(soilPlotId ? { plotId: soilPlotId } : {}),
+      ...(soil.soilReportId?.trim() ? { soilReportId: soil.soilReportId.trim() } : {}),
+      provenance: 'lab_confirmed' as const,
+      extractionMethod: normalizedExtraction,
+      testDate: soil.testDate.trim(),
+    },
   };
+
+  const recommendation: FertiliserRecommendation = {
+    cropId: rawCropId,
+    targetYieldTonnesPerHa: request.targetYieldTonnesPerHa,
+    farmAreaHectares: request.farmAreaHectares,
+    protocolVersion: protocol.protocolVersion,
+    protocolApprovalStatus: protocol.approvalStatus,
+    binding,
+    phosphorusConversion: pConv,
+    potassiumConversion: kConv,
+    deficitKgPerHa: {
+      nitrogenKg: nDeficitKgPerHa,
+      phosphorusKg: pDeficitKgPerHa,
+      potassiumKg: kDeficitKgPerHa,
+    },
+    productApplications,
+    limeRecommendationKgPerHa: limeKgPerHa,
+    warning,
+  };
+  Object.defineProperty(recommendation, TRUSTED_CALCULATION_BRAND, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
 
   return {
     ok: true,
@@ -665,26 +880,9 @@ export function evaluateFertiliserRecommendation(
       supportedZones: protocol.supportedZones,
       nutrientBasis: protocol.nutrientBasis,
     },
-    recommendation: {
-      cropId: rawCropId,
-      targetYieldTonnesPerHa: request.targetYieldTonnesPerHa,
-      farmAreaHectares: request.farmAreaHectares,
-      protocolVersion: protocol.protocolVersion,
-      protocolApprovalStatus: protocol.approvalStatus,
-      binding,
-      phosphorusConversion: pConv,
-      potassiumConversion: kConv,
-      deficitKgPerHa: {
-        nitrogenKg: nDeficitKgPerHa,
-        phosphorusKg: pDeficitKgPerHa,
-        potassiumKg: kDeficitKgPerHa,
-      },
-      productApplications,
-      limeRecommendationKgPerHa: limeKgPerHa,
-      warning,
-    },
+    recommendation,
     assumptions: [
-      `Approved protocol ${protocol.protocolVersion} (approved by ${approvalRecord!.reviewerName}, ${approvalRecord!.reviewerCredentials} on ${approvalRecord!.approvalDate}).`,
+      `Approved protocol ${protocol.protocolVersion} (approved by ${approvalRecord!.reviewerName}, ${approvalRecord!.reviewerCredentials} on ${approvalRecord!.approvalDate}, expires ${approvalRecord!.expiresAt}).`,
       pConv.conversionNote,
       kConv.conversionNote,
       'Fertiliser formulations assume NPK 15:15:15 (15% N, 15% P2O5, 15% K2O) and Urea (46% N).',
@@ -695,9 +893,10 @@ export function evaluateFertiliserRecommendation(
 }
 
 /**
- * Legacy-compatible deterministic entrypoint hardened to fail closed (Batch 04.0-H Revision 2).
- * Enforces the exact same mandatory approval, geographic, provenance, and nutrient-basis controls
- * as `evaluateFertiliserRecommendation` with no bypass flag.
+ * Legacy-compatible deterministic entrypoint hardened to fail closed (Batch 04.0-H Revision 3).
+ * Enforces the exact same mandatory server-controlled protocol approval, farm/plot soil association,
+ * geographic, provenance, and nutrient-basis controls as `evaluateFertiliserRecommendation`.
+ * Accepts ZERO protocol override parameters.
  */
 export function calculateFertiliserRecommendation(
   cropId: string,
@@ -711,7 +910,6 @@ export function calculateFertiliserRecommendation(
     plotId?: string | null;
     requestId?: string | null;
     referenceDate?: string;
-    protocolOverride?: Partial<FertiliserProtocolMetadata> | null;
   },
 ): FertiliserRecommendation {
   const result = evaluateFertiliserRecommendation({
@@ -725,7 +923,6 @@ export function calculateFertiliserRecommendation(
     plotId: options?.plotId,
     requestId: options?.requestId,
     referenceDate: options?.referenceDate,
-    protocolOverride: options?.protocolOverride,
   });
 
   if (!result.ok) {
