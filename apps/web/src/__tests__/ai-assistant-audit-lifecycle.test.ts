@@ -213,6 +213,7 @@ describe("Finding 09: /api/ai/assistant Explicit Audit Coverage Lifecycle", () =
       providerUsed: "claude",
       modelUsed: "claude-sonnet-4-5",
       passedSafetyGuardrail: false,
+      bannedChemicalsDetected: [],
       providerErrors: [],
       recommendationStatus: "unsupported_crop",
       numericGuardrailBlocked: true,
@@ -224,8 +225,12 @@ describe("Finding 09: /api/ai/assistant Explicit Audit Coverage Lifecycle", () =
       expect.anything(),
       expect.objectContaining({
         executionOutcome: "blocked",
-        guardrailRuleIds: expect.arrayContaining(["fertiliser_numeric_guardrail"]),
-        guardrailReasonCodes: expect.arrayContaining(["unsupported_numerical_prescription"]),
+        guardrailResult: expect.objectContaining({
+          status: "blocked",
+          blocked: true,
+          rule_ids: expect.arrayContaining(["fertiliser_numeric_guardrail"]),
+          reason_codes: expect.arrayContaining(["unsupported_numerical_prescription"]),
+        }),
       }),
     );
   });

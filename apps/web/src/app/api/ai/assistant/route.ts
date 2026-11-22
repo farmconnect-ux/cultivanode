@@ -315,7 +315,9 @@ export async function POST(req: Request) {
         reason_codes: result.passedSafetyGuardrail
           ? []
           : [
-              ...(result.bannedChemicalsDetected.length > 0 ? (["prohibited_chemical"] as const) : []),
+              ...((result.bannedChemicalsDetected?.length ?? 0) > 0 || !result.numericGuardrailBlocked
+                ? (["prohibited_chemical"] as const)
+                : []),
               ...(result.numericGuardrailBlocked ? (["unsupported_numerical_prescription"] as const) : []),
             ],
         blocked: !result.passedSafetyGuardrail,
