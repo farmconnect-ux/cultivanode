@@ -1,6 +1,6 @@
-# Batch 04.0 — Embedding, Reranking and Retrieval Evaluation Methodology (Correction 7)
+# Batch 04.0 — Embedding, Reranking and Retrieval Evaluation Methodology
 
-**Status:** Proposed | **Date:** 2026-11-22 | **ADRs:** ADR-014, ADR-017
+**Status:** Proposed — revision 3 | **Date:** 2026-11-22 | **ADRs:** ADR-014, ADR-017
 
 ## Current vector architecture (verified)
 
@@ -14,18 +14,25 @@
 
 ## Comparison methodology
 
-**Configurations compared**
+### Configurations compared
 
 1. Baseline: current 03.2 behaviour (whole-question `ILIKE`).
 2. Full-text only (`tsvector` + taxonomy synonyms).
-3. Each shortlisted hosted embedding model (2–4, at least one multilingual), alone and fused with full-text.
+3. Each shortlisted hosted embedding model (2–4, at least one multilingual), alone and fused with full-text. Models
+   are compared at their native output size, and at reduced sizes where the model supports it; no model is assumed
+   to produce 1,536 dimensions.
 4. Best fused configuration with each reranking option: none, a hosted cross-encoder reranker, an LLM reranker.
 
-The shortlist is fixed at the start of the benchmark and recorded with exact model versions (D-T1).
+The shortlist is fixed at the start of the benchmark and recorded with exact model versions (D-T1). Each model is
+loaded into its own partition of the proposed store (ADR-014), so comparisons run side by side.
 
-**Corpus:** a frozen snapshot of licensed documents with the production chunking settings.
+### Corpus
 
-**Question set (ADR-017)**, labelled by agronomists with graded relevance (0, 1, 2) per passage. Strata:
+A frozen snapshot of licensed documents with the production chunking settings.
+
+### Question set (ADR-017)
+
+Labelled by agronomists with graded relevance (0, 1, 2) per passage. Strata:
 
 | Stratum | Examples of what it tests |
 |---|---|
@@ -37,26 +44,31 @@ The shortlist is fixed at the start of the benchmark and recorded with exact mod
 | Noisy input | Typos, voice transcription errors |
 | No-answer questions | Topics absent from the corpus (must return nothing relevant) |
 
-**Metrics**, reported per stratum, not only overall: Recall@5, Recall@20, nDCG@10, MRR; no-answer precision;
-citation validity and unsupported-claim rate after generation; latency p50/p95 split into query embedding, database
-search and rerank; cost per 1,000 questions and per full corpus embedding; storage per 10,000 passages; HNSW build
-time. Confidence intervals by bootstrap over questions.
+### Metrics
 
-**Decision rule:** a configuration is acceptable only if it beats full-text-only on the local-name and non-English
-strata (not only English), stays within the latency and monthly cost budgets set by the owner (D-P1), and does not
-reduce no-answer precision.
+Reported per stratum, not only overall: Recall@5, Recall@20, nDCG@10, MRR; no-answer precision; citation validity and
+unsupported-claim rate after generation; latency p50/p95 split into query embedding, database search and rerank; cost
+per 1,000 questions and per full corpus embedding; storage per 10,000 passages per dimension size; HNSW build time.
+Confidence intervals by bootstrap over questions.
 
-## Changing the 1,536-dimension architecture
+### Decision rule
 
-- A `vector(n)` column holds one dimension; vectors from different models are not comparable even at equal size.
-- pgvector HNSW indexes support up to 2,000 dimensions for `vector` (4,000 for `halfvec`).
-- Options:
-  1. Choose a model with native 1,536 output, or one that supports reduced output dimensions, and keep the columns.
-  2. **Recommended for 04.2:** a separate `passage_embeddings` table keyed by (passage id, model, version) with
-     its own HNSW index per model. This allows side-by-side evaluation and model change without altering
-     `agronomic_standard_chunks`.
-  3. In-place change: add a new column and index, dual-write, re-embed in the background, switch the RPC, then drop
-     the old column.
-- Any change also affects farm memory (`farm_memory_items`, `search_farm_memory_items`) and `formatPgVector`.
-  Re-embedding farm memories sends farmer content to the provider again, which needs the consent and data-processing
-  review in the decision register (D-L3).
+A configuration is acceptable only if it beats full-text-only on the local-name and non-English strata (not only
+English), stays within the latency and monthly cost budgets set by the owner (D-P1), and does not reduce no-answer
+precision.
+
+## Storage for different dimensions
+
+See ADR-014 for the full comparison. In summary:
+
+- A typed `vector(n)` column holds one size; vectors from different models are not comparable even at equal size.
+- pgvector HNSW indexes support up to 2,000 dimensions for `vector` and 4,000 for `halfvec`; larger models use
+  `halfvec` or a supported reduced size.
+- Recommended: a `passage_embeddings` table list-partitioned by model, one partition per model with a dimension check
+  and its own HNSW index, driven by an `embedding_models` registry (candidate → shadow → active → standby → retired).
+  Alternatives compared: dimension-specific tables, and one table with an untyped column and per-model expression
+  indexes.
+- Switching models is a registry update in one transaction; rollback flips back to the standby model; retirement
+  drops its partition.
+- Farm memory (`farm_memory_items`, `search_farm_memory_items`) stays on its own `vector(1536)` column and is not
+  moved, unless a separate ADR approves it (D-L3).

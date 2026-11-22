@@ -1,6 +1,6 @@
-# Batch 04.0 — Fertiliser Safety Finding (Correction 1)
+# Batch 04.0 — Fertiliser Safety Finding
 
-**Status:** Verified finding | **Date:** 2026-11-22 | **Branch base:** `main` @ `ddad3b0`
+**Status:** Verified finding; correction is a **mandatory prerequisite before Batch 04.1** (phase 04.0-H, D-P6) | **Date:** 2026-11-22 | **Branch base:** `main` @ `ddad3b0`
 
 ## Answer
 
@@ -8,9 +8,6 @@
 through the fertiliser engine API. It comes from the AI assistant's rule-engine fallback, which returns fixed
 NPK and urea rates for any crop. The fertiliser engine itself also fails open for unknown crops; only the HTTP
 schema in front of it is closed.
-
-The revision 1 statement "Batch 03.1A says the API rejects unvalidated crops — confirm which path the assistant
-uses" is now resolved: the API path is closed, the assistant path is not.
 
 ## Execution paths traced
 
@@ -56,25 +53,28 @@ non-fertiliser questions in Yoruba can receive the fertiliser template.
   elemental ppm. P2O5 = P × 2.291 and K2O = K × 1.205. The credit factors (`× 0.6`, `× 0.48`, `OM × 15`) carry
   no citation.
 
-## Proposed fail-closed correction (for Batch 04.4; not implemented here)
+## Required correction: phase 04.0-H (mandatory before 04.1; not implemented in PR #25)
 
-See ADR-020. In summary:
+See ADR-020. 04.0-H must block unsupported crop fertiliser rates, unapproved coefficients, missing crop
+identification, unverified soil inputs and untraceable numerical recommendations:
 
-1. `calculateFertiliserRecommendation` returns a result union, `{ ok: false, code: 'crop_not_supported' | 'coefficients_unapproved' | 'soil_unit_unknown' | 'soil_not_lab_confirmed' }`,
-   and never applies a default coefficient. Coefficients move to an approved, versioned table linked to a published
-   standard and cited passages.
+1. `calculateFertiliserRecommendation` returns a result union (`crop_not_supported`, `coefficients_unapproved`,
+   `crop_not_identified`, soil-input codes) and never applies a default coefficient. Coefficients move to an approved,
+   versioned store linked to a published standard and cited passages.
 2. `EngineClient` local mode applies the same validation as the HTTP route; both import one shared schema.
 3. `generateAgronomicAdvisorAnswer` never returns numeric rates. Its fertiliser branch returns "no approved rate is
    available for this crop; contact an extension agent", unless the deterministic engine returned an approved result
    for that crop, in which case it quotes the engine output with its citation.
 4. All AI entry points (P4, P5) go through one audited path; P5's `cropId || "maize"` default is removed. With no
    resolved crop, numbers are refused.
-5. A server-side numeric validator (ADR-016) blocks any rate, dose or quantity in an LLM answer that is not traceable
-   to an engine result or a cited passage, and any rate above the published `max_nitrogen_kg_ha`.
-6. Units become explicit types: `SoilPotassium = { value, unit: 'cmol_kg' | 'mg_kg' }`, with one conversion function
-   (× 391). Oxide/elemental basis is declared per coefficient.
+5. A server-side numeric validator blocks any rate, dose or quantity in an LLM answer that is not traceable to an
+   engine result or a cited passage, and any rate above the published `max_nitrogen_kg_ha`.
+6. Soil inputs must be lab-confirmed **and** carry extraction method, sampling depth, test date, units and nutrient
+   basis (ADR-018). Units become explicit types: `SoilPotassium = { value, unit: 'cmol_kg' | 'mg_kg' }`, with one
+   conversion (× 391). Oxide/elemental basis is declared per coefficient.
 7. `forbid_published_standard_mutation` is extended to every agronomic field.
 
-**Tests to add in 04.4:** unknown crop → `crop_not_supported` (engine, client, route); rule-engine fertiliser query
-for `lettuce` contains no digits followed by `kg`; `cropId` absent → no rate; LLM output with an untraceable rate
-→ blocked; `0.25 cmol/kg` → `97.75 mg/kg`; published standard `max_nitrogen_kg_ha` update → `42501`.
+**Tests required in 04.0-H:** unknown crop → `crop_not_supported` (engine, client, route); rule-engine fertiliser
+query for `lettuce` contains no digits followed by `kg`; `cropId` absent → `crop_not_identified`; farmer-reported or
+modelled soil → refused; lab soil without method or depth → refused; LLM output with an untraceable rate → blocked;
+`0.25 cmol/kg` → `97.75 mg/kg`; published standard `max_nitrogen_kg_ha` update → `42501`.
