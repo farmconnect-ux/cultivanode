@@ -3,30 +3,33 @@
 import { randomUUID } from "node:crypto";
 import {
   FARM_ZONES,
+  VALID_GROWTH_STAGES,
   askGroundedAiAssistant,
-  type FarmZone,
   type FarmerContext,
   type GroundedAiAssistantResponse,
+  type VerifiedAgronomicFarmContext,
 } from "@cultivanode/shared";
+import type { User } from "@supabase/supabase-js";
 import { requireAccount } from "@/lib/account/session";
 import { aiConfig } from "@/lib/ai-config";
+import { resolveServerVerifiedAgronomicContext } from "@/lib/farm-context/verified-agronomic-context.service";
 import { logger } from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 
 export type AssistantResponse = GroundedAiAssistantResponse;
 
-function normalizeVerifiedZone(rawZone: unknown): FarmZone | undefined {
-  if (typeof rawZone !== "string" || !rawZone.trim()) return undefined;
-  const candidate = rawZone.trim().toLowerCase();
-  return (FARM_ZONES as readonly string[]).includes(candidate) ? (candidate as FarmZone) : undefined;
-}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * Web Farm Assistant Server Action (hardened in Batch 04.0-H Revision 2):
- * - NEVER defaults an unidentified crop to "maize" or an unknown zone to "derived_savanna" or "rainforest".
- * - Preserves missing geographic context as `undefined` and rejects invalid/fabricated zones.
- * - Passes every response through both the NAFDAC chemical guardrail and the server-side
- *   numerical application validator inside `askGroundedAiAssistant()`.
- * - Logs structured correlation & outcome metadata without logging raw prompt text.
+ * Web Farm Assistant Server Action (hardened in Batch 04.0-H Revision 5):
+ * - Authenticates the caller and verifies active (non-suspended) account status.
+ * - NEVER trusts client-supplied `zone` or `stageName` as verified farm context.
+ * - When `farmId` is provided, verifies farm ownership via the caller's RLS-scoped Supabase
+ *   client and delegates to the exact same `resolveServerVerifiedAgronomicContext()` used by
+ *   `POST /api/ai/assistant` (zero divergence).
+ * - Rejects invalid or conflicting client `zone` / `stageName` assertions.
+ * - When farm context is absent or unverified, passes `verifiedFarmContext: null` so numerical
+ *   fertiliser prescriptions fail closed unconditionally.
  */
 export async function askFarmAssistantAction(params: {
   query: string;
@@ -36,31 +39,105 @@ export async function askFarmAssistantAction(params: {
   imageMimeType?: string;
 }) {
   const account = await requireAccount(params.language === "yo" ? "yo" : "en");
+  if (account.profile?.suspended_at) {
+    throw new Error("Account is not active.");
+  }
+
   const query = typeof params.query === "string" ? params.query.trim().slice(0, 4000) : "";
   if (!query && !params.imageBase64) {
     throw new Error("Please enter a question or attach a photo.");
   }
 
-  const rawZone = params.context?.zone;
-  if (rawZone !== undefined && !normalizeVerifiedZone(rawZone)) {
-    throw new Error(`Invalid agro-ecological zone "${String(rawZone)}".`);
-  }
-  const verifiedZone = normalizeVerifiedZone(rawZone);
-
   const traceId = randomUUID();
   const c = aiConfig();
-  const cropId = typeof params.context?.cropId === "string" ? params.context.cropId.trim() : "";
+  const rawFarmId = typeof params.context?.farmId === "string" ? params.context.farmId.trim() : "";
+  const rawPlotId = typeof params.context?.plotId === "string" ? params.context.plotId.trim() : "";
+  const rawCropId = typeof params.context?.cropId === "string" ? params.context.cropId.trim() : "";
+
+  let resolvedZone: FarmerContext["zone"] = undefined;
+  let resolvedStageName: string | undefined = undefined;
+  let resolvedCropId = rawCropId;
+  let resolvedPlotId: string | undefined = undefined;
+  let resolvedFarmId: string | undefined = undefined;
+  let verifiedFarmContext: VerifiedAgronomicFarmContext | null = null;
+
+  if (rawFarmId) {
+    if (!UUID_RE.test(rawFarmId)) {
+      throw new Error("Invalid farmId format.");
+    }
+    if (rawPlotId && !UUID_RE.test(rawPlotId)) {
+      throw new Error("Invalid plotId format.");
+    }
+
+    const supabase = await createClient();
+    const { data: farm, error: farmErr } = await supabase
+      .from("farms")
+      .select("id")
+      .eq("id", rawFarmId)
+      .maybeSingle();
+
+    if (farmErr || !farm) {
+      throw new Error("Farm not found or access denied.");
+    }
+
+    const verifiedCtxRes = await resolveServerVerifiedAgronomicContext({
+      caller: {
+        user: { id: account.userId } as User,
+        farmId: farm.id,
+        client: supabase,
+        verifiedAt: new Date().toISOString(),
+      },
+      assertions: {
+        plotId: rawPlotId || undefined,
+        cropId: rawCropId || undefined,
+        zone: params.context?.zone,
+        stageName: params.context?.stageName,
+      },
+    });
+
+    if (verifiedCtxRes.conflict) {
+      throw new Error(`[${verifiedCtxRes.code}] ${verifiedCtxRes.error}`);
+    }
+
+    resolvedFarmId = farm.id;
+    resolvedPlotId = verifiedCtxRes.verifiedPlotId;
+    resolvedZone = verifiedCtxRes.verifiedZone;
+    resolvedStageName = verifiedCtxRes.verifiedGrowthStage;
+    resolvedCropId = verifiedCtxRes.verifiedCropId ?? rawCropId;
+    verifiedFarmContext = verifiedCtxRes.verifiedContext;
+  } else {
+    // No farmId: validate syntax of any client assertions to fail fast on garbage,
+    // but NEVER elevate client-supplied zone or stageName to verified context.
+    if (params.context?.zone !== undefined && String(params.context.zone).trim() !== "") {
+      const candidateZone = String(params.context.zone).trim().toLowerCase();
+      if (!(FARM_ZONES as readonly string[]).includes(candidateZone)) {
+        throw new Error(`Invalid agro-ecological zone "${String(params.context.zone)}".`);
+      }
+    }
+    if (params.context?.stageName !== undefined && params.context.stageName.trim() !== "") {
+      const candidateStage = params.context.stageName.trim().toLowerCase();
+      if (!VALID_GROWTH_STAGES.has(candidateStage)) {
+        throw new Error(`Invalid crop growth stage "${params.context.stageName}".`);
+      }
+    }
+    // Without a verified farm record, zone, stageName, and verifiedFarmContext remain unverified/null.
+    resolvedZone = undefined;
+    resolvedStageName = undefined;
+    verifiedFarmContext = null;
+  }
 
   const result = await askGroundedAiAssistant({
     query: query || "Please examine this crop photo and advise what to do.",
-    // Always bind farmerId to the signed-in account; NEVER invent a default cropId or zone.
     context: {
-      ...(params.context ?? {}),
-      cropId,
-      zone: verifiedZone,
+      cropId: resolvedCropId,
+      zone: resolvedZone,
+      stageName: resolvedStageName,
       farmerId: account.userId,
+      farmId: resolvedFarmId,
+      plotId: resolvedPlotId,
       requestId: traceId,
     },
+    verifiedFarmContext,
     language: params.language ?? "en",
     imageBase64: params.imageBase64,
     imageMimeType: params.imageMimeType,

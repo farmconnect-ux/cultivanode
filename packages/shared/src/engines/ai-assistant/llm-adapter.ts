@@ -2,6 +2,7 @@ import type { FarmerContext, GroundedPrompt, GuardrailCheckResult, GroundedKnowl
 import type { AppLanguage } from '../../roles';
 import type { GroundedEvidencePackage } from '../memory-rag/types';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
+import type { VerifiedAgronomicFarmContext } from './verified-farm-context';
 import { buildGroundedPrompt } from './prompt-builder';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
 import {
@@ -33,6 +34,8 @@ export interface GroundedAiAssistantRequest {
   timeoutMs?: number;
   /** Validated deterministic engine calculation, if one was run for this request (Batch 04.0-H). */
   approvedFertiliserCalculation?: FertiliserRecommendation | null;
+  /** Trusted server-verified farm/plot/zone/crop-cycle context (Batch 04.0-H Revision 5). */
+  verifiedFarmContext?: VerifiedAgronomicFarmContext | null;
 }
 
 export interface GroundedAiAssistantResponse {
@@ -422,16 +425,17 @@ export async function askGroundedAiAssistant(
   // 5. Pass output through mandatory NAFDAC chemical safety guardrails
   const guardrailResult: GuardrailCheckResult = checkChemicalSafetyGuardrails(rawAnswer);
 
-  // 6. Pass output through server-side numerical application validator (Batch 04.0-H Revision 2)
-  // Numerical source-information quotation remains disabled here (`verifiedSourceQuote: null`)
-  // until the evidence package carries verified licence permissions and Section 8 attribution.
+  // 6. Pass output through server-side numerical application validator (Batch 04.0-H Revision 5).
+  // Only `params.verifiedFarmContext` (server-resolved RLS farm/plot/crop-cycle context) may
+  // authorise numerical validation; client-supplied context assertions never substitute for it.
   const numericValidation = validateAssistantNumericalOutput(guardrailResult.sanitizedResponseText, {
-    cropId: params.context.cropId,
-    farmId: params.context.farmId ?? params.groundedEvidence?.verifiedCurrentFarmFacts?.farmId ?? null,
-    plotId: params.context.plotId ?? null,
+    cropId: params.verifiedFarmContext?.cropId ?? params.context.cropId,
+    farmId: params.verifiedFarmContext?.farmId ?? params.context.farmId ?? null,
+    plotId: params.verifiedFarmContext?.plotId ?? params.context.plotId ?? null,
     requestId: params.context.requestId ?? null,
-    zone: params.context.zone ?? params.groundedEvidence?.verifiedCurrentFarmFacts?.farmZone ?? null,
-    growthStage: params.context.stageName ?? null,
+    zone: params.verifiedFarmContext?.zone ?? null,
+    growthStage: params.verifiedFarmContext?.growthStage ?? null,
+    verifiedFarmContext: params.verifiedFarmContext ?? null,
     language: lang,
     approvedCalculation: params.approvedFertiliserCalculation ?? null,
     verifiedSourceQuote: null,

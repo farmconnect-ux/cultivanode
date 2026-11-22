@@ -7,6 +7,11 @@ import {
   validateAssistantNumericalOutput,
   type VerifiedSourceQuotationContext,
 } from './fertiliser-safety';
+import {
+  isTrustedVerifiedFarmContext,
+  resolveVerifiedAgronomicFarmContextFromSnapshot,
+} from './verified-farm-context';
+import type { LiveFarmContextSnapshot } from '../farm-context/types';
 import { askGroundedAiAssistant, generateAgronomicAdvisorAnswer } from './llm-adapter';
 import {
   evaluateWithTestApprovedProtocol,
@@ -15,6 +20,78 @@ import {
 } from '../inputs/__testing__/approved-protocol-test-harness';
 
 afterEach(() => vi.unstubAllGlobals());
+
+function makeLiveSnapshot(overrides?: {
+  farmId?: string;
+  farmZone?: string | null;
+  retrievedAt?: string;
+  plotId?: string;
+  cropId?: string;
+  cycleId?: string;
+  currentStage?: string | null;
+  cycleState?: 'verified_current' | 'unverified_provisional';
+  noCycles?: boolean;
+}): LiveFarmContextSnapshot {
+  const farmId = overrides?.farmId ?? 'farm-alpha';
+  const plotId = overrides?.plotId ?? 'plot-01';
+  const cropId = overrides?.cropId ?? 'maize';
+  const retrievedAt = overrides?.retrievedAt ?? '2026-11-22T12:25:00Z';
+  const activeCycles = overrides?.noCycles
+    ? []
+    : [
+        {
+          cycleId: overrides?.cycleId ?? 'cycle-001',
+          plotId,
+          cropId,
+          currentStage: overrides && 'currentStage' in overrides ? overrides.currentStage : 'basal',
+          plantingDate: '2026-11-15',
+          expectedHarvestDate: '2027-02-20',
+          healthStatus: 'healthy',
+          healthScore: 90,
+          state: overrides?.cycleState ?? 'verified_current',
+        },
+      ];
+
+  return {
+    farmId,
+    farmName: 'Test Farm',
+    farmZone: overrides && 'farmZone' in overrides ? overrides.farmZone ?? null : 'derived_savanna',
+    farmState: 'Oyo',
+    farmLga: 'Ibadan North',
+    farmQueryStatus: 'ok',
+    plotsQueryStatus: 'ok',
+    coreQueryErrors: [],
+    retrievedAt,
+    scope: 'farm',
+    domains: {
+      crop_identity_variety_and_stage: {
+        domain: 'crop_identity_variety_and_stage',
+        status: activeCycles.length > 0 ? 'ok' : 'empty',
+        data: { activeCycles, fallbackPlotCrops: [] },
+        sourceRefs: [],
+        conflicts: [],
+        missingFields: [],
+        validationIssues: [],
+      },
+    } as unknown as LiveFarmContextSnapshot['domains'],
+    auditContextRefs: [],
+    conflicts: [],
+    missingInformation: [],
+    validationIssues: [],
+    memoryExtension: { available: false, reason: 'test', farmScopeItems: [], profileScopeItems: [] },
+  };
+}
+
+function makeVerifiedFarmContext(overrides?: Parameters<typeof makeLiveSnapshot>[0]) {
+  const snap = makeLiveSnapshot(overrides);
+  const res = resolveVerifiedAgronomicFarmContextFromSnapshot(snap, {
+    plotId: overrides?.plotId ?? 'plot-01',
+    cropId: overrides?.cropId ?? 'maize',
+    referenceDate: '2026-11-22T12:30:00Z',
+  });
+  if (!res.ok) throw new Error(`Expected verified farm context fixture, got ${res.reasonCode}`);
+  return res.context;
+}
 
 function makeApprovedMaizeCalc(overrides?: {
   farmId?: string;
@@ -87,8 +164,9 @@ describe('Batch 04.0-H Revision 2 — Yoruba `iye`, Ambiguous Queries & Rule-Eng
 });
 
 describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding & Exact Value Verification', () => {
-  it('accepts deterministic calculation output when crop, farm, plot, request, zone, product, values, units, and timing match', () => {
+  it('accepts deterministic calculation output when trusted verifiedFarmContext matches crop, farm, plot, request, zone, growthStage, product, values, units, and timing', () => {
     const calc = makeApprovedMaizeCalc();
+    const vctx = makeVerifiedFarmContext();
     const deterministicText = formatApprovedFertiliserCalculation(calc, 'en');
 
     const res = validateAssistantNumericalOutput(deterministicText, {
@@ -98,6 +176,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'basal',
+      verifiedFarmContext: vctx,
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -113,6 +192,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'flowering',
+      verifiedFarmContext: makeVerifiedFarmContext({ currentStage: 'flowering' }),
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -132,6 +212,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext(),
       language: 'en' as const,
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -193,7 +274,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(wrongTiming.reasonCode).toBe('calculation_timing_mismatch');
   });
 
-  it('rejects cross-crop, cross-farm, cross-plot, cross-request, wrong-zone, stale, or provisional calculation bindings', () => {
+  it('rejects cross-crop, cross-farm, cross-plot, cross-request, wrong-zone, stale, or forged calculation bindings', () => {
     const calc = makeApprovedMaizeCalc();
     const deterministicText = formatApprovedFertiliserCalculation(calc, 'en');
 
@@ -203,6 +284,8 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext({ cropId: 'tomato' }),
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -216,6 +299,8 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-01',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext({ farmId: 'farm-beta' }),
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -229,6 +314,8 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       plotId: 'plot-99',
       requestId: 'req-001',
       zone: 'derived_savanna',
+      growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext({ plotId: 'plot-99' }),
       language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -243,9 +330,20 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'basal',
+      verifiedFarmContext: resolveVerifiedAgronomicFarmContextFromSnapshot(
+        makeLiveSnapshot({ retrievedAt: '2026-11-25T12:25:00Z' }),
+        { plotId: 'plot-01', cropId: 'maize', referenceDate: '2026-11-25T12:30:00Z' },
+      ).ok
+        ? (
+            resolveVerifiedAgronomicFarmContextFromSnapshot(
+              makeLiveSnapshot({ retrievedAt: '2026-11-25T12:25:00Z' }),
+              { plotId: 'plot-01', cropId: 'maize', referenceDate: '2026-11-25T12:30:00Z' },
+            ) as { ok: true; context: ReturnType<typeof makeVerifiedFarmContext> }
+          ).context
+        : null,
       language: 'en',
       approvedCalculation: calc,
-      referenceDate: '2026-11-25T12:30:00Z', // > 24h stale
+      referenceDate: '2026-11-25T12:30:00Z', // > 24h stale calculation
     });
     expect(stale.passed).toBe(false);
     expect(stale.reasonCode).toBe('calculation_stale_or_invalid');
@@ -259,6 +357,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext(),
       language: 'en',
       approvedCalculation: forgedCalc,
       referenceDate: '2026-11-22T12:30:00Z',
@@ -274,6 +373,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       requestId: 'req-001',
       zone: 'derived_savanna',
       growthStage: 'basal',
+      verifiedFarmContext: makeVerifiedFarmContext(),
       language: 'en',
       approvedCalculation: { ...calc },
       referenceDate: '2026-11-22T12:30:00Z',
@@ -282,72 +382,113 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(shallowRes.reasonCode).toBe('calculation_untrusted_origin');
   });
 
-  it('Finding 5: unconditionally requires valid matching request zone and growthStage (omission cannot bypass)', () => {
+  it('Revision 5: requires trusted immutable VerifiedAgronomicFarmContext and rejects missing, forged, cloned, mutated, stale, or mismatched context', () => {
     const calc = makeApprovedMaizeCalc();
+    const vctx = makeVerifiedFarmContext();
     const deterministicText = formatApprovedFertiliserCalculation(calc, 'en');
-    const baseOpts = {
+
+    // 1. Missing verifiedFarmContext even when raw zone & growthStage strings are supplied -> fails closed
+    const missingVctx = validateAssistantNumericalOutput(deterministicText, {
       cropId: 'maize',
       farmId: 'farm-alpha',
       plotId: 'plot-01',
       requestId: 'req-001',
-      language: 'en' as const,
+      zone: 'derived_savanna',
+      growthStage: 'basal',
+      verifiedFarmContext: null,
+      language: 'en',
       approvedCalculation: calc,
       referenceDate: '2026-11-22T12:30:00Z',
-    };
-
-    // Missing request zone -> fails closed
-    const missingZone = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      growthStage: 'basal',
     });
-    expect(missingZone.passed).toBe(false);
-    expect(missingZone.reasonCode).toBe('request_zone_missing');
+    expect(missingVctx.passed).toBe(false);
+    expect(missingVctx.reasonCode).toBe('verified_farm_context_missing');
 
-    // Missing request growthStage -> fails closed
-    const missingStage = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      zone: 'derived_savanna',
+    // 2. Caller-forged plain object claiming verificationState: 'verified_current' -> fails closed
+    const forgedCtx = { ...vctx };
+    expect(isTrustedVerifiedFarmContext(forgedCtx)).toBe(false);
+    expect(isTrustedVerifiedFarmContext(structuredClone(vctx))).toBe(false);
+    expect(isTrustedVerifiedFarmContext(JSON.parse(JSON.stringify(vctx)))).toBe(false);
+    const forgedAttempt = validateAssistantNumericalOutput(deterministicText, {
+      cropId: 'maize',
+      farmId: 'farm-alpha',
+      plotId: 'plot-01',
+      requestId: 'req-001',
+      verifiedFarmContext: forgedCtx,
+      language: 'en',
+      approvedCalculation: calc,
+      referenceDate: '2026-11-22T12:30:00Z',
     });
-    expect(missingStage.passed).toBe(false);
-    expect(missingStage.reasonCode).toBe('request_growth_stage_missing');
+    expect(forgedAttempt.passed).toBe(false);
+    expect(forgedAttempt.reasonCode).toBe('verified_farm_context_untrusted');
 
-    // Invalid request zone -> fails closed
-    const invalidZone = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      zone: 'arctic_tundra',
-      growthStage: 'basal',
+    // 3. Verified context is deep-frozen (attempted mutation throws TypeError)
+    expect(Object.isFrozen(vctx)).toBe(true);
+    expect(() => {
+      (vctx as unknown as Record<string, unknown>).growthStage = 'flowering';
+    }).toThrow(TypeError);
+
+    // 4. Stale verified context (> 15 minutes old) -> fails closed
+    const staleCtxRes = validateAssistantNumericalOutput(deterministicText, {
+      cropId: 'maize',
+      farmId: 'farm-alpha',
+      plotId: 'plot-01',
+      requestId: 'req-001',
+      verifiedFarmContext: vctx,
+      language: 'en',
+      approvedCalculation: calc,
+      referenceDate: '2026-11-22T13:00:00Z', // 35 minutes after resolvedAt
     });
-    expect(invalidZone.passed).toBe(false);
-    expect(invalidZone.reasonCode).toBe('request_zone_invalid');
+    expect(staleCtxRes.passed).toBe(false);
+    expect(staleCtxRes.reasonCode).toBe('verified_farm_context_stale');
 
-    // Invalid request growthStage -> fails closed
-    const invalidStage = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      zone: 'derived_savanna',
-      growthStage: 'invalid_stage_999',
-    });
-    expect(invalidStage.passed).toBe(false);
-    expect(invalidStage.reasonCode).toBe('request_growth_stage_invalid');
+    // 5. Snapshot resolver fails closed on missing zone, missing cycle, plot mismatch, inactive cycle, missing/invalid stage, stale snapshot
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ farmZone: null }), {
+        referenceDate: '2026-11-22T12:30:00Z',
+      }),
+    ).toMatchObject({ ok: false, reasonCode: 'farm_zone_unverified' });
 
-    // Zone mismatch -> fails closed
-    const mismatchZone = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      zone: 'rainforest',
-      growthStage: 'basal',
-    });
-    expect(mismatchZone.passed).toBe(false);
-    expect(mismatchZone.reasonCode).toBe('calculation_zone_mismatch');
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ noCycles: true }), {
+        referenceDate: '2026-11-22T12:30:00Z',
+      }),
+    ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_missing' });
 
-    // Growth-stage mismatch -> fails closed
-    const mismatchStage = validateAssistantNumericalOutput(deterministicText, {
-      ...baseOpts,
-      zone: 'derived_savanna',
-      growthStage: 'flowering',
-    });
-    expect(mismatchStage.passed).toBe(false);
-    expect(mismatchStage.reasonCode).toBe('calculation_growth_stage_mismatch');
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ plotId: 'plot-other' }), {
+        plotId: 'plot-01',
+        referenceDate: '2026-11-22T12:30:00Z',
+      }),
+    ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_plot_mismatch' });
 
-    // Non-numerical response without zone/growthStage continues to pass safely as general_guidance
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(
+        makeLiveSnapshot({ cycleState: 'unverified_provisional' }),
+        { referenceDate: '2026-11-22T12:30:00Z' },
+      ),
+    ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_inactive' });
+
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ currentStage: null }), {
+        referenceDate: '2026-11-22T12:30:00Z',
+      }),
+    ).toMatchObject({ ok: false, reasonCode: 'growth_stage_missing' });
+
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(
+        makeLiveSnapshot({ currentStage: 'invalid_stage_999' }),
+        { referenceDate: '2026-11-22T12:30:00Z' },
+      ),
+    ).toMatchObject({ ok: false, reasonCode: 'growth_stage_invalid' });
+
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(
+        makeLiveSnapshot({ retrievedAt: '2026-11-22T10:00:00Z' }),
+        { referenceDate: '2026-11-22T12:30:00Z' },
+      ),
+    ).toMatchObject({ ok: false, reasonCode: 'farm_context_stale' });
+
+    // 6. Non-numerical response without verifiedFarmContext continues to pass safely as general_guidance
     const nonNumeric = validateAssistantNumericalOutput(
       'Scout your maize whorls early in the morning and obtain a laboratory soil test.',
       { cropId: 'maize', language: 'en' },

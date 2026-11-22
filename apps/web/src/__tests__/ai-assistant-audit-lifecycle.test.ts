@@ -258,5 +258,49 @@ describe("Finding 09: /api/ai/assistant Explicit Audit Coverage Lifecycle", () =
     expect(mismatchRes.status).toBe(422);
     expect((await mismatchRes.json()).code).toBe("ZONE_MISMATCH");
     expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
+
+    // Revision 5: Client attempts to override verified active crop-cycle stage ("vegetative") with "flowering" -> 422
+    const stageOverrideRes = await POST(
+      makeReq({
+        traceId: TRACE_ID,
+        query: "Advise on maize",
+        context: { farmId: FARM_ID, stageName: "flowering" },
+      }),
+    );
+    expect(stageOverrideRes.status).toBe(422);
+    expect((await stageOverrideRes.json()).code).toBe("GROWTH_STAGE_MISMATCH");
+    expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
+
+    // Revision 5: Client supplies invalid growth stage -> 400
+    const badStageRes = await POST(
+      makeReq({
+        traceId: TRACE_ID,
+        query: "Advise on maize",
+        context: { farmId: FARM_ID, stageName: "invalid_stage_999" },
+      }),
+    );
+    expect(badStageRes.status).toBe(400);
+    expect((await badStageRes.json()).code).toBe("INVALID_GROWTH_STAGE");
+    expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
+
+    // Revision 5: Client supplies stage when NO active crop cycle exists -> 422
+    mocks.getLiveFarmContextSnapshot.mockResolvedValueOnce({
+      farmId: FARM_ID,
+      farmZone: "derived_savanna",
+      farmQueryStatus: "ok",
+      retrievedAt: new Date().toISOString(),
+      domains: { crop_identity_variety_and_stage: { status: "empty", data: { activeCycles: [] } } },
+      auditContextRefs: [{ source: "farms", record_id: FARM_ID, observed_at: "2026-11-21T04:00:00Z" }],
+    });
+    const noCycleStageRes = await POST(
+      makeReq({
+        traceId: TRACE_ID,
+        query: "Advise on maize",
+        context: { farmId: FARM_ID, stageName: "vegetative" },
+      }),
+    );
+    expect(noCycleStageRes.status).toBe(422);
+    expect((await noCycleStageRes.json()).code).toBe("GROWTH_STAGE_MISMATCH");
+    expect(mocks.askGroundedAiAssistant).not.toHaveBeenCalled();
   });
 });

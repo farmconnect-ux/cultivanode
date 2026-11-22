@@ -1,36 +1,14 @@
-import { FARM_ZONES, type AppLanguage } from '../../roles';
+import type { AppLanguage } from '../../roles';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
 import { isSupportedFertiliserCrop, isTrustedFertiliserCalculation } from '../inputs/fertiliser';
-
-const VALID_AGRO_ZONES = new Set<string>([
-  ...FARM_ZONES,
-  'southern_guinea_savanna',
-  'northern_guinea_savanna',
-  'sudan_savanna',
-  'sahel_savanna',
-  'mangrove_swamp',
-  'mid_altitude',
-]);
-
-const VALID_GROWTH_STAGES = new Set<string>([
-  'pre_planting',
-  'pre-planting',
-  'planting',
-  'basal',
-  'emergence',
-  'seedling',
-  'vegetative',
-  'tillering',
-  'flowering',
-  'fruiting',
-  'pod_filling',
-  'tuber_initiation',
-  'bulking',
-  'maturation',
-  'harvest',
-  'top_dress',
-  'split',
-]);
+import {
+  ACTIVE_CROP_CYCLE_STATUSES,
+  MAX_VERIFIED_FARM_CONTEXT_AGE_MS,
+  VALID_AGRO_ZONES,
+  VALID_GROWTH_STAGES,
+  isTrustedVerifiedFarmContext,
+  type VerifiedAgronomicFarmContext,
+} from './verified-farm-context';
 
 /**
  * Module-private unforgeable brand symbol for trusted source quotations.
@@ -439,6 +417,7 @@ function validateCalculationBindingAndValues(
     requestId?: string | null;
     zone?: string | null;
     growthStage?: string | null;
+    verifiedFarmContext?: VerifiedAgronomicFarmContext | null;
     referenceDate?: string;
   },
 ): { ok: true } | { ok: false; reasonCode: string } {
@@ -463,24 +442,60 @@ function validateCalculationBindingAndValues(
     return { ok: false, reasonCode: 'calculation_not_agronomist_approved' };
   }
 
-  // 2. Crop binding check
-  const reqCrop = options.cropId?.trim().toLowerCase() ?? '';
+  // 2. Revision 5 (Remediation F): Unconditionally require a trusted, immutable, fresh
+  // `VerifiedAgronomicFarmContext` derived from authorised RLS farm/plot/crop-cycle records.
+  const vctx = options.verifiedFarmContext;
+  if (!vctx) {
+    return { ok: false, reasonCode: 'verified_farm_context_missing' };
+  }
+  if (!isTrustedVerifiedFarmContext(vctx)) {
+    return { ok: false, reasonCode: 'verified_farm_context_untrusted' };
+  }
+
+  const refTs = options.referenceDate ? new Date(options.referenceDate).getTime() : Date.now();
+  const ctxTs = new Date(vctx.resolvedAt).getTime();
+  if (Number.isNaN(refTs) || Number.isNaN(ctxTs)) {
+    return { ok: false, reasonCode: 'verified_farm_context_stale' };
+  }
+  const ctxAgeMs = refTs - ctxTs;
+  if (ctxAgeMs > MAX_VERIFIED_FARM_CONTEXT_AGE_MS || ctxAgeMs < -60_000) {
+    return { ok: false, reasonCode: 'verified_farm_context_stale' };
+  }
+
+  if (
+    !vctx.cropCycleId?.trim() ||
+    !(ACTIVE_CROP_CYCLE_STATUSES as readonly string[]).includes(vctx.cropCycleStatus)
+  ) {
+    return { ok: false, reasonCode: 'verified_crop_cycle_invalid' };
+  }
+
+  // 3. Crop binding check (verified farm context + request cropId + calculation cropId)
   const calcCrop = calculation.cropId?.trim().toLowerCase() ?? '';
   const boundCrop = binding.cropId?.trim().toLowerCase() ?? '';
-  if (!reqCrop || !isSupportedFertiliserCrop(calcCrop) || reqCrop !== calcCrop || boundCrop !== calcCrop) {
+  const verifiedCrop = vctx.cropId?.trim().toLowerCase() ?? '';
+  const reqCrop = options.cropId?.trim().toLowerCase() ?? verifiedCrop;
+  if (
+    !verifiedCrop ||
+    !isSupportedFertiliserCrop(calcCrop) ||
+    verifiedCrop !== calcCrop ||
+    boundCrop !== calcCrop ||
+    (reqCrop && reqCrop !== calcCrop)
+  ) {
     return { ok: false, reasonCode: 'calculation_crop_mismatch' };
   }
 
-  // 3. Farm / plot / request / zone binding checks
-  const reqFarm = options.farmId?.trim() ?? '';
-  const boundFarm = binding.farmId?.trim() ?? '';
-  if ((reqFarm || boundFarm) && reqFarm !== boundFarm) {
+  // 4. Farm / plot / request binding checks against VerifiedAgronomicFarmContext
+  if (vctx.farmId !== binding.farmId || (options.farmId?.trim() && options.farmId.trim() !== vctx.farmId)) {
     return { ok: false, reasonCode: 'calculation_farm_mismatch' };
   }
 
-  const reqPlot = options.plotId?.trim() ?? '';
+  const verifiedPlot = vctx.plotId?.trim() ?? '';
   const boundPlot = binding.plotId?.trim() ?? '';
-  if ((reqPlot || boundPlot) && reqPlot !== boundPlot) {
+  const reqPlot = options.plotId?.trim() ?? '';
+  if ((verifiedPlot || boundPlot) && verifiedPlot !== boundPlot) {
+    return { ok: false, reasonCode: 'calculation_plot_mismatch' };
+  }
+  if (reqPlot && reqPlot !== verifiedPlot) {
     return { ok: false, reasonCode: 'calculation_plot_mismatch' };
   }
 
@@ -490,36 +505,40 @@ function validateCalculationBindingAndValues(
     return { ok: false, reasonCode: 'calculation_request_mismatch' };
   }
 
-  // Finding 5 (Revision 4): Current request geographic zone and crop growth stage are
-  // UNCONDITIONALLY mandatory for numerical-output validation (never silently skipped when omitted).
+  // 5. Verified geographic zone & verified crop growth stage checks (never skipped!)
   const boundZone = binding.zone?.trim().toLowerCase() ?? '';
-  const reqZone = options.zone?.trim().toLowerCase() ?? '';
-  if (!reqZone) {
+  const verifiedZone = vctx.zone?.trim().toLowerCase() ?? '';
+  if (!verifiedZone) {
     return { ok: false, reasonCode: 'request_zone_missing' };
   }
-  if (!VALID_AGRO_ZONES.has(reqZone)) {
+  if (!VALID_AGRO_ZONES.has(verifiedZone)) {
     return { ok: false, reasonCode: 'request_zone_invalid' };
   }
-  if (!boundZone || reqZone !== boundZone) {
+  if (!boundZone || verifiedZone !== boundZone) {
+    return { ok: false, reasonCode: 'calculation_zone_mismatch' };
+  }
+  if (options.zone?.trim() && options.zone.trim().toLowerCase() !== verifiedZone) {
     return { ok: false, reasonCode: 'calculation_zone_mismatch' };
   }
 
   const boundStage = binding.growthStage?.trim().toLowerCase() ?? '';
-  const reqStage = options.growthStage?.trim().toLowerCase() ?? '';
-  if (!reqStage) {
+  const verifiedStage = vctx.growthStage?.trim().toLowerCase() ?? '';
+  if (!verifiedStage) {
     return { ok: false, reasonCode: 'request_growth_stage_missing' };
   }
-  if (!VALID_GROWTH_STAGES.has(reqStage)) {
+  if (!VALID_GROWTH_STAGES.has(verifiedStage)) {
     return { ok: false, reasonCode: 'request_growth_stage_invalid' };
   }
-  if (!boundStage || reqStage !== boundStage) {
+  if (!boundStage || verifiedStage !== boundStage) {
+    return { ok: false, reasonCode: 'calculation_growth_stage_mismatch' };
+  }
+  if (options.growthStage?.trim() && options.growthStage.trim().toLowerCase() !== verifiedStage) {
     return { ok: false, reasonCode: 'calculation_growth_stage_mismatch' };
   }
 
-  // 4. Freshness check (reject stale or future-dated calculation objects)
+  // 6. Freshness check on calculation timestamp (reject stale or future-dated calculation objects)
   const calcTs = new Date(binding.calculatedAt).getTime();
-  const refTs = options.referenceDate ? new Date(options.referenceDate).getTime() : Date.now();
-  if (Number.isNaN(calcTs) || Number.isNaN(refTs)) {
+  if (Number.isNaN(calcTs)) {
     return { ok: false, reasonCode: 'calculation_timestamp_invalid' };
   }
   const ageMs = refTs - calcTs;
@@ -734,6 +753,7 @@ export function validateAssistantNumericalOutput(
     requestId?: string | null;
     zone?: string | null;
     growthStage?: string | null;
+    verifiedFarmContext?: VerifiedAgronomicFarmContext | null;
     language: AppLanguage | 'pcm';
     approvedCalculation?: FertiliserRecommendation | null;
     verifiedSourceQuote?: VerifiedSourceQuotationContext | null;

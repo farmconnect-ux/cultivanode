@@ -3,13 +3,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient as createSupabaseJs, type SupabaseClient, type User } from "@supabase/supabase-js";
 import {
-  FARM_ZONES,
   askGroundedAiAssistant,
   assembleGroundedEvidencePackage,
   type Database,
   type EvidenceRetrievalOutcome,
   type FarmMemoryItemRecord,
-  type FarmZone,
   type FarmerContext,
   type PublishedStandardPassage,
 } from "@cultivanode/shared";
@@ -23,6 +21,7 @@ import {
   type VerifiedAiFarmCallerContext,
 } from "@/lib/engines-api-helper";
 import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context.service";
+import { resolveServerVerifiedAgronomicContext } from "@/lib/farm-context/verified-agronomic-context.service";
 import { retrieveFarmMemories } from "@/lib/memory/farm-memory.service";
 import { retrievePublishedAgronomicStandards } from "@/lib/rag/agronomic-standards-rag.service";
 import { logger } from "@/lib/logger";
@@ -56,6 +55,7 @@ const AssistantBodySchema = z.object({
   context: z
     .object({
       farmId: z.string().uuid("context.farmId must be a valid UUID.").optional(),
+      plotId: z.string().uuid("context.plotId must be a valid UUID.").optional(),
       cropId: z.string().max(80).optional(),
       zone: z.string().max(80).optional(),
       stageName: z.string().max(80).optional(),
@@ -155,41 +155,35 @@ export async function POST(req: Request) {
 
     const traceId = body.traceId ?? randomUUID();
     const snapshot = await getLiveFarmContextSnapshot(verifiedFarmCaller);
-    const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
-    const resolvedCropId = body.context?.cropId ?? activeCycle?.cropId;
 
-    // Finding 4: Authoritative farm zone comes ONLY from the verified RLS-scoped farm snapshot.
-    // A client cannot fabricate or override the farm's agro-ecological zone.
-    const verifiedSnapshotZone =
-      typeof snapshot.farmZone === "string" &&
-      (FARM_ZONES as readonly string[]).includes(snapshot.farmZone.trim().toLowerCase())
-        ? (snapshot.farmZone.trim().toLowerCase() as FarmZone)
-        : undefined;
-
-    if (body.context?.zone !== undefined && body.context.zone.trim() !== "") {
-      const clientZone = body.context.zone.trim().toLowerCase();
-      if (!(FARM_ZONES as readonly string[]).includes(clientZone)) {
-        return NextResponse.json(
-          {
-            error: `Invalid agro-ecological zone "${body.context.zone}".`,
-            code: "INVALID_AGRO_ZONE",
-            traceId,
-          },
-          { status: 400 },
-        );
-      }
-      if (!verifiedSnapshotZone || clientZone !== verifiedSnapshotZone) {
-        return NextResponse.json(
-          {
-            error: "Client-supplied agro-ecological zone does not match the verified farm record.",
-            code: "ZONE_MISMATCH",
-            traceId,
-          },
-          { status: 422 },
-        );
-      }
+    // Revision 5 (Remediation C): Authoritative zone, plot ownership, and active crop-cycle growth stage
+    // come exclusively from the shared server-side RLS resolver. Client-supplied zone and stageName
+    // are treated strictly as assertions and NEVER override verified server records.
+    const verifiedCtxRes = await resolveServerVerifiedAgronomicContext({
+      caller: verifiedFarmCaller,
+      snapshot,
+      assertions: {
+        plotId: body.context?.plotId,
+        cropId: body.context?.cropId,
+        zone: body.context?.zone,
+        stageName: body.context?.stageName,
+      },
+    });
+    if (verifiedCtxRes.conflict) {
+      return NextResponse.json(
+        {
+          error: verifiedCtxRes.error,
+          code: verifiedCtxRes.code,
+          traceId,
+        },
+        { status: verifiedCtxRes.httpStatus },
+      );
     }
-    const resolvedZone = verifiedSnapshotZone;
+
+    const resolvedCropId = verifiedCtxRes.verifiedCropId ?? body.context?.cropId;
+    const resolvedZone = verifiedCtxRes.verifiedZone;
+    const resolvedStageName = verifiedCtxRes.verifiedGrowthStage;
+    const resolvedPlotId = verifiedCtxRes.verifiedPlotId;
 
     // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards
     // with EXPLICIT retrieval outcomes (Finding 4: never silently equate failure with empty results).
@@ -269,16 +263,19 @@ export async function POST(req: Request) {
     try {
       result = await askGroundedAiAssistant({
         query: body.query?.trim() || "Please examine this crop photo and advise what to do.",
-        // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
+        // Always bind farmerId, farmId, plotId, zone, and stageName to verified server records;
+        // NEVER pass client-supplied zone or stageName as authoritative context.
         context: {
-          ...(body.context ?? {}),
           cropId: resolvedCropId ?? "",
           zone: resolvedZone,
-          stageName: body.context?.stageName ?? activeCycle?.currentStage,
+          stageName: resolvedStageName,
+          daysAfterPlanting: body.context?.daysAfterPlanting,
           farmerId: verifiedFarmCaller.user.id,
           farmId: verifiedFarmCaller.farmId,
+          plotId: resolvedPlotId,
           requestId: traceId,
         } as FarmerContext,
+        verifiedFarmContext: verifiedCtxRes.verifiedContext,
         // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into the AI model pipeline.
         groundedEvidence: evidencePackage,
         language: body.language ?? "en",
