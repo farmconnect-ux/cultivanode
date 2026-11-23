@@ -15,15 +15,6 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
     farm: sanitizeMetadataField(snap.farmName ?? snap.farmId, 160),
     state: sanitizeMetadataField(snap.farmState ?? 'unknown', 60),
     ...(soil?.ph && soil.ph.value !== null ? { soilPh: { value: soil.ph.value, state: soil.ph.state } } : {}),
-    ...(activeCycles.length > 0
-      ? {
-          activeCropCycles: activeCycles.slice(0, 10).map((c) => ({
-            cropId: sanitizeMetadataField(c.cropId, 80),
-            currentStage: sanitizeMetadataField(c.currentStage, 80),
-            healthStatus: sanitizeMetadataField(c.healthStatus, 40),
-          })),
-        }
-      : {}),
     ...(pkg.missingOrUnavailable.length > 0
       ? {
           missingOrUnavailableFields: pkg.missingOrUnavailable.slice(0, 8).map((m) => `${m.domain}.${m.field}`),
@@ -34,6 +25,22 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
     `Verified Current Farm Facts (Authoritative Live Farm Context):\n<untrusted_evidence_json type="verified_farm_facts">\n${serializeUntrustedEvidenceJson(verifiedFactsPayload)}\n</untrusted_evidence_json>`,
   );
 
+  // Crop-cycle rows are recorded database assertions, not independent verification of crop or stage.
+  // Keep them outside the authoritative facts section and disclose their lifecycle provenance.
+  if (activeCycles.length > 0) {
+    const recordedCycles = activeCycles.slice(0, 10).map((c) => ({
+      cycleId: sanitizeMetadataField(c.cycleId, 80),
+      plotId: sanitizeMetadataField(c.plotId ?? 'unassigned', 80),
+      cropId: sanitizeMetadataField(c.cropId, 80),
+      lifecycleStatus: sanitizeMetadataField(c.status ?? 'missing', 40),
+      recordedGrowthStage: sanitizeMetadataField(c.currentStage, 80),
+      verificationStatus: 'recorded_database_assertion_not_independently_agronomically_verified',
+    }));
+    sections.push(
+      `Recorded Crop Cycle Entries (UNVERIFIED agronomic assertions; database lifecycle status is preserved but does not establish crop or growth-stage truth):\n<untrusted_evidence_json type="recorded_crop_cycle_entries">\n${serializeUntrustedEvidenceJson(recordedCycles)}\n</untrusted_evidence_json>`,
+    );
+  }
+
   // Stored farms.zone is a farmer/platform record, not independent geographic verification.
   // Keep it visible only in a separately labelled unverified tier, never as authoritative farm context.
   if (typeof snap.farmZone === 'string' && snap.farmZone.trim()) {
@@ -43,7 +50,7 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
       verificationStatus: 'unverified_stored_farm_attribute',
     };
     sections.push(
-      `Stored Farm Attributes (UNVERIFIED; do not use as authoritative geographic or agronomic evidence):\\n<untrusted_evidence_json type="unverified_stored_farm_attributes">\\n${serializeUntrustedEvidenceJson(storedAttributes)}\\n</untrusted_evidence_json>`,
+      `Stored Farm Attributes (UNVERIFIED; do not use as authoritative geographic or agronomic evidence):\n<untrusted_evidence_json type="unverified_stored_farm_attributes">\n${serializeUntrustedEvidenceJson(storedAttributes)}\\n</untrusted_evidence_json>`,
     );
   }
 
