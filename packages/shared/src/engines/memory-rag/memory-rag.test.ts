@@ -14,10 +14,10 @@ import {
 } from './index';
 import { buildGroundedPrompt } from '../ai-assistant/prompt-builder';
 import { askGroundedAiAssistant } from '../ai-assistant/llm-adapter';
-import type { LiveFarmContextSnapshot } from '../farm-context/types';
+import type { FarmContextDomain, LiveFarmContextSnapshot } from '../farm-context/types';
 
 function makeEmptySnapshot(farmId: string, soilObservedAt: string | null = null): LiveFarmContextSnapshot {
-  const emptySection = <T,>(domain: LiveFarmContextSnapshot['domains'][keyof LiveFarmContextSnapshot['domains']]['domain']) => ({
+  const emptySection = <T,>(domain: FarmContextDomain) => ({
     domain,
     status: 'empty' as const,
     data: null as T | null,

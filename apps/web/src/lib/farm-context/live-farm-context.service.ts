@@ -28,6 +28,8 @@ import {
   type FarmerObservationsDomainData,
   type FinancialMarketplaceDomainData,
   type InventoryTransactionInput,
+  type LabourDomainData,
+  type LivestockDomainData,
   type LiveFarmContextSnapshot,
   type MachineryUsageLogInput,
   type QueryErrorKind,
@@ -225,7 +227,7 @@ export async function getLiveFarmContextSnapshot(
   const plots = plotsError ? [] : (plotsRes.data ?? []);
   const plotIds = plots.map((p) => p.id);
 
-  // Parallelise all 8 independent domain queries under the caller's JWT.
+  // Parallelise all 10 independent domain queries under the caller's JWT.
   // Plot-dependent domains receive `plotsError` so they fail explicitly rather than assuming 0 plots.
   const [
     soilSection,
@@ -236,6 +238,8 @@ export async function getLiveFarmContextSnapshot(
     financeSection,
     equipmentSection,
     observationsSection,
+    labourSection,
+    livestockSection,
   ] = await Promise.all([
     loadSoilChemistryDomain(client, farm, plots, plotIds, plotsError, retrievedAt),
     loadSoilMoistureDomain(client, farmId, plotIds, plotsError, retrievedAt),
@@ -245,6 +249,8 @@ export async function getLiveFarmContextSnapshot(
     loadFinancialMarketplaceDomain(client, farmId, retrievedAt),
     loadEquipmentTelemetryDomain(client, farmId, plotIds, plotsError, retrievedAt),
     loadFarmerObservationsDomain(client, farmId, retrievedAt),
+    loadLabourDomain(client, farmId, retrievedAt),
+    loadLivestockDomain(client, farmId, retrievedAt),
   ]);
 
   const domains = {
@@ -256,6 +262,8 @@ export async function getLiveFarmContextSnapshot(
     financial_and_marketplace_records: financeSection,
     equipment_and_iot_telemetry: equipmentSection,
     farmer_observations_and_scouting: observationsSection,
+    labour_and_tasks: labourSection,
+    livestock_and_animal_health: livestockSection,
   };
 
   const allConflicts: ContextConflictDetail[] = Object.values(domains).flatMap((d) => d.conflicts);
@@ -1575,5 +1583,304 @@ async function loadFarmerObservationsDomain(
     };
   } catch {
     return makeErrorSection(domain, "Unexpected error retrieving farmer observations domain.");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Batch 03.4 (LFC-AC-06): labour and livestock domains.
+// Same rules as the other domains: caller-JWT RLS only, every row is a farmer record and therefore
+// `unverified_provisional`, and a failed sub-query is reported as an error (unknown), never as "none".
+// ---------------------------------------------------------------------------
+
+const TERMINAL_TASK_STATUSES = new Set(["completed", "cancelled"]);
+
+function isoDateOnly(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+function daysBefore(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString();
+}
+
+function subQueryIssue(
+  domain: FarmContextDomain,
+  field: string,
+  source: "farm_workers" | "farm_attendance_records" | "farm_operational_tasks" | "farm_livestock_groups" | "farm_livestock_health_events" | "farm_livestock_production_logs",
+  error: SupabaseQueryErrorLike | null,
+  label: string,
+): ContextValidationIssue {
+  return {
+    domain,
+    field,
+    code: "domain_query_error",
+    message: error ? `Failed to retrieve ${label} (${classifyQueryError(error)}).` : `Unexpected error retrieving ${label}.`,
+    source,
+  };
+}
+
+function rollUpDomainStatus(statuses: Array<"ok" | "empty" | "error">): DomainContextSection<unknown>["status"] {
+  if (statuses.every((s) => s === "error")) return "error";
+  if (statuses.some((s) => s === "error")) return "partial";
+  return statuses.some((s) => s === "ok") ? "ok" : "empty";
+}
+
+async function loadLabourDomain(
+  client: VerifiedFarmCallerContext["client"],
+  farmId: string,
+  retrievedAt: string,
+): Promise<DomainContextSection<LabourDomainData>> {
+  const domain: FarmContextDomain = "labour_and_tasks";
+  try {
+    const today = isoDateOnly(retrievedAt);
+    const [workersRes, attendanceRes, tasksRes] = await Promise.all([
+      client
+        .from("farm_workers")
+        .select("id, role, status, updated_at")
+        .eq("farm_id", farmId)
+        .limit(MAX_DOMAIN_ROWS * 4),
+      client
+        .from("farm_attendance_records")
+        .select("id, worker_id, status, clock_in_at")
+        .eq("farm_id", farmId)
+        .gte("clock_in_at", daysBefore(retrievedAt, 7))
+        .order("clock_in_at", { ascending: false })
+        .limit(MAX_DOMAIN_ROWS * 4),
+      client
+        .from("farm_operational_tasks")
+        .select("id, title, category, priority, status, plot_id, crop_cycle_id, assigned_worker_id, start_date, due_date, updated_at")
+        .eq("farm_id", farmId)
+        .not("status", "in", "(completed,cancelled)")
+        .order("due_date", { ascending: true })
+        .limit(MAX_DOMAIN_ROWS),
+    ]);
+
+    const validationIssues: ContextValidationIssue[] = [];
+    const sourceRefs: AuditContextReference[] = [];
+
+    const data: LabourDomainData = {
+      workers: { active: 0, onLeave: 0, inactive: 0, roles: [] },
+      attendanceLast7Days: { presentOrLate: 0, absentOrOnLeave: 0, workersRecorded: 0 },
+      openTasks: [],
+      workersQueryStatus: "ok",
+      attendanceQueryStatus: "ok",
+      tasksQueryStatus: "ok",
+    };
+
+    if (workersRes.error) {
+      data.workersQueryStatus = "error";
+      validationIssues.push(subQueryIssue(domain, "workers", "farm_workers", workersRes.error, "farm workers"));
+    } else {
+      const rows = workersRes.data ?? [];
+      const roles = new Set<string>();
+      for (const w of rows) {
+        const status = String(w.status ?? "").toLowerCase();
+        if (status === "active") {
+          data.workers.active += 1;
+          if (w.role) roles.add(String(w.role));
+        } else if (status === "on_leave") data.workers.onLeave += 1;
+        else data.workers.inactive += 1;
+        sourceRefs.push({ source: "farm_workers", record_id: w.id, observed_at: w.updated_at });
+      }
+      data.workers.roles = [...roles].slice(0, 10);
+      data.workersQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    if (attendanceRes.error) {
+      data.attendanceQueryStatus = "error";
+      validationIssues.push(
+        subQueryIssue(domain, "attendanceLast7Days", "farm_attendance_records", attendanceRes.error, "attendance records"),
+      );
+    } else {
+      const rows = attendanceRes.data ?? [];
+      const workers = new Set<string>();
+      for (const a of rows) {
+        const status = String(a.status ?? "").toLowerCase();
+        if (status === "absent" || status === "on_leave") data.attendanceLast7Days.absentOrOnLeave += 1;
+        else data.attendanceLast7Days.presentOrLate += 1;
+        if (a.worker_id) workers.add(a.worker_id);
+        sourceRefs.push({ source: "farm_attendance_records", record_id: a.id, observed_at: a.clock_in_at });
+      }
+      data.attendanceLast7Days.workersRecorded = workers.size;
+      data.attendanceQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    if (tasksRes.error) {
+      data.tasksQueryStatus = "error";
+      validationIssues.push(subQueryIssue(domain, "openTasks", "farm_operational_tasks", tasksRes.error, "farm tasks"));
+    } else {
+      const rows = (tasksRes.data ?? []).filter(
+        (t) => !TERMINAL_TASK_STATUSES.has(String(t.status ?? "").toLowerCase()),
+      );
+      data.openTasks = rows.map((t) => {
+        const status = String(t.status ?? "").toLowerCase();
+        return {
+          taskId: t.id,
+          title: t.title,
+          category: t.category,
+          priority: t.priority,
+          status,
+          plotId: t.plot_id,
+          cycleId: t.crop_cycle_id,
+          startDate: t.start_date,
+          dueDate: t.due_date,
+          overdue: status === "overdue" || (typeof t.due_date === "string" && t.due_date < today),
+          assigned: Boolean(t.assigned_worker_id),
+          state: "unverified_provisional" as const,
+        };
+      });
+      for (const t of rows) {
+        sourceRefs.push({ source: "farm_operational_tasks", record_id: t.id, observed_at: t.updated_at });
+      }
+      data.tasksQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    const status = rollUpDomainStatus([data.workersQueryStatus, data.attendanceQueryStatus, data.tasksQueryStatus]);
+    if (status === "error") {
+      return { ...makeErrorSection<LabourDomainData>(domain, "Failed to retrieve labour records."), validationIssues };
+    }
+    return {
+      domain,
+      status,
+      data,
+      sourceRefs: normalizeAuditContextReferences(sourceRefs),
+      conflicts: [],
+      missingFields: data.workersQueryStatus === "empty" ? ["workers"] : [],
+      validationIssues,
+    };
+  } catch {
+    return makeErrorSection(domain, "Unexpected error retrieving labour domain.");
+  }
+}
+
+async function loadLivestockDomain(
+  client: VerifiedFarmCallerContext["client"],
+  farmId: string,
+  retrievedAt: string,
+): Promise<DomainContextSection<LivestockDomainData>> {
+  const domain: FarmContextDomain = "livestock_and_animal_health";
+  try {
+    const today = isoDateOnly(retrievedAt);
+    const since = isoDateOnly(daysBefore(retrievedAt, 90));
+    const [groupsRes, healthRes, productionRes] = await Promise.all([
+      client
+        .from("farm_livestock_groups")
+        .select("id, group_name, animal_type, breed, purpose, population, age_weeks, health_status, updated_at")
+        .eq("farm_id", farmId)
+        .order("updated_at", { ascending: false })
+        .limit(MAX_DOMAIN_ROWS),
+      client
+        .from("farm_livestock_health_events")
+        .select("id, group_id, event_type, disease_or_condition, medication_name, administered_on, head_affected, withdrawal_end_date, created_at")
+        .eq("farm_id", farmId)
+        .or(`administered_on.gte.${since},withdrawal_end_date.gte.${today}`)
+        .order("administered_on", { ascending: false })
+        .limit(MAX_DOMAIN_ROWS),
+      client
+        .from("farm_livestock_production_logs")
+        .select("id, group_id, product_type, quantity, unit, log_date, created_at")
+        .eq("farm_id", farmId)
+        .gte("log_date", isoDateOnly(daysBefore(retrievedAt, 30)))
+        .order("log_date", { ascending: false })
+        .limit(MAX_DOMAIN_ROWS),
+    ]);
+
+    const validationIssues: ContextValidationIssue[] = [];
+    const sourceRefs: AuditContextReference[] = [];
+    const data: LivestockDomainData = {
+      groups: [],
+      recentHealthEvents: [],
+      activeWithdrawals: [],
+      recentProduction: [],
+      groupsQueryStatus: "ok",
+      healthQueryStatus: "ok",
+      productionQueryStatus: "ok",
+    };
+
+    if (groupsRes.error) {
+      data.groupsQueryStatus = "error";
+      validationIssues.push(subQueryIssue(domain, "groups", "farm_livestock_groups", groupsRes.error, "livestock groups"));
+    } else {
+      const rows = groupsRes.data ?? [];
+      data.groups = rows.map((g) => ({
+        groupId: g.id,
+        groupName: g.group_name,
+        animalType: g.animal_type,
+        breed: g.breed,
+        purpose: g.purpose,
+        population: g.population,
+        ageWeeks: g.age_weeks,
+        healthStatus: g.health_status,
+        state: "unverified_provisional" as const,
+      }));
+      for (const g of rows) sourceRefs.push({ source: "farm_livestock_groups", record_id: g.id, observed_at: g.updated_at });
+      data.groupsQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    if (healthRes.error) {
+      data.healthQueryStatus = "error";
+      validationIssues.push(
+        subQueryIssue(domain, "recentHealthEvents", "farm_livestock_health_events", healthRes.error, "livestock health events"),
+      );
+    } else {
+      const rows = healthRes.data ?? [];
+      data.recentHealthEvents = rows.map((e) => ({
+        eventId: e.id,
+        groupId: e.group_id,
+        eventType: e.event_type,
+        condition: e.disease_or_condition,
+        medication: e.medication_name,
+        administeredOn: e.administered_on,
+        headAffected: e.head_affected,
+        withdrawalEndDate: e.withdrawal_end_date,
+        state: "unverified_provisional" as const,
+      }));
+      data.activeWithdrawals = data.recentHealthEvents.filter(
+        (e) => typeof e.withdrawalEndDate === "string" && e.withdrawalEndDate >= today,
+      );
+      for (const e of rows) {
+        sourceRefs.push({ source: "farm_livestock_health_events", record_id: e.id, observed_at: e.created_at });
+      }
+      data.healthQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    if (productionRes.error) {
+      data.productionQueryStatus = "error";
+      validationIssues.push(
+        subQueryIssue(domain, "recentProduction", "farm_livestock_production_logs", productionRes.error, "livestock production logs"),
+      );
+    } else {
+      const rows = productionRes.data ?? [];
+      data.recentProduction = rows.map((p) => ({
+        logId: p.id,
+        groupId: p.group_id,
+        productType: p.product_type,
+        quantity: Number(p.quantity),
+        unit: p.unit,
+        logDate: p.log_date,
+        state: "unverified_provisional" as const,
+      }));
+      for (const p of rows) {
+        sourceRefs.push({ source: "farm_livestock_production_logs", record_id: p.id, observed_at: p.created_at });
+      }
+      data.productionQueryStatus = rows.length > 0 ? "ok" : "empty";
+    }
+
+    const status = rollUpDomainStatus([data.groupsQueryStatus, data.healthQueryStatus, data.productionQueryStatus]);
+    if (status === "error") {
+      return { ...makeErrorSection<LivestockDomainData>(domain, "Failed to retrieve livestock records."), validationIssues };
+    }
+    return {
+      domain,
+      status,
+      data,
+      sourceRefs: normalizeAuditContextReferences(sourceRefs),
+      conflicts: [],
+      missingFields: [],
+      validationIssues,
+    };
+  } catch {
+    return makeErrorSection(domain, "Unexpected error retrieving livestock domain.");
   }
 }

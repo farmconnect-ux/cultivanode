@@ -254,3 +254,18 @@ describe("Batch 03.4: web assistant uses the single audited entry point", () => 
     expect(component).toContain('name="consent_type" value="ai_intelligence"');
   });
 });
+
+describe("Batch 03.4: answer feedback (UI-AC-04)", () => {
+  const component = readFileSync(resolve(__dirname, "../components/account/ai-farm-assistant.tsx"), "utf8");
+
+  it("records feedback on audited answers through record_ai_feedback with the answer's trace id", () => {
+    expect(component).toContain('rpc("record_ai_feedback"');
+    expect(component).toContain("p_trace_id: traceId");
+    expect(component).toMatch(/m\.role === "assistant" && m\.traceId && <AnswerFeedback traceId=\{m\.traceId\} \/>/);
+    for (const outcome of ['"accepted"', '"rejected"', '"modified"']) expect(component).toContain(outcome);
+  });
+
+  it("treats a repeat rating (unique violation) as already saved rather than an error", () => {
+    expect(component).toContain('error.code === "23505"');
+  });
+});

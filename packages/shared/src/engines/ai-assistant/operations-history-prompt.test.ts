@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { assembleGroundedEvidencePackage } from '../memory-rag/evidence-assembler';
 import { buildGroundedPrompt } from './prompt-builder';
-import type { CropIdentityDomainData, LiveFarmContextSnapshot } from '../farm-context/types';
+import type { CropIdentityDomainData, FarmContextDomain, LiveFarmContextSnapshot } from '../farm-context/types';
 
 const FARM_ID = '11111111-1111-4111-8111-111111111111';
 
 function makeSnapshot(cropData: CropIdentityDomainData | null): LiveFarmContextSnapshot {
-  const emptySection = <T,>(domain: LiveFarmContextSnapshot['domains'][keyof LiveFarmContextSnapshot['domains']]['domain']) => ({
+  const emptySection = <T,>(domain: FarmContextDomain) => ({
     domain,
     status: 'empty' as const,
     data: null as T | null,
