@@ -33,8 +33,8 @@ insert into public.crop_cycle_operations (id, crop_cycle_id, operation_type, nam
 insert into public.farm_inventory (id, farm_id, item_name, category, quantity, unit, reorder_threshold, expiry_date) values
   ('41000000-0000-4000-8000-000000000501', '41000000-0000-4000-8000-000000000101', 'Urea 50kg', 'fertiliser', 2, 'bags', 3, null),
   ('41000000-0000-4000-8000-000000000502', '41000000-0000-4000-8000-000000000101', 'NPK 15-15-15', 'fertiliser', 10, 'bags', 3, null),
-  ('41000000-0000-4000-8000-000000000503', '41000000-0000-4000-8000-000000000101', 'Emamectin', 'chemical', 4, 'liters', null, current_date + 10),
-  ('41000000-0000-4000-8000-000000000504', '41000000-0000-4000-8000-000000000101', 'Old herbicide', 'chemical', 0, 'liters', null, current_date + 5);
+  ('41000000-0000-4000-8000-000000000503', '41000000-0000-4000-8000-000000000101', 'Emamectin', 'chemical', 4, 'liters', 0, current_date + 10),
+  ('41000000-0000-4000-8000-000000000504', '41000000-0000-4000-8000-000000000101', 'Old herbicide', 'chemical', 0, 'liters', 0, current_date + 5);
 
 -- Worker RPCs are for the service role only.
 set local role authenticated;
