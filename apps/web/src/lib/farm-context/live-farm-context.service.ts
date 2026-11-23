@@ -619,8 +619,6 @@ async function loadCropIdentityDomain(
 
     const cycles = (data ?? []).map((c) => {
       const normalizedStatus = typeof c.status === "string" ? c.status.trim().toLowerCase() : "";
-      const hasValidStage = typeof c.current_stage === "string" && c.current_stage.trim().length > 0;
-      const isActiveForDisplay = ACTIVE_CYCLE_STATUSES.has(normalizedStatus) && hasValidStage;
       return {
         cycleId: c.id,
         plotId: c.plot_id,
