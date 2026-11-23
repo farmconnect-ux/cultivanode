@@ -53,6 +53,7 @@ export async function askFarmAssistantAction(params: {
   const rawFarmId = typeof params.context?.farmId === "string" ? params.context.farmId.trim() : "";
   const rawPlotId = typeof params.context?.plotId === "string" ? params.context.plotId.trim() : "";
   const rawCropId = typeof params.context?.cropId === "string" ? params.context.cropId.trim() : "";
+  const rawCycleId = typeof params.context?.cycleId === "string" ? params.context.cycleId.trim() : "";
 
   let resolvedZone: FarmerContext["zone"] = undefined;
   let resolvedStageName: string | undefined = undefined;
@@ -90,6 +91,7 @@ export async function askFarmAssistantAction(params: {
       assertions: {
         plotId: rawPlotId || undefined,
         cropId: rawCropId || undefined,
+        cycleId: rawCycleId || undefined,
         zone: params.context?.zone,
         stageName: params.context?.stageName,
       },
@@ -135,6 +137,7 @@ export async function askFarmAssistantAction(params: {
       farmerId: account.userId,
       farmId: resolvedFarmId,
       plotId: resolvedPlotId,
+      cycleId: verifiedFarmContext?.cropCycleId,
       requestId: traceId,
     },
     verifiedFarmContext,
