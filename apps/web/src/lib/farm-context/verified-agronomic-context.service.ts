@@ -140,6 +140,8 @@ export async function resolveServerVerifiedAgronomicContext(params: {
 
   const isAmbiguous = scopedActiveCycles.length > 1;
   const matchedCycle = scopedActiveCycles.length === 1 ? scopedActiveCycles[0] : undefined;
+  const cycleSelectionMissing = !verifiedPlotId || !requestedCrop || !requestedCycleId;
+  const requestedCycleNotFound = Boolean(requestedCycleId && !matchedCycle && !isAmbiguous);
 
   const verifiedStageRaw =
     typeof matchedCycle?.currentStage === "string" ? matchedCycle.currentStage.trim().toLowerCase() : "";
@@ -195,7 +197,11 @@ export async function resolveServerVerifiedAgronomicContext(params: {
       ? null
       : isAmbiguous
         ? "crop_cycle_ambiguous"
-        : resolution.reasonCode,
+        : cycleSelectionMissing
+          ? "crop_cycle_selection_required"
+          : requestedCycleNotFound
+            ? "crop_cycle_missing"
+            : resolution.reasonCode,
     ...(isAmbiguous ? { ambiguousCycleCount: scopedActiveCycles.length } : {}),
   };
 }
