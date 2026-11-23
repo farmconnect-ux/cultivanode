@@ -8,9 +8,15 @@ import yo from "@/i18n/dictionaries/yo";
  * Batch 05 (part 1): farm monitors raise in-app notifications with these kinds. The inbox must
  * have words for every kind in both languages, and the farmer's answer goes through the RPC.
  */
-const KINDS = ["farm_operation_upcoming", "farm_operation_overdue", "farm_task_overdue", "farm_soil_test_needed"] as const;
+const KINDS = [
+  "farm_operation_upcoming", "farm_operation_overdue", "farm_task_overdue", "farm_soil_test_needed",
+  "farm_weather_risk", "farm_stock_low", "farm_stock_expiring",
+] as const;
 const root = resolve(__dirname, "../../../..");
-const migration = readFileSync(resolve(root, "supabase/migrations/20261126000000_batch_05_farm_monitors.sql"), "utf8");
+const migration = [
+  "supabase/migrations/20261126000000_batch_05_farm_monitors.sql",
+  "supabase/migrations/20261127000000_batch_05_weather_and_stock_monitors.sql",
+].map((f) => readFileSync(resolve(root, f), "utf8")).join("\n");
 
 describe("Batch 05 farm alerts in the inbox", () => {
   it("every notification kind raised by the monitors has English and Yorùbá text", () => {
