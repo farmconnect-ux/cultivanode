@@ -8977,6 +8977,10 @@ export type Database = {
         Args: { p_note?: string; p_outcome: string; p_trace_id: string }
         Returns: string
       }
+      respond_to_intelligence_event: {
+        Args: { p_event_id: string; p_response: string }
+        Returns: undefined
+      }
       create_farm_memory_item: {
         Args: {
           p_category: string

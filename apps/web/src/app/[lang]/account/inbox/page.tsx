@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarkAllRead } from "@/components/account/booking-forms";
-import { openMarketplaceOrderNotification } from "@/actions/notifications";
+import { openMarketplaceOrderNotification, respondToFarmAlert } from "@/actions/notifications";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon, type IconName } from "@/components/ds/icon";
 import { MetricCard } from "@/components/live/metric-card";
@@ -21,13 +21,14 @@ type Note = {
   id: string;
   kind: string;
   booking_id: string | null;
-  data: { title?: string; job_date?: string; name?: string; item_summary?: string; order_id?: string; order_number?: string; tracking?: string; note?: string };
+  data: { title?: string; job_date?: string; name?: string; item_summary?: string; order_id?: string; order_number?: string; tracking?: string; note?: string; event_id?: string; crop_cycle_id?: string };
   read_at: string | null;
   created_at: string;
 };
 
 const CATEGORIES = [
   { key: "all", label: "All" },
+  { key: "farm", label: "Farm alerts" },
   { key: "jobs", label: "Jobs & bookings" },
   { key: "verification", label: "Verification" },
   { key: "payments", label: "Payments" },
@@ -35,6 +36,7 @@ const CATEGORIES = [
 ] as const;
 
 function categoryOf(n: Note): string {
+  if (n.kind.startsWith("farm_")) return "farm";
   if (n.kind.includes("marketplace_order")) return "jobs";
   if (n.kind.includes("dispute")) return "disputes";
   if (n.kind.includes("payment") || n.kind.includes("payout")) return "payments";
@@ -47,6 +49,7 @@ const LOOK: Record<string, { icon: IconName; bar: string; chip: string }> = {
   disputes: { icon: "gavel", bar: "bg-error", chip: "bg-error-container text-on-error-container" },
   payments: { icon: "account_balance_wallet", bar: "bg-tertiary-container", chip: "bg-tertiary-fixed text-on-tertiary-fixed" },
   verification: { icon: "verified_user", bar: "bg-secondary", chip: "bg-secondary-container/60 text-on-secondary-container" },
+  farm: { icon: "eco", bar: "bg-secondary", chip: "bg-secondary-container/60 text-on-secondary-container" },
   jobs: { icon: "agriculture", bar: "bg-primary-container", chip: "bg-surface-container-high text-primary" },
   system: { icon: "notifications", bar: "bg-outline-variant", chip: "bg-surface-container text-on-surface-variant" },
 };
@@ -170,6 +173,41 @@ export default async function InboxPage({
                             {m.openOrder} <Icon name="arrow_forward" className="text-base" />
                           </button>
                         </form>
+                      )}
+                      {n.kind.startsWith("farm_") && (
+                        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start">
+                          {n.data.crop_cycle_id && /^[0-9a-f-]{36}$/i.test(n.data.crop_cycle_id) && (
+                            <Link
+                              href={`/${lang}/account/crops/${n.data.crop_cycle_id}`}
+                              className="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-md text-label-md text-white hover:bg-primary"
+                            >
+                              {m.openCrop} <Icon name="arrow_forward" className="text-base" />
+                            </Link>
+                          )}
+                          {!n.read_at && n.data.event_id && (
+                            <form action={respondToFarmAlert} className="flex flex-wrap gap-1">
+                              <input type="hidden" name="notification_id" value={n.id} />
+                              <input type="hidden" name="lang" value={lang} />
+                              {(
+                                [
+                                  ["useful", m.alertUseful],
+                                  ["not_useful", m.alertNotUseful],
+                                  ["done", m.alertDone],
+                                ] as const
+                              ).map(([value, label]) => (
+                                <button
+                                  key={value}
+                                  type="submit"
+                                  name="response"
+                                  value={value}
+                                  className="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-on-surface hover:bg-surface-container-low"
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </form>
+                          )}
+                        </div>
                       )}
                       {n.booking_id && (
                         <Link
