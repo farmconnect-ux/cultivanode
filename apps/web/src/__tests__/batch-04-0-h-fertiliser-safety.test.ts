@@ -458,6 +458,8 @@ describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safet
         },
         auditContextRefs: [],
       } as never,
+      // Explicit selection (Revision 7) so the check reaches geographic verification.
+      assertions: { plotId: PLOT_OWNED, cropId: "maize", cycleId: "cycle-1" },
     });
     expect(unverifiedGeoRes.conflict).toBe(false);
     if (!unverifiedGeoRes.conflict) {

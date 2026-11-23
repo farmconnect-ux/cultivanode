@@ -305,6 +305,10 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
     };
   }
 
+  const targetPlotId = options?.plotId?.trim() || '';
+  const targetCropId = options?.cropId?.trim().toLowerCase() || '';
+  const targetCycleId = options?.cycleId?.trim() || '';
+
   // Numerical context must identify one exact cycle, plot, and crop. A coincidental single match
   // is not sufficient evidence that the caller selected the intended cultivation cycle.
   if (!targetPlotId || !targetCropId || !targetCycleId) {
@@ -352,7 +356,6 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
     };
   }
 
-  const targetPlotId = options?.plotId?.trim() || '';
   if (targetPlotId && geo.plotId?.trim() && geo.plotId.trim() !== targetPlotId) {
     return {
       ok: false,
@@ -390,8 +393,6 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
     };
   }
 
-  const targetCropId = options?.cropId?.trim().toLowerCase() || '';
-  const targetCycleId = options?.cycleId?.trim() || '';
 
   const scopedCycles = allCycles.filter((c) => {
     if (targetPlotId && c.plotId !== targetPlotId) return false;
