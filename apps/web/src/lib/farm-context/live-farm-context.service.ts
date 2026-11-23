@@ -620,7 +620,7 @@ async function loadCropIdentityDomain(
     const cycles = (data ?? []).map((c) => {
       const normalizedStatus = typeof c.status === "string" ? c.status.trim().toLowerCase() : "";
       const hasValidStage = typeof c.current_stage === "string" && c.current_stage.trim().length > 0;
-      const isVerifiedActive = ACTIVE_CYCLE_STATUSES.has(normalizedStatus) && hasValidStage;
+      const isActiveForDisplay = ACTIVE_CYCLE_STATUSES.has(normalizedStatus) && hasValidStage;
       return {
         cycleId: c.id,
         plotId: c.plot_id,
@@ -631,7 +631,9 @@ async function loadCropIdentityDomain(
         expectedHarvestDate: c.expected_harvest_date,
         healthStatus: c.health_status,
         healthScore: c.health_score,
-        state: isVerifiedActive ? ("verified_current" as const) : ("unverified_provisional" as const),
+        // Active lifecycle + a populated stage do not independently verify agronomic truth.
+        // Preserve the record as provisional; the trusted resolver validates DB status and identity.
+        state: "unverified_provisional" as const,
       };
     });
 
