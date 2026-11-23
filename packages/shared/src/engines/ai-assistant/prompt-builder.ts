@@ -1,4 +1,5 @@
 import type { FarmerContext, GroundedKnowledgeSnippet, GroundedPrompt } from './types';
+import { formatSubjectAmbiguityNotice, type SubjectAmbiguity } from './subject-ambiguity';
 import type { AppLanguage } from '../../roles';
 import type { GroundedEvidencePackage } from '../memory-rag/types';
 import { sanitizeMetadataField, serializeUntrustedEvidenceJson } from '../memory-rag/evidence-assembler';
@@ -276,6 +277,7 @@ export function buildGroundedPrompt(
   context: FarmerContext,
   language: AppLanguage | 'pcm' = 'en',
   groundedEvidence?: GroundedEvidencePackage | null,
+  options?: { subjectAmbiguity?: SubjectAmbiguity | null },
 ): GroundedPrompt {
   const draftSnippets = retrieveGroundedContext(context);
   const publishedSnippets: GroundedKnowledgeSnippet[] = (groundedEvidence?.publishedAgronomicStandards ?? []).map(
@@ -311,12 +313,16 @@ Clearly distinguish verified facts from general advice. If confidence is low, re
   }
 
   const evidenceBlock = groundedEvidence ? `\n\n${formatGroundedEvidenceSections(groundedEvidence)}` : '';
+  const ambiguityBlock =
+    options?.subjectAmbiguity && options.subjectAmbiguity.candidates.length > 1
+      ? `\n\n${formatSubjectAmbiguityNotice(options.subjectAmbiguity)}`
+      : '';
 
   const userPrompt = `Farmer Context:
 - Crop: ${sanitizeMetadataField(context.cropId || 'unverified (not provided)', 80)}
 - Zone: ${sanitizeMetadataField(context.zone ?? 'unverified (not provided)', 40)}
 - Current Stage: ${sanitizeMetadataField(context.stageName ?? 'General', 80)}
-- Days after planting: ${context.daysAfterPlanting ?? 'N/A'}${evidenceBlock}
+- Days after planting: ${context.daysAfterPlanting ?? 'N/A'}${evidenceBlock}${ambiguityBlock}
 
 Reference Guidelines (Draft):
 ${draftContextText}

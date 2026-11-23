@@ -17,7 +17,26 @@ export type AssistantAnswer = {
   traceId: string | null;
   usedBasicAdvice: boolean;
   safetyNotes: string[];
+  /** LFC-AC-04: several active crops matched and none was chosen. The farmer picks one to ask again. */
+  candidates: AssistantCandidate[];
 };
+
+export type AssistantCandidate = { cycleId: string; cropId: string; plotId: string | null; plotName: string | null };
+
+function readCandidates(value: unknown): AssistantCandidate[] {
+  const list = (value as { candidates?: unknown } | null)?.candidates;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((c) => {
+    const r = c as Record<string, unknown>;
+    if (typeof r.cycleId !== 'string' || typeof r.cropId !== 'string') return [];
+    return [{
+      cycleId: r.cycleId,
+      cropId: r.cropId,
+      plotId: typeof r.plotId === 'string' ? r.plotId : null,
+      plotName: typeof r.plotName === 'string' ? r.plotName : null,
+    }];
+  });
+}
 
 export type AskResult =
   | { outcome: 'ok'; answer: AssistantAnswer }
@@ -90,6 +109,7 @@ export function interpretAssistantResponse(status: number, json: unknown): AskRe
     traceId?: string;
     providerUsed?: string;
     safetyAppendices?: string[];
+    subjectAmbiguity?: unknown;
     error?: string;
   };
   const ref = typeof body.traceId === 'string' ? body.traceId.slice(0, 8) : undefined;
@@ -101,6 +121,7 @@ export function interpretAssistantResponse(status: number, json: unknown): AskRe
         traceId: typeof body.traceId === 'string' ? body.traceId : null,
         usedBasicAdvice: body.providerUsed === 'rule-engine',
         safetyNotes: Array.isArray(body.safetyAppendices) ? body.safetyAppendices.filter((x) => typeof x === 'string') : [],
+        candidates: readCandidates(body.subjectAmbiguity),
       },
     };
   }

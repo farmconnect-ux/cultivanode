@@ -4,6 +4,7 @@ import type { GroundedEvidencePackage } from '../memory-rag/types';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
 import type { VerifiedAgronomicFarmContext } from './verified-farm-context';
 import { buildGroundedPrompt } from './prompt-builder';
+import { subjectClarificationQuestion, type SubjectAmbiguity } from './subject-ambiguity';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
 import {
   buildAmbiguousQueryClarification,
@@ -36,6 +37,12 @@ export interface GroundedAiAssistantRequest {
   approvedFertiliserCalculation?: FertiliserRecommendation | null;
   /** Trusted server-verified farm/plot/zone/crop-cycle context (Batch 04.0-H Revision 5). */
   verifiedFarmContext?: VerifiedAgronomicFarmContext | null;
+  /**
+   * Batch 03.4 (LFC-AC-04): set by the server when several active crop cycles match and none was
+   * selected. The crop, stage and cycle are then withheld from the prompt and the rule engine, and
+   * the answer asks the farmer which cycle is meant instead of guessing.
+   */
+  subjectAmbiguity?: SubjectAmbiguity | null;
 }
 
 export interface GroundedAiAssistantResponse {
@@ -56,6 +63,8 @@ export interface GroundedAiAssistantResponse {
   /** True when server-side numeric validator blocked an unsupported numerical fertiliser prescription. */
   numericGuardrailBlocked: boolean;
   numericGuardrailReasonCode: string | null;
+  /** Present when the question could refer to more than one active crop cycle (LFC-AC-04). */
+  subjectAmbiguity?: SubjectAmbiguity;
 }
 
 /**
@@ -116,18 +125,18 @@ export function generateAgronomicAdvisorAnswer(
     if (lang === 'yo') {
       return `Eto Iṣakoso Koriko fun ${context.cropId || 'oko rẹ'}:
 1. Ṣaaju ki irugbin to hu (Pre-emergence): Lo oogun koriko ti NAFDAC fọwọsi (gẹgẹbi Atrazine fun àgbàdo) ni ibamu pẹlu itọsọna iwọn lilo lori aami ọja lori ilẹ to tutu.
-2. Maṣe lo Paraquat rárá - NAFDAC ti fofinde e patapata!
+2. Maṣe lo oogun tí NAFDAC ti fofinde rárá!
 3. Nigbati irugbin ba ti hu: Ṣe itọju koriko pẹlu ọwọ ṣaaju ki koriko to gba agbara lori ohun ọgbin.`;
     }
     if (lang === 'pcm') {
       return `Weed control protocol for your ${context.cropId || 'crop'}:
 1. Before seeds sprout: Use a NAFDAC-approved selective herbicide (such as Atrazine for maize) strictly following the product label rate on damp soil.
-2. Never use Paraquat at all - NAFDAC don ban am completely for Nigeria!
+2. Never use any banned product at all - NAFDAC don ban dem for Nigeria!
 3. After crops grow: Do timely manual hoe weeding before weeds block sun and nutrients from your crop.`;
     }
     return `Weed control guidelines for ${context.cropId || 'crops'} (NAFDAC & IITA compliant):
 1. Pre-Emergence: Use a NAFDAC-registered selective herbicide (such as Atrazine for maize/sorghum) strictly according to the manufacturer label rate on damp soil.
-2. Safety Warning: Do NOT use Paraquat — it is strictly prohibited and banned by NAFDAC nationwide.
+2. Safety Warning: Do NOT use banned products. Use only NAFDAC-registered herbicides.
 3. Post-Emergence: Perform timely primary hoe weeding before canopy closure.`;
   }
 
@@ -352,7 +361,16 @@ export async function askGroundedAiAssistant(
   const timeoutMs = params.timeoutMs ?? 20000;
   const mimeType = params.imageMimeType ?? 'image/jpeg';
 
-  const groundedPrompt = buildGroundedPrompt(params.query, params.context, lang, params.groundedEvidence);
+  const ambiguity = params.subjectAmbiguity && params.subjectAmbiguity.candidates.length > 1 ? params.subjectAmbiguity : null;
+  // Never let a crop, stage or cycle stand in for a choice the farmer has not made.
+  const context: FarmerContext = ambiguity
+    ? { ...params.context, cropId: '', stageName: undefined, daysAfterPlanting: undefined, cycleId: undefined }
+    : params.context;
+  const verifiedFarmContext = ambiguity ? null : (params.verifiedFarmContext ?? null);
+
+  const groundedPrompt = buildGroundedPrompt(params.query, context, lang, params.groundedEvidence, {
+    subjectAmbiguity: ambiguity,
+  });
 
   let rawAnswer = '';
   let providerUsed: AiProvider = 'rule-engine';
@@ -418,7 +436,8 @@ export async function askGroundedAiAssistant(
 
   // 4. Fallback to deterministic agronomic advisor
   if (!rawAnswer) {
-    rawAnswer = generateAgronomicAdvisorAnswer(params.query, params.context, lang);
+    rawAnswer = generateAgronomicAdvisorAnswer(params.query, context, lang);
+    if (ambiguity) rawAnswer = `${subjectClarificationQuestion(ambiguity, lang)}\n\n${rawAnswer}`;
     providerUsed = 'rule-engine';
   }
 
@@ -429,13 +448,13 @@ export async function askGroundedAiAssistant(
   // Only `params.verifiedFarmContext` (server-resolved RLS farm/plot/crop-cycle context) may
   // authorise numerical validation; client-supplied context assertions never substitute for it.
   const numericValidation = validateAssistantNumericalOutput(guardrailResult.sanitizedResponseText, {
-    cropId: params.verifiedFarmContext?.cropId ?? params.context.cropId,
-    farmId: params.verifiedFarmContext?.farmId ?? params.context.farmId ?? null,
-    plotId: params.verifiedFarmContext?.plotId ?? params.context.plotId ?? null,
-    requestId: params.context.requestId ?? null,
-    zone: params.verifiedFarmContext?.zone ?? null,
-    growthStage: params.verifiedFarmContext?.growthStage ?? null,
-    verifiedFarmContext: params.verifiedFarmContext ?? null,
+    cropId: verifiedFarmContext?.cropId ?? context.cropId,
+    farmId: verifiedFarmContext?.farmId ?? context.farmId ?? null,
+    plotId: verifiedFarmContext?.plotId ?? context.plotId ?? null,
+    requestId: context.requestId ?? null,
+    zone: verifiedFarmContext?.zone ?? null,
+    growthStage: verifiedFarmContext?.growthStage ?? null,
+    verifiedFarmContext: verifiedFarmContext ?? null,
     language: lang,
     approvedCalculation: params.approvedFertiliserCalculation ?? null,
     verifiedSourceQuote: null,
@@ -458,5 +477,6 @@ export async function askGroundedAiAssistant(
     recommendationStatus: numericValidation.recommendationStatus,
     numericGuardrailBlocked: !numericValidation.passed,
     numericGuardrailReasonCode: numericValidation.reasonCode,
+    ...(ambiguity ? { subjectAmbiguity: ambiguity } : {}),
   };
 }

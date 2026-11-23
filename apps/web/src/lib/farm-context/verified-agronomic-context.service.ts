@@ -3,9 +3,11 @@ import {
   ACTIVE_CROP_CYCLE_STATUSES,
   FARM_ZONES,
   VALID_GROWTH_STAGES,
+  buildSubjectAmbiguity,
   resolveVerifiedAgronomicFarmContextFromSnapshot,
   type FarmZone,
   type LiveFarmContextSnapshot,
+  type SubjectAmbiguity,
   type VerifiedAgronomicFarmContext,
   type VerifiedGeographicZoneResolution,
 } from "@cultivanode/shared";
@@ -48,6 +50,11 @@ export type ServerVerifiedContextResult =
       verifiedContext: VerifiedAgronomicFarmContext | null;
       unavailableReasonCode: string | null;
       ambiguousCycleCount?: number;
+      /**
+       * LFC-AC-04: set when more than one active crop cycle matches and the caller selected none.
+       * The route must then answer with `subject_ambiguous` and the candidates, never a guessed cycle.
+       */
+      subjectAmbiguity?: SubjectAmbiguity;
     };
 
 /**
@@ -143,6 +150,16 @@ export async function resolveServerVerifiedAgronomicContext(params: {
   const cycleSelectionMissing = !verifiedPlotId || !requestedCrop || !requestedCycleId;
   const requestedCycleNotFound = Boolean(requestedCycleId && !matchedCycle && !isAmbiguous);
 
+  // LFC-AC-04: several cycles match and none was chosen. Name them so the farmer can pick one.
+  const plotNames = new Map<string, string>(
+    (snapshot.domains?.crop_identity_variety_and_stage?.data?.fallbackPlotCrops ?? []).map((p) => [
+      p.plotId,
+      p.plotName,
+    ]),
+  );
+  const subjectAmbiguity =
+    isAmbiguous && !requestedCycleId ? buildSubjectAmbiguity(scopedActiveCycles, plotNames) : null;
+
   const verifiedStageRaw =
     typeof matchedCycle?.currentStage === "string" ? matchedCycle.currentStage.trim().toLowerCase() : "";
   const verifiedGrowthStage =
@@ -203,5 +220,6 @@ export async function resolveServerVerifiedAgronomicContext(params: {
             ? "crop_cycle_missing"
             : resolution.reasonCode,
     ...(isAmbiguous ? { ambiguousCycleCount: scopedActiveCycles.length } : {}),
+    ...(subjectAmbiguity ? { subjectAmbiguity } : {}),
   };
 }

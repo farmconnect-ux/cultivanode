@@ -29,3 +29,4 @@ export {
 export * from './grounding';
 export * from './prompt-builder';
 export * from './llm-adapter';
+export * from './subject-ambiguity';

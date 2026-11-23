@@ -771,6 +771,7 @@ const en = {
       failed: 'The assistant could not answer right now. Please try again.',
       failedRef: 'The assistant could not answer right now (ref {ref}). Please try again.',
     },
+    whichCrop: 'You have more than one crop growing. Which one is this question about?',
     helpful: 'Was this helpful?',
     yes: 'Yes',
     no: 'No',
