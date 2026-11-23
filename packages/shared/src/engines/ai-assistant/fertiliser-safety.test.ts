@@ -113,6 +113,8 @@ function makeVerifiedFarmContext(overrides?: Parameters<typeof makeLiveSnapshot>
   const res = resolveVerifiedAgronomicFarmContextFromSnapshot(snap, {
     plotId: overrides?.plotId ?? 'plot-01',
     cropId: overrides?.cropId ?? 'maize',
+    // Explicit cycle selection is required since Batch 04.0-H (crop_cycle_selection_required).
+    cycleId: overrides?.cycleId ?? 'cycle-001',
     verifiedGeographicZone: makeTestGeoZone({
       farmId: overrides?.farmId ?? 'farm-alpha',
       plotId: overrides?.plotId ?? 'plot-01',
@@ -360,7 +362,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       {
         plotId: 'plot-01',
         cropId: 'maize',
-        verifiedGeographicZone: makeTestGeoZone({ resolvedAt: '2026-11-25T12:25:00Z' }),
+        cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ resolvedAt: '2026-11-25T12:25:00Z' }),
         referenceDate: '2026-11-25T12:30:00Z',
       },
     );
@@ -475,7 +477,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     // 5. Snapshot resolver fails closed on unverified zone, missing cycle, plot mismatch, inactive cycle, missing/invalid stage, stale snapshot
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ farmZone: 'derived_savanna' }), {
-        verifiedGeographicZone: null,
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: null,
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_unverified' });
@@ -483,7 +485,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     const validGeo = makeTestGeoZone();
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ noCycles: true }), {
-        verifiedGeographicZone: validGeo,
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo,
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_missing' });
@@ -491,21 +493,23 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ plotId: 'plot-other' }), {
         plotId: 'plot-01',
-        verifiedGeographicZone: validGeo,
+        cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo,
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_plot_mismatch' });
 
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(
-        makeLiveSnapshot({ cycleState: 'unverified_provisional' }),
-        { verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        // The Live Farm Context now labels every cycle row unverified_provisional (Batch 04.0-H); the
+        // resolver gates on the recorded lifecycle status instead, so an ended cycle is inactive.
+        makeLiveSnapshot({ cycleState: 'unverified_provisional', status: 'completed' }),
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       ),
     ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_inactive' });
 
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ currentStage: null }), {
-        verifiedGeographicZone: validGeo,
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo,
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'growth_stage_missing' });
@@ -513,14 +517,14 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(
         makeLiveSnapshot({ currentStage: 'invalid_stage_999' }),
-        { verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       ),
     ).toMatchObject({ ok: false, reasonCode: 'growth_stage_invalid' });
 
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(
         makeLiveSnapshot({ retrievedAt: '2026-11-22T10:00:00Z' }),
-        { verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       ),
     ).toMatchObject({ ok: false, reasonCode: 'farm_context_stale' });
 
@@ -540,7 +544,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     const okRes = resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
       plotId: 'plot-01',
       cropId: 'maize',
-      verifiedGeographicZone: makeTestGeoZone(),
+      cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone(),
       referenceDate: '2026-11-22T12:30:00Z',
     });
     expect(okRes.ok).toBe(true);
@@ -554,6 +558,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
         plotId: 'plot-01',
         cropId: 'maize',
+        cycleId: 'cycle-001',
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_unverified' });
@@ -563,7 +568,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(isTrustedGeographicZoneResolution(forgedGeo)).toBe(false);
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
-        verifiedGeographicZone: forgedGeo,
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: forgedGeo,
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_unverified' });
@@ -571,13 +576,13 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     // 4. Invalid coordinates (Null Island 0,0 / out-of-range 999,99) & missing dataset metadata -> fails closed
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
-        verifiedGeographicZone: makeTestGeoZone({ coordinates: { lat: 0, lng: 0 } }),
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ coordinates: { lat: 0, lng: 0 } }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_unverified' });
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
-        verifiedGeographicZone: makeTestGeoZone({ datasetId: '' }),
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ datasetId: '' }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_unverified' });
@@ -585,7 +590,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     // 5. Out-of-boundary unsupported zone -> fails closed
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
-        verifiedGeographicZone: makeTestGeoZone({ zone: 'arctic_tundra' }),
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ zone: 'arctic_tundra' }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_invalid' });
@@ -593,7 +598,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     // 6. Conflicting stored farms.zone ('rainforest') vs geographically resolved ('derived_savanna') -> fails closed
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ farmZone: 'rainforest' }), {
-        verifiedGeographicZone: makeTestGeoZone({ zone: 'derived_savanna' }),
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ zone: 'derived_savanna' }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_conflict' });
@@ -601,14 +606,14 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     // 7. Cross-farm / cross-plot coordinates -> fails closed
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
-        verifiedGeographicZone: makeTestGeoZone({ farmId: 'farm-other' }),
+        plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ farmId: 'farm-other' }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_farm_mismatch' });
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(baseSnap, {
         plotId: 'plot-01',
-        verifiedGeographicZone: makeTestGeoZone({ plotId: 'plot-other' }),
+        cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: makeTestGeoZone({ plotId: 'plot-other' }),
         referenceDate: '2026-11-22T12:30:00Z',
       }),
     ).toMatchObject({ ok: false, reasonCode: 'geographic_zone_plot_mismatch' });
@@ -621,7 +626,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     for (const status of ['land_preparation', 'planting', 'establishment', 'maintenance'] as const) {
       const res = resolveVerifiedAgronomicFarmContextFromSnapshot(
         makeLiveSnapshot({ status }),
-        { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       );
       expect(res.ok).toBe(true);
       if (res.ok) expect(res.context.cropCycleStatus).toBe(status);
@@ -631,7 +636,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(
         makeLiveSnapshot({ status: 'harvesting' }),
-        { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       ),
     ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_status_ineligible_for_fertiliser' });
 
@@ -640,7 +645,7 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       expect(
         resolveVerifiedAgronomicFarmContextFromSnapshot(
           makeLiveSnapshot({ status: badStatus }),
-          { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+          { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
         ),
       ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_inactive' });
     }
@@ -649,12 +654,12 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
     expect(
       resolveVerifiedAgronomicFarmContextFromSnapshot(
         makeLiveSnapshot({ status: undefined }),
-        { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
+        { plotId: 'plot-01', cropId: 'maize', cycleId: 'cycle-001', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
       ),
     ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_status_missing' });
   });
 
-  it('Revision 6 Finding 3: rejects ambiguous active crop cycles instead of picking first match via .find()', () => {
+  it('Revision 6 Finding 3 (updated for Revision 7): never picks a cycle by omission; explicit selection resolves exactly one cycle', () => {
     const validGeo = makeTestGeoZone({ plotId: undefined });
     const baseCycle = {
       plantingDate: '2026-11-15',
@@ -663,66 +668,75 @@ describe('Batch 04.0-H Revision 2 — Finding 2: Numerical Calculation Binding &
       healthScore: 90,
       state: 'verified_current' as const,
     };
-
-    // 1. Single active cycle with omitted optional plot/crop resolves uniquely
-    const uniqueOmitted = resolveVerifiedAgronomicFarmContextFromSnapshot(
-      makeLiveSnapshot({ status: 'planting' }),
-      { verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
-    );
-    expect(uniqueOmitted.ok).toBe(true);
-    if (uniqueOmitted.ok) expect(uniqueOmitted.context.cropCycleStatus).toBe('planting');
-
-    // 2. Multiple active cycles on different plots with omitted plotId -> ambiguous
-    const multiPlot = resolveVerifiedAgronomicFarmContextFromSnapshot(
+    const twoCycles = (second: { plotId: string; cropId: string; status: string; currentStage: string }) =>
       makeLiveSnapshot({
         customCycles: [
           { ...baseCycle, cycleId: 'c1', plotId: 'plot-01', cropId: 'maize', status: 'maintenance', currentStage: 'basal' },
-          { ...baseCycle, cycleId: 'c2', plotId: 'plot-02', cropId: 'maize', status: 'planting', currentStage: 'vegetative' },
+          { ...baseCycle, cycleId: 'c2', ...second },
         ],
-      }),
-      { cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
-    );
-    expect(multiPlot).toMatchObject({ ok: false, reasonCode: 'crop_cycle_ambiguous', ambiguousCycleCount: 2 });
+      });
 
-    // 3. Multiple active cycles on the SAME plot -> ambiguous even when plotId is supplied
-    const samePlot = resolveVerifiedAgronomicFarmContextFromSnapshot(
-      makeLiveSnapshot({
-        customCycles: [
-          { ...baseCycle, cycleId: 'c1', plotId: 'plot-01', cropId: 'maize', status: 'maintenance', currentStage: 'basal' },
-          { ...baseCycle, cycleId: 'c2', plotId: 'plot-01', cropId: 'maize', status: 'establishment', currentStage: 'vegetative' },
-        ],
+    // 1. A single active cycle is still NOT chosen implicitly (Revision 7: explicit selection required)
+    expect(
+      resolveVerifiedAgronomicFarmContextFromSnapshot(makeLiveSnapshot({ status: 'planting' }), {
+        verifiedGeographicZone: validGeo,
+        referenceDate: '2026-11-22T12:30:00Z',
       }),
-      { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
-    );
-    expect(samePlot).toMatchObject({ ok: false, reasonCode: 'crop_cycle_ambiguous', ambiguousCycleCount: 2 });
+    ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_selection_required' });
 
-    // 4. Multiple active cycles with different crops and omitted cropId -> ambiguous
-    const multiCrop = resolveVerifiedAgronomicFarmContextFromSnapshot(
-      makeLiveSnapshot({
-        customCycles: [
-          { ...baseCycle, cycleId: 'c1', plotId: 'plot-01', cropId: 'maize', status: 'maintenance', currentStage: 'basal' },
-          { ...baseCycle, cycleId: 'c2', plotId: 'plot-02', cropId: 'cassava', status: 'maintenance', currentStage: 'vegetative' },
-        ],
-      }),
-      { verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
-    );
-    expect(multiCrop).toMatchObject({ ok: false, reasonCode: 'crop_cycle_ambiguous', ambiguousCycleCount: 2 });
-
-    // 5. Completed cycle alongside 1 valid active cycle -> uniquely resolves the active cycle
-    const completedPlusActive = resolveVerifiedAgronomicFarmContextFromSnapshot(
-      makeLiveSnapshot({
-        customCycles: [
-          { ...baseCycle, cycleId: 'c-old', plotId: 'plot-01', cropId: 'maize', status: 'completed', currentStage: 'harvest' },
-          { ...baseCycle, cycleId: 'c-active', plotId: 'plot-01', cropId: 'maize', status: 'establishment', currentStage: 'vegetative' },
-        ],
-      }),
-      { plotId: 'plot-01', cropId: 'maize', verifiedGeographicZone: validGeo, referenceDate: '2026-11-22T12:30:00Z' },
-    );
-    expect(completedPlusActive.ok).toBe(true);
-    if (completedPlusActive.ok) {
-      expect(completedPlusActive.context.cropCycleId).toBe('c-active');
-      expect(completedPlusActive.context.cropCycleStatus).toBe('establishment');
+    // 2. Multiple active cycles with omitted selection -> rejected, never the first .find() match
+    for (const snap of [
+      twoCycles({ plotId: 'plot-02', cropId: 'maize', status: 'planting', currentStage: 'vegetative' }),
+      twoCycles({ plotId: 'plot-02', cropId: 'cassava', status: 'maintenance', currentStage: 'vegetative' }),
+    ]) {
+      expect(
+        resolveVerifiedAgronomicFarmContextFromSnapshot(snap, {
+          cropId: 'maize',
+          verifiedGeographicZone: validGeo,
+          referenceDate: '2026-11-22T12:30:00Z',
+        }),
+      ).toMatchObject({ ok: false, reasonCode: 'crop_cycle_selection_required' });
     }
+
+    // 3. Two active cycles on the SAME plot: explicit cycleId resolves exactly the selected one
+    const samePlot = twoCycles({ plotId: 'plot-01', cropId: 'maize', status: 'establishment', currentStage: 'vegetative' });
+    const pickC2 = resolveVerifiedAgronomicFarmContextFromSnapshot(samePlot, {
+      plotId: 'plot-01',
+      cropId: 'maize',
+      cycleId: 'c2',
+      verifiedGeographicZone: validGeo,
+      referenceDate: '2026-11-22T12:30:00Z',
+    });
+    expect(pickC2.ok).toBe(true);
+    if (pickC2.ok) {
+      expect(pickC2.context.cropCycleId).toBe('c2');
+      expect(pickC2.context.cropCycleStatus).toBe('establishment');
+    }
+
+    // 4. Selecting a completed cycle never falls through to an active sibling
+    const completedPlusActive = makeLiveSnapshot({
+      customCycles: [
+        { ...baseCycle, cycleId: 'c-old', plotId: 'plot-01', cropId: 'maize', status: 'completed', currentStage: 'harvest' },
+        { ...baseCycle, cycleId: 'c-active', plotId: 'plot-01', cropId: 'maize', status: 'establishment', currentStage: 'vegetative' },
+      ],
+    });
+    const oldRes = resolveVerifiedAgronomicFarmContextFromSnapshot(completedPlusActive, {
+      plotId: 'plot-01',
+      cropId: 'maize',
+      cycleId: 'c-old',
+      verifiedGeographicZone: validGeo,
+      referenceDate: '2026-11-22T12:30:00Z',
+    });
+    expect(oldRes.ok).toBe(false);
+    const activeRes = resolveVerifiedAgronomicFarmContextFromSnapshot(completedPlusActive, {
+      plotId: 'plot-01',
+      cropId: 'maize',
+      cycleId: 'c-active',
+      verifiedGeographicZone: validGeo,
+      referenceDate: '2026-11-22T12:30:00Z',
+    });
+    expect(activeRes.ok).toBe(true);
+    if (activeRes.ok) expect(activeRes.context.cropCycleId).toBe('c-active');
   });
 });
 
