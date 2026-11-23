@@ -69,6 +69,9 @@ export async function askFarmAssistantAction(params: {
     if (rawPlotId && !UUID_RE.test(rawPlotId)) {
       throw new Error("Invalid plotId format.");
     }
+    if (rawCycleId && !UUID_RE.test(rawCycleId)) {
+      throw new Error("Invalid cycleId format.");
+    }
 
     const supabase = await createClient();
     const { data: farm, error: farmErr } = await supabase
