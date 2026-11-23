@@ -609,17 +609,31 @@ async function loadCropIdentityDomain(
 
     if (error) return makeErrorSection(domain, "Failed to retrieve active crop cycles.", classifyQueryError(error));
 
-    const cycles = (data ?? []).map((c) => ({
-      cycleId: c.id,
-      plotId: c.plot_id,
-      cropId: c.crop_id,
-      currentStage: c.current_stage,
-      plantingDate: c.planting_date,
-      expectedHarvestDate: c.expected_harvest_date,
-      healthStatus: c.health_status,
-      healthScore: c.health_score,
-      state: "verified_current" as const,
-    }));
+    const ACTIVE_CYCLE_STATUSES = new Set([
+      "land_preparation",
+      "planting",
+      "establishment",
+      "maintenance",
+      "harvesting",
+    ]);
+
+    const cycles = (data ?? []).map((c) => {
+      const normalizedStatus = typeof c.status === "string" ? c.status.trim().toLowerCase() : "";
+      const hasValidStage = typeof c.current_stage === "string" && c.current_stage.trim().length > 0;
+      const isVerifiedActive = ACTIVE_CYCLE_STATUSES.has(normalizedStatus) && hasValidStage;
+      return {
+        cycleId: c.id,
+        plotId: c.plot_id,
+        cropId: c.crop_id,
+        status: normalizedStatus,
+        currentStage: c.current_stage,
+        plantingDate: c.planting_date,
+        expectedHarvestDate: c.expected_harvest_date,
+        healthStatus: c.health_status,
+        healthScore: c.health_score,
+        state: isVerifiedActive ? ("verified_current" as const) : ("unverified_provisional" as const),
+      };
+    });
 
     // If there are no active crop cycles and the plots query failed, we cannot conclude crop identity is missing.
     if (cycles.length === 0 && plotsError) {

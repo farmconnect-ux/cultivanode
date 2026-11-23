@@ -2,7 +2,7 @@ import type { AppLanguage } from '../../roles';
 import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
 import { isSupportedFertiliserCrop, isTrustedFertiliserCalculation } from '../inputs/fertiliser';
 import {
-  ACTIVE_CROP_CYCLE_STATUSES,
+  FERTILISER_ELIGIBLE_CROP_CYCLE_STATUSES,
   MAX_VERIFIED_FARM_CONTEXT_AGE_MS,
   VALID_AGRO_ZONES,
   VALID_GROWTH_STAGES,
@@ -464,7 +464,7 @@ function validateCalculationBindingAndValues(
 
   if (
     !vctx.cropCycleId?.trim() ||
-    !(ACTIVE_CROP_CYCLE_STATUSES as readonly string[]).includes(vctx.cropCycleStatus)
+    !(FERTILISER_ELIGIBLE_CROP_CYCLE_STATUSES as readonly string[]).includes(vctx.cropCycleStatus)
   ) {
     return { ok: false, reasonCode: 'verified_crop_cycle_invalid' };
   }

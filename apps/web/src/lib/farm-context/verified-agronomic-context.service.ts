@@ -1,11 +1,13 @@
 import "server-only";
 import {
+  ACTIVE_CROP_CYCLE_STATUSES,
   FARM_ZONES,
   VALID_GROWTH_STAGES,
   resolveVerifiedAgronomicFarmContextFromSnapshot,
   type FarmZone,
   type LiveFarmContextSnapshot,
   type VerifiedAgronomicFarmContext,
+  type VerifiedGeographicZoneResolution,
 } from "@cultivanode/shared";
 import { verifyFarmPlotAccess, type VerifiedFarmCallerContext } from "@/lib/engines-api-helper";
 import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context.service";
@@ -33,30 +35,41 @@ export type ServerVerifiedContextResult =
       conflict: false;
       snapshot: LiveFarmContextSnapshot;
       verifiedPlotId?: string;
+      /** Stored farm zone from RLS `farms.zone` (for display/conflict checks only; NOT independently geographically verified). */
       verifiedZone?: FarmZone;
       verifiedCropId?: string;
       verifiedGrowthStage?: string;
+      /**
+       * Trusted immutable agronomic farm context eligible for numerical fertiliser validation.
+       * Always `null` when geographic verification is unavailable (`geographic_zone_unverified`),
+       * crop cycles are ambiguous (`crop_cycle_ambiguous`), or lifecycle status is ineligible.
+       */
       verifiedContext: VerifiedAgronomicFarmContext | null;
       unavailableReasonCode: string | null;
+      ambiguousCycleCount?: number;
     };
 
 /**
  * Single authoritative server-side resolver shared by `/api/ai/assistant` and `askFarmAssistantAction`
- * (Batch 04.0-H Revision 5, Remediations A, B, C, D).
+ * (Batch 04.0-H Revision 6 — Findings 1, 2, and 3).
  *
- * Security invariants:
- * - Resolves geographic zone ONLY from the verified RLS-scoped `farms` record (`snapshot.farmZone`).
- * - Resolves active crop cycle and growth stage ONLY from verified RLS-scoped `crop_cycles` records.
- * - Verifies plot-to-farm ownership under caller RLS via `verifyFarmPlotAccess` when `plotId` is supplied.
- * - Treats client-supplied `zone` and `stageName` strictly as untrusted assertions:
- *   rejects invalid or conflicting assertions (non-disclosing) and NEVER lets them override server records.
- * - Produces a deep-frozen, WeakSet-registered `VerifiedAgronomicFarmContext` when all mandatory
- *   conditions are satisfied, or `verifiedContext: null` (causing numerical prescriptions to fail closed).
+ * Security & agronomic integrity invariants:
+ * - Finding 1 (Geographic Verification): `farms.zone` is a stored farm attribute, NOT independent
+ *   geographic verification. Because no authoritative agro-ecological boundary dataset exists in
+ *   the repository yet, `verifiedGeographicZone` defaults to `null` and `verifiedContext` fails
+ *   closed with `geographic_zone_unverified` (never silently falling back to `farms.zone`).
+ * - Finding 2 (Lifecycle Integrity): Preserves actual DB `crop_cycles.status` and never hardcodes
+ *   `maintenance` or synthetic `verified_current`.
+ * - Finding 3 (Ambiguity Rejection): Uses deterministic `.filter(...)` instead of `.find(...)`;
+ *   when multiple active crop cycles match without unique plot/crop disambiguation, refuses to
+ *   pick an arbitrary first match and returns `unavailableReasonCode: "crop_cycle_ambiguous"`.
  */
 export async function resolveServerVerifiedAgronomicContext(params: {
   caller: VerifiedFarmCallerContext;
   snapshot?: LiveFarmContextSnapshot;
   assertions?: ClientContextAssertions;
+  /** Optional server-verified geographic zone resolution when an authoritative boundary dataset is wired. */
+  verifiedGeographicZone?: VerifiedGeographicZoneResolution | null;
   referenceDate?: string;
 }): Promise<ServerVerifiedContextResult> {
   const { caller, assertions } = params;
@@ -81,8 +94,9 @@ export async function resolveServerVerifiedAgronomicContext(params: {
   // 2. Load RLS-scoped LiveFarmContextSnapshot (if not already provided by caller route)
   const snapshot = params.snapshot ?? (await getLiveFarmContextSnapshot(caller));
 
-  // 3. Authoritative geographic zone from verified farm record (NEVER from client assertion)
-  const verifiedZone =
+  // 3. Validate client zone assertion against stored RLS farm zone (for spoofing rejection only;
+  //    this does NOT constitute independent geographic verification for numerical prescriptions).
+  const storedFarmZone =
     typeof snapshot.farmZone === "string" &&
     (FARM_ZONES as readonly string[]).includes(snapshot.farmZone.trim().toLowerCase())
       ? (snapshot.farmZone.trim().toLowerCase() as FarmZone)
@@ -98,7 +112,7 @@ export async function resolveServerVerifiedAgronomicContext(params: {
         error: `Invalid agro-ecological zone "${assertions.zone}".`,
       };
     }
-    if (!verifiedZone || clientZone !== verifiedZone) {
+    if (!storedFarmZone || clientZone !== storedFarmZone) {
       return {
         conflict: true,
         httpStatus: 422,
@@ -108,14 +122,24 @@ export async function resolveServerVerifiedAgronomicContext(params: {
     }
   }
 
-  // 4. Authoritative active crop cycle & growth stage from verified RLS crop_cycles
-  const activeCycles = snapshot.domains?.crop_identity_variety_and_stage?.data?.activeCycles ?? [];
+  // 4. Deterministic, unambiguous active crop-cycle resolution (NEVER `.find(...)` first-match!)
+  const allCycles = snapshot.domains?.crop_identity_variety_and_stage?.data?.activeCycles ?? [];
   const requestedCrop = assertions?.cropId?.trim().toLowerCase() || "";
-  const matchedCycle = activeCycles.find((c) => {
+  const activeStatusSet = new Set<string>(ACTIVE_CROP_CYCLE_STATUSES);
+
+  const scopedActiveCycles = allCycles.filter((c) => {
     if (verifiedPlotId && c.plotId !== verifiedPlotId) return false;
     if (requestedCrop && c.cropId.trim().toLowerCase() !== requestedCrop) return false;
+    // If status is populated, require it to be an active cultivation status; if omitted in legacy mocks,
+    // allow downstream `resolveVerifiedAgronomicFarmContextFromSnapshot` to reject `crop_cycle_status_missing`.
+    if (typeof c.status === "string" && c.status.trim() !== "") {
+      return activeStatusSet.has(c.status.trim().toLowerCase());
+    }
     return true;
   });
+
+  const isAmbiguous = scopedActiveCycles.length > 1;
+  const matchedCycle = scopedActiveCycles.length === 1 ? scopedActiveCycles[0] : undefined;
 
   const verifiedStageRaw =
     typeof matchedCycle?.currentStage === "string" ? matchedCycle.currentStage.trim().toLowerCase() : "";
@@ -123,7 +147,7 @@ export async function resolveServerVerifiedAgronomicContext(params: {
     verifiedStageRaw && VALID_GROWTH_STAGES.has(verifiedStageRaw) ? verifiedStageRaw : undefined;
 
   // Client-supplied stageName is an untrusted assertion: reject invalid or conflicting assertions;
-  // NEVER let client stageName override or substitute for a missing/different active crop-cycle stage.
+  // NEVER let client stageName override or substitute for a missing, ambiguous, or different cycle stage.
   if (
     assertions?.stageName !== undefined &&
     assertions.stageName !== null &&
@@ -148,10 +172,13 @@ export async function resolveServerVerifiedAgronomicContext(params: {
     }
   }
 
-  // 5. Mint immutable, WeakSet-registered VerifiedAgronomicFarmContext when all checks succeed
+  // 5. Attempt to mint immutable, WeakSet-registered VerifiedAgronomicFarmContext.
+  //    In production, `params.verifiedGeographicZone` is `null` because no authoritative boundary
+  //    dataset exists yet, so this fails closed with `geographic_zone_unverified` (or `crop_cycle_ambiguous`).
   const resolution = resolveVerifiedAgronomicFarmContextFromSnapshot(snapshot, {
     plotId: verifiedPlotId,
     cropId: matchedCycle?.cropId ?? (requestedCrop || undefined),
+    verifiedGeographicZone: params.verifiedGeographicZone ?? null,
     referenceDate: params.referenceDate,
   });
 
@@ -159,10 +186,15 @@ export async function resolveServerVerifiedAgronomicContext(params: {
     conflict: false,
     snapshot,
     verifiedPlotId,
-    verifiedZone,
+    verifiedZone: storedFarmZone,
     verifiedCropId: matchedCycle?.cropId ?? undefined,
     verifiedGrowthStage,
     verifiedContext: resolution.ok ? resolution.context : null,
-    unavailableReasonCode: resolution.ok ? null : resolution.reasonCode,
+    unavailableReasonCode: resolution.ok
+      ? null
+      : isAmbiguous
+        ? "crop_cycle_ambiguous"
+        : resolution.reasonCode,
+    ...(isAmbiguous ? { ambiguousCycleCount: scopedActiveCycles.length } : {}),
   };
 }

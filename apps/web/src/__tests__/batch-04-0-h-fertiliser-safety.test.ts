@@ -35,6 +35,7 @@ vi.mock("@/lib/farm-context/live-farm-context.service", () => ({
 
 import { POST as fertiliserPost } from "@/app/api/engines/agronomy/fertiliser/route";
 import { askFarmAssistantAction } from "@/actions/ai-assistant";
+import { resolveServerVerifiedAgronomicContext } from "@/lib/farm-context/verified-agronomic-context.service";
 
 const FARM_OWNED = "11111111-1111-4111-8111-111111111111";
 const FARM_OTHER = "22222222-2222-4222-8222-222222222222";
@@ -420,5 +421,93 @@ describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safet
     expect(capturedBody).not.toContain("- Current Stage: basal");
     expect(noFarmRes.numericGuardrailBlocked).toBe(true);
     expect(noFarmRes.answer).not.toContain("200 kg/ha");
+  });
+
+  it("Revision 6: resolveServerVerifiedAgronomicContext fails closed on unverified farms.zone and ambiguous active crop cycles", async () => {
+    const caller = {
+      user: { id: "user-1" } as never,
+      farmId: FARM_OWNED,
+      client: fakeRlsClient as never,
+      verifiedAt: new Date().toISOString(),
+    };
+
+    // 1. Stored farms.zone alone does NOT mint a verifiedContext (fails closed with geographic_zone_unverified)
+    const unverifiedGeoRes = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: {
+        farmId: FARM_OWNED,
+        farmZone: "derived_savanna",
+        farmQueryStatus: "ok",
+        retrievedAt: new Date().toISOString(),
+        domains: {
+          crop_identity_variety_and_stage: {
+            status: "ok",
+            data: {
+              activeCycles: [
+                {
+                  cycleId: "cycle-1",
+                  plotId: PLOT_OWNED,
+                  cropId: "maize",
+                  status: "maintenance",
+                  currentStage: "vegetative",
+                  state: "verified_current",
+                },
+              ],
+            },
+          },
+        },
+        auditContextRefs: [],
+      } as never,
+    });
+    expect(unverifiedGeoRes.conflict).toBe(false);
+    if (!unverifiedGeoRes.conflict) {
+      expect(unverifiedGeoRes.verifiedContext).toBeNull();
+      expect(unverifiedGeoRes.unavailableReasonCode).toBe("geographic_zone_unverified");
+    }
+
+    // 2. Multiple active crop cycles on different plots with omitted plotId -> crop_cycle_ambiguous (never .find()[0])
+    const ambiguousRes = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: {
+        farmId: FARM_OWNED,
+        farmZone: "derived_savanna",
+        farmQueryStatus: "ok",
+        retrievedAt: new Date().toISOString(),
+        domains: {
+          crop_identity_variety_and_stage: {
+            status: "ok",
+            data: {
+              activeCycles: [
+                {
+                  cycleId: "cycle-1",
+                  plotId: PLOT_OWNED,
+                  cropId: "maize",
+                  status: "maintenance",
+                  currentStage: "vegetative",
+                  state: "verified_current",
+                },
+                {
+                  cycleId: "cycle-2",
+                  plotId: PLOT_OTHER,
+                  cropId: "cassava",
+                  status: "planting",
+                  currentStage: "basal",
+                  state: "verified_current",
+                },
+              ],
+            },
+          },
+        },
+        auditContextRefs: [],
+      } as never,
+    });
+    expect(ambiguousRes.conflict).toBe(false);
+    if (!ambiguousRes.conflict) {
+      expect(ambiguousRes.verifiedContext).toBeNull();
+      expect(ambiguousRes.verifiedCropId).toBeUndefined();
+      expect(ambiguousRes.verifiedGrowthStage).toBeUndefined();
+      expect(ambiguousRes.unavailableReasonCode).toBe("crop_cycle_ambiguous");
+      expect(ambiguousRes.ambiguousCycleCount).toBe(2);
+    }
   });
 });
