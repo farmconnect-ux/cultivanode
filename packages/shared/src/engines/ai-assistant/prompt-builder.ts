@@ -41,6 +41,31 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
     );
   }
 
+  // Batch 03.4: recorded operations history (past and planned applications) for the active cycles.
+  // Farmer-recorded entries: a "completed" row is a claim, not verification. When the history query
+  // failed, say so explicitly so the model never treats unknown history as "nothing applied".
+  const cropDomainData = snap.domains?.crop_identity_variety_and_stage?.data;
+  const recentOperations = cropDomainData?.recentOperations ?? [];
+  if (cropDomainData?.operationsQueryStatus === 'error') {
+    sections.push(
+      'Recorded Crop Operations: UNAVAILABLE (the operations history could not be retrieved). Do NOT assume no fertiliser, spray or other input has been applied; ask the farmer what was applied and when.',
+    );
+  } else if (recentOperations.length > 0) {
+    const recordedOperations = recentOperations.slice(0, 20).map((o) => ({
+      cycleId: sanitizeMetadataField(o.cycleId, 80),
+      name: sanitizeMetadataField(o.name, 120),
+      operationType: sanitizeMetadataField(o.operationType, 60),
+      stage: sanitizeMetadataField(o.stage, 60),
+      status: sanitizeMetadataField(o.status || 'missing', 30),
+      scheduledDate: sanitizeMetadataField(o.scheduledDate, 40),
+      completedDate: o.completedDate ? sanitizeMetadataField(o.completedDate, 40) : null,
+      verificationStatus: 'farmer_recorded_not_independently_verified',
+    }));
+    sections.push(
+      `Recorded Crop Operations (UNVERIFIED farmer records, newest first; consider past applications before advising another, and confirm with the farmer what was actually applied):\n<untrusted_evidence_json type="recorded_crop_operations">\n${serializeUntrustedEvidenceJson(recordedOperations)}\n</untrusted_evidence_json>`,
+    );
+  }
+
   // Stored farms.zone is a farmer/platform record, not independent geographic verification.
   // Keep it visible only in a separately labelled unverified tier, never as authoritative farm context.
   if (typeof snap.farmZone === 'string' && snap.farmZone.trim()) {

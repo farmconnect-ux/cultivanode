@@ -34,7 +34,6 @@ vi.mock("@/lib/farm-context/live-farm-context.service", () => ({
 }));
 
 import { POST as fertiliserPost } from "@/app/api/engines/agronomy/fertiliser/route";
-import { askFarmAssistantAction } from "@/actions/ai-assistant";
 import { resolveServerVerifiedAgronomicContext } from "@/lib/farm-context/verified-agronomic-context.service";
 
 const FARM_OWNED = "11111111-1111-4111-8111-111111111111";
@@ -319,109 +318,9 @@ describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safet
     expect(lettuceRes.status).toBe(400);
   });
 
-  it("askFarmAssistantAction preserves missing zone (never defaults to derived_savanna), rejects invalid zone, and blocks LLM rates", async () => {
-    let capturedPromptBody = "";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_url: unknown, init?: RequestInit) => {
-        capturedPromptBody = String(init?.body ?? "");
-        return new Response(
-          JSON.stringify({
-            content: [{ type: "text", text: "Apply 200 kg/ha right after rain." }],
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }),
-    );
-
-    const missingCtxRes = await askFarmAssistantAction({
-      query: "How much should I apply?",
-      language: "en",
-    });
-    expect(capturedPromptBody).not.toContain("derived_savanna");
-    expect(capturedPromptBody).toContain("unverified (not provided)");
-    expect(missingCtxRes.passedSafetyGuardrail).toBe(false);
-    expect(missingCtxRes.numericGuardrailBlocked).toBe(true);
-    expect(missingCtxRes.answer).not.toContain("200 kg/ha");
-
-    await expect(
-      askFarmAssistantAction({
-        query: "Advise on maize",
-        context: { cropId: "maize", zone: "fabricated_zone" as never },
-        language: "en",
-      }),
-    ).rejects.toThrow("Invalid agro-ecological zone");
-  });
-
-  it("Revision 5: askFarmAssistantAction enforces active account, RLS farm ownership, and blocks client zone/stage overrides", async () => {
-    // 1. Suspended account -> rejected
-    mocks.requireAccount.mockResolvedValueOnce({
-      userId: "user-1",
-      profile: { suspended_at: "2026-11-01T00:00:00Z" },
-    });
-    await expect(
-      askFarmAssistantAction({ query: "Advise on maize", language: "en" }),
-    ).rejects.toThrow("Account is not active");
-
-    // 2. Unauthorised cross-tenant farmId -> rejected
-    mocks.createClient.mockResolvedValueOnce({
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: null, error: null }),
-          }),
-        }),
-      }),
-    });
-    await expect(
-      askFarmAssistantAction({
-        query: "Advise on maize",
-        context: { cropId: "maize", farmId: FARM_OTHER },
-        language: "en",
-      }),
-    ).rejects.toThrow("Farm not found or access denied");
-
-    // 3. Client attempts to override verified growth stage ("vegetative") with "flowering" -> rejected
-    await expect(
-      askFarmAssistantAction({
-        query: "Advise on maize",
-        context: { cropId: "maize", farmId: FARM_OWNED, stageName: "flowering" },
-        language: "en",
-      }),
-    ).rejects.toThrow("GROWTH_STAGE_MISMATCH");
-
-    // 4. Client attempts to override verified farm zone ("derived_savanna") with "rainforest" -> rejected
-    await expect(
-      askFarmAssistantAction({
-        query: "Advise on maize",
-        context: { cropId: "maize", farmId: FARM_OWNED, zone: "rainforest" },
-        language: "en",
-      }),
-    ).rejects.toThrow("ZONE_MISMATCH");
-
-    // 5. Client supplies valid zone & stage WITHOUT farmId -> never elevated to verified context; LLM rates blocked
-    let capturedBody = "";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_u: unknown, init?: RequestInit) => {
-        capturedBody = String(init?.body ?? "");
-        return new Response(
-          JSON.stringify({ content: [{ type: "text", text: "Apply 200 kg/ha NPK." }] }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }),
-    );
-    const noFarmRes = await askFarmAssistantAction({
-      query: "How much NPK for maize?",
-      context: { cropId: "maize", zone: "derived_savanna", stageName: "basal" },
-      language: "en",
-    });
-    expect(capturedBody).toContain("- Zone: unverified (not provided)");
-    expect(capturedBody).not.toContain("- Zone: derived_savanna");
-    expect(capturedBody).not.toContain("- Current Stage: basal");
-    expect(noFarmRes.numericGuardrailBlocked).toBe(true);
-    expect(noFarmRes.answer).not.toContain("200 kg/ha");
-  });
+  // Batch 03.4: the legacy `askFarmAssistantAction` server action was removed. The web assistant now
+  // calls the audited `POST /api/ai/assistant`, whose zone/stage/farm-ownership protections are covered
+  // in ai-assistant-audit-lifecycle.test.ts and batch-03-4-assistant-wiring.test.ts.
 
   it("Revision 6: resolveServerVerifiedAgronomicContext fails closed on unverified farms.zone and ambiguous active crop cycles", async () => {
     const caller = {

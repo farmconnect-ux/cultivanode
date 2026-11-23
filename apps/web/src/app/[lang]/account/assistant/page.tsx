@@ -22,20 +22,56 @@ export default async function AssistantPage({ params }: { params: Promise<{ lang
     ...(account.orgIds.length ? [`organization_id.in.(${account.orgIds.join(",")})`] : []),
   ];
   const { data: farmsData } = await supabase.from("farms").select("id, name, state, zone").or(scope.join(",")).order("created_at");
-  // No invented farm when the user has none: the assistant still answers general questions.
+  // No invented farm when the user has none. Every answer is audited against a farm, so the
+  // assistant asks the user to add a farm first (FARM_CONTEXT_REQUIRED_FOR_AUDIT on the API).
   const farms = (farmsData ?? []).map((f) => ({ id: f.id, name: f.name, state: f.state, zone: f.zone as string | null }));
-  const { data: plotsData } = farms.length
-    ? await supabase.from("plots").select("id, farm_id, name, area_ha").in("farm_id", farms.map((f) => f.id))
-    : { data: [] };
+  const farmIds = farms.map((f) => f.id);
+  const [{ data: plotsData }, { data: cyclesData }, { data: consent }] = await Promise.all([
+    farmIds.length
+      ? supabase.from("plots").select("id, farm_id, name, area_ha").in("farm_id", farmIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; farm_id: string; name: string; area_ha: number | null }> }),
+    // Batch 03.4: the farmer picks one of their own active crop cycles; the server re-verifies it.
+    // Same lifecycle values as the Live Farm Context service (planning and terminal states excluded).
+    farmIds.length
+      ? supabase
+          .from("crop_cycles")
+          .select("id, farm_id, plot_id, crop_id, current_stage, status")
+          .in("farm_id", farmIds)
+          .in("status", ["land_preparation", "planting", "establishment", "maintenance", "harvesting"])
+          .order("planting_date", { ascending: false })
+      : Promise.resolve({
+          data: [] as Array<{ id: string; farm_id: string; plot_id: string | null; crop_id: string; current_stage: string; status: string }>,
+        }),
+    // The assistant API refuses requests without current `ai_intelligence` consent, so ask first.
+    supabase
+      .from("current_consents")
+      .select("granted")
+      .eq("profile_id", account.userId)
+      .eq("consent_type", "ai_intelligence")
+      .maybeSingle(),
+  ]);
+  const cycles = (cyclesData ?? []).map((c) => ({
+    id: c.id,
+    farm_id: c.farm_id,
+    plot_id: c.plot_id,
+    crop_id: c.crop_id,
+    current_stage: c.current_stage,
+  }));
 
   return (
     <>
       <PageHeader
         title="Farm assistant"
-        description="Ask about your crops, fertiliser, pests or animals in English, Yorùbá or Pidgin. Answers use your farms and plots. Check any chemical advice with the product label or an extension agent before you spray."
+        description="Ask about your crops, fertiliser, pests or animals in English, Yorùbá or Pidgin. Answers use the records of the farm and crop you pick. Check any chemical advice with the product label or an extension agent before you spray."
       />
       <section className="overflow-hidden rounded-xl bg-surface-container-lowest p-space-md shadow-sm sm:p-space-lg">
-        <AiFarmAssistant farms={farms} plots={plotsData ?? []} lang={lang} />
+        <AiFarmAssistant
+          farms={farms}
+          plots={plotsData ?? []}
+          cycles={cycles}
+          aiConsentGranted={consent?.granted === true}
+          lang={lang}
+        />
       </section>
     </>
   );

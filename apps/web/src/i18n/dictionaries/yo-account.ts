@@ -727,6 +727,7 @@ const yoAccount: typeof enAccount = {
         share_with_buyers: "Pín àkọsílẹ̀ oko mi pẹ̀lú àwọn olùrà tí mo bá yàn",
         share_with_investors: "Pín àkọsílẹ̀ oko mi pẹ̀lú àwọn olùdókòwò tí mo bá yàn",
         share_with_partners: "Pín àkọsílẹ̀ oko mi pẹ̀lú àwọn alábàáṣiṣẹ́pọ̀ ìwádìí",
+        ai_intelligence: "Jẹ́ kí olùrànlọ́wọ́ oko AI lo àkọsílẹ̀ oko mi láti dá mi lóhùn",
       },
       on: "Ó wà ní títàn",
       off: "Ó wà ní pípa",

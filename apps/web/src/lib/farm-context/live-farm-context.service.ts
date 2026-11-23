@@ -20,6 +20,7 @@ import {
   type CoreQueryError,
   type CoreQueryStatus,
   type CropIdentityDomainData,
+  type CropOperationRecord,
   type DomainContextSection,
   type EquipmentTelemetryDomainData,
   type FarmContextDomain,
@@ -646,6 +647,69 @@ async function loadCropIdentityDomain(
       observed_at: c.created_at,
     }));
 
+    // Batch 03.4: operations history for the active cycles, so past applications reach the model.
+    // `crop_cycle_operations` has no farm_id; RLS scopes it through can_view_farm(crop_cycle_farm_id(...)),
+    // and we additionally restrict to this farm's active cycle ids. A failed query is reported as an
+    // error (history unknown), never as an empty history.
+    const operationsValidationIssues: ContextValidationIssue[] = [];
+    let recentOperations: CropOperationRecord[] = [];
+    let operationsQueryStatus: CropIdentityDomainData["operationsQueryStatus"] = "skipped";
+    const cycleIds = cycles.map((c) => c.cycleId);
+    if (cycleIds.length > 0) {
+      try {
+        const { data: ops, error: opsError } = await client
+          .from("crop_cycle_operations")
+          .select("id, crop_cycle_id, name, operation_type, stage, status, scheduled_date, completed_date, created_at")
+          .in("crop_cycle_id", cycleIds)
+          .order("scheduled_date", { ascending: false })
+          .limit(MAX_DOMAIN_ROWS);
+        if (opsError) {
+          operationsQueryStatus = "error";
+          operationsValidationIssues.push({
+            domain,
+            field: "recentOperations",
+            code: "domain_query_error",
+            message: `Failed to retrieve crop operations history (${classifyQueryError(opsError)}).`,
+            source: "crop_cycle_operations",
+          });
+        } else {
+          const activeIds = new Set(cycleIds);
+          recentOperations = (ops ?? [])
+            .filter((o) => activeIds.has(o.crop_cycle_id))
+            .map((o) => ({
+              operationId: o.id,
+              cycleId: o.crop_cycle_id,
+              name: o.name,
+              operationType: o.operation_type,
+              stage: o.stage,
+              status: typeof o.status === "string" ? o.status.trim().toLowerCase() : "",
+              scheduledDate: o.scheduled_date,
+              completedDate: o.completed_date,
+              // Farmer-recorded; a "completed" row is a claim that the work was done, not verification.
+              state: "unverified_provisional" as const,
+            }));
+          operationsQueryStatus = recentOperations.length > 0 ? "ok" : "empty";
+          for (const o of ops ?? []) {
+            if (!activeIds.has(o.crop_cycle_id)) continue;
+            sourceRefs.push({
+              source: "crop_cycle_operations",
+              record_id: o.id,
+              observed_at: o.completed_date ?? o.created_at,
+            });
+          }
+        }
+      } catch {
+        operationsQueryStatus = "error";
+        operationsValidationIssues.push({
+          domain,
+          field: "recentOperations",
+          code: "domain_query_error",
+          message: "Unexpected error retrieving crop operations history.",
+          source: "crop_cycle_operations",
+        });
+      }
+    }
+
     const fallbackPlotCrops = plots
       .filter((p) => p.current_crop)
       .map((p) => ({
@@ -663,21 +727,31 @@ async function loadCropIdentityDomain(
       }
     }
 
-    const validationIssues: ContextValidationIssue[] = plotsError
-      ? [
-          {
-            domain,
-            field: "plots",
-            code: "core_query_error",
-            message: plotsError.message,
-          },
-        ]
-      : [];
+    const validationIssues: ContextValidationIssue[] = [
+      ...(plotsError
+        ? [
+            {
+              domain,
+              field: "plots",
+              code: "core_query_error" as const,
+              message: plotsError.message,
+            },
+          ]
+        : []),
+      ...operationsValidationIssues,
+    ];
 
     return {
       domain,
-      status: plotsError ? "partial" : cycles.length > 0 ? "ok" : fallbackPlotCrops.length > 0 ? "partial" : "empty",
-      data: { activeCycles: cycles, fallbackPlotCrops },
+      status:
+        plotsError || operationsQueryStatus === "error"
+          ? "partial"
+          : cycles.length > 0
+            ? "ok"
+            : fallbackPlotCrops.length > 0
+              ? "partial"
+              : "empty",
+      data: { activeCycles: cycles, fallbackPlotCrops, recentOperations, operationsQueryStatus },
       sourceRefs: normalizeAuditContextReferences(sourceRefs),
       conflicts: [],
       missingFields: cycles.length === 0 && fallbackPlotCrops.length === 0 ? ["activeCycles"] : [],
