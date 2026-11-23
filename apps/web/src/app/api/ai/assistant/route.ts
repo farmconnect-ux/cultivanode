@@ -13,6 +13,7 @@ import {
 } from "@cultivanode/shared";
 import { createClient } from "@/lib/supabase/server";
 import { aiConfig } from "@/lib/ai-config";
+import { redactProviderError } from "@/lib/provider-error";
 import { recordAiAuditEvent } from "@/lib/ai-audit";
 import {
   authorizeAiFarmRequest,
@@ -383,6 +384,9 @@ export async function POST(req: Request) {
       logger.warn("ai_assistant_fallback", {
         provider: result.providerUsed,
         errors: result.providerErrors.length,
+        // Why each provider failed (status code and the provider's short message), with anything
+        // that looks like a key masked, so a fallback can be diagnosed from the logs.
+        reasons: result.providerErrors.map(redactProviderError).join(" | ").slice(0, 900),
       });
     } else {
       logger.info("ai_assistant_ok", { provider: result.providerUsed, model: result.modelUsed });
@@ -407,3 +411,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to process AI request." }, { status: 500 });
   }
 }
+
