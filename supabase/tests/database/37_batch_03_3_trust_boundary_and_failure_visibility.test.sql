@@ -135,7 +135,9 @@ select lives_ok(
 select ok(
   not exists (select 1 from pg_catalog.pg_extension where extname = 'pg_cron')
   or (
-    select count(*) = 3
+    -- Every enabled registered task has a job (3 in Batch 03.3, more as tasks are added).
+    select count(*) >= 3
+           and count(*) = (select count(*) from private.scheduled_task_registry where is_enabled)
            and bool_and(j.command like 'select private.run_scheduled_task(%); commit; select private.assert_scheduled_task_succeeded(%);')
       from cron.job j
       join private.scheduled_task_registry r on r.cron_job_name = j.jobname

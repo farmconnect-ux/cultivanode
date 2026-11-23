@@ -22,3 +22,28 @@ export async function openMarketplaceOrderNotification(formData: FormData): Prom
   if (notification?.kind === "marketplace_order_placed") redirect(`/${lang}/account/marketplace/seller?order=${orderId}`);
   redirect(`/${lang}/account/marketplace/orders/${orderId}`);
 }
+
+/** Batch 05: the farmer answers a farm alert (useful / not useful / done). Marks the notification read. */
+export async function respondToFarmAlert(formData: FormData): Promise<void> {
+  const rawLang = String(formData.get("lang") ?? "").trim().toLowerCase();
+  const lang: Locale = hasLocale(rawLang) ? rawLang : defaultLocale;
+  const notificationId = String(formData.get("notification_id") ?? "").trim();
+  const response = String(formData.get("response") ?? "").trim();
+  if (!/^[0-9a-f-]{36}$/i.test(notificationId) || !["useful", "not_useful", "done"].includes(response)) return;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect(`/${lang}/sign-in`);
+  const { data: notification } = await supabase
+    .from("notifications")
+    .select("kind, data")
+    .eq("id", notificationId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  const eventId = notification?.kind?.startsWith("farm_") ? (notification.data as { event_id?: unknown } | null)?.event_id : null;
+  if (typeof eventId !== "string" || !/^[0-9a-f-]{36}$/i.test(eventId)) return;
+  const { error } = await supabase.rpc("respond_to_intelligence_event", { p_event_id: eventId, p_response: response });
+  if (error) throw new Error("Could not save your answer to this alert.");
+  await supabase.rpc("mark_notifications_read", { p_ids: [notificationId] });
+  revalidatePath(`/${lang}/account/inbox`);
+  revalidatePath(`/${lang}/account`);
+}
