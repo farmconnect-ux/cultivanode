@@ -510,4 +510,93 @@ describe("Batch 04.0-H Revision 4 — Farm/Plot Ownership & Fertiliser API Safet
       expect(ambiguousRes.ambiguousCycleCount).toBe(2);
     }
   });
+
+  it("Revision 7: requires explicit cycle selection and resolves the exact matching active crop cycle", async () => {
+    const caller = {
+      user: { id: "user-1" } as never,
+      farmId: FARM_OWNED,
+      client: fakeRlsClient as never,
+      verifiedAt: new Date().toISOString(),
+    };
+    const makeSnapshot = (cycles: Array<Record<string, unknown>>) => ({
+      farmId: FARM_OWNED,
+      farmZone: "derived_savanna",
+      farmQueryStatus: "ok",
+      retrievedAt: new Date().toISOString(),
+      domains: {
+        crop_identity_variety_and_stage: {
+          status: "ok",
+          data: { activeCycles: cycles },
+        },
+      },
+      auditContextRefs: [],
+    } as never);
+    const cycles = [
+      {
+        cycleId: "cycle-1",
+        plotId: PLOT_OWNED,
+        cropId: "maize",
+        status: "maintenance",
+        currentStage: "vegetative",
+        state: "unverified_provisional",
+      },
+      {
+        cycleId: "cycle-2",
+        plotId: PLOT_OWNED,
+        cropId: "maize",
+        status: "planting",
+        currentStage: "basal",
+        state: "unverified_provisional",
+      },
+    ];
+
+    const missingCycle = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: makeSnapshot(cycles),
+      assertions: { plotId: PLOT_OWNED, cropId: "maize" },
+    });
+    expect(missingCycle.conflict).toBe(false);
+    if (!missingCycle.conflict) {
+      expect(missingCycle.verifiedContext).toBeNull();
+      expect(missingCycle.unavailableReasonCode).toBe("crop_cycle_ambiguous");
+      expect(missingCycle.ambiguousCycleCount).toBe(2);
+    }
+
+    const explicitCycle = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: makeSnapshot(cycles),
+      assertions: { plotId: PLOT_OWNED, cropId: "maize", cycleId: "cycle-2" },
+    });
+    expect(explicitCycle.conflict).toBe(false);
+    if (!explicitCycle.conflict) {
+      expect(explicitCycle.verifiedContext).toBeNull();
+      expect(explicitCycle.verifiedGrowthStage).toBe("basal");
+      expect(explicitCycle.ambiguousCycleCount).toBeUndefined();
+      // Geographic verification remains unavailable, so the exact cycle still cannot authorise a prescription.
+      expect(explicitCycle.unavailableReasonCode).toBe("geographic_zone_unverified");
+    }
+
+    const mismatchedCycle = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: makeSnapshot(cycles),
+      assertions: { plotId: PLOT_OWNED, cropId: "maize", cycleId: "99999999-9999-4999-8999-999999999999" },
+    });
+    expect(mismatchedCycle.conflict).toBe(false);
+    if (!mismatchedCycle.conflict) {
+      expect(mismatchedCycle.verifiedContext).toBeNull();
+      expect(mismatchedCycle.verifiedGrowthStage).toBeUndefined();
+      expect(mismatchedCycle.unavailableReasonCode).toBe("crop_cycle_missing");
+    }
+
+    const missingPlot = await resolveServerVerifiedAgronomicContext({
+      caller,
+      snapshot: makeSnapshot(cycles),
+      assertions: { cropId: "maize", cycleId: "cycle-2" },
+    });
+    expect(missingPlot.conflict).toBe(false);
+    if (!missingPlot.conflict) {
+      expect(missingPlot.verifiedContext).toBeNull();
+      expect(missingPlot.unavailableReasonCode).toBe("crop_cycle_selection_required");
+    }
+  });
 });
