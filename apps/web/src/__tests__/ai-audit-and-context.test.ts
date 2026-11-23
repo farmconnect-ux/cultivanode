@@ -626,12 +626,14 @@ describe("Batch 03.1D — LiveFarmContextService Remediation Regressions (Findin
 
     const snapshot = await getLiveFarmContextSnapshot(makeCaller(client), { now: new Date("2026-11-21T04:00:00Z") });
     const cycles = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles ?? [];
+    // Batch 04.0-H: a crop-cycle row is a recorded assertion, not independent agronomic verification,
+    // so the Live Farm Context labels it unverified_provisional; the trusted resolver checks lifecycle status.
     expect(cycles.map((cycle) => cycle.state)).toEqual([
-      "verified_current",
-      "verified_current",
-      "verified_current",
-      "verified_current",
-      "verified_current",
+      "unverified_provisional",
+      "unverified_provisional",
+      "unverified_provisional",
+      "unverified_provisional",
+      "unverified_provisional",
     ]);
     expect(cycles.map((cycle) => cycle.cropId).sort()).toEqual(["crop-1", "crop-2", "crop-3", "crop-4", "crop-5"]);
     const cycleQuery = client.queries.find((query) => query.table === "crop_cycles" && query.ins.some(([column]) => column === "status"));

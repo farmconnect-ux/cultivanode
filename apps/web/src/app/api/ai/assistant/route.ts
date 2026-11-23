@@ -21,6 +21,7 @@ import {
   type VerifiedAiFarmCallerContext,
 } from "@/lib/engines-api-helper";
 import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context.service";
+import { resolveServerVerifiedAgronomicContext } from "@/lib/farm-context/verified-agronomic-context.service";
 import { retrieveFarmMemories } from "@/lib/memory/farm-memory.service";
 import { retrievePublishedAgronomicStandards } from "@/lib/rag/agronomic-standards-rag.service";
 import { logger } from "@/lib/logger";
@@ -54,7 +55,9 @@ const AssistantBodySchema = z.object({
   context: z
     .object({
       farmId: z.string().uuid("context.farmId must be a valid UUID.").optional(),
+      plotId: z.string().uuid("context.plotId must be a valid UUID.").optional(),
       cropId: z.string().max(80).optional(),
+      cycleId: z.string().uuid("context.cycleId must be a valid UUID.").optional(),
       zone: z.string().max(80).optional(),
       stageName: z.string().max(80).optional(),
       daysAfterPlanting: z.number().int().min(0).max(3650).optional(),
@@ -153,9 +156,36 @@ export async function POST(req: Request) {
 
     const traceId = body.traceId ?? randomUUID();
     const snapshot = await getLiveFarmContextSnapshot(verifiedFarmCaller);
-    const activeCycle = snapshot.domains.crop_identity_variety_and_stage.data?.activeCycles[0];
-    const resolvedCropId = body.context?.cropId ?? activeCycle?.cropId;
-    const resolvedZone = body.context?.zone ?? snapshot.farmZone ?? undefined;
+
+    // Revision 5 (Remediation C): Authoritative zone, plot ownership, and active crop-cycle growth stage
+    // come exclusively from the shared server-side RLS resolver. Client-supplied zone and stageName
+    // are treated strictly as assertions and NEVER override verified server records.
+    const verifiedCtxRes = await resolveServerVerifiedAgronomicContext({
+      caller: verifiedFarmCaller,
+      snapshot,
+      assertions: {
+        plotId: body.context?.plotId,
+        cropId: body.context?.cropId,
+        cycleId: body.context?.cycleId,
+        zone: body.context?.zone,
+        stageName: body.context?.stageName,
+      },
+    });
+    if (verifiedCtxRes.conflict) {
+      return NextResponse.json(
+        {
+          error: verifiedCtxRes.error,
+          code: verifiedCtxRes.code,
+          traceId,
+        },
+        { status: verifiedCtxRes.httpStatus },
+      );
+    }
+
+    const resolvedCropId = verifiedCtxRes.verifiedCropId ?? body.context?.cropId;
+    const resolvedZone = verifiedCtxRes.verifiedZone;
+    const resolvedStageName = verifiedCtxRes.verifiedGrowthStage;
+    const resolvedPlotId = verifiedCtxRes.verifiedPlotId;
 
     // Batch 03.2: Retrieve RLS-scoped persistent memories & published-only agronomic standards
     // with EXPLICIT retrieval outcomes (Finding 4: never silently equate failure with empty results).
@@ -235,14 +265,20 @@ export async function POST(req: Request) {
     try {
       result = await askGroundedAiAssistant({
         query: body.query?.trim() || "Please examine this crop photo and advise what to do.",
-        // Always bind farmerId to the authenticated caller; never trust client-supplied farmerId
+        // Always bind farmerId, farmId, plotId, zone, and stageName to verified server records;
+        // NEVER pass client-supplied zone or stageName as authoritative context.
         context: {
-          ...(body.context ?? {}),
-          cropId: resolvedCropId,
+          cropId: resolvedCropId ?? "",
           zone: resolvedZone,
-          stageName: body.context?.stageName ?? activeCycle?.currentStage,
+          stageName: resolvedStageName,
+          daysAfterPlanting: body.context?.daysAfterPlanting,
           farmerId: verifiedFarmCaller.user.id,
+          farmId: verifiedFarmCaller.farmId,
+          plotId: resolvedPlotId,
+          cycleId: verifiedCtxRes.verifiedContext?.cropCycleId,
+          requestId: traceId,
         } as FarmerContext,
+        verifiedFarmContext: verifiedCtxRes.verifiedContext,
         // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into the AI model pipeline.
         groundedEvidence: evidencePackage,
         language: body.language ?? "en",
@@ -309,8 +345,17 @@ export async function POST(req: Request) {
       executionOutcome,
       guardrailResult: {
         status: result.passedSafetyGuardrail ? "passed" : "blocked",
-        rule_ids: ["nafdac_chemical_guardrail"],
-        reason_codes: result.passedSafetyGuardrail ? [] : ["prohibited_chemical"],
+        rule_ids: result.numericGuardrailBlocked
+          ? ["nafdac_chemical_guardrail", "fertiliser_numeric_guardrail"]
+          : ["nafdac_chemical_guardrail"],
+        reason_codes: result.passedSafetyGuardrail
+          ? []
+          : [
+              ...((result.bannedChemicalsDetected?.length ?? 0) > 0 || !result.numericGuardrailBlocked
+                ? (["prohibited_chemical"] as const)
+                : []),
+              ...(result.numericGuardrailBlocked ? (["unsupported_numerical_prescription"] as const) : []),
+            ],
         blocked: !result.passedSafetyGuardrail,
       },
       contextRefs: auditContextRefs,

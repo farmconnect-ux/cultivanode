@@ -1,15 +1,143 @@
+import type {
+  ConvertedPhosphorusValue,
+  ConvertedPotassiumValue,
+  NutrientBasis,
+  SoilExtractionMethod,
+  TypedSoilPhosphorusInput,
+  TypedSoilPotassiumInput,
+} from './nutrient-units';
+
+export type SoilEvidenceClass =
+  | 'lab_confirmed'
+  | 'field_kit'
+  | 'farmer_reported'
+  | 'modelled_estimate';
+
+export type AgriculturalRecommendationStatus =
+  | 'approved_calculation'
+  | 'source_information'
+  | 'general_guidance'
+  | 'insufficient_evidence'
+  | 'unsupported_crop'
+  | 'invalid_input'
+  | 'calculation_failure';
+
+/**
+ * Trusted server-verified laboratory report record (Batch 04.0-H Revision 4).
+ * Caller-supplied plain objects claiming `verificationStatus: 'verified'` are NEVER trusted;
+ * only server-verified records registered in the engine's private trust registry may authorise
+ * numerical fertiliser prescriptions.
+ */
+export interface VerifiedLaboratoryReportRecord {
+  laboratoryName: string;
+  laboratoryId: string;
+  reportId: string;
+  farmId: string;
+  plotId?: string;
+  sampleCollectionDate: string; // strict ISO date
+  analysisDate: string; // strict ISO date
+  expiresAt: string; // strict ISO date
+  extractionMethod: SoilExtractionMethod | string;
+  samplingDepthCm: number;
+  verificationStatus: 'verified';
+  provenanceRecordId: string;
+}
+
 export interface SoilNutrientProfile {
   pH: number;
   nitrogenPercent?: number; // Organic matter / total N % (e.g. 0.15%)
-  phosphorusPpm: number; // Available P (Bray-1, e.g. 8 ppm)
-  potassiumPpm: number; // Exchangeable K (e.g. 120 ppm)
+  /** Legacy untyped phosphorus ppm — rejected fail-closed because basis (elemental_P vs P2O5) is ambiguous. */
+  phosphorusPpm?: number;
+  /** Preferred explicit typed phosphorus input preserving original lab value, unit, and basis. */
+  phosphorus?: TypedSoilPhosphorusInput;
+  /** Legacy untyped potassium ppm — rejected fail-closed because basis (elemental_K vs K2O) is ambiguous. */
+  potassiumPpm?: number;
+  /** Preferred explicit typed potassium input preserving original lab value, unit, and basis. */
+  potassium?: TypedSoilPotassiumInput;
   organicMatterPercent?: number;
+  /** Caller-declared soil evidence class; alone this NEVER proves laboratory authenticity. */
+  provenance?: SoilEvidenceClass;
+  extractionMethod?: SoilExtractionMethod | string;
+  samplingDepthCm?: number;
+  testDate?: string; // ISO date string
+  /** Mandatory farm association on the soil report; must match request farmId. */
+  farmId?: string;
+  /** Mandatory plot association when recommendation or soil report is plot-specific. */
+  plotId?: string;
+  /** Optional laboratory report identifier preserved in the calculation binding for traceability. */
+  soilReportId?: string;
+  /**
+   * Server-verified laboratory report record (required for numerical prescriptions).
+   * Plain caller-supplied objects are rejected fail-closed.
+   */
+  verifiedLabReport?: VerifiedLaboratoryReportRecord | null;
+}
+
+export interface AgronomicApprovalRecord {
+  reviewerName: string;
+  reviewerCredentials: string;
+  competenceScope: string;
+  /** Strict ISO date string (YYYY-MM-DD or full ISO-8601). */
+  approvalDate: string;
+  /** Mandatory approval lifecycle status; only 'active' may authorise prescriptions. */
+  status: 'active' | 'withdrawn' | 'superseded' | 'revoked' | 'suspended';
+  /** Mandatory strict ISO expiry date; indefinite validity is never inferred. */
+  expiresAt: string;
+  sourceEvidence: string;
+  protocolVersion: string;
+  applicableCropId: string;
+  applicableZones: readonly string[];
+}
+
+export interface FertiliserProtocolMetadata {
+  cropId: string;
+  protocolVersion: string;
+  /**
+   * Software validation (`provisional_software_validated`), document publication, or
+   * administrative approval NEVER authorises a public numerical fertiliser prescription.
+   * Only `agronomist_approved` with an active, non-expired `approvalRecord` may do so.
+   */
+  approvalStatus: 'provisional_software_validated' | 'agronomist_approved';
+  approvalRecord?: AgronomicApprovalRecord | null;
+  sourceCitation: string;
+  maxNitrogenKgPerHa: number;
+  supportedZones: readonly string[];
+  nutrientBasis: {
+    nitrogen: NutrientBasis;
+    phosphorus: NutrientBasis;
+    potassium: NutrientBasis;
+  };
+}
+
+export interface FertiliserCalculationBinding {
+  cropId: string;
+  farmId: string;
+  plotId?: string;
+  requestId?: string;
+  zone: string;
+  growthStage: string;
+  protocolVersion: string;
+  protocolApprovalStatus: 'agronomist_approved';
+  calculatedAt: string; // ISO timestamp
+  soilAssociation: {
+    farmId: string;
+    plotId?: string;
+    soilReportId?: string;
+    provenance: 'lab_confirmed';
+    extractionMethod: string;
+    testDate: string;
+  };
 }
 
 export interface FertiliserRecommendation {
   cropId: string;
   targetYieldTonnesPerHa: number;
   farmAreaHectares: number;
+  protocolVersion?: string;
+  protocolApprovalStatus?: FertiliserProtocolMetadata['approvalStatus'];
+  binding?: FertiliserCalculationBinding;
+  phosphorusConversion?: ConvertedPhosphorusValue;
+  potassiumConversion?: ConvertedPotassiumValue;
   deficitKgPerHa: {
     nitrogenKg: number;
     phosphorusKg: number;
@@ -25,6 +153,37 @@ export interface FertiliserRecommendation {
   limeRecommendationKgPerHa: number;
   warning?: string;
 }
+
+export interface FertiliserCalculationRequest {
+  cropId?: string | null;
+  targetYieldTonnesPerHa: number;
+  farmAreaHectares: number;
+  soil?: SoilNutrientProfile | null;
+  zone?: string | null;
+  growthStage?: string | null;
+  farmId?: string | null;
+  plotId?: string | null;
+  requestId?: string | null;
+  referenceDate?: string;
+}
+
+export type FertiliserRecommendationResult =
+  | {
+      ok: true;
+      status: 'approved_calculation';
+      recommendation: FertiliserRecommendation;
+      protocol: FertiliserProtocolMetadata;
+      assumptions: string[];
+      missingInformation: string[];
+    }
+  | {
+      ok: false;
+      status: Exclude<AgriculturalRecommendationStatus, 'approved_calculation'>;
+      reasonCode: string;
+      message: string;
+      missingRequirements: string[];
+      guidance: string;
+    };
 
 export interface ApprovedAgrochemical {
   id: string;

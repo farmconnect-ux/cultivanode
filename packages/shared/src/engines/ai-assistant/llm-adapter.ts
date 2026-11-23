@@ -1,8 +1,16 @@
 import type { FarmerContext, GroundedPrompt, GuardrailCheckResult, GroundedKnowledgeSnippet } from './types';
 import type { AppLanguage } from '../../roles';
 import type { GroundedEvidencePackage } from '../memory-rag/types';
+import type { AgriculturalRecommendationStatus, FertiliserRecommendation } from '../inputs/types';
+import type { VerifiedAgronomicFarmContext } from './verified-farm-context';
 import { buildGroundedPrompt } from './prompt-builder';
 import { checkChemicalSafetyGuardrails } from './chemical-guardrail';
+import {
+  buildAmbiguousQueryClarification,
+  buildSafeNonNumericalFertiliserGuidance,
+  detectFertiliserIntent,
+  validateAssistantNumericalOutput,
+} from './fertiliser-safety';
 
 export type AiProvider = 'claude' | 'gemini' | 'openai' | 'rule-engine';
 
@@ -24,6 +32,10 @@ export interface GroundedAiAssistantRequest {
   primaryModel?: string;
   fallbackModel?: string;
   timeoutMs?: number;
+  /** Validated deterministic engine calculation, if one was run for this request (Batch 04.0-H). */
+  approvedFertiliserCalculation?: FertiliserRecommendation | null;
+  /** Trusted server-verified farm/plot/zone/crop-cycle context (Batch 04.0-H Revision 5). */
+  verifiedFarmContext?: VerifiedAgronomicFarmContext | null;
 }
 
 export interface GroundedAiAssistantResponse {
@@ -39,6 +51,11 @@ export interface GroundedAiAssistantResponse {
   approvedChemicalsDetected: string[];
   safetyAppendices: string[];
   sources: GroundedKnowledgeSnippet[];
+  /** Batch 04.0-H recommendation contract status. */
+  recommendationStatus: AgriculturalRecommendationStatus;
+  /** True when server-side numeric validator blocked an unsupported numerical fertiliser prescription. */
+  numericGuardrailBlocked: boolean;
+  numericGuardrailReasonCode: string | null;
 }
 
 /**
@@ -57,90 +74,88 @@ export function generateAgronomicAdvisorAnswer(
     return `WARNING: The chemical mentioned (Paraquat / Carbofuran / DDT) is strictly BANNED by NAFDAC across Nigeria due to lethal toxicity and long-term soil hazards. Do not use this substance. For land clearing and weed control in ${context.cropId || 'crops'}, use approved glyphosate (for non-crop areas) or mechanical tillage / selective hoe weeding.`;
   }
 
-  // 2. Fall Armyworm (FAW) on Maize
+  // 2. Fall Armyworm (FAW) on Maize (non-numerical label-directed guidance)
   if ((q.includes('armyworm') || q.includes('kokoro') || q.includes('faw')) && (context.cropId === 'maize' || q.includes('maize'))) {
     if (lang === 'yo') {
       return `Fun iṣakoso Kokoro Armyworm (Fall Armyworm) lori oko Àgbàdo rẹ:
 1. Ṣayẹwo aarin ewe àgbàdo (whorl) ni kutukutu owurọ fun idọti kokoro (frass).
-2. Lo oogun ti a fọwọsi gẹgẹbi Emamectin Benzoate (Ampligo / Proclaim) ni iwọn 250g fun hektari kan (tabi 15-20ml ninu knapsack sprayer 16L).
+2. Lo oogun ti NAFDAC fọwọsi gẹgẹbi Emamectin Benzoate (Ampligo / Proclaim) ni ibamu pẹlu itọsọna iwọn lilo lori aami ọja (product label) ati itọsọna alamọran ogbin.
 3. Fọ́n oogun naa taara sinu iho aarin ewe (funnel) nibi ti kokoro naa fi pamọ si.
-4. Pa ofin NAFDAC mọ: Akoko idaduro ṣaaju ikore (PHI) jẹ ọjọ meje (7 days). Maṣe jẹ ki ẹranko tabi eniyan wọle si oko laarin wakati mejila (12 hours REI).`;
+4. Pa ofin NAFDAC mọ: Tẹle akoko idaduro ṣaaju ikore (PHI) ati akoko idaduro wiwọle (REI) lori aami oogun ki o si wọ aṣọ aabo (PPE).`;
     }
     if (lang === 'pcm') {
       return `To stop Fall Armyworm from destroying your Maize:
 1. Check inside the maize leaf funnel early morning for their dirt and holes.
-2. Spray approved chemical like Emamectin benzoate (Ampligo or Proclaim) with 250g per hectare or 15-20ml inside one 16L knapsack sprayer.
+2. Spray NAFDAC-approved Emamectin benzoate (Ampligo or Proclaim) strictly following the product label rate and extension guidance.
 3. Target the spray direct inside the center of the maize leaf where the caterpillar dey hide.
-4. Obey NAFDAC rule: Make you wait 7 days before harvest (PHI 7 days), and nobody must enter the farm for 12 hours after spraying (REI 12 hours).`;
+4. Obey NAFDAC rule: Follow the Pre-Harvest Interval (PHI) and Restricted-Entry Interval (REI) printed on the product label and wear full PPE.`;
     }
     return `To effectively manage Fall Armyworm (Spodoptera frugiperda) on your Maize crop:
 1. Scouting: Inspect the leaf whorls (funnels) twice weekly in early morning for sawdust-like frass and windowpane feeding signs.
-2. Approved Treatment: Apply Emamectin Benzoate (e.g. Ampligo or Proclaim 5 SG) at 250g/ha (or 15-20ml per 16-litre knapsack).
+2. Approved Treatment: Apply a NAFDAC-registered Emamectin Benzoate product (e.g. Ampligo or Proclaim) strictly following the manufacturer label rate and local extension guidance.
 3. Application Technique: Direct the spray nozzle directly into the central whorl of each maize plant where larvae conceal themselves.
-4. Safety & Intervals: Pre-Harvest Interval (PHI) is 7 days. Restricted-Entry Interval (REI) is 12 hours. Always wear full personal protective equipment (PPE).`;
+4. Safety & Intervals: Follow the Pre-Harvest Interval (PHI) and Restricted-Entry Interval (REI) printed on the product label and always wear full personal protective equipment (PPE).`;
   }
 
-  // 3. Fertiliser questions
-  if (q.includes('fertiliser') || q.includes('fertilizer') || q.includes('npk') || q.includes('urea') || q.includes('ajile') || q.includes('iye')) {
-    if (lang === 'yo') {
-      return `Eto Ajilẹ ti o peye fun ${context.cropId ?? 'oko rẹ'} ni South-West Nigeria:
-1. Ajilẹ Ibẹrẹ (Basal): Lo NPK 15:15:15 (báàgì mẹrin si mẹfa fun hektari kan) lakoko gbigbin tabi ọsẹ meji lẹhin gbigbin.
-2. Ajilẹ Ekeji (Top-dressing): Lo Urea (46% N) báàgì meji si mẹta fun hektari kan ni ọsẹ mẹrin si mẹfa (4-6 weeks) nigbati ohun ọgbin ba n ga de ekun.
-3. Rii daju pe ilẹ tutu ṣaaju ki o to fi ajilẹ si, ki o si bo o pẹlu iye erupẹ diẹ lati dẹkun pipadanu nitrogen.`;
-    }
-    if (lang === 'pcm') {
-      return `Correct Fertiliser guide for your ${context.cropId ?? 'farm'} for South-West Nigeria:
-1. First Fertiliser (Basal): Put NPK 15:15:15 (around 4 to 6 bags per hectare) during planting or 2 weeks after planting. Put am 5cm away from the crop stem.
-2. Second Fertiliser (Top-dressing): Put Urea (46% Nitrogen) 2 to 3 bags per hectare at 4 to 6 weeks when the plant reach knee height.
-3. Make sure the soil get small water before you put fertilizer, and cover am small with sand make sun no blow the nitrogen go.`;
-    }
-    return `Scientifically grounded fertiliser protocol for ${context.cropId ?? 'crops'} in South-West Nigeria:
-1. Basal Application: Apply NPK 15:15:15 at 200–300 kg/ha (4–6 bags of 50kg per hectare) at planting or 10–14 days after emergence. Place fertiliser 5cm away from seed/stem in a ring or band.
-2. Top-Dressing: Side-dress Urea (46% N) at 100–150 kg/ha (2–3 bags/ha) at vegetative knee-high stage (4–6 weeks after planting).
-3. Moisture Requirement: Apply fertiliser only on moist soil and lightly incorporate into topsoil to prevent volatile nitrogen losses.`;
+  // 3. Fertiliser questions & ambiguous multilingual quantity queries (Batch 04.0-H: ADR-020)
+  // NEVER emit hardcoded NPK/urea numerical rates, and NEVER false-trigger on Yoruba `iye`.
+  const intent = detectFertiliserIntent(query);
+  if (intent.intent === 'fertiliser') {
+    return buildSafeNonNumericalFertiliserGuidance({
+      cropId: context.cropId,
+      language: lang,
+      reasonCode: context.cropId ? 'deterministic_calculation_required' : 'crop_not_identified',
+    });
+  }
+  if (intent.intent === 'ambiguous_quantity') {
+    return buildAmbiguousQueryClarification(lang);
   }
 
-  // 4. Weeding and Herbicide
+  // 4. Weeding and Herbicide (non-numerical label-directed guidance)
   if (q.includes('weed') || q.includes('koriko') || q.includes('herbicide') || q.includes('clearing')) {
     if (lang === 'yo') {
-      return `Eto Iṣakoso Koriko fun ${context.cropId ?? 'oko rẹ'}:
-1. Ṣaaju ki irugbin to hu (Pre-emergence): Lo Atrazine 500 SC (lita 3 fun hektari kan) fun oko àgbàdo lori ilẹ to tutu.
+      return `Eto Iṣakoso Koriko fun ${context.cropId || 'oko rẹ'}:
+1. Ṣaaju ki irugbin to hu (Pre-emergence): Lo oogun koriko ti NAFDAC fọwọsi (gẹgẹbi Atrazine fun àgbàdo) ni ibamu pẹlu itọsọna iwọn lilo lori aami ọja lori ilẹ to tutu.
 2. Maṣe lo Paraquat rárá - NAFDAC ti fofinde e patapata!
-3. Nigbati irugbin ba ti hu: Ṣe itọju koriko pẹlu ọwọ tabi ṣaaju ki koriko to gba agbara lori ohun ọgbin ni ọsẹ 3 si 4 lẹhin gbigbin.`;
+3. Nigbati irugbin ba ti hu: Ṣe itọju koriko pẹlu ọwọ ṣaaju ki koriko to gba agbara lori ohun ọgbin.`;
     }
     if (lang === 'pcm') {
-      return `Weed control protocol for your ${context.cropId ?? 'crop'}:
-1. Before seeds sprout: Spray approved selective herbicide like Atrazine 500 SC (3 litres per hectare) on wet ground.
+      return `Weed control protocol for your ${context.cropId || 'crop'}:
+1. Before seeds sprout: Use a NAFDAC-approved selective herbicide (such as Atrazine for maize) strictly following the product label rate on damp soil.
 2. Never use Paraquat at all - NAFDAC don ban am completely for Nigeria!
-3. After crops grow: Do manual hoe weeding around 3 to 4 weeks before the weed block sun and fertilizer from your crop.`;
+3. After crops grow: Do timely manual hoe weeding before weeds block sun and nutrients from your crop.`;
     }
-    return `Weed control guidelines for ${context.cropId ?? 'crops'} (NAFDAC & IITA compliant):
-1. Pre-Emergence: For maize/sorghum, apply Atrazine 500 SC at 3.0 L/ha on damp soil within 48 hours of planting.
+    return `Weed control guidelines for ${context.cropId || 'crops'} (NAFDAC & IITA compliant):
+1. Pre-Emergence: Use a NAFDAC-registered selective herbicide (such as Atrazine for maize/sorghum) strictly according to the manufacturer label rate on damp soil.
 2. Safety Warning: Do NOT use Paraquat — it is strictly prohibited and banned by NAFDAC nationwide.
-3. Post-Emergence: Perform primary hoe weeding between 21–28 days after planting before canopy closure.`;
+3. Post-Emergence: Perform timely primary hoe weeding before canopy closure.`;
   }
 
-  // 5. Default grounded GAP advice
+  // 5. Default grounded GAP advice (NEVER invent an agro-ecological zone when context.zone is missing)
+  const zoneLabelYo = context.zone ? context.zone : 'A ko ti fi idi agbegbe oju-ọjọ oko rẹ mulẹ (jọwọ jẹrisi agbegbe oko rẹ)';
+  const zoneLabelPcm = context.zone ? context.zone : 'Farm agro-ecological zone never confirm yet (please confirm your farm zone)';
+  const zoneLabelEn = context.zone ? context.zone : 'Not yet verified (please confirm your farm agro-ecological zone before site-specific prescriptions)';
+
   if (lang === 'yo') {
-    return `Imọran Ogbin IITA/NIHORT fun ${context.cropId ?? 'ohun ogbin rẹ'}:
-- Zone: South-West Agro-ecological Zone (${context.zone ?? 'Rainforest / Derived Savanna'}).
+    return `Imọran Ogbin IITA/NIHORT fun ${context.cropId || 'ohun ogbin rẹ'}:
+- Agbegbe oju-ọjọ (Zone): ${zoneLabelYo}.
 - Rii daju pe o gbin irugbin ti o ni iwe-ẹri (certified seed/seedlings) lati yago fun arun.
-- Tẹle ilana aaye gbigbin ti o peye ki o si ṣe idanwo ilẹ (soil test) lati mọ iye ajilẹ to yẹ.
+- Tẹle ilana aaye gbigbin ti o peye ki o si ṣe idanwo ilẹ (soil test) lati mọ eto ajilẹ to yẹ.
 - Kan si alamọran oko (Field Agent) CultivaNode fun atilẹyin afikun.`;
   }
 
   if (lang === 'pcm') {
-    return `Official IITA/NIHORT agricultural advice for your ${context.cropId ?? 'crop'}:
-- Zone: South-West Agro-ecological Zone (${context.zone ?? 'Rainforest / Derived Savanna'}).
+    return `General IITA/NIHORT agricultural guidance for your ${context.cropId || 'crop'}:
+- Agro-ecological Zone: ${zoneLabelPcm}.
 - Always buy certified seeds and clean planting materials make disease no enter your farm.
-- Follow proper spacing and test your soil so you go know the exact bags of fertilizer wey your farm need.
+- Follow proper spacing and test your soil for lab before applying any fertiliser rate.
 - Talk to your CultivaNode Field Agent if you need tractor or spraying services.`;
   }
 
-  return `GAP Agronomic Advisory for ${context.cropId ?? 'your crop'} in South-West Nigeria:
-- Agro-Ecological Suitability: Calibrated for ${context.zone ?? 'Rainforest / Derived Savanna'} conditions.
+  return `General GAP Agronomic Guidance for ${context.cropId || 'your crop'}:
+- Agro-Ecological Zone: ${zoneLabelEn}.
 - Certified Planting Material: Use high-yielding, disease-resistant varieties vetted by IITA/NIHORT.
-- Timely Operations: Adhere strictly to the operations schedule for land prep, basal fertiliser, and pest scouting.
+- Timely Operations: Follow your operations schedule for land preparation, soil-tested nutrient management, and pest scouting.
 - Need mechanization? You can directly book tractors, ridgers, or spraying providers through your CultivaNode dashboard.`;
 }
 
@@ -410,16 +425,38 @@ export async function askGroundedAiAssistant(
   // 5. Pass output through mandatory NAFDAC chemical safety guardrails
   const guardrailResult: GuardrailCheckResult = checkChemicalSafetyGuardrails(rawAnswer);
 
+  // 6. Pass output through server-side numerical application validator (Batch 04.0-H Revision 5).
+  // Only `params.verifiedFarmContext` (server-resolved RLS farm/plot/crop-cycle context) may
+  // authorise numerical validation; client-supplied context assertions never substitute for it.
+  const numericValidation = validateAssistantNumericalOutput(guardrailResult.sanitizedResponseText, {
+    cropId: params.verifiedFarmContext?.cropId ?? params.context.cropId,
+    farmId: params.verifiedFarmContext?.farmId ?? params.context.farmId ?? null,
+    plotId: params.verifiedFarmContext?.plotId ?? params.context.plotId ?? null,
+    requestId: params.context.requestId ?? null,
+    zone: params.verifiedFarmContext?.zone ?? null,
+    growthStage: params.verifiedFarmContext?.growthStage ?? null,
+    verifiedFarmContext: params.verifiedFarmContext ?? null,
+    language: lang,
+    approvedCalculation: params.approvedFertiliserCalculation ?? null,
+    verifiedSourceQuote: null,
+  });
+
+  const finalPassed = guardrailResult.passed && numericValidation.passed;
+  const finalAnswer = guardrailResult.passed ? numericValidation.sanitizedText : guardrailResult.sanitizedResponseText;
+
   return {
-    answer: guardrailResult.sanitizedResponseText,
+    answer: finalAnswer,
     language: lang,
     providerUsed,
     modelUsed,
     providerErrors,
-    passedSafetyGuardrail: guardrailResult.passed,
+    passedSafetyGuardrail: finalPassed,
     bannedChemicalsDetected: guardrailResult.bannedChemicalsDetected,
     approvedChemicalsDetected: guardrailResult.approvedChemicalsDetected,
     safetyAppendices: guardrailResult.safetyAppendices,
     sources: groundedPrompt.contextSources,
+    recommendationStatus: numericValidation.recommendationStatus,
+    numericGuardrailBlocked: !numericValidation.passed,
+    numericGuardrailReasonCode: numericValidation.reasonCode,
   };
 }

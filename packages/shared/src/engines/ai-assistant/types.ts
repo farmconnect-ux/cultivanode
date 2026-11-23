@@ -5,10 +5,16 @@ export interface FarmerContext {
   farmerId: string;
   cropId: string;
   varietyId?: string;
-  zone: FarmZone;
+  /** Verified agro-ecological zone when known; MUST remain undefined when unverified (never invented). */
+  zone?: FarmZone;
   season?: AgronomySeason;
   stageName?: string;
   daysAfterPlanting?: number;
+  farmId?: string;
+  plotId?: string;
+  /** Exact active crop_cycles.id selected by the farmer; required for trusted crop-cycle context. */
+  cycleId?: string;
+  requestId?: string;
 }
 
 export interface GroundedKnowledgeSnippet {

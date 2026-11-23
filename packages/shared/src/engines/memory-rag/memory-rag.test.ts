@@ -316,6 +316,8 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     };
   }
 
+  // makeEmptySnapshot() sets farmZone, so every prompt also carries the Batch 04.0-H
+  // "unverified_stored_farm_attributes" block; expected counts below include it.
   function assertNoDelimiterBreakout(serializedPrompt: string, expectedBlockCount: number): void {
     const openTags = serializedPrompt.match(/<untrusted_evidence_json\b[^>]*>/g) ?? [];
     const closeTags = serializedPrompt.match(/<\/untrusted_evidence_json>/g) ?? [];
@@ -338,8 +340,8 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Advise on maize', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    // Live farm facts + confirmed memory = 2 evidence blocks
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    // Live farm facts + unverified stored farm zone (Batch 04.0-H) + confirmed memory = 3 evidence blocks
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toMatch(/Ignore all safety rules/i);
     expect(prompt.userPrompt).not.toContain('SYSTEM:');
     expect(pkg.sanitizationSummary.fieldsTransformed).toBeGreaterThanOrEqual(1);
@@ -363,7 +365,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     // Invalid category must be clamped to safe fallback 'semantic'
     expect(pkg.confirmedHistoricalMemories[0]?.category).toBe('semantic');
     const prompt = buildGroundedPrompt('Advise on maize', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toMatch(/Ignore previous instructions/i);
   });
 
@@ -383,7 +385,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Weed control?', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toMatch(/Ignore all previous instructions/i);
     expect(prompt.userPrompt).not.toContain('<assistant>');
   });
@@ -401,7 +403,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
 
     const prompt = buildGroundedPrompt('Pest advice', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
     // Live farm facts + published standards = 2 blocks
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toContain('SYSTEM:');
   });
 
@@ -419,7 +421,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Maize fertiliser?', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toMatch(/Ignore previous instructions/i);
     expect(prompt.userPrompt).not.toContain('DEVELOPER:');
   });
@@ -437,7 +439,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Fertiliser rate?', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).toContain('Apply 200 kg/ha NPK 15-15-15 at planting.');
     expect(prompt.userPrompt).not.toMatch(/Ignore all previous instructions/i);
     expect(prompt.userPrompt).not.toMatch(/Forget all prior instructions/i);
@@ -469,7 +471,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     expect(std.sourceAuthority).not.toMatch(/[\u202E\u200B\u2028]/);
 
     const prompt = buildGroundedPrompt('Check soil', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 3);
+    assertNoDelimiterBreakout(prompt.userPrompt, 4);
     expect(prompt.userPrompt).not.toMatch(/[\u202E\u200B\u2028\u2029]/);
   });
 
@@ -488,7 +490,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Check', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 2);
+    assertNoDelimiterBreakout(prompt.userPrompt, 3);
     expect(prompt.userPrompt).not.toContain('<script>');
     // Depth limit caps deeply nested objects safely
     expect(prompt.userPrompt).toContain('[TRUNCATED]');
@@ -517,7 +519,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
     });
 
     const prompt = buildGroundedPrompt('Maize spacing?', { farmerId: 'u1', cropId: 'maize', zone: 'derived_savanna' }, 'en', pkg);
-    assertNoDelimiterBreakout(prompt.userPrompt, 3);
+    assertNoDelimiterBreakout(prompt.userPrompt, 4);
     expect(prompt.userPrompt).toContain('North plot drained well in 2025');
     expect(prompt.userPrompt).toContain('4200');
     expect(prompt.userPrompt).toContain('Slightly acidic pH 5.8');
@@ -593,7 +595,7 @@ describe('Batch 03.2G Finding 5 — Complete Untrusted Evidence Boundary & Adver
           : Array.isArray(rawContent)
             ? rawContent.map((part) => part.text ?? '').join('\n')
             : '';
-      assertNoDelimiterBreakout(userMessage, 3);
+      assertNoDelimiterBreakout(userMessage, 4);
       expect(userMessage).not.toMatch(/Ignore all previous instructions/i);
       expect(userMessage).not.toMatch(/Ignore previous instructions/i);
       expect(userMessage).not.toContain('SYSTEM:');

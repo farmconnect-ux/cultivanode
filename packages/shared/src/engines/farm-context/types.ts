@@ -201,6 +201,8 @@ export interface CropIdentityDomainData {
     cycleId: string;
     plotId: string | null;
     cropId: string;
+    /** Actual `crop_cycles.status` from the database (preserved without hardcoding). */
+    status: string;
     currentStage: string;
     plantingDate: string;
     expectedHarvestDate: string;
