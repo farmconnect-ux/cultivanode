@@ -305,6 +305,16 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
     };
   }
 
+  // Numerical context must identify one exact cycle, plot, and crop. A coincidental single match
+  // is not sufficient evidence that the caller selected the intended cultivation cycle.
+  if (!targetPlotId || !targetCropId || !targetCycleId) {
+    return {
+      ok: false,
+      reasonCode: 'crop_cycle_selection_required',
+      message: 'Explicit plot, crop, and crop-cycle identifiers are required to establish trusted cycle-specific context.',
+    };
+  }
+
   // Finding 1: Independent geographic-zone verification (NEVER fall back to stored `farms.zone`)
   const geo = options?.verifiedGeographicZone;
   if (!geo || !isTrustedGeographicZoneResolution(geo)) {
@@ -382,16 +392,6 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
 
   const targetCropId = options?.cropId?.trim().toLowerCase() || '';
   const targetCycleId = options?.cycleId?.trim() || '';
-
-  // Numerical context must identify one exact cycle, plot, and crop. A coincidental single match
-  // is not sufficient evidence that the caller selected the intended cultivation cycle.
-  if (!targetPlotId || !targetCropId || !targetCycleId) {
-    return {
-      ok: false,
-      reasonCode: 'crop_cycle_selection_required',
-      message: 'Explicit plot, crop, and crop-cycle identifiers are required to establish trusted cycle-specific context.',
-    };
-  }
 
   const scopedCycles = allCycles.filter((c) => {
     if (targetPlotId && c.plotId !== targetPlotId) return false;
