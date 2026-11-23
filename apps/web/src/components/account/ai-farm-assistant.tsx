@@ -8,7 +8,13 @@ import { setConsent } from "@/actions/account";
 import { Badge, Button, Card } from "@/components/ui";
 import type { Locale } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/client";
-import type { AppLanguage, GroundedAiAssistantResponse, GroundedKnowledgeSnippet } from "@cultivanode/shared";
+import {
+  describeSubjectCandidate,
+  type AppLanguage,
+  type GroundedAiAssistantResponse,
+  type GroundedKnowledgeSnippet,
+  type SubjectCandidate,
+} from "@cultivanode/shared";
 
 /**
  * Batch 03.4: the web assistant calls the single audited entry point `POST /api/ai/assistant`
@@ -190,6 +196,9 @@ interface MessageItem {
   safetyAppendices?: string[];
   passedSafetyGuardrail?: boolean;
   traceId?: string;
+  /** LFC-AC-04: the question matched several active crops; the farmer picks one to ask again. */
+  subjectCandidates?: SubjectCandidate[];
+  askedQuery?: string;
   timestamp: string;
 }
 
@@ -316,7 +325,14 @@ export function AiFarmAssistant({
     reader.readAsDataURL(file);
   };
 
-  const handleSend = (queryToSend?: string) => {
+  const handleSend = (
+    queryToSend?: string,
+    cycleOverride?: { cycleId: string; cropId: string; plotId: string | null },
+  ) => {
+    const cycleForRequest = cycleOverride
+      ?? (selectedCycle
+        ? { cycleId: selectedCycle.id, cropId: selectedCycle.crop_id, plotId: selectedCycle.plot_id }
+        : null);
     const text = (queryToSend ?? inputQuery).trim();
     const currentImg = selectedImage;
     if ((!text && !currentImg) || isPending || !canAsk || !selectedFarm) return;
@@ -341,11 +357,11 @@ export function AiFarmAssistant({
           query: text || "Please examine this crop image and identify potential disease or nutrient issues with verified treatments.",
           context: {
             farmId: selectedFarm.id,
-            ...(selectedCycle
+            ...(cycleForRequest
               ? {
-                  cycleId: selectedCycle.id,
-                  cropId: selectedCycle.crop_id,
-                  ...(selectedCycle.plot_id ? { plotId: selectedCycle.plot_id } : {}),
+                  cycleId: cycleForRequest.cycleId,
+                  cropId: cycleForRequest.cropId,
+                  ...(cycleForRequest.plotId ? { plotId: cycleForRequest.plotId } : {}),
                 }
               : {}),
           },
@@ -364,6 +380,8 @@ export function AiFarmAssistant({
           safetyAppendices: res.safetyAppendices,
           passedSafetyGuardrail: res.passedSafetyGuardrail,
           traceId: res.traceId,
+          subjectCandidates: res.subjectAmbiguity?.candidates,
+          askedQuery: text || undefined,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
 
@@ -608,6 +626,27 @@ export function AiFarmAssistant({
 
                 {m.traceId && (
                   <p className="mt-2 text-[10px] text-on-surface-variant">Ref {m.traceId.slice(0, 8)}</p>
+                )}
+                {m.role === "assistant" && m.subjectCandidates && m.subjectCandidates.length > 1 && (
+                  <div className="mt-3 flex flex-col gap-2 border-t border-border/60 pt-3">
+                    <p className="text-xs font-semibold text-primary">Which crop is this about?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {m.subjectCandidates.map((c) => (
+                        <button
+                          key={c.cycleId}
+                          type="button"
+                          disabled={isPending || !m.askedQuery}
+                          onClick={() => {
+                            if (farmCycles.some((fc) => fc.id === c.cycleId)) setSelectedCycleId(c.cycleId);
+                            handleSend(m.askedQuery, { cycleId: c.cycleId, cropId: c.cropId, plotId: c.plotId });
+                          }}
+                          className="rounded-full border border-primary/40 bg-surface px-3 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          {describeSubjectCandidate(c)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {m.role === "assistant" && m.traceId && <AnswerFeedback traceId={m.traceId} />}
 

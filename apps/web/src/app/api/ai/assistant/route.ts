@@ -279,6 +279,8 @@ export async function POST(req: Request) {
           requestId: traceId,
         } as FarmerContext,
         verifiedFarmContext: verifiedCtxRes.verifiedContext,
+        // LFC-AC-04: several active cycles match and none was chosen; ask instead of guessing.
+        subjectAmbiguity: verifiedCtxRes.subjectAmbiguity ?? null,
         // Finding 1: Pass the assembled, sanitised GroundedEvidencePackage directly into the AI model pipeline.
         groundedEvidence: evidencePackage,
         language: body.language ?? "en",

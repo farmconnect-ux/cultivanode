@@ -8,6 +8,7 @@ import {
   loadAssistantCycles,
   plainAnswer,
   recordAssistantFeedback,
+  type AssistantCandidate,
   type AssistantCycle,
   type FeedbackOutcome,
 } from '../lib/assistant';
@@ -17,7 +18,16 @@ import { Button, Card, Chips, Header, Notice, Pill, Screen, Text, TextField } fr
 
 type Message =
   | { id: string; role: 'user'; text: string }
-  | { id: string; role: 'assistant'; text: string; traceId: string | null; basic: boolean; safety: string[] };
+  | {
+      id: string;
+      role: 'assistant';
+      text: string;
+      traceId: string | null;
+      basic: boolean;
+      safety: string[];
+      candidates: AssistantCandidate[];
+      askedQuery: string;
+    };
 
 const WHOLE_FARM = 'whole_farm';
 let seq = 0;
@@ -57,19 +67,29 @@ export function AssistantScreen({ onBack }: { onBack: () => void }) {
     } else setError(a.errors.failed);
   }
 
-  async function ask() {
-    const text = query.trim();
+  async function ask(again?: { text: string; candidate: AssistantCandidate }) {
+    const text = again ? again.text : query.trim();
     if (!text || busy || !farm || consent !== 'granted') return;
     setError(null);
     setBusy(true);
     setMessages((m) => [...m, { id: nextId(), role: 'user', text }]);
-    setQuery('');
-    const cycle = cycles.find((c) => c.id === cycleId) ?? null;
+    if (!again) setQuery('');
+    const cycle: AssistantCycle | null = again
+      ? (cycles.find((c) => c.id === again.candidate.cycleId) ?? {
+          id: again.candidate.cycleId,
+          plotId: again.candidate.plotId,
+          cropId: again.candidate.cropId,
+          stage: null,
+          cropName: again.candidate.cropId,
+          cropLocal: null,
+        })
+      : (cycles.find((c) => c.id === cycleId) ?? null);
+    if (again && cycles.some((c) => c.id === again.candidate.cycleId)) setCycleId(again.candidate.cycleId);
     const res = await askAssistant({ query: text, language: lang === 'yo' ? 'yo' : 'en', farmId: farm.id, cycle });
     setBusy(false);
     if (res.outcome === 'ok') {
       const r = res.answer;
-      setMessages((m) => [...m, { id: nextId(), role: 'assistant', text: plainAnswer(r.answer), traceId: r.traceId, basic: r.usedBasicAdvice, safety: r.safetyNotes }]);
+      setMessages((m) => [...m, { id: nextId(), role: 'assistant', text: plainAnswer(r.answer), traceId: r.traceId, basic: r.usedBasicAdvice, safety: r.safetyNotes, candidates: r.candidates, askedQuery: text }]);
       return;
     }
     if (res.outcome === 'consent') setConsent('missing');
@@ -93,7 +113,7 @@ export function AssistantScreen({ onBack }: { onBack: () => void }) {
       footer={
         <View style={styles.composer}>
           <TextField label={a.placeholder} placeholder={a.placeholder} value={query} onChangeText={setQuery} maxLength={2000} multiline editable={canAsk} />
-          <Button title={busy ? a.asking : a.ask} icon="send" onPress={ask} loading={busy} disabled={!canAsk || !query.trim()} />
+          <Button title={busy ? a.asking : a.ask} icon="send" onPress={() => ask()} loading={busy} disabled={!canAsk || !query.trim()} />
         </View>
       }
     >
@@ -138,6 +158,27 @@ export function AssistantScreen({ onBack }: { onBack: () => void }) {
             {m.safety.map((x) => (
               <Notice key={x} tone="warning">{x}</Notice>
             ))}
+            {m.candidates.length > 1 ? (
+              <View style={styles.feedback}>
+                <Text variant="small">{a.whichCrop}</Text>
+                <View style={styles.row}>
+                  {m.candidates.map((c) => {
+                    const local = cycles.find((x) => x.id === c.cycleId);
+                    const name = local ? (lang === 'yo' && local.cropLocal ? local.cropLocal : local.cropName) : c.cropId.replace(/_/g, ' ');
+                    return (
+                      <Button
+                        key={c.cycleId}
+                        title={c.plotName ? `${name} · ${c.plotName}` : name}
+                        variant="secondary"
+                        compact
+                        disabled={!canAsk}
+                        onPress={() => ask({ text: m.askedQuery, candidate: c })}
+                      />
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
             {m.traceId ? <Text variant="caption" muted>{fill(a.ref, { ref: m.traceId.slice(0, 8) })}</Text> : null}
             {m.traceId ? <Feedback traceId={m.traceId} /> : null}
           </Card>

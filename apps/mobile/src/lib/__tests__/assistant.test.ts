@@ -35,7 +35,28 @@ describe('mobile farm assistant (Batch 03.4)', () => {
     const res = await askAssistant({ query: 'Hi', language: 'en', farmId: 'f1' });
     expect(fetchMock.mock.calls[0]![0]).toMatch(/\/api\/ai\/assistant$/);
     expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe('Bearer tok');
-    expect(res).toEqual({ outcome: 'ok', answer: { answer: '**Yes**', traceId: '12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usedBasicAdvice: false, safetyNotes: [] } });
+    expect(res).toEqual({ outcome: 'ok', answer: { answer: '**Yes**', traceId: '12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usedBasicAdvice: false, safetyNotes: [], candidates: [] } });
+  });
+
+  it('reads the crop choices when the question matched more than one crop (LFC-AC-04)', async () => {
+    const { interpretAssistantResponse } = await import('../assistant');
+    const res = interpretAssistantResponse(200, {
+      answer: 'Which one?',
+      traceId: 't',
+      providerUsed: 'rule-engine',
+      subjectAmbiguity: {
+        status: 'subject_ambiguous',
+        candidates: [
+          { cycleId: 'c1', cropId: 'maize', plotId: 'p1', plotName: 'North plot' },
+          { cycleId: 'c2', cropId: 'cassava', plotId: null },
+          { cycleId: 3, cropId: 'bad' },
+        ],
+      },
+    });
+    expect(res.outcome === 'ok' && res.answer.candidates).toEqual([
+      { cycleId: 'c1', cropId: 'maize', plotId: 'p1', plotName: 'North plot' },
+      { cycleId: 'c2', cropId: 'cassava', plotId: null, plotName: null },
+    ]);
   });
 
   it('maps failures to clear outcomes', async () => {

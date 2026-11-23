@@ -772,6 +772,7 @@ const yo: Dictionary = {
       failed: 'Olùrànlọ́wọ́ kò lè dáhùn báyìí. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
       failedRef: 'Olùrànlọ́wọ́ kò lè dáhùn báyìí (ìtọ́ka {ref}). Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
     },
+    whichCrop: 'O ní ju irugbin kan lọ tí ń dàgbà. Èwo ni ìbéèrè yìí jẹ mọ́?',
     helpful: 'Ṣé èyí wúlò?',
     yes: 'Bẹ́ẹ̀ni',
     no: 'Rárá',
