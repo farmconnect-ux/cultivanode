@@ -123,6 +123,7 @@ export type VerifiedFarmContextResolutionResult =
         | 'geographic_zone_plot_mismatch'
         | 'crop_cycle_missing'
         | 'crop_cycle_ambiguous'
+        | 'crop_cycle_selection_required'
         | 'crop_cycle_plot_mismatch'
         | 'crop_cycle_status_missing'
         | 'crop_cycle_inactive'
@@ -264,6 +265,7 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
   options?: {
     plotId?: string | null;
     cropId?: string | null;
+    cycleId?: string | null;
     verifiedGeographicZone?: VerifiedGeographicZoneResolution | null;
     referenceDate?: string;
   },
@@ -379,10 +381,22 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
   }
 
   const targetCropId = options?.cropId?.trim().toLowerCase() || '';
+  const targetCycleId = options?.cycleId?.trim() || '';
+
+  // Numerical context must identify one exact cycle, plot, and crop. A coincidental single match
+  // is not sufficient evidence that the caller selected the intended cultivation cycle.
+  if (!targetPlotId || !targetCropId || !targetCycleId) {
+    return {
+      ok: false,
+      reasonCode: 'crop_cycle_selection_required',
+      message: 'Explicit plot, crop, and crop-cycle identifiers are required to establish trusted cycle-specific context.',
+    };
+  }
 
   const scopedCycles = allCycles.filter((c) => {
     if (targetPlotId && c.plotId !== targetPlotId) return false;
-    if (targetCropId && c.cropId.trim().toLowerCase() !== targetCropId) return false;
+    if (c.cropId.trim().toLowerCase() !== targetCropId) return false;
+    if (c.cycleId !== targetCycleId) return false;
     return true;
   });
 
@@ -391,7 +405,7 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
       ok: false,
       reasonCode: targetPlotId ? 'crop_cycle_plot_mismatch' : 'crop_cycle_missing',
       message: targetPlotId
-        ? 'No crop cycle matches the verified plot and crop on this farm.'
+        ? 'No crop cycle matches the explicitly selected plot, crop, and cycle on this farm.'
         : 'No crop cycle matches the requested crop on this farm.',
     };
   }
@@ -439,7 +453,7 @@ export function resolveVerifiedAgronomicFarmContextFromSnapshot(
     };
   }
 
-  if (matchedCycle.state !== 'verified_current' || !matchedCycle.cycleId?.trim()) {
+  if (!matchedCycle.cycleId?.trim() || matchedCycle.cycleId !== targetCycleId) {
     return {
       ok: false,
       reasonCode: 'crop_cycle_inactive',
