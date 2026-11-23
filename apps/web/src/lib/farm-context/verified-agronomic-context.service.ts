@@ -15,6 +15,7 @@ import { getLiveFarmContextSnapshot } from "@/lib/farm-context/live-farm-context
 export interface ClientContextAssertions {
   plotId?: string | null;
   cropId?: string | null;
+  cycleId?: string | null;
   zone?: string | null;
   stageName?: string | null;
 }
@@ -125,17 +126,16 @@ export async function resolveServerVerifiedAgronomicContext(params: {
   // 4. Deterministic, unambiguous active crop-cycle resolution (NEVER `.find(...)` first-match!)
   const allCycles = snapshot.domains?.crop_identity_variety_and_stage?.data?.activeCycles ?? [];
   const requestedCrop = assertions?.cropId?.trim().toLowerCase() || "";
+  const requestedCycleId = assertions?.cycleId?.trim() || "";
   const activeStatusSet = new Set<string>(ACTIVE_CROP_CYCLE_STATUSES);
 
   const scopedActiveCycles = allCycles.filter((c) => {
     if (verifiedPlotId && c.plotId !== verifiedPlotId) return false;
     if (requestedCrop && c.cropId.trim().toLowerCase() !== requestedCrop) return false;
+    if (requestedCycleId && c.cycleId !== requestedCycleId) return false;
     // If status is populated, require it to be an active cultivation status; if omitted in legacy mocks,
     // allow downstream `resolveVerifiedAgronomicFarmContextFromSnapshot` to reject `crop_cycle_status_missing`.
-    if (typeof c.status === "string" && c.status.trim() !== "") {
-      return activeStatusSet.has(c.status.trim().toLowerCase());
-    }
-    return true;
+    return typeof c.status === "string" && activeStatusSet.has(c.status.trim().toLowerCase());
   });
 
   const isAmbiguous = scopedActiveCycles.length > 1;
@@ -177,7 +177,8 @@ export async function resolveServerVerifiedAgronomicContext(params: {
   //    dataset exists yet, so this fails closed with `geographic_zone_unverified` (or `crop_cycle_ambiguous`).
   const resolution = resolveVerifiedAgronomicFarmContextFromSnapshot(snapshot, {
     plotId: verifiedPlotId,
-    cropId: matchedCycle?.cropId ?? (requestedCrop || undefined),
+    cropId: requestedCrop || undefined,
+    cycleId: requestedCycleId || undefined,
     verifiedGeographicZone: params.verifiedGeographicZone ?? null,
     referenceDate: params.referenceDate,
   });
