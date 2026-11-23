@@ -35,6 +35,8 @@ export const FARM_CONTEXT_DOMAINS = [
   'financial_and_marketplace_records',
   'equipment_and_iot_telemetry',
   'farmer_observations_and_scouting',
+  'labour_and_tasks',
+  'livestock_and_animal_health',
 ] as const;
 
 export type FarmContextDomain = (typeof FARM_CONTEXT_DOMAINS)[number];
@@ -74,6 +76,10 @@ export const ALLOWED_AUDIT_CONTEXT_SOURCES = [
   'weather_cache',
   'marketplace_orders',
   'marketplace_journal_entries',
+  // Batch 03.4 (migration 20261125000000): labour and livestock domains.
+  'farm_workers',
+  'farm_attendance_records',
+  'farm_livestock_groups',
 ] as const;
 
 export type AllowedAuditContextSource = (typeof ALLOWED_AUDIT_CONTEXT_SOURCES)[number];
@@ -333,6 +339,94 @@ export interface PersistentMemoryExtensionPoint {
   profileScopeItems: readonly [];
 }
 
+/** Sub-query status inside a multi-table domain. `error` means unknown, never "none recorded". */
+export type DomainSubQueryStatus = 'ok' | 'empty' | 'error';
+
+/**
+ * Batch 03.4: labour domain. Worker names, phone numbers and wages are deliberately not carried:
+ * the assistant only needs capacity (how many people are available) and the open task load.
+ */
+export interface LabourDomainData {
+  workers: {
+    active: number;
+    onLeave: number;
+    inactive: number;
+    roles: string[];
+  };
+  attendanceLast7Days: {
+    presentOrLate: number;
+    absentOrOnLeave: number;
+    /** Distinct workers with any attendance record in the window. */
+    workersRecorded: number;
+  };
+  openTasks: LabourTaskRecord[];
+  workersQueryStatus: DomainSubQueryStatus;
+  attendanceQueryStatus: DomainSubQueryStatus;
+  tasksQueryStatus: DomainSubQueryStatus;
+}
+
+export interface LabourTaskRecord {
+  taskId: string;
+  title: string;
+  category: string;
+  priority: string;
+  status: string;
+  plotId: string | null;
+  cycleId: string | null;
+  startDate: string;
+  dueDate: string;
+  /** Not completed or cancelled, and due before the snapshot date. */
+  overdue: boolean;
+  assigned: boolean;
+  state: 'unverified_provisional';
+}
+
+/** Batch 03.4: livestock domain (groups are the records the livestock screens write). */
+export interface LivestockDomainData {
+  groups: LivestockGroupRecord[];
+  recentHealthEvents: LivestockHealthEventRecord[];
+  /** Health events whose withdrawal end date is on or after the snapshot date. */
+  activeWithdrawals: LivestockHealthEventRecord[];
+  recentProduction: LivestockProductionRecord[];
+  groupsQueryStatus: DomainSubQueryStatus;
+  healthQueryStatus: DomainSubQueryStatus;
+  productionQueryStatus: DomainSubQueryStatus;
+}
+
+export interface LivestockGroupRecord {
+  groupId: string;
+  groupName: string;
+  animalType: string;
+  breed: string | null;
+  purpose: string;
+  population: number;
+  ageWeeks: number | null;
+  healthStatus: string;
+  state: 'unverified_provisional';
+}
+
+export interface LivestockHealthEventRecord {
+  eventId: string;
+  groupId: string | null;
+  eventType: string;
+  condition: string | null;
+  medication: string | null;
+  administeredOn: string;
+  headAffected: number | null;
+  withdrawalEndDate: string | null;
+  state: 'unverified_provisional';
+}
+
+export interface LivestockProductionRecord {
+  logId: string;
+  groupId: string | null;
+  productType: string;
+  quantity: number;
+  unit: string;
+  logDate: string;
+  state: 'unverified_provisional';
+}
+
 export interface LiveFarmContextSnapshot {
   farmId: string;
   farmName: string | null;
@@ -353,6 +447,9 @@ export interface LiveFarmContextSnapshot {
     financial_and_marketplace_records: DomainContextSection<FinancialMarketplaceDomainData>;
     equipment_and_iot_telemetry: DomainContextSection<EquipmentTelemetryDomainData>;
     farmer_observations_and_scouting: DomainContextSection<FarmerObservationsDomainData>;
+    /** Batch 03.4. Optional so snapshots built before these domains existed still type-check. */
+    labour_and_tasks?: DomainContextSection<LabourDomainData>;
+    livestock_and_animal_health?: DomainContextSection<LivestockDomainData>;
   };
   auditContextRefs: AuditContextReference[];
   conflicts: ContextConflictDetail[];

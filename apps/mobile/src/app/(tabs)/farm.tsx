@@ -7,6 +7,7 @@ const TOOL_ROUTES = {
   inventory: '/inventory',
   map: '/farms/boundary_walk',
   scouting: '/operations/scouting',
+  assistant: '/operations/assistant',
 } as const;
 
 export default function FarmRoute() {

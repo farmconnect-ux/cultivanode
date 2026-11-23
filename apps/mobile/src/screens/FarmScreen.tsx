@@ -10,7 +10,7 @@ import { color as c, space } from '../theme';
 import { Button, Card, Empty, Pill, Row, Screen, SectionTitle, Text, type IconName } from '../ui';
 import { cropLabel, CropCard } from './HomeScreen';
 
-export type FarmTool = 'livestock' | 'books' | 'inventory' | 'map' | 'scouting';
+export type FarmTool = 'livestock' | 'books' | 'inventory' | 'map' | 'scouting' | 'assistant';
 type Props = { onAddCrop: () => void; onAddFarm: () => void; onTool: (tool: FarmTool) => void };
 
 /** My farm: crops, every job still to do (late, this week, later) and the farm tools that are switched on. */
@@ -48,6 +48,7 @@ export function FarmScreen({ onAddCrop, onAddFarm, onTool }: Props) {
 
   const tools: { key: FarmTool; icon: IconName; on: boolean }[] = [
     { key: 'scouting', icon: 'eye', on: true },
+    { key: 'assistant', icon: 'message-circle', on: true },
     { key: 'books', icon: 'book-open', on: true },
     { key: 'inventory', icon: 'package', on: true },
     { key: 'livestock', icon: 'feather', on: flags.module_livestock === true },

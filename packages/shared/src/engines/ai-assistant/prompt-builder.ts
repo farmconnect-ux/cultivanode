@@ -66,6 +66,108 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
     );
   }
 
+  // Batch 03.4 (LFC-AC-06): labour capacity and open tasks. Counts only; no worker names, phones or wages.
+  const labourSection = snap.domains?.labour_and_tasks;
+  const labour = labourSection?.data;
+  if (labourSection?.status === 'error') {
+    sections.push(
+      'Farm Labour and Tasks: UNAVAILABLE (labour records could not be retrieved). Do NOT assume the farm has no workers or no pending tasks; ask the farmer.',
+    );
+  } else if (labour) {
+    const payload = {
+      workers:
+        labour.workersQueryStatus === 'error'
+          ? 'unavailable'
+          : {
+              active: labour.workers.active,
+              onLeave: labour.workers.onLeave,
+              roles: labour.workers.roles.slice(0, 10).map((r) => sanitizeMetadataField(r, 40)),
+            },
+      attendanceLast7Days: labour.attendanceQueryStatus === 'error' ? 'unavailable' : labour.attendanceLast7Days,
+      openTasks:
+        labour.tasksQueryStatus === 'error'
+          ? 'unavailable'
+          : labour.openTasks.slice(0, 15).map((t) => ({
+              title: sanitizeMetadataField(t.title, 120),
+              category: sanitizeMetadataField(t.category, 40),
+              priority: sanitizeMetadataField(t.priority, 20),
+              status: sanitizeMetadataField(t.status, 20),
+              dueDate: sanitizeMetadataField(t.dueDate, 20),
+              overdue: t.overdue,
+              assigned: t.assigned,
+            })),
+      verificationStatus: 'farmer_recorded_not_independently_verified',
+    };
+    const hasContent =
+      labour.workersQueryStatus !== 'empty' || labour.attendanceQueryStatus !== 'empty' || labour.tasksQueryStatus !== 'empty';
+    if (hasContent) {
+      sections.push(
+        `Farm Labour and Tasks (UNVERIFIED farmer records; use to judge whether advice is practical with the people available):\n<untrusted_evidence_json type="farm_labour_and_tasks">\n${serializeUntrustedEvidenceJson(payload)}\n</untrusted_evidence_json>`,
+      );
+    }
+  }
+
+  // Batch 03.4 (LFC-AC-06): livestock groups, health events and withdrawal periods.
+  const livestockSection = snap.domains?.livestock_and_animal_health;
+  const livestock = livestockSection?.data;
+  if (livestockSection?.status === 'error') {
+    sections.push(
+      'Farm Livestock: UNAVAILABLE (livestock records could not be retrieved). Do NOT assume the farm has no animals, no recent treatments or no active drug withdrawal periods; ask the farmer.',
+    );
+  } else if (livestock) {
+    const healthUnavailable = livestock.healthQueryStatus === 'error';
+    const payload = {
+      groups:
+        livestock.groupsQueryStatus === 'error'
+          ? 'unavailable'
+          : livestock.groups.slice(0, 15).map((g) => ({
+              groupId: sanitizeMetadataField(g.groupId, 80),
+              name: sanitizeMetadataField(g.groupName, 100),
+              animalType: sanitizeMetadataField(g.animalType, 30),
+              breed: g.breed ? sanitizeMetadataField(g.breed, 60) : null,
+              purpose: sanitizeMetadataField(g.purpose, 20),
+              population: g.population,
+              ageWeeks: g.ageWeeks,
+              healthStatus: sanitizeMetadataField(g.healthStatus, 20),
+            })),
+      activeDrugWithdrawals: healthUnavailable
+        ? 'unavailable'
+        : livestock.activeWithdrawals.slice(0, 10).map((e) => ({
+            groupId: e.groupId ? sanitizeMetadataField(e.groupId, 80) : null,
+            medication: e.medication ? sanitizeMetadataField(e.medication, 80) : null,
+            administeredOn: sanitizeMetadataField(e.administeredOn, 20),
+            withdrawalEndDate: e.withdrawalEndDate ? sanitizeMetadataField(e.withdrawalEndDate, 20) : null,
+          })),
+      recentHealthEvents: healthUnavailable
+        ? 'unavailable'
+        : livestock.recentHealthEvents.slice(0, 10).map((e) => ({
+            groupId: e.groupId ? sanitizeMetadataField(e.groupId, 80) : null,
+            eventType: sanitizeMetadataField(e.eventType, 30),
+            condition: e.condition ? sanitizeMetadataField(e.condition, 80) : null,
+            medication: e.medication ? sanitizeMetadataField(e.medication, 80) : null,
+            administeredOn: sanitizeMetadataField(e.administeredOn, 20),
+            headAffected: e.headAffected,
+          })),
+      recentProduction:
+        livestock.productionQueryStatus === 'error'
+          ? 'unavailable'
+          : livestock.recentProduction.slice(0, 10).map((p) => ({
+              productType: sanitizeMetadataField(p.productType, 20),
+              quantity: p.quantity,
+              unit: sanitizeMetadataField(p.unit, 20),
+              logDate: sanitizeMetadataField(p.logDate, 20),
+            })),
+      verificationStatus: 'farmer_recorded_not_independently_verified',
+    };
+    const hasContent =
+      livestock.groupsQueryStatus !== 'empty' || livestock.healthQueryStatus !== 'empty' || livestock.productionQueryStatus !== 'empty';
+    if (hasContent) {
+      sections.push(
+        `Farm Livestock (UNVERIFIED farmer records; never advise selling or eating meat, milk or eggs from a group inside an active drug withdrawal period):\n<untrusted_evidence_json type="farm_livestock">\n${serializeUntrustedEvidenceJson(payload)}\n</untrusted_evidence_json>`,
+      );
+    }
+  }
+
   // Stored farms.zone is a farmer/platform record, not independent geographic verification.
   // Keep it visible only in a separately labelled unverified tier, never as authoritative farm context.
   if (typeof snap.farmZone === 'string' && snap.farmZone.trim()) {

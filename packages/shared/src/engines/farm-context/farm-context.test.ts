@@ -17,8 +17,8 @@ import {
 } from './index';
 
 describe('Batch 03.1C/D Live Farm Context — Shared Contract & Provenance Helpers', () => {
-  it('exposes the 8 canonical agricultural domains and 7 explicit context states', () => {
-    expect(FARM_CONTEXT_DOMAINS).toHaveLength(8);
+  it('exposes the 10 canonical domains (8 agricultural + Batch 03.4 labour and livestock) and 7 explicit context states', () => {
+    expect(FARM_CONTEXT_DOMAINS).toHaveLength(10);
     expect(CONTEXT_STATES).toEqual([
       'verified_current',
       'unverified_provisional',

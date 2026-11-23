@@ -52,6 +52,111 @@ async function askAuditedAssistant(body: {
   return payload as AssistantApiResponse;
 }
 
+type FeedbackOutcome = "accepted" | "rejected" | "modified";
+
+/**
+ * UI-AC-04: every audited answer can carry feedback. `record_ai_feedback` checks that the caller
+ * can view the farm the answer was about and stores one feedback row per person per answer.
+ */
+async function recordAnswerFeedback(traceId: string, outcome: FeedbackOutcome, note?: string): Promise<"saved" | "already"> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("record_ai_feedback", {
+    p_trace_id: traceId,
+    p_outcome: outcome,
+    ...(note && note.trim() ? { p_note: note.trim().slice(0, 1000) } : {}),
+  });
+  if (!error) return "saved";
+  if (error.code === "23505") return "already";
+  throw new Error("Could not save your feedback. Please try again.");
+}
+
+function AnswerFeedback({ traceId }: { traceId: string }) {
+  const [state, setState] = useState<"idle" | "note" | "saving" | "done" | "error">("idle");
+  const [choice, setChoice] = useState<FeedbackOutcome | null>(null);
+  const [note, setNote] = useState("");
+  const [message, setMessage] = useState("");
+
+  const submit = async (outcome: FeedbackOutcome, withNote?: string) => {
+    setChoice(outcome);
+    setState("saving");
+    try {
+      const result = await recordAnswerFeedback(traceId, outcome, withNote);
+      setMessage(result === "already" ? "You already rated this answer." : "Thanks, your feedback was saved.");
+      setState("done");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Could not save your feedback.");
+      setState("error");
+    }
+  };
+
+  if (state === "done") {
+    return <p className="mt-2 text-[10px] text-on-surface-variant" role="status">{message}</p>;
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 text-[11px]" data-testid="answer-feedback">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-on-surface-variant">Was this helpful?</span>
+        <button
+          type="button"
+          disabled={state === "saving"}
+          aria-pressed={choice === "accepted"}
+          onClick={() => submit("accepted")}
+          className="rounded-full border border-border bg-surface px-2 py-0.5 hover:border-primary disabled:opacity-50"
+        >
+          👍 Yes
+        </button>
+        <button
+          type="button"
+          disabled={state === "saving"}
+          aria-pressed={choice === "rejected"}
+          onClick={() => {
+            setChoice("rejected");
+            setState("note");
+          }}
+          className="rounded-full border border-border bg-surface px-2 py-0.5 hover:border-primary disabled:opacity-50"
+        >
+          👎 No
+        </button>
+        <button
+          type="button"
+          disabled={state === "saving"}
+          aria-pressed={choice === "modified"}
+          onClick={() => {
+            setChoice("modified");
+            setState("note");
+          }}
+          className="rounded-full border border-border bg-surface px-2 py-0.5 hover:border-primary disabled:opacity-50"
+        >
+          ✏️ I changed it
+        </button>
+      </div>
+      {(state === "note" || (state === "saving" && choice !== "accepted") || (state === "error" && choice !== "accepted")) && (
+        <form
+          className="flex items-center gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (choice) void submit(choice, note);
+          }}
+        >
+          <input
+            type="text"
+            value={note}
+            maxLength={1000}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={choice === "modified" ? "What did you do instead? (optional)" : "What was wrong? (optional)"}
+            className="flex-1 rounded border border-border bg-surface px-2 py-1 text-[11px] text-on-surface focus:border-primary-container focus:outline-none"
+          />
+          <Button type="submit" variant="primary" size="sm" className="text-[11px]" disabled={state === "saving"}>
+            {state === "saving" ? "Saving..." : "Send"}
+          </Button>
+        </form>
+      )}
+      {state === "error" && <p className="text-[10px] text-error" role="alert">{message}</p>}
+    </div>
+  );
+}
+
 interface FarmOption {
   id: string;
   name: string;
@@ -504,6 +609,7 @@ export function AiFarmAssistant({
                 {m.traceId && (
                   <p className="mt-2 text-[10px] text-on-surface-variant">Ref {m.traceId.slice(0, 8)}</p>
                 )}
+                {m.role === "assistant" && m.traceId && <AnswerFeedback traceId={m.traceId} />}
 
                 {/* Citations & Sources */}
                 {m.sources && m.sources.length > 0 && (
