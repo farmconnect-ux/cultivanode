@@ -12,6 +12,8 @@ export interface FarmerContext {
   daysAfterPlanting?: number;
   farmId?: string;
   plotId?: string;
+  /** Exact active crop_cycles.id selected by the farmer; required for trusted crop-cycle context. */
+  cycleId?: string;
   requestId?: string;
 }
 
