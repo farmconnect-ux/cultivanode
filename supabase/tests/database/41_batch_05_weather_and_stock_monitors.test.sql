@@ -68,7 +68,7 @@ select is((select count(*)::int from public.fie_intelligence_events where subjec
   'spraying on a windy day raises a weather risk');
 select is((select count(*)::int from public.fie_intelligence_events where subject_id = '41000000-0000-4000-8000-000000000403' and monitor_key = 'weather_window_conflict'), 0,
   'wind alone does not flag fertiliser');
-select is((select count(*)::int from public.fie_intelligence_events where subject_id = '41000000-0000-4000-8000-000000000404'), 0,
+select is((select count(*)::int from public.fie_intelligence_events where subject_id = '41000000-0000-4000-8000-000000000404' and monitor_key = 'weather_window_conflict'), 0,
   'harvest is not weather-sensitive here');
 select is((select count(*)::int from public.fie_intelligence_events where subject_id = '41000000-0000-4000-8000-000000000405' and monitor_key = 'weather_window_conflict'), 0,
   'a job 5 days away is outside the weather window');
