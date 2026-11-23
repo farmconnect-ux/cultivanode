@@ -51,7 +51,7 @@ export type ServerVerifiedContextResult =
     };
 
 /**
- * Single authoritative server-side resolver shared by `/api/ai/assistant` and `askFarmAssistantAction`
+ * Single authoritative server-side resolver used by `/api/ai/assistant` (the single audited AI entry point since Batch 03.4)
  * (Batch 04.0-H Revision 6 — Findings 1, 2, and 3).
  *
  * Security & agronomic integrity invariants:

@@ -216,6 +216,28 @@ export interface CropIdentityDomainData {
     currentCrop: string | null;
     state: ContextState;
   }>;
+  /**
+   * Batch 03.4: operations recorded against the active cycles (`crop_cycle_operations`), newest first,
+   * so past applications (fertiliser, spray, irrigation, weeding) reach the assistant. These are
+   * farmer-recorded entries, never independent verification that an input was applied.
+   * Optional for backward compatibility with snapshots built before Batch 03.4.
+   */
+  recentOperations?: CropOperationRecord[];
+  /** `error` when the operations query failed: the history is unknown, not empty. */
+  operationsQueryStatus?: 'ok' | 'empty' | 'error' | 'skipped';
+}
+
+export interface CropOperationRecord {
+  operationId: string;
+  cycleId: string;
+  name: string;
+  operationType: string;
+  stage: string;
+  /** `crop_cycle_operations.status`: pending, in_progress, completed, skipped or cancelled. */
+  status: string;
+  scheduledDate: string;
+  completedDate: string | null;
+  state: ContextState;
 }
 
 export interface WeatherDomainData {

@@ -11,7 +11,7 @@ import { fill, formatDate } from "@/lib/text";
 
 const ORDER = [
   "terms_of_use", "privacy_policy", "data_processing", "marketing_messages",
-  "share_with_lenders", "share_with_buyers", "share_with_investors", "share_with_partners",
+  "share_with_lenders", "share_with_buyers", "share_with_investors", "share_with_partners", "ai_intelligence",
 ] as const;
 
 export default async function PrivacyPage({ params }: PageProps<"/[lang]/account/privacy">) {

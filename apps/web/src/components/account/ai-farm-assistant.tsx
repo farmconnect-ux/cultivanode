@@ -3,10 +3,54 @@
 import * as React from "react";
 
 import { useState, useTransition, useRef } from "react";
-import { askFarmAssistantAction, type AssistantResponse } from "@/actions/ai-assistant";
+import Link from "next/link";
+import { setConsent } from "@/actions/account";
 import { Badge, Button, Card } from "@/components/ui";
 import type { Locale } from "@/i18n/config";
-import type { FarmZone, AppLanguage, GroundedKnowledgeSnippet } from "@cultivanode/shared";
+import { createClient } from "@/lib/supabase/client";
+import type { AppLanguage, GroundedAiAssistantResponse, GroundedKnowledgeSnippet } from "@cultivanode/shared";
+
+/**
+ * Batch 03.4: the web assistant calls the single audited entry point `POST /api/ai/assistant`
+ * (Bearer JWT, active account, farm RLS, `ai_intelligence` consent, Live Farm Context, AI audit).
+ * The old `askFarmAssistantAction` server action, which skipped consent, farm context and audit,
+ * has been removed. The client never sends a zone or growth stage: the server derives both from
+ * the farm and the selected crop-cycle records.
+ */
+type AssistantApiResponse = GroundedAiAssistantResponse & { traceId?: string; auditStatus?: string };
+
+type AssistantApiError = { error?: string; code?: string; traceId?: string };
+
+async function askAuditedAssistant(body: {
+  query: string;
+  language: AppLanguage | "pcm";
+  imageBase64?: string;
+  imageMimeType?: string;
+  context: { farmId: string; plotId?: string; cycleId?: string; cropId?: string };
+}): Promise<AssistantApiResponse> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Your session has ended. Please sign in again.");
+
+  const res = await fetch("/api/ai/assistant", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  let payload: unknown = null;
+  try {
+    payload = await res.json();
+  } catch {
+    payload = null;
+  }
+  if (!res.ok) {
+    const err = (payload ?? {}) as AssistantApiError;
+    const ref = err.traceId ? ` (ref ${err.traceId.slice(0, 8)})` : "";
+    throw new Error(`${err.error ?? "The assistant could not answer right now."}${ref}`);
+  }
+  return payload as AssistantApiResponse;
+}
 
 interface FarmOption {
   id: string;
@@ -22,6 +66,14 @@ interface PlotOption {
   area_ha: number | null;
 }
 
+interface CycleOption {
+  id: string;
+  farm_id: string;
+  plot_id: string | null;
+  crop_id: string;
+  current_stage: string;
+}
+
 interface MessageItem {
   id: string;
   role: "user" | "assistant";
@@ -32,8 +84,11 @@ interface MessageItem {
   sources?: GroundedKnowledgeSnippet[];
   safetyAppendices?: string[];
   passedSafetyGuardrail?: boolean;
+  traceId?: string;
   timestamp: string;
 }
+
+const pretty = (v: string) => v.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 
 // Message ids for list keys; a counter keeps rendering pure (no clock reads).
 let messageSeq = 0;
@@ -61,14 +116,19 @@ function renderAnswer(text: string): React.ReactNode {
 export function AiFarmAssistant({
   farms,
   plots,
+  cycles,
+  aiConsentGranted,
   lang,
 }: {
   farms: FarmOption[];
   plots: PlotOption[];
+  cycles: CycleOption[];
+  aiConsentGranted: boolean;
   lang: Locale;
 }) {
   const [selectedFarmId, setSelectedFarmId] = useState<string>(farms[0]?.id ?? "");
-  const [selectedCropId, setSelectedCropId] = useState<string>("maize");
+  // "" means the whole farm with no specific crop. No crop is ever assumed.
+  const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   const [assistantLang, setAssistantLang] = useState<AppLanguage | "pcm">(
     lang === "yo" ? "yo" : "en"
   );
@@ -78,13 +138,10 @@ export function AiFarmAssistant({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedFarm = farms.find((f) => f.id === selectedFarmId) ?? farms[0];
-  // Never invent an agro-ecological zone when the farm record has no verified zone (Batch 04.0-H Rev 2).
-  const farmZone: FarmZone | undefined =
-    selectedFarm?.zone === "rainforest" ||
-    selectedFarm?.zone === "derived_savanna" ||
-    selectedFarm?.zone === "southern_guinea"
-      ? (selectedFarm.zone as FarmZone)
-      : undefined;
+  const farmCycles = cycles.filter((c) => c.farm_id === selectedFarm?.id);
+  const selectedCycle = farmCycles.find((c) => c.id === selectedCycleId);
+  const plotName = (plotId: string | null) => plots.find((p) => p.id === plotId)?.name;
+  const canAsk = aiConsentGranted && Boolean(selectedFarm);
 
   const [messages, setMessages] = useState<MessageItem[]>([
     {
@@ -136,8 +193,9 @@ export function AiFarmAssistant({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 8 * 1024 * 1024) {
-      alert("Image is larger than 8MB. Please choose a smaller photo.");
+    // The assistant API accepts up to 8,000,000 base64 characters, which is about 5.7 MB of image.
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is larger than 5MB. Please choose a smaller photo.");
       return;
     }
 
@@ -156,7 +214,7 @@ export function AiFarmAssistant({
   const handleSend = (queryToSend?: string) => {
     const text = (queryToSend ?? inputQuery).trim();
     const currentImg = selectedImage;
-    if ((!text && !currentImg) || isPending) return;
+    if ((!text && !currentImg) || isPending || !canAsk || !selectedFarm) return;
 
     const userMsg: MessageItem = {
       id: newMessageId('usr'),
@@ -174,13 +232,17 @@ export function AiFarmAssistant({
 
     startTransition(async () => {
       try {
-        const res: AssistantResponse = await askFarmAssistantAction({
+        const res = await askAuditedAssistant({
           query: text || "Please examine this crop image and identify potential disease or nutrient issues with verified treatments.",
           context: {
-            farmerId: selectedFarm?.id ?? "farmer-1",
-            farmId: selectedFarm?.id,
-            cropId: selectedCropId,
-            zone: farmZone,
+            farmId: selectedFarm.id,
+            ...(selectedCycle
+              ? {
+                  cycleId: selectedCycle.id,
+                  cropId: selectedCycle.crop_id,
+                  ...(selectedCycle.plot_id ? { plotId: selectedCycle.plot_id } : {}),
+                }
+              : {}),
           },
           language: assistantLang,
           imageBase64: currentImg?.base64,
@@ -196,6 +258,7 @@ export function AiFarmAssistant({
           sources: res.sources,
           safetyAppendices: res.safetyAppendices,
           passedSafetyGuardrail: res.passedSafetyGuardrail,
+          traceId: res.traceId,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
 
@@ -269,42 +332,45 @@ export function AiFarmAssistant({
             <label className="font-semibold text-primary">Farm Location &amp; Zone</label>
             <select
               value={selectedFarmId}
-              onChange={(e) => setSelectedFarmId(e.target.value)}
+              onChange={(e) => {
+                setSelectedFarmId(e.target.value);
+                setSelectedCycleId("");
+              }}
+              disabled={farms.length === 0}
               className="rounded border border-border bg-surface px-3 py-1.5 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             >
               {farms.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.name} ({f.state} • {f.zone ?? "Rainforest"})
+                  {f.name} ({f.state ?? "State not set"} • {f.zone ? pretty(f.zone) : "Zone not set"})
                 </option>
               ))}
             </select>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="font-semibold text-primary">Active Crop Focus</label>
+            <label className="font-semibold text-primary">Crop</label>
             <select
-              value={selectedCropId}
-              onChange={(e) => setSelectedCropId(e.target.value)}
+              value={selectedCycleId}
+              onChange={(e) => setSelectedCycleId(e.target.value)}
+              disabled={farmCycles.length === 0}
               className="rounded border border-border bg-surface px-3 py-1.5 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             >
-              <optgroup label="Field Crops">
-                <option value="maize">Maize (Àgbàdo)</option>
-                <option value="cassava">Cassava (Gbaágùdá)</option>
-                <option value="yam">Yam (Iṣu)</option>
-                <option value="rice">Rice (Ìrẹsì)</option>
-                <option value="cowpea">Cowpea (Ẹwà)</option>
-                <option value="sweet_potato">Sweet Potato</option>
-              </optgroup>
-              <optgroup label="Vegetables">
-                <option value="tomato">Tomato (Tòmátì)</option>
-                <option value="pepper">Pepper (Ata)</option>
-                <option value="okra">Okra (Ilá)</option>
-                <option value="amaranth">Amaranth (Tẹtẹ)</option>
-                <option value="ewedu">Ewedu</option>
-                <option value="cucumber">Cucumber</option>
-                <option value="watermelon">Watermelon</option>
-              </optgroup>
+              <option value="">Whole farm (no specific crop)</option>
+              {farmCycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {pretty(c.crop_id)} · {plotName(c.plot_id) ?? "No plot"} · {pretty(c.current_stage)}
+                </option>
+              ))}
             </select>
+            {farmCycles.length === 0 && selectedFarm && (
+              <span className="text-[11px] text-on-surface-variant">
+                No active crop on this farm.{" "}
+                <Link href={`/${lang}/account/crops`} className="underline">
+                  Record a crop
+                </Link>{" "}
+                for crop-specific advice.
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -317,6 +383,42 @@ export function AiFarmAssistant({
           </div>
         </div>
 
+        {farms.length === 0 && (
+          <div className="rounded-lg border border-caution/40 bg-caution-soft p-3 text-xs text-on-surface">
+            <p className="font-semibold">Add a farm to use the assistant.</p>
+            <p className="mt-0.5 text-on-surface-variant">
+              Every answer is checked against your farm records and kept in an audit log, so the assistant needs a farm.{" "}
+              <Link href={`/${lang}/account/farms`} className="font-semibold underline">
+                Add a farm
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {farms.length > 0 && !aiConsentGranted && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-secondary/40 bg-surface p-3 text-xs">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-primary">Allow the AI assistant to use your farm records?</p>
+              <p className="mt-0.5 text-on-surface-variant">
+                It reads the farm, crops, soil tests, stock and work records you pick to answer you. You can turn this off
+                any time in{" "}
+                <Link href={`/${lang}/account/privacy`} className="underline">
+                  Privacy
+                </Link>
+                .
+              </p>
+            </div>
+            <form action={setConsent}>
+              <input type="hidden" name="lang" value={lang} />
+              <input type="hidden" name="consent_type" value="ai_intelligence" />
+              <input type="hidden" name="granted" value="true" />
+              <Button type="submit" variant="primary" size="sm" className="text-xs">
+                Allow
+              </Button>
+            </form>
+          </div>
+        )}
+
         {/* Quick Prompts */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mr-1">
@@ -326,6 +428,7 @@ export function AiFarmAssistant({
             <button
               key={i}
               type="button"
+              disabled={!canAsk || isPending}
               onClick={() => {
                 if (p.langTarget) setAssistantLang(p.langTarget);
                 handleSend(p.text);
@@ -397,6 +500,10 @@ export function AiFarmAssistant({
 
                 {/* Content */}
                 <div className="whitespace-pre-wrap">{renderAnswer(m.text)}</div>
+
+                {m.traceId && (
+                  <p className="mt-2 text-[10px] text-on-surface-variant">Ref {m.traceId.slice(0, 8)}</p>
+                )}
 
                 {/* Citations & Sources */}
                 {m.sources && m.sources.length > 0 && (
@@ -487,14 +594,14 @@ export function AiFarmAssistant({
                   ? "Ask question about your farm, fertilizer, or chemical..."
                   : "Ask about your farm, fertiliser dosage, pest management, or chemicals..."
               }
-              disabled={isPending}
+              disabled={isPending || !canAsk}
               className="flex-1 rounded-lg border border-border bg-surface px-4 py-2 text-xs text-on-surface focus:border-primary-container focus:outline-none"
             />
             <Button
               type="submit"
               variant="primary"
               size="sm"
-              disabled={isPending || (!inputQuery.trim() && !selectedImage)}
+              disabled={isPending || !canAsk || (!inputQuery.trim() && !selectedImage)}
               className="text-xs px-4"
             >
               {isPending ? "Consulting..." : "Send"}

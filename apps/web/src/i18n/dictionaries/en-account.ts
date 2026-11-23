@@ -725,6 +725,7 @@ const enAccount = {
         share_with_buyers: "Share my farm records with buyers I choose",
         share_with_investors: "Share my farm records with investors I choose",
         share_with_partners: "Share anonymous farm data with research partners",
+        ai_intelligence: "Let the AI farm assistant use my farm records to answer me",
       },
       on: "On",
       off: "Off",
