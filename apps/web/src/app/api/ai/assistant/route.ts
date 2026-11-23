@@ -57,6 +57,7 @@ const AssistantBodySchema = z.object({
       farmId: z.string().uuid("context.farmId must be a valid UUID.").optional(),
       plotId: z.string().uuid("context.plotId must be a valid UUID.").optional(),
       cropId: z.string().max(80).optional(),
+      cycleId: z.string().uuid("context.cycleId must be a valid UUID.").optional(),
       zone: z.string().max(80).optional(),
       stageName: z.string().max(80).optional(),
       daysAfterPlanting: z.number().int().min(0).max(3650).optional(),
@@ -165,6 +166,7 @@ export async function POST(req: Request) {
       assertions: {
         plotId: body.context?.plotId,
         cropId: body.context?.cropId,
+        cycleId: body.context?.cycleId,
         zone: body.context?.zone,
         stageName: body.context?.stageName,
       },
@@ -273,6 +275,7 @@ export async function POST(req: Request) {
           farmerId: verifiedFarmCaller.user.id,
           farmId: verifiedFarmCaller.farmId,
           plotId: resolvedPlotId,
+          cycleId: verifiedCtxRes.verifiedContext?.cropCycleId,
           requestId: traceId,
         } as FarmerContext,
         verifiedFarmContext: verifiedCtxRes.verifiedContext,
