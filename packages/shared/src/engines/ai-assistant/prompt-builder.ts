@@ -13,7 +13,6 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
   const activeCycles = snap.domains?.crop_identity_variety_and_stage?.data?.activeCycles ?? [];
   const verifiedFactsPayload = {
     farm: sanitizeMetadataField(snap.farmName ?? snap.farmId, 160),
-    zone: sanitizeMetadataField(snap.farmZone ?? 'unknown', 60),
     state: sanitizeMetadataField(snap.farmState ?? 'unknown', 60),
     ...(soil?.ph && soil.ph.value !== null ? { soilPh: { value: soil.ph.value, state: soil.ph.state } } : {}),
     ...(activeCycles.length > 0
@@ -34,6 +33,19 @@ function formatGroundedEvidenceSections(pkg: GroundedEvidencePackage): string {
   sections.push(
     `Verified Current Farm Facts (Authoritative Live Farm Context):\n<untrusted_evidence_json type="verified_farm_facts">\n${serializeUntrustedEvidenceJson(verifiedFactsPayload)}\n</untrusted_evidence_json>`,
   );
+
+  // Stored farms.zone is a farmer/platform record, not independent geographic verification.
+  // Keep it visible only in a separately labelled unverified tier, never as authoritative farm context.
+  if (typeof snap.farmZone === 'string' && snap.farmZone.trim()) {
+    const storedAttributes = {
+      zone: sanitizeMetadataField(snap.farmZone, 60),
+      source: 'farms.zone',
+      verificationStatus: 'unverified_stored_farm_attribute',
+    };
+    sections.push(
+      `Stored Farm Attributes (UNVERIFIED; do not use as authoritative geographic or agronomic evidence):\\n<untrusted_evidence_json type="unverified_stored_farm_attributes">\\n${serializeUntrustedEvidenceJson(storedAttributes)}\\n</untrusted_evidence_json>`,
+    );
+  }
 
   // 2. Confirmed Historical Farm Memories (JSON-serialized with escaped delimiters; zero raw interpolation)
   if (pkg.confirmedHistoricalMemories.length > 0) {
