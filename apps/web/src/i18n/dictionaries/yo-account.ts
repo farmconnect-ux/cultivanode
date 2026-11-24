@@ -685,6 +685,9 @@ const yoAccount: typeof enAccount = {
       alertUseful: "Ó wúlò",
       alertNotUseful: "Kò wúlò",
       alertDone: "Ó ti parí",
+      emailAlertsOn: "Fi ìkìlọ̀ oko ránṣẹ́ sí ímeèlì mi: ó wà ní títàn",
+      emailAlertsOff: "Fi ìkìlọ̀ oko ránṣẹ́ sí ímeèlì mi: ó wà ní pípa",
+      emailAlertsNoAddress: "Fi àdírẹ́sì ímeèlì kún un nínú Ètò láti gba ìkìlọ̀ oko lórí ímeèlì.",
       alertThanks: "A dúpẹ́, a ti kọ ọ́ sílẹ̀.",
       unknown: "O ní ìfiránṣẹ́ tuntun kan. Ṣí i láti rí àlàyé tuntun.",
       kinds: {

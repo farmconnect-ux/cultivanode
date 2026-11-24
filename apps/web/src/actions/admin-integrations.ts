@@ -11,7 +11,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
 
-type Kind = "sms" | "identity" | "weather" | "payment" | "maps";
+type Kind = "sms" | "identity" | "weather" | "email" | "payment" | "maps";
 type Mode = "test" | "live";
 
 interface IntegrationProvider {
@@ -26,7 +26,7 @@ interface IntegrationOverview {
 }
 
 const MODES: readonly Mode[] = ["test", "live"];
-const KINDS: readonly Kind[] = ["sms", "identity", "weather", "payment", "maps"];
+const KINDS: readonly Kind[] = ["sms", "identity", "weather", "email", "payment", "maps"];
 const CODE = /^[a-z][a-z0-9_]{1,39}$/;
 
 function field(form: FormData, name: string): string {
@@ -165,6 +165,7 @@ const TEST_ERRORS: Record<string, string> = {
   billing: "The provider account has no credit",
   bad_response: "The provider sent an answer we could not read",
   invalid_phone: "Enter a Nigerian mobile number",
+  invalid_email: "Enter an email address",
   forbidden: "You do not have permission to run tests",
 };
 
@@ -262,6 +263,7 @@ export async function sendIntegrationTest(_prev: ActionResult | null, form: Form
 
   if (body.ok) {
     if (kind === "sms") return { ok: true, message: `Test SMS sent (${body.mode} mode). Check the phone.` };
+    if (kind === "email") return { ok: true, message: `Test email sent (${body.mode} mode). Check the inbox, and the spam folder.` };
     if (kind === "weather") return { ok: true, message: `Connected: ${body.days ?? 7} days of forecast received for ${body.place ?? "pilot corridor"}.` };
     if (body.check === "bank_list") return { ok: true, message: `Connected in live mode: ${body.banks} banks listed. No ID was checked.` };
     return { ok: true, message: `Sandbox NIN check answered: record ${body.found ? "found" : "not found"}.` };

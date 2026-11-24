@@ -683,6 +683,9 @@ const enAccount = {
       alertUseful: "Useful",
       alertNotUseful: "Not useful",
       alertDone: "Done",
+      emailAlertsOn: "Email me farm alerts: on",
+      emailAlertsOff: "Email me farm alerts: off",
+      emailAlertsNoAddress: "Add an email address in Settings to get farm alerts by email.",
       alertThanks: "Thanks, noted.",
       unknown: "You have a new notification. Open it to view the latest details.",
       kinds: {

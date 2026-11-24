@@ -23,6 +23,20 @@ export async function openMarketplaceOrderNotification(formData: FormData): Prom
   redirect(`/${lang}/account/marketplace/orders/${orderId}`);
 }
 
+/** Batch 05: farm alert emails on or off for the signed-in person. */
+export async function setFarmAlertEmail(formData: FormData): Promise<void> {
+  const rawLang = String(formData.get("lang") ?? "").trim().toLowerCase();
+  const lang: Locale = hasLocale(rawLang) ? rawLang : defaultLocale;
+  const on = String(formData.get("on") ?? "");
+  if (on !== "true" && on !== "false") return;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect(`/${lang}/sign-in`);
+  const { error } = await supabase.rpc("set_farm_alert_email", { p_on: on === "true" });
+  if (error) throw new Error("Could not save your email choice.");
+  revalidatePath(`/${lang}/account/inbox`);
+}
+
 /** Batch 05: the farmer answers a farm alert (useful / not useful / done). Marks the notification read. */
 export async function respondToFarmAlert(formData: FormData): Promise<void> {
   const rawLang = String(formData.get("lang") ?? "").trim().toLowerCase();

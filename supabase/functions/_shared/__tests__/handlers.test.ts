@@ -230,6 +230,17 @@ describe('integration-test', () => {
     expect(await res.json()).toMatchObject({ ok: false, error: 'not_configured', missing: ['key:api_key'] });
   });
 
+  it('sends a test email and refuses a bad address', async () => {
+    const emailRuntime: Runtime = { provider: 'resend', kind: 'email', mode: 'live', implemented: true, test_only: false, missing: [],
+      config: { from_email: 'alerts@cultivanode.com', from_name: 'CultivaNode' }, secrets: { api_key: 're_x' } };
+    const { fn, calls } = backend({ runtime: emailRuntime, isStaff: true, providerResponse: () => jsonRes({ id: 'msg_9' }) });
+    const res = await handleIntegrationTest(req({ kind: 'email', provider: 'resend', to: 'staff@example.com' }), { env, fetchFn: fn });
+    expect(await res.json()).toMatchObject({ ok: true });
+    expect(calls.find((c) => c.url === 'https://api.resend.com/emails')!.body).toMatchObject({ to: ['staff@example.com'] });
+    const bad = await handleIntegrationTest(req({ kind: 'email', provider: 'resend', to: 'nope' }), { env, fetchFn: fn });
+    expect(bad.status).toBe(400);
+  });
+
   it('never runs a real ID check in live mode', async () => {
     const { fn, calls } = backend({
       runtime: idRuntime({ provider: 'prembly', mode: 'live', test_only: false,
