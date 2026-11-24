@@ -1,7 +1,7 @@
 // Contracts every provider adapter implements. The rest of the code never names a provider:
 // it asks the database which one is active (integration_runtime) and calls it through these.
 
-export type IntegrationKind = 'sms' | 'identity' | 'weather';
+export type IntegrationKind = 'sms' | 'identity' | 'weather' | 'email';
 export type IntegrationMode = 'test' | 'live';
 
 /** What public.integration_runtime() returns. */
@@ -33,6 +33,17 @@ export type FetchFn = typeof fetch;
 
 export interface SmsProvider {
   send(toInternational: string, text: string): Promise<Result<{ messageId?: string }>>;
+}
+
+export type EmailMessage = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+export interface EmailProvider {
+  send(message: EmailMessage): Promise<Result<{ messageId?: string }>>;
 }
 
 export type PersonRecord = {

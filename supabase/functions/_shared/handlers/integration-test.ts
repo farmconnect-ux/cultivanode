@@ -1,8 +1,10 @@
 // "Send test" button on the admin Integrations page. Staff with integrations.manage only.
 // SMS: sends a harmless test message. Identity: in test mode runs the provider's sandbox NIN;
 // in live mode only fetches the bank list (free, no personal data). Weather: one forecast for Ibadan.
+// Email: sends a short test email to the address staff typed.
 import { BRAND_NAME } from '../brand.ts';
 import { fail, json, preflight } from '../http.ts';
+import { emailProvider, isEmailAddress } from '../providers/email.ts';
 import { identityProvider } from '../providers/identity.ts';
 import { smsProvider } from '../providers/sms.ts';
 import { PILOT_PLACES, weatherProvider } from '../providers/weather.ts';
@@ -41,7 +43,7 @@ export async function handleIntegrationTest(req: Request, deps: IntegrationTestD
   } catch {
     return fail('invalid_request', 400);
   }
-  if ((body.kind !== 'sms' && body.kind !== 'identity' && body.kind !== 'weather') || typeof body.provider !== 'string') {
+  if ((body.kind !== 'sms' && body.kind !== 'identity' && body.kind !== 'weather' && body.kind !== 'email') || typeof body.provider !== 'string') {
     return fail('invalid_request', 400);
   }
 
@@ -62,6 +64,22 @@ export async function handleIntegrationTest(req: Request, deps: IntegrationTestD
     if (!adapter.ok) return json({ ok: false, error: adapter.error });
     const r = await adapter.value.send(to, `Test message from ${BRAND_NAME} admin. No action needed.`);
     await logEvent(env, { kind: 'sms', provider: rt.provider, mode: rt.mode, operation: 'test', success: r.ok,
+      http_status: r.httpStatus, error_code: r.ok ? undefined : r.error, duration_ms: Date.now() - started }, fetchFn);
+    return json(r.ok ? { ok: true, mode: rt.mode } : { ok: false, error: r.error, detail: r.detail, mode: rt.mode });
+  }
+
+  if (body.kind === 'email') {
+    const to = typeof body.to === 'string' ? body.to.trim() : '';
+    if (!isEmailAddress(to)) return fail('invalid_email', 400);
+    const adapter = emailProvider(rt, fetchFn);
+    if (!adapter.ok) return json({ ok: false, error: adapter.error });
+    const r = await adapter.value.send({
+      to,
+      subject: `Test email from ${BRAND_NAME} admin`,
+      text: `This is a test email from the ${BRAND_NAME} admin Integrations page. No action needed.`,
+      html: `<p>This is a test email from the ${BRAND_NAME} admin Integrations page. No action needed.</p>`,
+    });
+    await logEvent(env, { kind: 'email', provider: rt.provider, mode: rt.mode, operation: 'test', success: r.ok,
       http_status: r.httpStatus, error_code: r.ok ? undefined : r.error, duration_ms: Date.now() - started }, fetchFn);
     return json(r.ok ? { ok: true, mode: rt.mode } : { ok: false, error: r.error, detail: r.detail, mode: rt.mode });
   }

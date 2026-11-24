@@ -12,7 +12,7 @@ import {
 } from "@/actions/admin-integrations";
 import { Badge, Button, Card, cx, Field, Input, Select } from "@/components/ui";
 
-type Kind = "sms" | "identity" | "weather" | "payment" | "maps";
+type Kind = "sms" | "identity" | "weather" | "email" | "payment" | "maps";
 type Mode = "test" | "live";
 
 type ConfigField = { key: string; label: string; required?: boolean; default?: string; options?: string[]; help?: string };
@@ -43,6 +43,7 @@ const KIND_TITLES: Record<Kind, { title: string; intro: string }> = {
   sms: { title: "SMS (sign-in codes)", intro: "Sends the one-time codes people use to sign in, and SMS alerts later." },
   identity: { title: "Identity checks", intro: "Checks NIN, BVN and payout bank accounts during verification." },
   weather: { title: "Weather", intro: "Forecasts and farm alerts for the pilot states on the admin dashboard and farm-level monitoring." },
+  email: { title: "Email", intro: "Sends farm alert emails. Use Resend, or any mail service that offers SMTP." },
   payment: { title: "Payment Gateways & Escrow Settlements", intro: "Paystack (Nigerian cards & bank transfer), Flutterwave (Pan-African mobile money & USSD), and Stripe (international cards)." },
   maps: { title: "Geospatial & Mapping (Google Maps Platform)", intro: "Centrally configured Google Maps Platform for sub-meter cadastral boundary delineation, satellite imagery, and geocoding." },
 };
@@ -223,7 +224,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
 
   return (
     <div className="flex flex-col gap-10">
-      {(["sms", "identity", "weather", "payment", "maps"] as const).map((kind) => {
+      {(["sms", "identity", "weather", "email", "payment", "maps"] as const).map((kind) => {
         const active = mergedSettings.find((s) => s.kind === kind)?.active_provider;
         const providers = mergedProviders.filter((p) => p.kind === kind);
         const current = providers.find((p) => p.code === active);
@@ -242,7 +243,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
             </div>
             {current?.test_only && (
               <p role="note" className="rounded-md border-l-4 border-caution bg-caution-soft p-3">
-                A test provider is in use. {kind === "sms" ? "Real people cannot receive sign-in codes" : kind === "identity" ? "Real people cannot be verified" : "Weather stops"} until
+                A test provider is in use. {kind === "sms" ? "Real people cannot receive sign-in codes" : kind === "identity" ? "Real people cannot be verified" : kind === "email" ? "No email reaches anyone" : "Weather stops"} until
                 you switch to a real provider. On the hosted project test providers are always refused; they only work in local development.
               </p>
             )}
@@ -401,6 +402,13 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
           <ActionForm action={sendIntegrationTest} hidden={base}>
             {(pending) => (
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                {p.kind === "email" && (
+                  <div className="flex-1">
+                    <Field id={`${p.code}-to`} label="Send a test email to">
+                      <Input id={`${p.code}-to`} name="to" type="email" inputMode="email" placeholder="you@example.com" />
+                    </Field>
+                  </div>
+                )}
                 {p.kind === "sms" && (
                   <div className="flex-1">
                     <Field id={`${p.code}-to`} label="Send a test SMS to">
@@ -413,6 +421,8 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
                     ? "Testing..."
                     : p.kind === "sms"
                       ? "Send test SMS"
+                      : p.kind === "email"
+                        ? "Send test email"
                       : p.kind === "payment"
                         ? "Ping gateway"
                         : p.kind === "maps"

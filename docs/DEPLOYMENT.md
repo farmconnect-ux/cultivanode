@@ -19,8 +19,10 @@
 ## Sign-in codes and identity checks
 Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pieces are set once:
 
-1. **Edge Functions** `send-sms`, `verify-identity`, `integration-test` are deployed from
-   `supabase/functions` (`npx supabase functions deploy <name>`; `send-sms` has JWT verification off).
+1. **Edge Functions** in `supabase/functions` deploy automatically when a pull request merges to `main`
+   (Supabase GitHub integration), with the settings in `supabase/config.toml`. `send-sms`, `send-notifications`,
+   `farm-weather-worker` and `send-email` have JWT verification off (a hook secret or the Vault worker secret
+   authorises them). By hand: `npx supabase functions deploy <name>`.
 2. **Auth hook:** Authentication > Auth Hooks > Send SMS hook > HTTPS, URL
    `https://vqbtnftnxyfaembwgfrk.supabase.co/functions/v1/send-sms`, generate a secret.
 3. **Function secrets** (Edge Functions > Secrets): `SEND_SMS_HOOK_SECRET` = that secret (`v1,whsec_...`);
@@ -67,3 +69,12 @@ Providers are chosen in the admin console (see INTEGRATIONS.md). The platform pi
 ## Checklist before a release
 Typecheck, lint, unit tests, pgTAP and web build pass; Supabase advisors reviewed; no secrets in the diff;
 docs and `requirements-matrix.md` updated.
+
+## Farm alert emails
+1. Admin > Integrations > Email: pick **Resend** (paste the API key; the From address must be on a domain
+   verified in Resend) or **SMTP** (any mail service: host, port, username, password, From address).
+2. Supabase Edge Functions cannot open ports 25 or 587. Use port 465 (TLS), or another port your mail service
+   offers with STARTTLS (for example 2525).
+3. Press **Send test email**. pg_cron wakes `send-email` every 15 minutes when alerts are waiting; each person
+   gets one email with all their new alerts. Alerts older than 3 days are dropped, not sent.
+4. Farmers turn emails off with "Email me farm alerts" in their inbox.

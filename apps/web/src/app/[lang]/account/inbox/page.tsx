@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarkAllRead } from "@/components/account/booking-forms";
-import { openMarketplaceOrderNotification, respondToFarmAlert } from "@/actions/notifications";
+import { openMarketplaceOrderNotification, respondToFarmAlert, setFarmAlertEmail } from "@/actions/notifications";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Icon, type IconName } from "@/components/ds/icon";
 import { MetricCard } from "@/components/live/metric-card";
@@ -63,7 +63,7 @@ export default async function InboxPage({
 }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
-  await requireAccount(lang, { customer: true });
+  const account = await requireAccount(lang, { customer: true });
   const sp = searchParams ? await searchParams : {};
   const currentCat = typeof sp.cat === "string" ? sp.cat : "all";
 
@@ -76,6 +76,9 @@ export default async function InboxPage({
     .order("created_at", { ascending: false })
     .limit(100);
   const all = (data ?? []) as unknown as Note[];
+  const { data: prefs } = await supabase.from("notification_preferences").select("farm_alert_email").maybeSingle();
+  const emailAlertsOn = prefs?.farm_alert_email ?? true;
+  const hasEmail = !!account.profile.email;
   const notes = currentCat === "all" ? all : all.filter((n) => categoryOf(n) === currentCat);
   const unread = all.filter((n) => !n.read_at).length;
   const count = (k: string) => (k === "all" ? all.length : all.filter((n) => categoryOf(n) === k).length);
@@ -87,6 +90,22 @@ export default async function InboxPage({
         actions: (
           <div className="flex flex-wrap items-center gap-space-sm">
             {unread > 0 && <MarkAllRead lang={lang} t={t.acct} />}
+            {hasEmail ? (
+              <form action={setFarmAlertEmail}>
+                <input type="hidden" name="lang" value={lang} />
+                <input type="hidden" name="on" value={emailAlertsOn ? "false" : "true"} />
+                <button
+                  type="submit"
+                  aria-pressed={emailAlertsOn}
+                  className="flex items-center gap-space-xs rounded-lg bg-surface-container-lowest px-space-md py-2 font-label-md text-label-md text-on-surface shadow-sm hover:bg-surface-container-low"
+                >
+                  <Icon name={emailAlertsOn ? "mark_email_read" : "mail"} className="text-base" />
+                  {emailAlertsOn ? m.emailAlertsOn : m.emailAlertsOff}
+                </button>
+              </form>
+            ) : (
+              <span className="text-label-sm text-on-surface-variant">{m.emailAlertsNoAddress}</span>
+            )}
             <Link href={`/${lang}/account/settings`} className="flex items-center gap-space-xs rounded-lg bg-surface-container-lowest px-space-md py-2 font-label-md text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">
               <Icon name="tune" className="text-base" /> Preferences
             </Link>

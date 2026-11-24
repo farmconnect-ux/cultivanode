@@ -7208,6 +7208,24 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          farm_alert_email: boolean
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          farm_alert_email?: boolean
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          farm_alert_email?: boolean
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           booking_id: string | null
@@ -8981,6 +8999,10 @@ export type Database = {
         Args: { p_event_id: string; p_response: string }
         Returns: undefined
       }
+      set_farm_alert_email: {
+        Args: { p_on: boolean }
+        Returns: undefined
+      }
       create_farm_memory_item: {
         Args: {
           p_category: string
@@ -10090,7 +10112,7 @@ export type Database = {
         | "completed"
         | "cancelled"
       farm_zone: "rainforest" | "derived_savanna" | "other"
-      integration_kind: "sms" | "identity" | "weather" | "payment" | "maps"
+      integration_kind: "sms" | "identity" | "weather" | "payment" | "maps" | "email"
       integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -10408,7 +10430,7 @@ export const Constants = {
         "cancelled",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
-      integration_kind: ["sms", "identity", "weather", "payment", "maps"],
+      integration_kind: ["sms", "identity", "weather", "payment", "maps", "email"],
       integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],
