@@ -260,7 +260,7 @@ export async function POST(req: Request) {
     const auditContextRefs = evidencePackage?.auditContextRefs ?? snapshot.auditContextRefs;
     const memoryItemIds = evidencePackage?.memoryItemIds ?? [];
 
-    const c = aiConfig();
+    const c = await aiConfig();
     let result: Awaited<ReturnType<typeof askGroundedAiAssistant>>;
 
     try {

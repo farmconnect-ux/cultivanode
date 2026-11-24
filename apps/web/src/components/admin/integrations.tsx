@@ -12,7 +12,7 @@ import {
 } from "@/actions/admin-integrations";
 import { Badge, Button, Card, cx, Field, Input, Select } from "@/components/ui";
 
-type Kind = "sms" | "identity" | "weather" | "email" | "payment" | "maps";
+type Kind = "sms" | "identity" | "weather" | "email" | "ai" | "payment" | "maps";
 type Mode = "test" | "live";
 
 type ConfigField = { key: string; label: string; required?: boolean; default?: string; options?: string[]; help?: string };
@@ -44,6 +44,11 @@ const KIND_TITLES: Record<Kind, { title: string; intro: string }> = {
   identity: { title: "Identity checks", intro: "Checks NIN, BVN and payout bank accounts during verification." },
   weather: { title: "Weather", intro: "Forecasts and farm alerts for the pilot states on the admin dashboard and farm-level monitoring." },
   email: { title: "Email", intro: "Sends farm alert emails. Use Resend, or any mail service that offers SMTP." },
+  ai: {
+    title: "AI models",
+    intro:
+      "The farm assistant and photo checks ask Claude first, then Gemini, then OpenAI, then use built-in advice. A new key works within a minute, with no redeploy. A provider with no key here keeps using the key in the Vercel settings, if there is one; press Check key to see which one is in use.",
+  },
   payment: { title: "Payment Gateways & Escrow Settlements", intro: "Paystack (Nigerian cards & bank transfer), Flutterwave (Pan-African mobile money & USSD), and Stripe (international cards)." },
   maps: { title: "Geospatial & Mapping (Google Maps Platform)", intro: "Centrally configured Google Maps Platform for sub-meter cadastral boundary delineation, satellite imagery, and geocoding." },
 };
@@ -224,7 +229,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
 
   return (
     <div className="flex flex-col gap-10">
-      {(["sms", "identity", "weather", "email", "payment", "maps"] as const).map((kind) => {
+      {(["sms", "identity", "weather", "email", "ai", "payment", "maps"] as const).map((kind) => {
         const active = mergedSettings.find((s) => s.kind === kind)?.active_provider;
         const providers = mergedProviders.filter((p) => p.kind === kind);
         const current = providers.find((p) => p.code === active);
@@ -235,7 +240,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
                 <h2 id={`kind-${kind}`} className="text-2xl font-bold">{KIND_TITLES[kind].title}</h2>
                 <p className="text-on-surface-variant">{KIND_TITLES[kind].intro}</p>
               </div>
-              {current && (
+              {current && kind !== "ai" && (
                 <p className="font-semibold">
                   In use: {current.name} <span className="text-on-surface-variant">({current.mode})</span>
                 </p>
@@ -249,7 +254,7 @@ export function IntegrationsBoard({ overview }: { overview: Overview }) {
             )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
               {providers.map((p) => (
-                <ProviderCard key={p.code} provider={p} inUse={p.code === active} />
+                <ProviderCard key={p.code} provider={p} inUse={kind !== "ai" && p.code === active} />
               ))}
             </div>
           </section>
@@ -390,7 +395,7 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
 
       {p.implemented && (
         <div className="flex flex-col gap-4 border-t border-border pt-4">
-          {!inUse && (
+          {!inUse && p.kind !== "ai" && (
             <ActionForm action={activateIntegration} hidden={base}>
               {(pending) => (
                 <Button type="submit" disabled={pending || missingNow.length > 0} className="w-fit">
@@ -423,6 +428,8 @@ function ProviderCard({ provider: p, inUse }: { provider: Provider; inUse: boole
                       ? "Send test SMS"
                       : p.kind === "email"
                         ? "Send test email"
+                      : p.kind === "ai"
+                        ? "Check key"
                       : p.kind === "payment"
                         ? "Ping gateway"
                         : p.kind === "maps"

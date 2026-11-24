@@ -1,6 +1,8 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { resetAiConfigCache } from "@/lib/ai-config";
+import { checkAiKey, type AiProvider } from "@/lib/ai-key-check";
 import { logger } from "@/lib/logger";
 import { supabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +13,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
 
-type Kind = "sms" | "identity" | "weather" | "email" | "payment" | "maps";
+type Kind = "sms" | "identity" | "weather" | "email" | "ai" | "payment" | "maps";
 type Mode = "test" | "live";
 
 interface IntegrationProvider {
@@ -26,7 +28,7 @@ interface IntegrationOverview {
 }
 
 const MODES: readonly Mode[] = ["test", "live"];
-const KINDS: readonly Kind[] = ["sms", "identity", "weather", "email", "payment", "maps"];
+const KINDS: readonly Kind[] = ["sms", "identity", "weather", "email", "ai", "payment", "maps"];
 const CODE = /^[a-z][a-z0-9_]{1,39}$/;
 
 function field(form: FormData, name: string): string {
@@ -64,7 +66,10 @@ export async function saveIntegrationConfig(_prev: ActionResult | null, form: Fo
   }
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_save_integration_config", { p_provider: provider, p_mode: m, p_config: config });
-  if (!error) refresh();
+  if (!error) {
+    resetAiConfigCache();
+    refresh();
+  }
   return explain(error, `Saved the ${m} settings.`);
 }
 
@@ -109,7 +114,10 @@ export async function setIntegrationSecret(_prev: ActionResult | null, form: For
   const { error } = await supabase.rpc("admin_set_integration_secret", {
     p_provider: provider, p_mode: m, p_field: key, p_value: value,
   });
-  if (!error) refresh();
+  if (!error) {
+    resetAiConfigCache();
+    refresh();
+  }
   return explain(error, `Key saved for ${m} mode. It is stored encrypted and cannot be shown again.`);
 }
 
@@ -120,7 +128,10 @@ export async function clearIntegrationSecret(_prev: ActionResult | null, form: F
   if (!CODE.test(provider) || !CODE.test(key) || !m) return { ok: false, message: "Invalid request." };
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_clear_integration_secret", { p_provider: provider, p_mode: m, p_field: key });
-  if (!error) refresh();
+  if (!error) {
+    resetAiConfigCache();
+    refresh();
+  }
   return explain(error, "Key removed.");
 }
 
@@ -179,6 +190,24 @@ export async function sendIntegrationTest(_prev: ActionResult | null, form: Form
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) return { ok: false, message: "Your session has ended. Sign in again." };
+
+  // AI keys: a 1-token request with the key the assistant would use right now (no Edge Function involved).
+  if (kind === "ai") {
+    if (provider !== "claude" && provider !== "gemini" && provider !== "openai") return { ok: false, message: "Invalid request." };
+    const { data: allowed } = await supabase.rpc("has_permission", { p_permission: "integrations.manage" });
+    if (allowed !== true) return { ok: false, message: "You do not have permission to change integrations." };
+    const r = await checkAiKey(provider as AiProvider);
+    if (r.ok) {
+      return { ok: true, message: `Works: ${r.model} answered, using the key ${r.source === "admin" ? "saved here" : "from the Vercel settings"}.` };
+    }
+    const why = {
+      no_key: "No key is saved here or in the Vercel settings.",
+      bad_key: "The provider refused the key. Check it was copied in full and is still active.",
+      model_not_found: `The provider does not offer the model ${r.model}. Clear the model field to use the default.`,
+      unavailable: "The provider did not answer. Try again in a minute.",
+    }[r.reason];
+    return { ok: false, message: `${why}${r.status ? ` (HTTP ${r.status})` : ""}` };
+  }
 
   // For payment gateways and maps, check configuration and secrets directly
   if (kind === "payment" || kind === "maps") {

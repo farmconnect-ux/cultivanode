@@ -1,6 +1,6 @@
 import "server-only";
 import { checkChemicalSafetyGuardrails } from "@cultivanode/shared";
-import { aiConfig } from "@/lib/ai-config";
+import { aiConfig, type AiConfig } from "@/lib/ai-config";
 import { logger } from "@/lib/logger";
 
 // Crop photo analysis with a vision model: Claude (Sonnet, then Haiku) first, then Gemini, then OpenAI. Keys
@@ -45,17 +45,17 @@ function prompt(c: Context): string {
   ].join("\n");
 }
 
-function timeout(): AbortSignal {
-  return AbortSignal.timeout(aiConfig().timeoutMs);
+function timeout(c: AiConfig): AbortSignal {
+  return AbortSignal.timeout(c.timeoutMs);
 }
 
-async function claude(model: string, images: CropImage[], text: string): Promise<string | null> {
-  const key = aiConfig().anthropicApiKey;
+async function claude(c: AiConfig, model: string, images: CropImage[], text: string): Promise<string | null> {
+  const key = c.anthropicApiKey;
   if (!key) return null;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-    signal: timeout(),
+    signal: timeout(c),
     body: JSON.stringify({
       model,
       max_tokens: 2048,
@@ -75,13 +75,13 @@ async function claude(model: string, images: CropImage[], text: string): Promise
   return (json.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("") || null;
 }
 
-async function gemini(images: CropImage[], text: string): Promise<string | null> {
-  const { geminiApiKey: key, primaryModel: model } = aiConfig();
+async function gemini(c: AiConfig, images: CropImage[], text: string): Promise<string | null> {
+  const { geminiApiKey: key, primaryModel: model } = c;
   if (!key) return null;
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    signal: timeout(),
+    signal: timeout(c),
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text }, ...images.map((i) => ({ inline_data: { mime_type: i.mime, data: i.base64 } }))] }],
       generationConfig: {
@@ -97,13 +97,13 @@ async function gemini(images: CropImage[], text: string): Promise<string | null>
   return json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? null;
 }
 
-async function openai(images: CropImage[], text: string): Promise<string | null> {
-  const { openaiApiKey: key, fallbackModel: model } = aiConfig();
+async function openai(c: AiConfig, images: CropImage[], text: string): Promise<string | null> {
+  const { openaiApiKey: key, fallbackModel: model } = c;
   if (!key) return null;
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    signal: timeout(),
+    signal: timeout(c),
     body: JSON.stringify({
       model,
       temperature: 0.2,
@@ -182,20 +182,20 @@ function clean(raw: string): Diagnosis | null {
   return d;
 }
 
-export function visionConfigured(): boolean {
-  const c = aiConfig();
+export async function visionConfigured(): Promise<boolean> {
+  const c = await aiConfig();
   return Boolean(c.anthropicApiKey || c.geminiApiKey || c.openaiApiKey);
 }
 
 export async function diagnoseCropPhotos(images: CropImage[], context: Context): Promise<DiagnosisResult> {
-  if (!visionConfigured()) return { ok: false, error: "not_configured" };
+  const c = await aiConfig();
+  if (!(c.anthropicApiKey || c.geminiApiKey || c.openaiApiKey)) return { ok: false, error: "not_configured" };
   if (!images.length) return { ok: false, error: "failed" };
   const text = prompt(context);
-  const c = aiConfig();
   const tries: [string, () => Promise<string | null>][] = [
-    ...c.claudeModels.map((m): [string, () => Promise<string | null>] => [m, () => claude(m, images, text)]),
-    [c.primaryModel, () => gemini(images, text)],
-    [c.fallbackModel, () => openai(images, text)],
+    ...c.claudeModels.map((m): [string, () => Promise<string | null>] => [m, () => claude(c, m, images, text)]),
+    [c.primaryModel, () => gemini(c, images, text)],
+    [c.fallbackModel, () => openai(c, images, text)],
   ];
   for (const [model, run] of tries) {
     try {
