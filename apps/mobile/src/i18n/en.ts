@@ -290,6 +290,23 @@ const en = {
     openMarket: 'Open the market',
     soon: 'Coming soon',
   },
+  alerts: {
+    title: 'Farm alerts',
+    useful: 'Useful',
+    notUseful: 'Not useful',
+    done: 'Done',
+    thanks: 'Thanks, noted.',
+    risk: 'Forecast risk',
+    kinds: {
+      farm_operation_upcoming: 'Coming up on {name}: {title} is planned for {date}.',
+      farm_operation_overdue: 'Overdue on {name}: {title} was planned for {date} and is not marked done.',
+      farm_task_overdue: 'Overdue task on {name}: {title} was due on {date}.',
+      farm_soil_test_needed: '{title} on {name} is planned for {date}, but this plot has no soil test from the last 2 years. Test the soil first so the right amount can be worked out.',
+      farm_weather_risk: 'Weather risk on {name}: {title} is planned for {date}, and the forecast shows {note}. Consider moving it to a drier, calmer day.',
+      farm_stock_low: 'Low stock on {name}: {title} is down to {note}. Restock before your next job needs it.',
+      farm_stock_expiring: '{title} on {name} expires on {date}. Use it before then or set it aside.',
+    },
+  },
   hire: {
     title: 'Hire',
     intro: 'Tractors and farm hands near your farm. You pay them directly.',
