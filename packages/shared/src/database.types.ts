@@ -9413,6 +9413,7 @@ export type Database = {
         Args: { p_agent: string; p_code_hash: string; p_phone: string }
         Returns: Json
       }
+      ai_provider_runtime: { Args: never; Returns: Json }
       approve_role_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: {
@@ -10112,7 +10113,7 @@ export type Database = {
         | "completed"
         | "cancelled"
       farm_zone: "rainforest" | "derived_savanna" | "other"
-      integration_kind: "sms" | "identity" | "weather" | "payment" | "maps" | "email"
+      integration_kind: "sms" | "identity" | "weather" | "payment" | "maps" | "email" | "ai"
       integration_mode: "test" | "live"
       listing_kind: "equipment" | "service"
       listing_status: "draft" | "active" | "paused" | "suspended"
@@ -10430,7 +10431,7 @@ export const Constants = {
         "cancelled",
       ],
       farm_zone: ["rainforest", "derived_savanna", "other"],
-      integration_kind: ["sms", "identity", "weather", "payment", "maps", "email"],
+      integration_kind: ["sms", "identity", "weather", "payment", "maps", "email", "ai"],
       integration_mode: ["test", "live"],
       listing_kind: ["equipment", "service"],
       listing_status: ["draft", "active", "paused", "suspended"],

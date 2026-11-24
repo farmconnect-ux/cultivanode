@@ -67,6 +67,14 @@ Apps (NIN/BVN/bank) ------------------------------------------------------------
    accounts, the name-match score and the outcome. The provider's full response is discarded.
 5. The verification tier updates automatically (NIN -> 1; NIN + BVN + verified bank account -> 2).
 
+## AI models (farm assistant and photo checks)
+Admin > Integrations > AI models holds the Claude, Gemini and OpenAI keys (in Vault) and optional model names.
+All three are used in order: Claude, then Gemini, then OpenAI, then built-in advice. The Next.js server reads
+them through `ai_provider_runtime()` (service role, `SUPABASE_SECRET_KEY`) and caches them for a minute, so a
+new key works within a minute without a redeploy. A provider with no key saved there uses its Vercel variable
+(`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`). **Check key** sends a 1-token request and says
+whether the admin key or the Vercel key answered. `/api/ai/health` (staff only) shows `keySources`.
+
 ## Adding a provider
 
 1. Write an adapter in `supabase/functions/_shared/providers/sms.ts` or `identity.ts` that implements

@@ -29,7 +29,7 @@ export async function GET() {
   if (!auth.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { data: perms } = await supabase.rpc("my_permissions");
   if (!perms || perms.length === 0) return NextResponse.json({ error: "Staff only" }, { status: 403 });
-  const c = aiConfig();
+  const c = await aiConfig();
   const signal = () => AbortSignal.timeout(20000);
   const checks = await Promise.all([
     ...c.claudeModels.map((model) =>
@@ -60,7 +60,7 @@ export async function GET() {
     ),
   ]);
   return NextResponse.json(
-    { deployment: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local", env: process.env.VERCEL_ENV ?? "local", timeoutMs: c.timeoutMs, checks },
+    { deployment: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local", env: process.env.VERCEL_ENV ?? "local", timeoutMs: c.timeoutMs, keySources: c.sources, checks },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
