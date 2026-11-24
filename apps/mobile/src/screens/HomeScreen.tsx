@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fill, useI18n } from '../i18n';
 import { greeting, shortDate, whenLabel, daysFromToday } from '../lib/dates';
+import { answerFarmAlert, loadFarmAlerts, type AlertResponse, type FarmAlert } from '../lib/alerts';
 import { loadCrops, loadJobs, markJobDone, type Crop, type Job } from '../lib/farm';
 import { isFarmer, useSession } from '../lib/session';
 import { loadFarmWeather, type FarmWeather } from '../lib/weather';
@@ -44,17 +45,25 @@ export function HomeScreen({ toast, onGo }: Props) {
   const [message, setMessage] = useState<string | null>(toast ?? null);
   const [busyJob, setBusyJob] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
+  const [alerts, setAlerts] = useState<FarmAlert[]>([]);
+  const [busyAlert, setBusyAlert] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!farm) {
       setCrops([]);
       setJobs([]);
+      setAlerts([]);
       loadFarmWeather(account?.profile.state ?? null).then(setWeather);
       return;
     }
-    const [cr, w] = await Promise.all([loadCrops(farm.id).catch(() => [] as Crop[]), loadFarmWeather(farm.state)]);
+    const [cr, w, al] = await Promise.all([
+      loadCrops(farm.id).catch(() => [] as Crop[]),
+      loadFarmWeather(farm.state),
+      loadFarmAlerts(farm.id).catch(() => [] as FarmAlert[]),
+    ]);
     setCrops(cr);
     setWeather(w);
+    setAlerts(al);
     setJobs(await loadJobs(farm.id, cr).catch(() => [] as Job[]));
   }, [farm, account?.profile.state]);
 
@@ -85,6 +94,18 @@ export function HomeScreen({ toast, onGo }: Props) {
     if (ok) {
       setJobs((js) => js.filter((j) => j.id !== job.id));
       setMessage(h.doneToast);
+    } else {
+      setMessage(t.common.offline);
+    }
+  }
+
+  async function answer(alert: FarmAlert, response: AlertResponse) {
+    setBusyAlert(alert.id);
+    const ok = await answerFarmAlert(alert, response);
+    setBusyAlert(null);
+    if (ok) {
+      setAlerts((as) => as.filter((a) => a.id !== alert.id));
+      setMessage(t.alerts.thanks);
     } else {
       setMessage(t.common.offline);
     }
@@ -128,6 +149,15 @@ export function HomeScreen({ toast, onGo }: Props) {
       ) : null}
 
       {weather ? <WeatherCard w={weather} /> : null}
+
+      {farmer && farm && alerts.length > 0 ? (
+        <View style={styles.group}>
+          <SectionTitle title={t.alerts.title} />
+          {alerts.map((a) => (
+            <AlertCard key={a.id} alert={a} busy={busyAlert === a.id} onAnswer={(r) => answer(a, r)} />
+          ))}
+        </View>
+      ) : null}
 
       {farmer && !farm ? (
         <Card>
@@ -230,6 +260,28 @@ function WeatherCard({ w }: { w: FarmWeather }) {
       <Text color="#e3f3ea">{fill(rainy ? h.rainToday : h.dryToday, { mm: w.weekRainMm })}</Text>
       <View style={[styles.advice, { backgroundColor: w.holdSpraying || w.dryWeek ? c.mint : 'rgba(108,248,187,0.18)' }]}>
         <Text variant="label" color={w.holdSpraying || w.dryWeek ? c.primary : c.mint}>{advice}</Text>
+      </View>
+    </Card>
+  );
+}
+
+/** The alert sentence in the app language. Risk alerts say "forecast risk", never that harm has happened. */
+export function alertText(alert: FarmAlert, kinds: Record<FarmAlert['kind'], string>): string {
+  return fill(kinds[alert.kind], { title: alert.title, name: alert.name, note: alert.note, date: alert.date ? shortDate(alert.date) : '' });
+}
+
+function AlertCard({ alert, busy, onAnswer }: { alert: FarmAlert; busy: boolean; onAnswer: (r: AlertResponse) => void }) {
+  const { t } = useI18n();
+  const a = t.alerts;
+  const urgent = alert.kind === 'farm_operation_overdue' || alert.kind === 'farm_task_overdue';
+  return (
+    <Card>
+      {alert.kind === 'farm_weather_risk' ? <Pill tone="amber" icon="cloud-rain">{a.risk}</Pill> : null}
+      <Text color={urgent ? c.danger : undefined}>{alertText(alert, a.kinds)}</Text>
+      <View style={styles.actions}>
+        <Button title={a.useful} compact variant="secondary" disabled={busy} onPress={() => onAnswer('useful')} style={styles.flex} />
+        <Button title={a.notUseful} compact variant="ghost" disabled={busy} onPress={() => onAnswer('not_useful')} style={styles.flex} />
+        <Button title={a.done} compact icon="check" loading={busy} onPress={() => onAnswer('done')} style={styles.flex} />
       </View>
     </Card>
   );

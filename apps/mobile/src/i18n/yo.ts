@@ -291,6 +291,23 @@ const yo: Dictionary = {
     openMarket: 'Ṣí ọjà',
     soon: 'Ń bọ̀ láìpẹ́',
   },
+  alerts: {
+    title: 'Ìkìlọ̀ oko',
+    useful: 'Ó wúlò',
+    notUseful: 'Kò wúlò',
+    done: 'Ó ti parí',
+    thanks: 'A dúpẹ́, a ti kọ ọ́ sílẹ̀.',
+    risk: 'Ewu àsọtẹ́lẹ̀ ojú ọjọ́',
+    kinds: {
+      farm_operation_upcoming: 'Ó ń bọ̀ ní {name}: a ti ṣètò {title} fún {date}.',
+      farm_operation_overdue: 'Ó ti pẹ́ ní {name}: a ṣètò {title} fún {date}, a kò sì tíì sàmì sí i pé ó ti parí.',
+      farm_task_overdue: 'Iṣẹ́ tó ti pẹ́ ní {name}: {title} yẹ kó parí ní {date}.',
+      farm_soil_test_needed: 'A ti ṣètò {title} ní {name} fún {date}, ṣùgbọ́n kò sí àyẹ̀wò ilẹ̀ fún oko yìí láàrin ọdún méjì sẹ́yìn. Ṣe àyẹ̀wò ilẹ̀ kí a lè mọ ìwọ̀n tó tọ́.',
+      farm_weather_risk: 'Ewu ojú ọjọ́ ní {name}: a ti ṣètò {title} fún {date}, àsọtẹ́lẹ̀ ojú ọjọ́ sì fi {note} hàn. Ronú láti sún un sí ọjọ́ tí ó gbẹ, tí afẹ́fẹ́ kò le.',
+      farm_stock_low: 'Ohun èlò ti fẹ́ tán ní {name}: {title} kù sí {note}. Ra òmíràn kí iṣẹ́ rẹ tó ń bọ̀ tó nílò rẹ̀.',
+      farm_stock_expiring: '{title} ní {name} yóò bàjẹ́ ní {date}. Lò ó ṣáájú ọjọ́ náà tàbí kí o yà á sọ́tọ̀.',
+    },
+  },
   hire: {
     title: 'Gbà síṣẹ́',
     intro: 'Tírákítọ̀ àti òṣìṣẹ́ oko nítòsí oko rẹ. O máa sanwó fún wọn tààrà.',
